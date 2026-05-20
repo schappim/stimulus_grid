@@ -22,6 +22,8 @@ export default class GridController extends Controller {
     height:         { type: String, default: '' },          // CSS height, e.g. '480px'
     getRowId:       { type: String, default: 'id' },        // field name for row identity
     domLayout:      { type: String, default: '' },          // '' | 'autoHeight'
+    serverSide:     { type: Boolean, default: false },       // rowData is one server page
+    rowCount:       { type: Number, default: 0 },            // total rows on the server
   };
 
   initialize() {
@@ -58,6 +60,8 @@ export default class GridController extends Controller {
       page: 0,
       pageSize: this.pageSizeValue,
     };
+    this.state.serverSide = this.serverSideValue;
+    this.state.serverRowCount = this.rowCountValue;
 
     // Snapshot any user-supplied initial markup before we restructure.
     this._captureInitialMarkup();
@@ -434,6 +438,8 @@ export default class GridController extends Controller {
   }
 
   filteredCount() {
+    // Server-side: the total lives on the server, not in rowData.
+    if (this.state.serverSide) return this.state.serverRowCount;
     // Compute on-demand so consumers reading inside grid:filterChanged handlers
     // (which fire before the next render) get up-to-date counts.
     const cols = Object.fromEntries(this.state.columnDefs.map((c) => [c.field, c]));
@@ -441,6 +447,15 @@ export default class GridController extends Controller {
     let rows = applyFilters(this.state.rowData, this.state.filterModel, cols);
     rows = applyQuickFilter(rows, this.state.quickFilter, visible);
     return rows.length;
+  }
+
+  // Server-side row model: set the total row count so pagination reflects the
+  // full table even though only one page is loaded client-side. No event is
+  // emitted (callers pair this with setRowData, whose rowDataChanged refreshes
+  // the pagination UI) — emitting paginationChanged here would loop grid-sync.
+  setRowCount(n) {
+    this.state.serverRowCount = Math.max(0, Number(n) || 0);
+    this.scheduleRender('page');
   }
 
   lastPageIndex() { return this.totalPages() - 1; }
@@ -555,7 +570,9 @@ export default class GridController extends Controller {
   setRowData(rows) {
     this.state.rowData = Array.isArray(rows) ? rows : [];
     this.state.selection.clear();
-    this.state.pagination.page = 0;
+    // Server-side: rowData is just the current page; grid-sync owns the page
+    // index, so don't reset it here (that would fight server pagination).
+    if (!this.state.serverSide) this.state.pagination.page = 0;
     this.scheduleRender('data');
     emit(this.element, 'grid:rowDataChanged', { rows: this.state.rowData });
   }
@@ -635,6 +652,8 @@ export default class GridController extends Controller {
         filterModel: this.state.filterModel,
         quickFilter: this.state.quickFilter,
         pagination: this.state.pagination,
+        serverSide: this.state.serverSide,
+        serverRowCount: this.state.serverRowCount,
       });
     }
     if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection')) this._renderHeader();

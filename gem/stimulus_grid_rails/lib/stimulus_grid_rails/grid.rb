@@ -167,6 +167,23 @@ module StimulusGridRails
       relation
     end
 
+    # Server-side sort (RAILS.md §21). `sort_model` is the client shape:
+    # [{ "colId" =>, "sort" => "asc"|"desc" }, …]. Only real (non-computed,
+    # non-underscore) columns that exist on the model are honored.
+    def apply_sort(relation, sort_model)
+      return relation if sort_model.blank?
+      table  = self.class.model_class.arel_table
+      names  = self.class.model_class.column_names
+      orders = Array(sort_model).filter_map do |entry|
+        col_id = (entry["colId"] || entry[:colId]).to_s
+        col    = self.class.columns_registry[col_id.to_sym]
+        next unless col && !col.computed? && !col_id.start_with?("_") && names.include?(col_id)
+        dir = (entry["sort"] || entry[:sort]).to_s.downcase == "desc" ? :desc : :asc
+        table[col_id.to_sym].public_send(dir)
+      end
+      orders.empty? ? relation : relation.reorder(*orders)
+    end
+
     def cell_value(row, column)
       if column.computed?
         method = "compute_#{column.name}"

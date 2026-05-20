@@ -7,6 +7,11 @@ export function createGridApi(grid) {
     getRowData() { return grid.state.rowData.slice(); },
     applyTransaction(tx) { return grid.applyTransaction(tx); },
 
+    // Server-side row model
+    setRowCount(total) { grid.setRowCount(total); },
+    getRowCount() { return grid.state.serverSide ? grid.state.serverRowCount : grid.state.rowData.length; },
+    isServerSide() { return !!grid.state.serverSide; },
+
     // ---- Columns ----
     setColumnDefs(defs) { grid.setColumnDefs(defs); },
     getColumnDefs() { return grid.state.columnDefs.slice(); },

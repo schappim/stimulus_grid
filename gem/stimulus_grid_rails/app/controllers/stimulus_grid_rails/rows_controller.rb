@@ -18,9 +18,21 @@ module StimulusGridRails
       grid     = grid_for(params[:resource])
       relation = grid.search_and_filter(grid.scope(current_grid_user),
                                         q: params[:q], filters: parse_filters)
-      total = relation.count
-      rows  = relation.limit(MAX_ROWS).map { |r| grid.row_to_h(r) }
-      render json: { rows: rows, total: total, limited: total > MAX_ROWS }
+      relation = grid.apply_sort(relation, parse_sort)
+      total    = relation.count
+
+      if params[:page].present?
+        # Server-side row model: return just the requested window.
+        page      = params[:page].to_i
+        page_size = (params[:page_size].presence || 25).to_i.clamp(1, 1000)
+        window    = relation.offset(page * page_size).limit(page_size)
+        rows      = window.map { |r| grid.row_to_h(r) }
+        render json: { rows: rows, total: total, page: page, page_size: page_size, limited: false }
+      else
+        # Client-side model: the capped full (filtered) set.
+        rows = relation.limit(MAX_ROWS).map { |r| grid.row_to_h(r) }
+        render json: { rows: rows, total: total, limited: total > MAX_ROWS }
+      end
     end
 
     def create
@@ -72,6 +84,15 @@ module StimulusGridRails
       end
     rescue JSON::ParserError
       {}
+    end
+
+    # `sort` arrives as a JSON string: [{ "colId":, "sort":"asc"|"desc" }, …].
+    def parse_sort
+      raw = params[:sort]
+      return [] if raw.blank?
+      raw.is_a?(String) ? JSON.parse(raw) : raw
+    rescue JSON::ParserError
+      []
     end
   end
 end

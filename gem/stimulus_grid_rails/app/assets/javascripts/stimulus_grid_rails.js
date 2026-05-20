@@ -58,6 +58,7 @@ class GridSyncController extends Controller {
     bulkRowsPath:      String,   // "/grids/:resource/rows/bulk"
     undoPath:          String,   // "/grids/:resource/undo"
     redoPath:          String,   // "/grids/:resource/redo"
+    serverSide:        Boolean,  // server-side row model (windowed fetch)
     optimisticIdPrefix: { type: String, default: "" },
   }
 
@@ -93,23 +94,40 @@ class GridSyncController extends Controller {
     //   gridEl.dispatchEvent(new CustomEvent("grid-sync:search", { detail: { q } }))
     //   gridEl.dispatchEvent(new CustomEvent("grid-sync:filter", { detail: { column, criteria } }))  // criteria=null clears
     //   gridEl.dispatchEvent(new CustomEvent("grid-sync:clear-filters"))
-    this._query = { q: "", filters: {} }
-    this._debouncedFetch = debounce(() => this._fetchRows(), 200)
-    this._onSearch = (e) => { this._query.q = e?.detail?.q ?? ""; this._debouncedFetch() }
+    this._query = { q: "", filters: {}, sort: [] }
+    // In server-side mode, a query change resets to page 0 (debounced); the
+    // resulting paginationChanged is the single trigger that fetches a window.
+    // In client mode, a query change refetches the (capped) full set directly.
+    this._afterQueryChange = this.serverSideValue
+      ? debounce(() => this._gridEl.gridApi?.paginationGoToFirstPage(), 200)
+      : debounce(() => this._fetchRows(), 200)
+    this._onSearch = (e) => { this._query.q = e?.detail?.q ?? ""; this._afterQueryChange() }
     this._onFilter = (e) => {
       const { column, criteria } = e?.detail || {}
       if (!column) return
       if (criteria == null || criteria === "") delete this._query.filters[column]
       else this._query.filters[column] = criteria
-      this._debouncedFetch()
+      this._afterQueryChange()
     }
     this._onClearFilters = () => {
-      this._query = { q: "", filters: {} }
-      this._fetchRows()
+      this._query = { q: "", filters: {}, sort: this._query.sort }
+      this.serverSideValue ? this._gridEl.gridApi?.paginationGoToFirstPage() : this._fetchRows()
     }
     this._gridEl.addEventListener("grid-sync:search", this._onSearch)
     this._gridEl.addEventListener("grid-sync:filter", this._onFilter)
     this._gridEl.addEventListener("grid-sync:clear-filters", this._onClearFilters)
+
+    // Server-side row model: paginationChanged (page click / size change / a
+    // reset from above) fetches that window; sortChanged sorts on the server.
+    if (this.serverSideValue) {
+      this._onSrvPage = () => this._fetchRows()
+      this._onSrvSort = (e) => {
+        this._query.sort = e?.detail?.sortModel || []
+        this._gridEl.gridApi?.paginationGoToFirstPage()   // → paginationChanged → fetch
+      }
+      this._gridEl.addEventListener("grid:paginationChanged", this._onSrvPage)
+      this._gridEl.addEventListener("grid:sortChanged", this._onSrvSort)
+    }
 
     // Undo / redo keyboard shortcuts (RAILS.md §16). Cmd/Ctrl+Z undoes,
     // Cmd/Ctrl+Shift+Z (or Cmd/Ctrl+Y) redoes. Skipped while a cell editor or
@@ -138,6 +156,8 @@ class GridSyncController extends Controller {
     this._gridEl.removeEventListener("grid-sync:search", this._onSearch)
     this._gridEl.removeEventListener("grid-sync:filter", this._onFilter)
     this._gridEl.removeEventListener("grid-sync:clear-filters", this._onClearFilters)
+    if (this._onSrvPage) this._gridEl.removeEventListener("grid:paginationChanged", this._onSrvPage)
+    if (this._onSrvSort) this._gridEl.removeEventListener("grid:sortChanged", this._onSrvSort)
     document.removeEventListener("keydown", this._onKeydown)
   }
 
@@ -174,6 +194,11 @@ class GridSyncController extends Controller {
     if (Object.keys(this._query.filters).length) {
       url.searchParams.set("filters", JSON.stringify(this._query.filters))
     }
+    if (this.serverSideValue) {
+      url.searchParams.set("page", api.paginationGetCurrentPage())
+      url.searchParams.set("page_size", api.paginationGetPageSize())
+      if (this._query.sort.length) url.searchParams.set("sort", JSON.stringify(this._query.sort))
+    }
     try {
       const res = await fetch(url, {
         method: "GET", credentials: "same-origin",
@@ -181,6 +206,9 @@ class GridSyncController extends Controller {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      // setRowCount first so the pagination refresh (fired by setRowData's
+      // rowDataChanged) reads the new total.
+      if (this.serverSideValue) api.setRowCount(data.total)
       api.setRowData(data.rows)
       this._gridEl.dispatchEvent(new CustomEvent("grid-sync:rows-fetched", {
         detail: { total: data.total, shown: data.rows.length, limited: data.limited },

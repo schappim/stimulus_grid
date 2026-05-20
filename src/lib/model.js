@@ -153,6 +153,18 @@ export function applyPagination(rows, pagination) {
 /* -------- Top-level pipeline -------- */
 
 export function buildDisplayList(state) {
+  // Server-side row model: rowData IS the current page already filtered/sorted
+  // by the server. Skip the client pipeline; pagination metadata comes from the
+  // server-provided total row count.
+  if (state.serverSide) {
+    const rows = state.rowData;
+    const pageSize = state.pagination?.pageSize || rows.length || 1;
+    const total = state.serverRowCount ?? rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(state.pagination?.page || 0, totalPages - 1);
+    return { filteredSorted: rows, rows, total, totalPages, page, pageRows: rows };
+  }
+
   const columnsByField = Object.fromEntries(state.columnDefs.map((c) => [c.field, c]));
   const visibleCols = state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
   let rows = state.rowData;
