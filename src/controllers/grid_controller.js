@@ -41,6 +41,10 @@ export default class GridController extends Controller {
     this._renderPending = false;
     this._dirty = new Set();
     this._lastRenderedRowIds = new Set();
+    // Per-column runtime overrides applied via gridApi (pinned/hidden/width).
+    // Stored separately from columnDefs so they survive a header re-registration
+    // (which could happen on a render that briefly detaches the <th>).
+    this._runtimeOverrides = Object.create(null);
   }
 
   connect() {
@@ -258,12 +262,11 @@ export default class GridController extends Controller {
 
   registerColumn(def, headerEl) {
     const existing = this.state.columnDefs.findIndex((c) => c.field === def.field);
-    const enriched = { ...def, _headerEl: headerEl };
-    // No-op when the same header re-registers with identical defs — avoids
-    // an infinite render loop if a re-render briefly detaches and reattaches
-    // header elements (Stimulus then re-runs connect() → registerColumn).
+    const overrides = this._runtimeOverrides[def.field] || {};
+    const enriched = { ...def, ...overrides, _headerEl: headerEl };
     if (existing >= 0) {
       const old = this.state.columnDefs[existing];
+      // No-op when nothing changed — breaks any latent reconnect → re-register loop.
       if (old._headerEl === headerEl && sameColDef(old, enriched)) return;
       this.state.columnDefs[existing] = enriched;
     } else {
@@ -458,6 +461,7 @@ export default class GridController extends Controller {
     const c = this._colByField(colId);
     if (!c) return;
     c.hidden = !visible;
+    this._runtimeOverrides[colId] = { ...(this._runtimeOverrides[colId] || {}), hidden: !visible };
     this.scheduleRender('columns');
     emit(this.element, 'grid:columnVisible', { colId, visible });
   }
@@ -465,18 +469,22 @@ export default class GridController extends Controller {
   setColumnPinned(colId, pinned) {
     const c = this._colByField(colId);
     if (!c) return;
-    c.pinned = pinned || null;
+    const next = pinned || null;
+    c.pinned = next;
+    this._runtimeOverrides[colId] = { ...(this._runtimeOverrides[colId] || {}), pinned: next };
     this._reorderForPinning();
     this.scheduleRender('columns');
-    emit(this.element, 'grid:columnPinned', { colId, pinned: c.pinned });
+    emit(this.element, 'grid:columnPinned', { colId, pinned: next });
   }
 
   setColumnWidth(colId, width) {
     const c = this._colByField(colId);
     if (!c) return;
-    c.width = Math.max(c.minWidth || 40, Math.min(c.maxWidth || 4000, width));
+    const w = Math.max(c.minWidth || 40, Math.min(c.maxWidth || 4000, width));
+    c.width = w;
+    this._runtimeOverrides[colId] = { ...(this._runtimeOverrides[colId] || {}), width: w };
     this.scheduleRender('columns');
-    emit(this.element, 'grid:columnResized', { colId, width: c.width });
+    emit(this.element, 'grid:columnResized', { colId, width: w });
   }
 
   moveColumn(colId, toIndex) {
@@ -670,6 +678,7 @@ export default class GridController extends Controller {
     while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
 
     // Always update each th's state-driven attrs + chrome (no structure churn).
+    const pin = this._pinOffsets();
     for (const col of visible) {
       const th = row.querySelector(`th[data-header-cell-field-value="${cssEscape(col.field)}"]`)
         || row.querySelector(`th[data-field="${cssEscape(col.field)}"]`);
@@ -683,6 +692,8 @@ export default class GridController extends Controller {
         'data-pinned': col.pinned || null,
       });
       if (col.width) th.style.width = col.width + 'px';
+      th.style.left = col.pinned === 'left' ? pin.left[col.field] + 'px' : '';
+      th.style.right = col.pinned === 'right' ? pin.right[col.field] + 'px' : '';
       this._ensureHeaderChrome(th, col, sortEntry);
     }
   }
@@ -826,11 +837,14 @@ export default class GridController extends Controller {
   _renderRow(tr, row, cols) {
     // Rebuild cells in column order. Cheap because table-layout is fixed.
     tr.innerHTML = '';
+    const pin = this._pinOffsets();
     for (const col of cols) {
       const td = el('td', {
         'data-col-id': col.field,
         'data-pinned': col.pinned || null,
       });
+      if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
+      else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
       if (col._isCheckbox) {
         td.classList.add('sg-checkbox-cell');
         const cb = el('input', { type: 'checkbox' });
@@ -971,6 +985,22 @@ export default class GridController extends Controller {
 
   _visibleCols() {
     return this.state.columnDefs.filter((c) => !c.hidden);
+  }
+
+  _pinOffsets() {
+    const cols = this._visibleCols();
+    const left = {};
+    let off = 0;
+    for (const c of cols) {
+      if (c.pinned === 'left') { left[c.field] = off; off += (c.width || 150); }
+    }
+    const right = {};
+    off = 0;
+    for (let i = cols.length - 1; i >= 0; i--) {
+      const c = cols[i];
+      if (c.pinned === 'right') { right[c.field] = off; off += (c.width || 150); }
+    }
+    return { left, right };
   }
 
   _colByField(field) {
