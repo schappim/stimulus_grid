@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>09 — Everything together | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .panel { height: 540px; margin-top: 12px; }
+    .toolbar {
+      display:flex; flex-wrap:wrap; gap:6px; margin: 12px 0;
+      align-items:center;
+    }
+    .toolbar button, .toolbar select {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .toolbar .group { display:flex; align-items:center; gap:4px; border:1px solid #e5e7eb; padding:2px 4px; border-radius:5px; background:#f9fafb; }
+    .toolbar .group label { font-size: 12px; color: #6b7280; padding-left: 4px; }
+    .stat { color:#6b7280; font-size:13px; margin-left:auto; }
+
+    .medals { display: inline-flex; gap: 3px; align-items: center; }
+    .medal {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 18px; border-radius: 9px;
+      font-size: 11px; font-weight: 600;
+    }
+    .medal.gold   { background: #fef3c7; color: #92400e; }
+    .medal.silver { background: #e5e7eb; color: #374151; }
+    .medal.bronze { background: #fce7d6; color: #9a3412; }
+    .medal[data-zero="true"] { opacity: 0.25; }
+
+    .del-btn {
+      background: transparent; border: 1px solid #fca5a5;
+      color: #dc2626; border-radius: 3px;
+      padding: 0 6px; font-size: 14px; line-height: 18px;
+      cursor: pointer;
+    }
+    .del-btn:hover { background: #fee2e2; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>09 — Everything together</h1>
+  <p class="lede">
+    All v0.1 features in one grid: sort, multi-sort, filter, multi-select with
+    checkbox column, inline editing, pinned columns (left + right), custom cell
+    renderers, pagination, and a toolbar exercising the full <code>gridApi</code>.
+  </p>
+
+  <template id="medals-renderer">
+    <span class="medals">
+      <span class="medal gold"   data-bind="gold"></span>
+      <span class="medal silver" data-bind="silver"></span>
+      <span class="medal bronze" data-bind="bronze"></span>
+    </span>
+  </template>
+
+  <template id="delete-renderer">
+    <button class="del-btn" title="Delete row">×</button>
+  </template>
+
+  <div class="toolbar">
+    <button id="add-row">+ Add row</button>
+    <button id="export-csv">Export CSV (selected)</button>
+    <button id="export-all-csv">Export CSV (all)</button>
+    <div class="group">
+      <label>Hide</label>
+      <select id="hide-col">
+        <option value="">—</option>
+        <option value="age">age</option>
+        <option value="date">date</option>
+        <option value="country">country</option>
+        <option value="sport">sport</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>Pin</label>
+      <select id="pin-col">
+        <option value="">—</option>
+        <option value="country:left">country → left</option>
+        <option value="country:right">country → right</option>
+        <option value="country:">country → unpin</option>
+        <option value="gold:right">gold → right</option>
+        <option value="gold:">gold → unpin</option>
+      </select>
+    </div>
+    <button id="size-to-fit">Size cols to fit</button>
+    <button id="autosize-all">Autosize all</button>
+    <span class="stat" id="stat">…</span>
+  </div>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-row-selection-value="multiple"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="25">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="_select"
+              data-header-cell-checkbox-value="true"
+              data-header-cell-pinned-value="left"
+              data-header-cell-width-value="36"></th>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-editable-value="true"
+              data-header-cell-pinned-value="left"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-editable-value="true"
+              data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="date" data-header-cell-editable-value="true"
+              data-header-cell-width-value="130">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-editable-value="true"
+              data-header-cell-cell-renderer-value="medals-renderer"
+              data-header-cell-width-value="150">Medals</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_actions"
+              data-header-cell-cell-renderer-value="delete-renderer"
+              data-header-cell-sortable-value="false" data-header-cell-resizable-value="false"
+              data-header-cell-pinned-value="right"
+              data-header-cell-width-value="50"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+    <label>Rows
+      <select data-pagination-target="pageSize" data-action="change->pagination#changeSize">
+        <option>10</option>
+        <option selected>25</option>
+        <option>50</option>
+      </select>
+    </label>
+  </nav>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.getElementById('grid');
+    const stat = document.getElementById('stat');
+
+    const updateStat = () => {
+      const api = grid.gridApi;
+      stat.textContent = `${api.paginationGetRowCount()} rows · ${api.getSelectedRowIds().length} selected · page ${api.paginationGetCurrentPage() + 1}/${api.paginationGetTotalPages()}`;
+    };
+
+    grid.addEventListener('grid:ready', async (e) => {
+      const res = await fetch('./data/athletes.json');
+      const data = await res.json();
+      e.detail.api.setRowData(data);
+      requestAnimationFrame(updateStat);
+    });
+    ['grid:rowDataChanged', 'grid:filterChanged', 'grid:selectionChanged',
+     'grid:paginationChanged'].forEach(ev =>
+      grid.addEventListener(ev, updateStat));
+
+    // Dim zero-medal badges after each render.
+    grid.addEventListener('grid:rowDataChanged', () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.medal').forEach(m => {
+        m.dataset.zero = m.textContent.trim() === '0' ? 'true' : '';
+      });
+    }));
+
+    // Delete-button delegation
+    grid.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('del-btn')) return;
+      const tr = e.target.closest('tr');
+      const rowId = tr.dataset.rowId;
+      grid.gridApi.applyTransaction({
+        remove: [grid.gridApi.getRowData().find(r => String(r.id) === rowId)],
+      });
+    });
+
+    // Toolbar
+    document.getElementById('add-row').onclick = () => {
+      const ids = grid.gridApi.getRowData().map(r => r.id);
+      const newId = (Math.max(0, ...ids) || 0) + 1;
+      grid.gridApi.applyTransaction({
+        add: [{
+          id: newId, athlete: 'New Athlete', country: 'United States',
+          sport: 'Swimming', age: 22, date: '2026-05-20',
+          gold: 0, silver: 0, bronze: 0,
+        }]
+      });
+      grid.gridApi.paginationGoToFirstPage();
+    };
+
+    document.getElementById('export-csv').onclick = () =>
+      grid.gridApi.exportDataAsCsv({ onlySelected: true, fileName: 'selected.csv' });
+    document.getElementById('export-all-csv').onclick = () =>
+      grid.gridApi.exportDataAsCsv({ fileName: 'all-athletes.csv' });
+
+    document.getElementById('hide-col').onchange = (e) => {
+      const colId = e.target.value;
+      if (!colId) return;
+      const isHidden = grid.gridApi.getColumnDefs().find(c => c.field === colId)?.hidden;
+      grid.gridApi.setColumnVisible(colId, !!isHidden);  // toggle
+      e.target.value = '';
+    };
+
+    document.getElementById('pin-col').onchange = (e) => {
+      const [colId, where] = (e.target.value || ':').split(':');
+      if (colId) grid.gridApi.setColumnPinned(colId, where || null);
+      e.target.value = '';
+    };
+
+    document.getElementById('size-to-fit').onclick = () => grid.gridApi.sizeColumnsToFit();
+    document.getElementById('autosize-all').onclick = () => grid.gridApi.autoSizeAllColumns();
+  </script>
+</body>
+</html>
