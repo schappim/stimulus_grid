@@ -2,11 +2,11 @@ var q = Object.defineProperty;
 var z = (s, l, e) => l in s ? q(s, l, { enumerable: !0, configurable: !0, writable: !0, value: e }) : s[l] = e;
 var m = (s, l, e) => z(s, typeof l != "symbol" ? l + "" : l, e);
 import { Controller as v, Application as B } from "@hotwired/stimulus";
-function b(s, l) {
+function y(s, l) {
   return typeof l.valueGetter == "function" ? l.valueGetter(s) : s?.[l.field];
 }
-function y(s, l) {
-  const e = b(s, l);
+function b(s, l) {
+  const e = y(s, l);
   return typeof l.valueFormatter == "function" ? l.valueFormatter(e, s) : e == null ? "" : l.type === "date" && e instanceof Date ? e.toLocaleDateString() : l.type === "boolean" ? e ? "✓" : "" : String(e);
 }
 const A = {
@@ -55,7 +55,7 @@ function j(s, l, e) {
   if (!e) return !0;
   const t = e.filterType || l.filter || "text", n = ($[t] || A)[e.type];
   if (!n) return !0;
-  const r = b(s, l);
+  const r = y(s, l);
   return n(r, e.value, e.value2);
 }
 function P(s, l, e) {
@@ -70,7 +70,7 @@ function T(s, l, e) {
   const t = String(l).toLowerCase();
   return s.filter((i) => {
     for (const n of e) {
-      const r = y(i, n);
+      const r = b(i, n);
       if (r && String(r).toLowerCase().includes(t)) return !0;
     }
     return !1;
@@ -94,7 +94,7 @@ function X(s, l, e) {
     for (const { colId: r, sort: a } of l) {
       const o = e[r];
       if (!o) continue;
-      const c = b(i, o), u = b(n, o), d = typeof o.comparator == "function" ? o.comparator(c, u, i, n) : U(c, u, o.type);
+      const c = y(i, o), u = y(n, o), d = typeof o.comparator == "function" ? o.comparator(c, u, i, n) : U(c, u, o.type);
       if (d !== 0) return a === "desc" ? -d : d;
     }
     return 0;
@@ -332,14 +332,14 @@ class D extends v {
     m(this, "_onCellMouseDown", (e) => {
       if (e.button !== 0) return;
       const t = this._cellAt(e.target);
-      t && (e.shiftKey && this.state.cellSel.anchor ? this.state.cellSel.focus = t : (this.state.cellSel = { anchor: t, focus: t }, this._cellDragging = !0), this._cellDragMoved = !1, this.scheduleRender("selection"), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+      t && (e.shiftKey && this.state.cellSel.anchor ? this.state.cellSel.focus = t : (this.state.cellSel = { anchor: t, focus: t }, this._cellDragging = !0), this._cellDragMoved = !1, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
     });
     m(this, "_onCellMouseOver", (e) => {
       if (!this._cellDragging) return;
       const t = this._cellAt(e.target);
       if (!t) return;
       const i = this.state.cellSel.focus;
-      i && i.rowId === t.rowId && i.colId === t.colId || (this.state.cellSel.focus = t, this._cellDragMoved = !0, this.scheduleRender("selection"), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+      i && i.rowId === t.rowId && i.colId === t.colId || (this.state.cellSel.focus = t, this._cellDragMoved = !0, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
     });
     m(this, "_onCellMouseUp", () => {
       this._cellDragging = !1;
@@ -584,7 +584,7 @@ class D extends v {
     const i = this.state.columnDefs.find((r) => r.field === t);
     if (!i || !i.editable) return;
     const n = this.state.rowData.find((r) => this._rowId(r) === e);
-    n && (this.state.editing = { rowId: e, colId: t, originalValue: b(n, i) }, this.scheduleRender("cells"));
+    n && (this.state.editing = { rowId: e, colId: t, originalValue: y(n, i) }, this.scheduleRender("cells"));
   }
   stopEditing(e = !1) {
     if (!this.state.editing) return;
@@ -629,7 +629,7 @@ class D extends v {
     const i = (t.headerName || t.field || "").length, n = this.state.rowData.slice(0, 200);
     let r = i;
     for (const a of n) {
-      const o = String(y(a, t) ?? "").length;
+      const o = String(b(a, t) ?? "").length;
       o > r && (r = o);
     }
     this.setColumnWidth(e, Math.min(400, Math.max(60, r * 8 + 24)));
@@ -675,7 +675,7 @@ class D extends v {
   getDataAsCsv({ columnSeparator: e = ",", onlySelected: t = !1 } = {}) {
     const i = this._visibleCols().filter((o) => !o._isCheckbox), n = t ? this.getSelectedRows() : this._displayList.filteredSorted, r = (o) => /[",\n\r]/.test(o) ? `"${String(o).replace(/"/g, '""')}"` : String(o), a = [i.map((o) => r(o.headerName || o.field)).join(e)];
     for (const o of n)
-      a.push(i.map((c) => r(y(o, c))).join(e));
+      a.push(i.map((c) => r(b(o, c))).join(e));
     return a.join(`
 `);
   }
@@ -843,7 +843,7 @@ class D extends v {
       }
       if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === o.field) {
         u.setAttribute("data-editing", "true");
-        const { node: h, control: p } = this._buildEditor(o, b(t, o));
+        const { node: h, control: p } = this._buildEditor(o, y(t, o));
         u.appendChild(h), queueMicrotask(() => {
           p?.focus(), p?.select?.();
         });
@@ -856,14 +856,14 @@ class D extends v {
     if (i.cellRenderer) {
       const n = L(i.cellRenderer);
       if (n) {
-        const r = b(t, i), a = y(t, i);
+        const r = y(t, i), a = b(t, i);
         (n.dataset.bind || n.dataset.bindText !== void 0) && (n.textContent = n.dataset.bind ? String(t[n.dataset.bind] ?? "") : a), n.dataset.bindAttr && n.setAttribute(n.dataset.bindAttr, r), n.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((o) => {
           o.dataset.bindText !== void 0 ? o.textContent = a : o.dataset.bind && (o.textContent = String(t[o.dataset.bind] ?? "")), o.dataset.bindAttr && o.setAttribute(o.dataset.bindAttr, r);
         }), e.appendChild(n);
         return;
       }
     }
-    e.textContent = y(t, i);
+    e.textContent = b(t, i);
   }
   // Returns { node, control }: the element to mount and the focusable control
   // whose value is read on commit. A column may supply a custom editor via a
@@ -919,24 +919,43 @@ class D extends v {
       const r = this.state.rowData.find((o) => this._rowId(o) === i), a = n.dataset.colId;
       g(this.element, "grid:cellClicked", { rowId: i, colId: a, value: r?.[a], event: e });
     }
-    if (this._cellDragMoved) {
+    if (this.suppressRowClickSelectionValue || this.rowSelectionValue === "") {
       this._cellDragMoved = !1;
       return;
     }
-    if (!this.suppressRowClickSelectionValue && this.rowSelectionValue !== "") {
-      if (this.cellSelectionValue)
-        e.metaKey || e.ctrlKey ? this.toggleRowSelection(i, "toggle") : e.shiftKey || this.state.selection.size && this.deselectAll();
-      else {
-        const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
-        this.toggleRowSelection(i, r);
+    if (this.cellSelectionValue) {
+      if (e.metaKey || e.ctrlKey) {
+        this.toggleRowSelection(i, "toggle"), this._cellDragMoved = !1, g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
+        return;
       }
-      g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
+      if (this._cellDragMoved) {
+        this._cellDragMoved = !1;
+        return;
+      }
+      !e.shiftKey && this.state.selection.size && this.deselectAll();
+    } else {
+      if (this._cellDragMoved) {
+        this._cellDragMoved = !1;
+        return;
+      }
+      const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
+      this.toggleRowSelection(i, r);
     }
+    g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
   }
   // ----- Cell selection (click = active cell, drag / shift+click = range) -----
   _cellAt(e) {
     const t = e.closest?.("td"), i = e.closest?.("tr");
     return !t || !i || t.classList.contains("sg-checkbox-cell") || !t.dataset.colId || t.dataset.editing === "true" ? null : { rowId: this._coerceRowId(i.dataset.rowId), colId: t.dataset.colId };
+  }
+  // Toggle the active/range data-attrs on the existing cell DOM without
+  // rebuilding the tbody (so in-flight mouse interactions aren't disrupted).
+  _applyCellSelHighlight() {
+    const e = this._computeCellSelKeys();
+    this._selKeys = e, this._tbody && this._tbody.querySelectorAll("td[data-col-id]").forEach((t) => {
+      const i = t.parentElement, n = `${i && i.dataset.rowId}:${t.dataset.colId}`;
+      e.active === n ? t.setAttribute("data-cell-active", "true") : t.removeAttribute("data-cell-active"), e.range && e.range.has(n) ? t.setAttribute("data-cell-range", "true") : t.removeAttribute("data-cell-range");
+    });
   }
   // Rectangle of the selection in display indices, or null.
   _cellSelRect() {
@@ -963,7 +982,7 @@ class D extends v {
       const r = [];
       for (let a = e.c0; a <= e.c1; a++) {
         const o = e.cols[a];
-        o && r.push(y(n, o));
+        o && r.push(b(n, o));
       }
       t.push(r);
     }

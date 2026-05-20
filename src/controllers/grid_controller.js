@@ -1044,21 +1044,25 @@ export default class GridController extends Controller {
       const colId = td.dataset.colId;
       emit(this.element, 'grid:cellClicked', { rowId, colId, value: row?.[colId], event: e });
     }
-    // A drag that selected a cell range shouldn't also toggle row selection.
-    if (this._cellDragMoved) { this._cellDragMoved = false; return; }
-    if (this.suppressRowClickSelectionValue) return;
-    if (this.rowSelectionValue === '') return;
+    if (this.suppressRowClickSelectionValue || this.rowSelectionValue === '') {
+      this._cellDragMoved = false;
+      return;
+    }
     if (this.cellSelectionValue) {
-      // Cell-primary mode: a plain click selects the CELL (set on mousedown) and
-      // clears row selection; rows are selected with a modifier or the checkbox
-      // column — so plain cell clicks no longer paint whole rows.
+      // Cell-primary mode. Cmd/Ctrl+click toggles ROW selection — honored even
+      // if a tiny drag was registered, so it's reliable on real trackpads.
       if (e.metaKey || e.ctrlKey) {
         this.toggleRowSelection(rowId, 'toggle');
-      } else if (!e.shiftKey) {
-        if (this.state.selection.size) this.deselectAll();   // fresh single cell
+        this._cellDragMoved = false;
+        emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
+        return;
       }
-      // shift+click extends the cell range (handled in _onCellMouseDown).
+      // A drag that made a cell range shouldn't clear the selection.
+      if (this._cellDragMoved) { this._cellDragMoved = false; return; }
+      // Plain click → fresh single cell (clear any row selection).
+      if (!e.shiftKey && this.state.selection.size) this.deselectAll();
     } else {
+      if (this._cellDragMoved) { this._cellDragMoved = false; return; }
       const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
       this.toggleRowSelection(rowId, mode);
     }
@@ -1086,7 +1090,10 @@ export default class GridController extends Controller {
       this._cellDragging = true;
     }
     this._cellDragMoved = false;
-    this.scheduleRender('selection');
+    // Update the highlight IN PLACE — re-rendering the tbody here would detach
+    // the just-pressed cell before the click fires and can swallow the click
+    // (breaking Cmd-click row select on real browsers).
+    this._applyCellSelHighlight();
     emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
   };
 
@@ -1098,9 +1105,25 @@ export default class GridController extends Controller {
     if (f && f.rowId === cell.rowId && f.colId === cell.colId) return;
     this.state.cellSel.focus = cell;
     this._cellDragMoved = true;
-    this.scheduleRender('selection');
+    this._applyCellSelHighlight();
     emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
   };
+
+  // Toggle the active/range data-attrs on the existing cell DOM without
+  // rebuilding the tbody (so in-flight mouse interactions aren't disrupted).
+  _applyCellSelHighlight() {
+    const keys = this._computeCellSelKeys();
+    this._selKeys = keys;
+    if (!this._tbody) return;
+    this._tbody.querySelectorAll('td[data-col-id]').forEach((td) => {
+      const tr = td.parentElement;
+      const key = `${tr && tr.dataset.rowId}:${td.dataset.colId}`;
+      if (keys.active === key) td.setAttribute('data-cell-active', 'true');
+      else td.removeAttribute('data-cell-active');
+      if (keys.range && keys.range.has(key)) td.setAttribute('data-cell-range', 'true');
+      else td.removeAttribute('data-cell-range');
+    });
+  }
 
   _onCellMouseUp = () => { this._cellDragging = false; };
 

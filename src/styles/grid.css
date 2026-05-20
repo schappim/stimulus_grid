@@ -9,8 +9,8 @@
   --sg-bg-hover: #eef2ff;
   --sg-bg-selected: #dbeafe;          /* cell range (blue) */
   --sg-bg-selected-hover: #bfdbfe;
-  --sg-bg-row-selected: #e7f6ec;      /* row selection (green) — distinct from cell range */
-  --sg-bg-row-selected-hover: #d4eedd;
+  --sg-bg-row-selected: #c7f0d5;      /* row selection (green) — distinct from cell range */
+  --sg-bg-row-selected-hover: #aee7c4;
   --sg-border: #e5e7eb;
   --sg-border-strong: #d1d5db;
   --sg-accent: #2563eb;
