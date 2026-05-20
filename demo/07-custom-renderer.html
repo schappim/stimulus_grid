@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>07 — Custom cell renderers | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+
+    /* Custom renderer styles */
+    .country-cell { display: inline-flex; align-items: center; gap: 6px; }
+    .country-cell .flag { font-size: 18px; line-height: 1; }
+    .country-cell .name { color: #1f2937; }
+
+    .medals { display: inline-flex; gap: 4px; align-items: center; }
+    .medal {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 18px;
+      border-radius: 9px;
+      font-size: 11px; font-weight: 600;
+      padding: 0 5px;
+    }
+    .medal.gold   { background: #fef3c7; color: #92400e; }
+    .medal.silver { background: #e5e7eb; color: #374151; }
+    .medal.bronze { background: #fce7d6; color: #9a3412; }
+    .medal[data-zero="true"] { opacity: 0.25; }
+
+    .sport-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 11px; font-weight: 500;
+      background: #e0e7ff; color: #3730a3;
+    }
+    .sport-pill[data-sport="Swimming"]            { background: #cffafe; color: #155e75; }
+    .sport-pill[data-sport="Athletics"]           { background: #dcfce7; color: #14532d; }
+    .sport-pill[data-sport="Gymnastics"]          { background: #fce7f3; color: #831843; }
+    .sport-pill[data-sport="Cross Country Skiing"]{ background: #dbeafe; color: #1e3a8a; }
+    .sport-pill[data-sport="Tennis"]              { background: #fef9c3; color: #713f12; }
+    .sport-pill[data-sport="Cycling"]             { background: #f3e8ff; color: #581c87; }
+    .sport-pill[data-sport="Diving"]              { background: #e0f2fe; color: #0c4a6e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>07 — Custom cell renderers</h1>
+  <p class="lede">
+    A column with <code>data-header-cell-cell-renderer-value="<i>id</i>"</code> looks up
+    a <code>&lt;template id="<i>id</i>"&gt;</code> and clones it for each cell.
+    Descendant elements with <code>data-bind="field"</code> get text from the row,
+    and <code>data-bind-attr="attr"</code> sets an attribute from the column value
+    (great for CSS hooks like <code>[data-sport]</code>).
+  </p>
+
+  <!-- Templates for custom rendering -->
+  <template id="country-renderer">
+    <span class="country-cell">
+      <span class="flag" data-bind="flag"></span>
+      <span class="name" data-bind="country"></span>
+    </span>
+  </template>
+
+  <template id="medals-renderer">
+    <span class="medals">
+      <span class="medal gold"   data-bind="gold"></span>
+      <span class="medal silver" data-bind="silver"></span>
+      <span class="medal bronze" data-bind="bronze"></span>
+    </span>
+  </template>
+
+  <template id="sport-renderer">
+    <span class="sport-pill" data-bind="sport" data-bind-attr="data-sport"></span>
+  </template>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="15">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true"
+              data-header-cell-cell-renderer-value="country-renderer"
+              data-header-cell-width-value="200">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true"
+              data-header-cell-cell-renderer-value="sport-renderer"
+              data-header-cell-width-value="200">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-cell-renderer-value="medals-renderer"
+              data-header-cell-width-value="160">Medals</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // Country → flag emoji map (covers all countries in athletes.json).
+    const FLAGS = {
+      'United States':'🇺🇸','Soviet Union':'🇷🇺','Finland':'🇫🇮','Norway':'🇳🇴',
+      'Germany':'🇩🇪','Japan':'🇯🇵','Jamaica':'🇯🇲','Russia':'🇷🇺',
+      'Great Britain':'🇬🇧','China':'🇨🇳','South Korea':'🇰🇷','Australia':'🇦🇺',
+      'Morocco':'🇲🇦','Switzerland':'🇨🇭','Spain':'🇪🇸','Ethiopia':'🇪🇹',
+      'Kenya':'🇰🇪','Bulgaria':'🇧🇬','Mozambique':'🇲🇿','Netherlands':'🇳🇱',
+      'New Zealand':'🇳🇿','Poland':'🇵🇱','South Africa':'🇿🇦','France':'🇫🇷',
+      'Colombia':'🇨🇴','Qatar':'🇶🇦','Croatia':'🇭🇷',
+    };
+
+    const grid = document.getElementById('grid');
+    grid.addEventListener('grid:ready', async (e) => {
+      const res = await fetch('./data/athletes.json');
+      const raw = await res.json();
+      const enriched = raw.map(r => ({ ...r, flag: FLAGS[r.country] || '🏳️' }));
+      e.detail.api.setRowData(enriched);
+    });
+
+    // Demo: zero-value medals are dimmed via [data-zero] — we patch them post-render.
+    grid.addEventListener('grid:rowDataChanged', () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.medal').forEach(m => {
+        if (m.textContent.trim() === '0') m.dataset.zero = 'true';
+      });
+    }));
+  </script>
+</body>
+</html>
