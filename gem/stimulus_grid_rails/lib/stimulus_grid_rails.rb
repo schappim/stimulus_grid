@@ -19,6 +19,25 @@ module StimulusGridRails
     def parent_controller
       @parent_controller ||= "ApplicationController"
     end
+
+    # Where the engine is mounted. The grid's client-side endpoints are built
+    # from this, so it must match how you mount the engine:
+    #
+    #   # config/initializers/stimulus_grid_rails.rb
+    #   StimulusGridRails.mount_path = "/admin/grids"
+    #
+    #   # config/routes.rb
+    #   mount StimulusGridRails::Engine => StimulusGridRails.mount_path
+    #
+    # Using the same value in both places keeps the browser requests and the
+    # routes in sync regardless of namespace/scope. Default "/grids".
+    def mount_path
+      @mount_path || "/grids"
+    end
+
+    def mount_path=(path)
+      @mount_path = path.to_s.sub(%r{/+\z}, "")   # strip trailing slash(es)
+    end
   end
 
   # Per-process registry of ApplicationGrid subclasses, keyed by `resource`.

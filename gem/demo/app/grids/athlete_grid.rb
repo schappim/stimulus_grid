@@ -2,10 +2,6 @@ class AthleteGrid < StimulusGridRails::Grid
   resource :athletes
   model    Athlete
 
-  # All connected users share one stream — every browser tab receives every
-  # edit. Multi-tenant apps would scope by team / user / view.
-  stream_name { |_user| "athletes" }
-
   column :athlete, type: :string,  editable: true, width: 220, pinned: :left
   column :country, type: :string,  editable: true, width: 160
   # Custom cell that is ALSO editable: a pill renderer for display

@@ -40,7 +40,16 @@ StimulusGridRails.start(app)   // grid-sync, cell-editor + Turbo Stream actions
 ```ruby
 # config/routes.rb
 mount ActionCable.server => "/cable"
-mount StimulusGridRails::Engine => "/grids"
+mount StimulusGridRails::Engine => StimulusGridRails.mount_path   # default "/grids"
+```
+
+To namespace the endpoints, set the path and mount at it (the grid builds its
+client requests from `mount_path`, so they follow automatically):
+
+```ruby
+# config/initializers/stimulus_grid_rails.rb
+StimulusGridRails.mount_path = "/admin/grids"
+# StimulusGridRails.parent_controller = "ApplicationController"   # Devise/ActsAsTenant
 ```
 
 The engine auto-pins `stimulus_grid` + `stimulus_grid_rails` via importmap and

@@ -3,8 +3,8 @@ module StimulusGridRails
   # whose `action=` is one of: cell, cell-attr, cell-confirm, cell-revert,
   # cell-conflict, row-insert-sorted, row-remove, aggregate, bulk.
   #
-  # The matching client-side StreamActions live in
-  # app/assets/javascripts/stimulus_grid_rails/stream_actions.js.
+  # The matching client-side StreamActions are registered by
+  # app/assets/javascripts/stimulus_grid_rails.js (registerStreamActions).
   #
   # Use directly:
   #   render turbo_stream: StimulusGridRails::TurboStreams.cell(

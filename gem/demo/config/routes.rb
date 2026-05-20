@@ -4,8 +4,10 @@ Rails.application.routes.draw do
   # ActionCable channel for live Turbo Stream broadcasts.
   mount ActionCable.server => "/cable"
 
-  # The gem's mutation endpoints: /grids/athletes/:id/cells/:column etc.
-  mount StimulusGridRails::Engine => "/grids", as: :stimulus_grid_rails
+  # The gem's endpoints, mounted at the configured path (see
+  # config/initializers/stimulus_grid_rails.rb — this demo namespaces them under
+  # /admin/grids to show the mount path is configurable).
+  mount StimulusGridRails::Engine => StimulusGridRails.mount_path, as: :stimulus_grid_rails
 
   resources :athletes, only: %i[index]
 

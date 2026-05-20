@@ -115,7 +115,18 @@ StimulusGridRails.start(application)   // grid-sync, cell-editor + Turbo Stream 
 ```ruby
 # config/routes.rb
 mount ActionCable.server => "/cable"
-mount StimulusGridRails::Engine => "/grids"
+mount StimulusGridRails::Engine => StimulusGridRails.mount_path   # default "/grids"
+```
+
+### Choosing the path (e.g. namespacing under `/admin`)
+
+The endpoints live wherever you mount the engine. Set `mount_path` and mount at
+the same value — the grid builds its browser requests from `mount_path`, so they
+follow automatically:
+
+```ruby
+# config/initializers/stimulus_grid_rails.rb
+StimulusGridRails.mount_path = "/admin/grids"
 ```
 
 ## Usage

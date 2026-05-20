@@ -43,3 +43,12 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
 - Undo/redo (RAILS.md §16): StimulusGridRails::Audit + migration; per cell-commit
   recording; POST /undo and /redo replay via apply_cell!; Cmd/Ctrl+Z and
   Cmd/Ctrl+Shift+Z (Ctrl+Y) shortcuts in grid-sync.
+- Editable custom cells: a column can declare cell_editor: (a <template>) so a
+  custom-rendered cell is fully editable.
+- Configurable mount path: StimulusGridRails.mount_path (default "/grids"). The
+  grid builds its client endpoints from it, so the engine can be namespaced
+  (e.g. "/admin/grids") without depending on the engine's route-helper name.
+- Removed the unused stream_name/stream_name_for Grid API (streams are derived
+  from streamables_for + tenant token since the automatic-broadcast refactor).
+- Added docs/REFERENCE.md — complete API reference (Ruby API, endpoints, Turbo
+  Stream protocol, client contract, config, tenancy).

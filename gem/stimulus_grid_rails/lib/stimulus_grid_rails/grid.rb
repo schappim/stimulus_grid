@@ -11,7 +11,6 @@ module StimulusGridRails
   #   class AthleteGrid < StimulusGridRails::Grid
   #     resource :athletes
   #     model    Athlete
-  #     stream_name { |user| "athletes:#{user.id}" }
   #
   #     column :athlete,  type: :string,  editable: true, width: 200, pinned: :left
   #     column :country,  type: :string,  editable: ->(row, user) { user.admin? }
@@ -27,7 +26,7 @@ module StimulusGridRails
   #   end
   class Grid
     class << self
-      attr_reader :resource_name, :model_class, :columns_registry, :stream_block
+      attr_reader :resource_name, :model_class, :columns_registry
 
       def resource(name)
         @resource_name = name.to_s
@@ -36,10 +35,6 @@ module StimulusGridRails
 
       def model(klass)
         @model_class = klass
-      end
-
-      def stream_name(&block)
-        @stream_block = block
       end
 
       def column(name, **opts)
@@ -67,11 +62,6 @@ module StimulusGridRails
 
     def visible_columns_for(_row)
       columns
-    end
-
-    def stream_name_for(user)
-      block = self.class.stream_block
-      block ? block.call(user) : self.class.resource_name
     end
 
     # Called from the controller after a successful coercion + permission check.

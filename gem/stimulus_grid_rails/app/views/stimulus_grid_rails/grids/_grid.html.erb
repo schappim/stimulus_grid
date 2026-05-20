@@ -18,6 +18,12 @@
   pagination   = local_assigns.fetch(:pagination, true)
   page_size    = local_assigns.fetch(:page_size, 25)
   row_selection = local_assigns[:row_selection]
+
+  # Client endpoints are built from the configured mount path (default "/grids"),
+  # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
+  # is reflected here without depending on the engine's route-helper name. :row_id
+  # and :column stay as placeholders the grid-sync controller substitutes.
+  base = StimulusGridRails.mount_path
 %>
 
 <div id="<%= grid_id %>"
@@ -28,12 +34,12 @@
      data-grid-pagination-value="<%= pagination %>"
      data-grid-page-size-value="<%= page_size %>"
      data-grid-sync-resource-value="<%= resource %>"
-     data-grid-sync-cells-path-template-value="<%= stimulus_grid_rails.cell_path(resource: ':resource', row_id: ':row_id', column: ':column') %>"
-     data-grid-sync-rows-path-value="<%= stimulus_grid_rails.rows_path(resource: resource) %>"
-     data-grid-sync-row-path-template-value="<%= stimulus_grid_rails.row_path(resource: resource, row_id: ':row_id') %>"
-     data-grid-sync-bulk-rows-path-value="<%= stimulus_grid_rails.bulk_rows_path(resource: resource) %>"
-     data-grid-sync-undo-path-value="<%= stimulus_grid_rails.undo_path(resource: resource) %>"
-     data-grid-sync-redo-path-value="<%= stimulus_grid_rails.redo_path(resource: resource) %>">
+     data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"
+     data-grid-sync-rows-path-value="<%= "#{base}/#{resource}/rows" %>"
+     data-grid-sync-row-path-template-value="<%= "#{base}/#{resource}/rows/:row_id" %>"
+     data-grid-sync-bulk-rows-path-value="<%= "#{base}/#{resource}/rows/bulk" %>"
+     data-grid-sync-undo-path-value="<%= "#{base}/#{resource}/undo" %>"
+     data-grid-sync-redo-path-value="<%= "#{base}/#{resource}/redo" %>">
   <table>
     <thead>
       <tr>
