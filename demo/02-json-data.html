@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>02 — JSON data | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>02 — JSON data</h1>
+  <p class="lede">
+    Data is loaded asynchronously from <code>/data/athletes.json</code> via
+    <code>data-grid-row-data-url-value</code>. No JS data hand-off — drop a URL
+    on the element and the grid fetches it.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="70">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="70">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="70">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="70">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <button id="show-count">Show row count</button>
+    <button id="sort-by-gold">Sort by Gold (desc)</button>
+    <button id="clear-sort">Clear sort</button>
+    <button id="add-row">Add row via API</button>
+    <span id="stat" class="stat"></span>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+
+    grid.addEventListener('grid:ready', (e) => {
+      stat.textContent = `Loaded ${e.detail.api.getRowData().length} rows`;
+    });
+    grid.addEventListener('grid:rowDataChanged', (e) => {
+      stat.textContent = `${e.detail.rows.length} rows`;
+    });
+
+    document.getElementById('show-count').onclick = () =>
+      stat.textContent = `${grid.gridApi.getRowData().length} rows total`;
+    document.getElementById('sort-by-gold').onclick = () =>
+      grid.gridApi.setSortModel([{ colId: 'gold', sort: 'desc' }]);
+    document.getElementById('clear-sort').onclick = () =>
+      grid.gridApi.setSortModel([]);
+    document.getElementById('add-row').onclick = () => {
+      const id = Date.now();
+      grid.gridApi.applyTransaction({ add: [{
+        id, athlete: 'Test Athlete', age: 22, country: 'Nowhere',
+        sport: 'Curling', date: '2026-02-14', gold: 1, silver: 0, bronze: 0,
+      }] });
+    };
+  </script>
+</body>
+</html>

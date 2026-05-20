@@ -28,14 +28,12 @@ export default class HeaderCellController extends Controller {
       if (txt) this.headerNameValue = txt;
     }
     this.grid.registerColumn(this.toColumnDef(), this.element);
-    // Auto-bind sort click (so users don't need to add data-action manually).
-    if (this.sortableValue) {
-      this.element.addEventListener('click', this._onClick);
-    }
+    // One mousedown handler dispatches to sort (bare click) or reorder (drag).
+    this.element.addEventListener('mousedown', this._onMouseDown);
   }
 
   disconnect() {
-    this.element.removeEventListener('click', this._onClick);
+    this.element.removeEventListener('mousedown', this._onMouseDown);
     this.grid?.unregisterColumn(this.fieldValue);
   }
 
@@ -58,12 +56,68 @@ export default class HeaderCellController extends Controller {
     };
   }
 
-  // Stimulus actions (wired via data-action on chrome we render). Manual entrypoint
-  // for sort lives in #_onClick so users don't have to write data-action="...sort".
-  _onClick = (event) => {
+  /* Single mousedown handler: distinguishes a bare click (→ sort) from a drag
+   * that moves past a small pixel threshold (→ column reorder). Lets us keep
+   * sort + reorder on the same header without a separate drag handle. */
+  _onMouseDown = (event) => {
+    if (event.button !== 0) return;
     if (event.target.closest('.sg-resize-handle, .sg-filter-icon, .sg-reorder-handle')) return;
-    this.sort(event);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let dragging = false;
+    const move = (e) => {
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (!dragging && (dx > 5 || dy > 5)) {
+        dragging = true;
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        this._beginReorder(startX);
+      }
+    };
+    const up = (e) => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      if (!dragging) this.sort(e);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
   };
+
+  _beginReorder(startX) {
+    if (!this.grid) return;
+    const headerRow = this.element.parentElement;
+    const ths = Array.from(headerRow.children);
+    const fromIndex = ths.indexOf(this.element);
+    let dropIndex = fromIndex;
+
+    this.element.style.opacity = '0.5';
+    this.element.style.background = 'var(--sg-bg-hover, #eef2ff)';
+    document.body.style.cursor = 'grabbing';
+
+    const move = (e) => {
+      const cursorX = e.clientX;
+      let best = ths.length;
+      for (let i = 0; i < ths.length; i++) {
+        const r = ths[i].getBoundingClientRect();
+        if (cursorX < r.left + r.width / 2) { best = i; break; }
+      }
+      dropIndex = best > fromIndex ? best - 1 : best;
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      this.element.style.opacity = '';
+      this.element.style.background = '';
+      document.body.style.cursor = '';
+      if (dropIndex !== fromIndex) {
+        this.grid.moveColumn(this.fieldValue, dropIndex);
+      }
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  }
 
   sort(event) {
     if (!this.sortableValue || !this.grid) return;
@@ -96,33 +150,4 @@ export default class HeaderCellController extends Controller {
     document.body.style.userSelect = 'none';
   }
 
-  // Column reorder (drag header to a new position).
-  startReorder(event) {
-    if (!this.grid) return;
-    event.preventDefault();
-    const startX = event.clientX;
-    const fromIndex = this.grid.state.columnDefs.findIndex((c) => c.field === this.fieldValue);
-    let dropIndex = fromIndex;
-    const cols = Array.from(this.element.parentElement.children);
-    const move = (e) => {
-      const dx = e.clientX - startX;
-      const rect = this.element.getBoundingClientRect();
-      const cursor = rect.left + dx + rect.width / 2;
-      let bestIdx = fromIndex;
-      cols.forEach((c, i) => {
-        const r = c.getBoundingClientRect();
-        if (cursor > r.left + r.width / 2) bestIdx = i + 1;
-      });
-      dropIndex = Math.min(cols.length - 1, Math.max(0, bestIdx));
-      this.element.style.opacity = '0.6';
-    };
-    const up = () => {
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-      this.element.style.opacity = '';
-      this.grid.moveColumn(this.fieldValue, dropIndex);
-    };
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up);
-  }
 }

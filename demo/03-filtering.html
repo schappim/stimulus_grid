@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>03 — Filtering | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .stat { color:#6b7280; font-size:13px; margin-left:auto; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>03 — Filtering</h1>
+  <p class="lede">
+    Hover a header to reveal the filter icon (<code>≡</code>) and click it to filter.
+    Filter types are declared on the header with
+    <code>data-header-cell-filter-value="text"</code> (also <code>number</code>,
+    <code>date</code>, <code>boolean</code>).
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number"
+              data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="date"
+              data-header-cell-width-value="120">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number"
+              data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number"
+              data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number"
+              data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <button id="usa-only">Country contains "United"</button>
+    <button id="gold-2-plus">Gold ≥ 2</button>
+    <button id="modern">Date after 2010-01-01</button>
+    <button id="clear">Clear all filters</button>
+    <span class="stat" id="stat"></span>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+    const updateStat = () => stat.textContent =
+      `${grid.gridApi.paginationGetRowCount?.() ?? grid.gridApi.getRowData().length} rows shown after filter`;
+
+    grid.addEventListener('grid:ready', updateStat);
+    grid.addEventListener('grid:filterChanged', updateStat);
+
+    document.getElementById('usa-only').onclick = () =>
+      grid.gridApi.setFilterModel({ country: { filterType: 'text', type: 'contains', value: 'United' } });
+    document.getElementById('gold-2-plus').onclick = () =>
+      grid.gridApi.setFilterModel({ gold: { filterType: 'number', type: 'greaterThanOrEqual', value: 2 } });
+    document.getElementById('modern').onclick = () =>
+      grid.gridApi.setFilterModel({ date: { filterType: 'date', type: 'greaterThan', value: '2010-01-01' } });
+    document.getElementById('clear').onclick = () =>
+      grid.gridApi.setFilterModel({});
+  </script>
+</body>
+</html>
