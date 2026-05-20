@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "stimulus_grid_rails demo" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%= stylesheet_link_tag "stimulus_grid",        media: "all" %>
+    <%= stylesheet_link_tag "stimulus_grid_rails",  media: "all" %>
+    <%= stylesheet_link_tag "application",          media: "all" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>
