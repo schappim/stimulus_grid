@@ -150,12 +150,26 @@ and updates its dataset; persist by listening to that event.
 
 ## Cell selection & copy
 
-Cells aren't browser-text-selectable; the grid has its own Numbers/Sheets-style
-model (default `data-grid-cell-selection-value="true"`):
-- **plain click** → active cell only (outline; no row selection)
-- **shift+click / drag** → rectangular cell range (active cell stays outlined, not filled)
-- **Cmd/Ctrl+click** → toggle a row
-- **Cmd/Ctrl+Shift+click** → select a row range (from the last row anchor)
+Cells aren't browser-text-selectable; the grid has a Numbers/Sheets-style model
+(default `data-grid-cell-selection-value="true"`):
+
+Mouse (cells):
+- **click** → active cell (outline; not filled)
+- **shift+click / drag** → rectangular cell range
+- **Cmd/Ctrl+click** → add a non-contiguous range (multi-range); **Cmd/Ctrl+drag** extends it
+
+Keyboard:
+- **arrows** move the active cell; **Shift+arrows** extend the range; **Tab/Shift+Tab** move
+- **Cmd/Ctrl+A** → select all rows (grids with row selection) or all cells
+- **Enter** edits the active cell; **type a character** starts editing seeded with it
+- **Delete/Backspace** clears the selected editable cells; **Esc** clears the selection
+- **Cmd/Ctrl+C** copies the active range as TSV
+
+Row selection: add a **row-number gutter** column —
+`<th data-controller="header-cell" data-header-cell-row-number-value="true" data-header-cell-pinned-value="left">` —
+then click the number to select the row, Shift+click for a range, Cmd/Ctrl+click to add.
+(Or a checkbox column via `data-header-cell-checkbox-value="true"`.) Active cell =
+outline; cell range = blue; row selection = green — distinct on purpose.
 
 Highlights are distinct: active cell = accent **outline box**; cell range = **blue**
 fill (`data-cell-range`); row selection = **green** fill (`data-selected`).

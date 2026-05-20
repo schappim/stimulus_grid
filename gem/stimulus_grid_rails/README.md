@@ -331,12 +331,15 @@ still broadcast live. See `gem/demo` (the `/big_rows` page seeds 50k rows).
 
 ## Cells: selection, copy, paste
 
-- Cells use a **Numbers/Sheets-style selection model** (no browser text
-  highlight): plain click = active cell, drag/shift+click = cell range,
-  **Cmd/Ctrl+click = toggle a row**, **Cmd/Ctrl+Shift+click = row range**.
-  Distinct colors — cell range is blue, the active cell is outlined, row
-  selection is green. (`data-grid-cell-selection-value="false"` restores
-  plain-click row selection.)
+- **Numbers/Sheets-style selection** (no browser text highlight): click = active
+  cell; shift+click/drag = cell range; **Cmd/Ctrl+click = a non-contiguous cell
+  range**. Keyboard: arrows move, Shift+arrows extend, **Cmd/Ctrl+A selects all
+  rows**, Enter/type-to-edit, Delete clears, Esc clears, Cmd/Ctrl+C copies.
+  Colors are distinct — cell range blue, active cell outlined, row selection green.
+- **Row selection gutter** (optional): pass `row_gutter: :numbers` (1-based row
+  numbers) or `row_gutter: :checkbox` (per-row checkbox + select-all header) to
+  the grid partial. Click = select row, Shift+click = range, Cmd/Ctrl+click = add.
+  (`data-grid-cell-selection-value="false"` restores legacy plain-click row select.)
 - **Copy** the range with `Cmd/Ctrl+C` (TSV).
 - **Bulk paste** (§9): click an editable anchor cell, then paste tab/newline data
   (e.g. from a spreadsheet). The grid fills the range and POSTs one request to
