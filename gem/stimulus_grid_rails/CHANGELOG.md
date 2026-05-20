@@ -23,3 +23,10 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
 - `grid-sync` Stimulus controller — turns base-grid `cellValueChanged` events
   into optimistic PATCHes and reconciles the response; suppresses the
   originating client's own broadcast echo.
+- Row create/destroy (RAILS.md §14/§15): `RowsController` with create,
+  destroy, and bulk-destroy; `Grid#new_row_defaults`/`build_new_row`/`row_to_json`;
+  `Column` `sortable:`/`filterable:` options for action columns; grid-sync
+  `addRow`/`removeRow`/`deleteSelected` via `grid-sync:add-row` /
+  `grid-sync:delete-selected` events + delegated per-row delete buttons.
+- Editor cell navigation: Tab / Shift+Tab move the open editor to the next /
+  previous editable cell (wraps within the page), committing as they go.

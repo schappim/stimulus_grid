@@ -25,13 +25,15 @@ Rails app *knows its schema*.
 | §4 | Optimistic updates: cell marked `data-pending`, `X-Optimistic-Id` header, server `cell-confirm`/`cell-revert`, originator suppresses its own broadcast echo | ✅ |
 | §7 | Server-side column registry: per-column `type`, `editable` (bool or lambda), `editor`, `editor_config`, `validate`, `concurrency`, `computed`/`depends_on` | ✅ |
 | §8 | One cell-mutation endpoint `PATCH /grids/:resource/:row_id/cells/:column` | ✅ |
-| §9 | Single-cell commit edit mode (Tab/Enter/Esc) | ✅ |
+| §9 | Single-cell commit edit mode + Tab/Shift+Tab cell navigation + Enter/Esc | ✅ |
 | §10 | Standard editors: string/text/integer/decimal/money/boolean/enum/date/datetime | ✅ (via base grid) |
 | §11 | Server-side validation → `cell-revert` with `errors` payload | ✅ |
 | §12 | Computed columns + cascade replayed server-side as a `bulk` stream | ✅ |
 | §13 | Version-checked concurrency (`lock_version` → `cell-conflict`) | ✅ |
+| §14 | Create rows: `POST /grids/:resource/rows` → `row-insert-sorted` broadcast | ✅ |
+| §15 | Delete rows: per-row + multi-select bulk → `row-remove` broadcast | ✅ |
 | §17 | `editable:` lambda re-checked on every PATCH (never trust the client) | ✅ |
-| §9 (bulk), §14, §15, §16 | Bulk paste / inline create / delete / undo-redo | ⏳ partial / deferred |
+| §9 (bulk paste), §16 | Excel paste / undo-redo | ⏳ deferred |
 
 ---
 
@@ -201,6 +203,35 @@ and watch **total** cascade. Set age to `999` and watch the server reject it.
 The originating client carries its own optimistic-id set and **suppresses the
 broadcast echo of its own edit**, so it doesn't double-apply.
 
+### Adding & removing rows (§14/§15)
+
+Create and delete flow through the gem and broadcast live to every tab. Wire a
+toolbar by dispatching events on the grid element:
+
+```js
+gridEl.dispatchEvent(new CustomEvent("grid-sync:add-row"))           // optional { detail: { attributes } }
+gridEl.dispatchEvent(new CustomEvent("grid-sync:delete-selected"))   // deletes gridApi.getSelectedRowIds()
+```
+
+Per-row delete buttons work via a cell renderer + delegated click — declare an
+action column and provide the template:
+
+```ruby
+column :_actions, type: :string, editable: false, sortable: false,
+                  filterable: false, pinned: :right, cell_renderer: "sgr-row-actions"
+def new_row_defaults = { athlete: "New athlete", sport: "Swimming", age: 20, gold: 0, silver: 0, bronze: 0 }
+```
+
+```erb
+<template id="sgr-row-actions">
+  <button data-sgr-action="delete-row" title="Delete row">×</button>
+</template>
+```
+
+Create persists with `new_row_defaults`, returns + broadcasts `row-insert-sorted`
+(idempotent by id, so the originator doesn't double-add). Delete relies on the
+model's `after_destroy_commit` `row-remove` broadcast for other tabs.
+
 ## Roadmap
 
 Deferred from this MVP slice (PRs welcome):
@@ -209,9 +240,6 @@ Deferred from this MVP slice (PRs welcome):
   `bulk` stream with per-mutation confirm/revert + partial-success toast. *(The
   `/bulk` endpoint and `bulk` action exist; the client-side paste detection does
   not.)*
-- **Inline create** (§14): sentinel row → `POST /grids/:resource` → replace with
-  persisted row.
-- **Delete** (§15): multi-select + Delete key → `DELETE /grids/:resource/bulk`.
 - **Undo/redo** (§16): server-side audit row + inverse-mutation replay.
 - **Field-locking & presence** (§13 field-locked, §1 `presence`): the `presence`
   Turbo Stream action is wired client-side; the lock lifecycle is not.
