@@ -1,0 +1,60 @@
+<% content_for :title, "Athletes — stimulus_grid_rails demo" %>
+
+<header class="page">
+  <h1>Athletes</h1>
+  <p class="lede">
+    Edit any cell. Changes commit on <kbd>Enter</kbd> / blur, fly through a
+    <code>PATCH /grids/athletes/:id/cells/:column</code> with an optimistic id,
+    and broadcast to every connected tab via Turbo Stream over Action Cable.
+    Try opening this page in two browser windows side-by-side and edit in one
+    — the other updates within ~50 ms.
+  </p>
+  <ul class="features">
+    <li><strong>Server-side column registry</strong> (RAILS.md §7): see <code>app/grids/athlete_grid.rb</code></li>
+    <li><strong>Optimistic updates</strong> with reconcile (§4): blue pulse during commit, green flash on confirm, red on revert</li>
+    <li><strong>Computed cascade</strong> (§12): edit gold/silver/bronze and watch <em>total</em> update in the same broadcast</li>
+    <li><strong>Version-checked concurrency</strong> (§13): the <em>age</em> column carries <code>lock_version</code></li>
+    <li><strong>Cross-tab live sync</strong> via <code>turbo_stream_from "athletes"</code></li>
+    <li><strong>Server validation</strong>: try setting age to 999 — server rejects, cell reverts with a tooltip</li>
+  </ul>
+</header>
+
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: @grid, rows: @athletes, row_selection: "multiple", page_size: 25 } %>
+
+<footer class="page-foot">
+  <small>
+    Total computed live as you edit medal counts. Backed by Action Cable;
+    open <code>/cable</code> in two tabs to see the WebSocket frames.
+  </small>
+</footer>
+
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0 20px;
+    color: #1f2937;
+    line-height: 1.5;
+  }
+  header.page h1 { margin-bottom: 4px; }
+  .lede { color: #4b5563; margin-top: 0; }
+  .features {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 10px 28px; font-size: 13px; color: #374151;
+  }
+  .features li { margin: 4px 0; }
+  .features strong { color: #111827; }
+  .sgr-panel { height: 600px; margin-top: 14px; }
+  kbd {
+    background: #f3f4f6; border: 1px solid #d1d5db; border-bottom-width: 2px;
+    border-radius: 3px; padding: 1px 5px; font-family: ui-monospace, monospace;
+    font-size: .85em;
+  }
+  code {
+    background: #f3f4f6; padding: 1px 5px; border-radius: 3px;
+    font-family: ui-monospace, monospace; font-size: .9em;
+  }
+  .page-foot { margin-top: 20px; color: #6b7280; font-size: 13px; }
+</style>
