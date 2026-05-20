@@ -15,6 +15,8 @@
     <li><strong>Computed cascade</strong> (§12): edit gold/silver/bronze and watch <em>total</em> update in the same broadcast</li>
     <li><strong>Version-checked concurrency</strong> (§13): the <em>age</em> column carries <code>lock_version</code></li>
     <li><strong>Add / remove rows</strong> (§14/§15): the toolbar adds; the × on each row (or "Delete selected") removes — live in every tab</li>
+    <li><strong>Server-side global search + filtering</strong> (§21): the search box and per-column filters query the DB via the column registry (<code>GET /grids/athletes/rows</code>) and swap the dataset</li>
+    <li><strong>Custom cells</strong>: the <em>Medals</em> column is a client-side renderer (<code>&lt;template id="sgr-medals"&gt;</code> with <code>data-bind</code>)</li>
     <li><strong>Cross-tab live sync</strong> via <code>turbo_stream_from "athletes"</code></li>
     <li><strong>Server validation</strong>: try setting age to 999 — server rejects, cell reverts with a tooltip</li>
   </ul>
@@ -25,9 +27,29 @@
   <button type="button" class="sgr-del" data-sgr-action="delete-row" title="Delete row">×</button>
 </template>
 
+<%# Custom cell: medal badges bound to the row's gold/silver/bronze values. %>
+<template id="sgr-medals">
+  <span class="medals">
+    <span class="medal gold"   data-bind="gold"   title="Gold"></span>
+    <span class="medal silver" data-bind="silver" title="Silver"></span>
+    <span class="medal bronze" data-bind="bronze" title="Bronze"></span>
+  </span>
+</template>
+
+<div class="searchbar" data-grid-id="athletes-grid">
+  <input type="search" id="global-search" autocomplete="off"
+         placeholder="🔎  Search athletes — name, country, sport (server-side)…" />
+  <button type="button" id="clear-filters">Clear</button>
+</div>
+
 <div class="toolbar" data-grid-id="athletes-grid">
   <button type="button" id="add-row">+ Add athlete</button>
   <button type="button" id="delete-selected">Delete selected</button>
+  <span class="filters">
+    <input type="search" class="col-filter" data-col="country" data-op="contains" placeholder="country contains…" autocomplete="off" />
+    <input type="search" class="col-filter" data-col="sport"   data-op="contains" placeholder="sport contains…" autocomplete="off" />
+    <input type="number" class="col-filter" data-col="gold"    data-op="greaterThanOrEqual" placeholder="min gold" />
+  </span>
   <span class="stat" id="stat">…</span>
 </div>
 
@@ -48,6 +70,7 @@
   (function () {
     const gridEl = document.getElementById("athletes-grid");
     const stat = document.getElementById("stat");
+    const grandTotal = <%= @athletes.size %>;
 
     document.getElementById("add-row").addEventListener("click", () => {
       gridEl.dispatchEvent(new CustomEvent("grid-sync:add-row"));
@@ -56,16 +79,57 @@
       gridEl.dispatchEvent(new CustomEvent("grid-sync:delete-selected"));
     });
 
+    // Global search → server-side query.
+    document.getElementById("global-search").addEventListener("input", (e) => {
+      gridEl.dispatchEvent(new CustomEvent("grid-sync:search", { detail: { q: e.target.value } }));
+    });
+
+    // Per-column filters → server-side query. Each input declares its column +
+    // operator; an empty value clears that column's filter.
+    document.querySelectorAll(".col-filter").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        const value = inp.value.trim();
+        const criteria = value === "" ? null : { type: inp.dataset.op, value };
+        gridEl.dispatchEvent(new CustomEvent("grid-sync:filter", {
+          detail: { column: inp.dataset.col, criteria },
+        }));
+      });
+    });
+
+    // Clear everything.
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      document.getElementById("global-search").value = "";
+      document.querySelectorAll(".col-filter").forEach((i) => { i.value = ""; });
+      gridEl.dispatchEvent(new CustomEvent("grid-sync:clear-filters"));
+    });
+
+    // Dim zero-count medal badges after each render (custom-cell polish).
+    function dimZeros() {
+      requestAnimationFrame(() => {
+        gridEl.querySelectorAll(".medal").forEach((m) => {
+          m.dataset.zero = m.textContent.trim() === "0" ? "true" : "";
+        });
+      });
+    }
+
+    let lastServerTotal = null;
     function refreshStat() {
       const api = gridEl.gridApi;
       if (!api) return;
-      const total = api.getRowData().length;
+      const shown = api.getRowData().length;
       const selected = api.getSelectedRowIds ? api.getSelectedRowIds().length : 0;
-      stat.textContent = `${total} rows` + (selected ? ` · ${selected} selected` : "");
+      let base = lastServerTotal == null || lastServerTotal === shown
+        ? `${shown} rows`
+        : `${shown} of ${grandTotal} rows (filtered)`;
+      stat.textContent = base + (selected ? ` · ${selected} selected` : "");
     }
+    gridEl.addEventListener("grid-sync:rows-fetched", (e) => {
+      lastServerTotal = e.detail.total;
+      refreshStat();
+    });
     ["grid:ready", "grid:rowDataChanged", "grid:selectionChanged"].forEach((ev) =>
-      gridEl.addEventListener(ev, refreshStat));
-    requestAnimationFrame(refreshStat);
+      gridEl.addEventListener(ev, () => { refreshStat(); dimZeros(); }));
+    requestAnimationFrame(() => { refreshStat(); dimZeros(); });
   })();
 </script>
 
@@ -86,8 +150,38 @@
   }
   .features li { margin: 4px 0; }
   .features strong { color: #111827; }
+  /* --- Search box --- */
+  .searchbar {
+    display: flex; align-items: center; gap: 8px; margin-top: 16px;
+  }
+  .searchbar #global-search {
+    flex: 1;
+    appearance: none;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 15px;
+    color: #111827;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .searchbar #global-search::placeholder { color: #9ca3af; }
+  .searchbar #global-search:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+  .searchbar #clear-filters {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 9px 16px; font: inherit; cursor: pointer; color: #374151;
+  }
+  .searchbar #clear-filters:hover { background: #f3f4f6; }
+
+  /* --- Toolbar (actions + per-column filters) --- */
   .toolbar {
-    display: flex; align-items: center; gap: 8px; margin-top: 14px;
+    display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;
   }
   .toolbar button {
     background: #fff; border: 1px solid #d1d5db; border-radius: 5px;
@@ -96,13 +190,35 @@
   .toolbar button:hover { background: #f3f4f6; }
   .toolbar #add-row { border-color: #2563eb; color: #1d4ed8; }
   .toolbar #delete-selected { border-color: #fca5a5; color: #dc2626; }
-  .toolbar .stat { margin-left: auto; color: #6b7280; font-size: 13px; }
+  .toolbar .filters { display: flex; gap: 6px; align-items: center; }
+  .toolbar .col-filter {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 5px;
+    padding: 5px 9px; font: inherit; font-size: 13px; width: 150px;
+  }
+  .toolbar .col-filter[type="number"] { width: 90px; }
+  .toolbar .col-filter:focus {
+    outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+  }
+  .toolbar .stat { margin-left: auto; color: #6b7280; font-size: 13px; white-space: nowrap; }
   .sgr-del {
     background: transparent; border: 1px solid #fca5a5; color: #dc2626;
     border-radius: 4px; padding: 0 8px; font-size: 15px; line-height: 20px;
     cursor: pointer;
   }
   .sgr-del:hover { background: #fee2e2; }
+
+  /* --- Custom cell: medal badges --- */
+  .medals { display: inline-flex; gap: 3px; align-items: center; }
+  .medal {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 18px; border-radius: 9px;
+    font-size: 11px; font-weight: 600;
+  }
+  .medal.gold   { background: #fef3c7; color: #92400e; }
+  .medal.silver { background: #e5e7eb; color: #374151; }
+  .medal.bronze { background: #fce7d6; color: #9a3412; }
+  .medal[data-zero="true"] { opacity: 0.25; }
+
   .sgr-panel { height: 600px; margin-top: 10px; }
   kbd {
     background: #f3f4f6; border: 1px solid #d1d5db; border-bottom-width: 2px;

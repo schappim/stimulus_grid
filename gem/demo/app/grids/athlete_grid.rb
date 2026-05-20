@@ -26,6 +26,14 @@ class AthleteGrid < StimulusGridRails::Grid
   column :total,   type: :integer, computed: true, depends_on: %i[gold silver bronze],
                    editable: false, width: 70, header: "Total"
 
+  # Custom cell — a client-side renderer (template id "sgr-medals") shows the
+  # row's gold/silver/bronze as colored badges via data-bind. Presentational,
+  # so it's non-editable / non-sortable / non-filterable and excluded from the
+  # search JSON (name starts with "_").
+  column :_medals, type: :string, editable: false, sortable: false,
+                   filterable: false, width: 110, header: "Medals",
+                   cell_renderer: "sgr-medals"
+
   # Action column — a client-side renderer (template id "sgr-row-actions")
   # supplies a per-row delete button. Not a model attribute, so name starts
   # with "_" (skipped by row_to_h) and it's non-sortable / non-filterable.
