@@ -960,6 +960,10 @@ export default class GridController extends Controller {
   _onBodyClick(e) {
     const tr = e.target.closest('tr');
     if (!tr) return;
+    // Clicks inside an active editor must not trigger selection. Selection
+    // toggles render the row, which rebuilds the cell and destroys the live
+    // <input>, so the user can't position their cursor in the editor.
+    if (e.target.closest('td[data-editing="true"]')) return;
     const rowId = this._coerceRowId(tr.dataset.rowId);
     const td = e.target.closest('td');
     if (e.target.matches('input[type="checkbox"]')) {
@@ -982,6 +986,9 @@ export default class GridController extends Controller {
     const tr = e.target.closest('tr');
     const td = e.target.closest('td');
     if (!tr || !td) return;
+    // Dblclick inside the active editor should select a word, not restart editing
+    // (which would re-render and lose the input).
+    if (td.dataset.editing === 'true') return;
     const rowId = this._coerceRowId(tr.dataset.rowId);
     const colId = td.dataset.colId;
     this.startEditingCell(rowId, colId);
