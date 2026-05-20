@@ -324,7 +324,10 @@ class GridSyncController extends Controller {
   async deleteSelected() {
     const api = this._gridEl.gridApi
     if (!api) return
-    const ids = api.getSelectedRowIds ? api.getSelectedRowIds() : []
+    // Prefer explicit row selection (checkbox / Cmd-click); otherwise fall back
+    // to the rows covered by the current cell selection.
+    let ids = api.getSelectedRowIds ? api.getSelectedRowIds() : []
+    if (!ids.length && api.getCellSelectionRowIds) ids = api.getCellSelectionRowIds()
     if (!ids.length) return
     if (this.hasBulkRowsPathValue) {
       try {

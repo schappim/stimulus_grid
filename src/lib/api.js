@@ -59,6 +59,7 @@ export function createGridApi(grid) {
     // ---- Cell selection ----
     getCellSelection() { return grid.getCellSelectionDetail(); },
     getCellRangeValues() { return grid._cellRangeRows(); },
+    getCellSelectionRowIds() { return grid.getCellSelectionRowIds(); },
 
     // ---- Editing ----
     startEditingCell({ rowId, colId }) { grid.startEditingCell(rowId, colId); },

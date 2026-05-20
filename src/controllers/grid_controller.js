@@ -24,6 +24,7 @@ export default class GridController extends Controller {
     domLayout:      { type: String, default: '' },          // '' | 'autoHeight'
     serverSide:     { type: Boolean, default: false },       // rowData is one server page
     rowCount:       { type: Number, default: 0 },            // total rows on the server
+    cellSelection:  { type: Boolean, default: true },        // click=cell; modifier/checkbox=row
   };
 
   initialize() {
@@ -1047,8 +1048,20 @@ export default class GridController extends Controller {
     if (this._cellDragMoved) { this._cellDragMoved = false; return; }
     if (this.suppressRowClickSelectionValue) return;
     if (this.rowSelectionValue === '') return;
-    const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
-    this.toggleRowSelection(rowId, mode);
+    if (this.cellSelectionValue) {
+      // Cell-primary mode: a plain click selects the CELL (set on mousedown) and
+      // clears row selection; rows are selected with a modifier or the checkbox
+      // column — so plain cell clicks no longer paint whole rows.
+      if (e.metaKey || e.ctrlKey) {
+        this.toggleRowSelection(rowId, 'toggle');
+      } else if (!e.shiftKey) {
+        if (this.state.selection.size) this.deselectAll();   // fresh single cell
+      }
+      // shift+click extends the cell range (handled in _onCellMouseDown).
+    } else {
+      const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
+      this.toggleRowSelection(rowId, mode);
+    }
     emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
   }
 
@@ -1165,6 +1178,18 @@ export default class GridController extends Controller {
       rowCount: rect ? rect.r1 - rect.r0 + 1 : 0,
       colCount: rect ? rect.c1 - rect.c0 + 1 : 0,
     };
+  }
+
+  // Row ids covered by the current cell selection rectangle.
+  getCellSelectionRowIds() {
+    const rect = this._cellSelRect();
+    if (!rect) return [];
+    const ids = [];
+    for (let r = rect.r0; r <= rect.r1; r++) {
+      const row = rect.rows[r];
+      if (row) ids.push(this._rowId(row));
+    }
+    return ids;
   }
 
   _onBodyDblClick(e) {

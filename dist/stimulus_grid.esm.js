@@ -2,11 +2,11 @@ var q = Object.defineProperty;
 var z = (s, l, e) => l in s ? q(s, l, { enumerable: !0, configurable: !0, writable: !0, value: e }) : s[l] = e;
 var m = (s, l, e) => z(s, typeof l != "symbol" ? l + "" : l, e);
 import { Controller as v, Application as B } from "@hotwired/stimulus";
-function _(s, l) {
+function b(s, l) {
   return typeof l.valueGetter == "function" ? l.valueGetter(s) : s?.[l.field];
 }
 function y(s, l) {
-  const e = _(s, l);
+  const e = b(s, l);
   return typeof l.valueFormatter == "function" ? l.valueFormatter(e, s) : e == null ? "" : l.type === "date" && e instanceof Date ? e.toLocaleDateString() : l.type === "boolean" ? e ? "✓" : "" : String(e);
 }
 const A = {
@@ -48,21 +48,21 @@ const G = {
   notBlank: (s) => s != null && s !== ""
 }, H = {
   equals: (s, l) => l === "true" ? !!s : l === "false" ? !s : !0
-}, $ = {
+}, K = {
   in: (s, l) => Array.isArray(l) && l.includes(String(s ?? ""))
-}, j = { text: A, number: W, date: G, boolean: H, set: $ };
-function K(s, l, e) {
+}, $ = { text: A, number: W, date: G, boolean: H, set: K };
+function j(s, l, e) {
   if (!e) return !0;
-  const t = e.filterType || l.filter || "text", n = (j[t] || A)[e.type];
+  const t = e.filterType || l.filter || "text", n = ($[t] || A)[e.type];
   if (!n) return !0;
-  const r = _(s, l);
+  const r = b(s, l);
   return n(r, e.value, e.value2);
 }
 function P(s, l, e) {
   const t = Object.entries(l || {}).filter(([, i]) => i != null);
   return t.length === 0 ? s : s.filter((i) => t.every(([n, r]) => {
     const a = e[n];
-    return a ? K(i, a, r) : !0;
+    return a ? j(i, a, r) : !0;
   }));
 }
 function T(s, l, e) {
@@ -94,7 +94,7 @@ function X(s, l, e) {
     for (const { colId: r, sort: a } of l) {
       const o = e[r];
       if (!o) continue;
-      const c = _(i, o), u = _(n, o), d = typeof o.comparator == "function" ? o.comparator(c, u, i, n) : U(c, u, o.type);
+      const c = b(i, o), u = b(n, o), d = typeof o.comparator == "function" ? o.comparator(c, u, i, n) : U(c, u, o.type);
       if (d !== 0) return a === "desc" ? -d : d;
     }
     return 0;
@@ -256,6 +256,9 @@ function J(s) {
     getCellRangeValues() {
       return s._cellRangeRows();
     },
+    getCellSelectionRowIds() {
+      return s.getCellSelectionRowIds();
+    },
     // ---- Editing ----
     startEditingCell({ rowId: l, colId: e }) {
       s.startEditingCell(l, e);
@@ -294,11 +297,11 @@ function f(s, l = {}, e = []) {
     i == null || i === !1 || t.appendChild(typeof i == "string" ? document.createTextNode(i) : i);
   return t;
 }
-function L(s, l) {
+function I(s, l) {
   for (const [e, t] of Object.entries(l))
     t == null || t === !1 ? s.removeAttribute(e) : t === !0 ? s.setAttribute(e, "") : s.setAttribute(e, String(t));
 }
-function I(s) {
+function L(s) {
   const l = document.getElementById(s);
   return !l || l.tagName !== "TEMPLATE" ? null : l.content.firstElementChild.cloneNode(!0);
 }
@@ -443,9 +446,9 @@ class D extends v {
   }
   _openFallbackFilterPopover(e, t) {
     const i = this.state.filterModel[e.field] || {}, n = se(e.filter), r = f("div", { class: "sg-filter-popover" }), a = f("select");
-    n.forEach((b) => a.append(new Option(b.label, b.value, !1, b.value === i.type)));
+    n.forEach((_) => a.append(new Option(_.label, _.value, !1, _.value === i.type)));
     const o = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", c = f("input", { type: o, value: i.value ?? "" }), u = f("input", { type: o, value: i.value2 ?? "", style: { display: "none" } }), d = () => {
-      const b = a.value, R = b === "inRange", O = !(b === "blank" || b === "notBlank");
+      const _ = a.value, R = _ === "inRange", O = !(_ === "blank" || _ === "notBlank");
       c.style.display = O ? "" : "none", u.style.display = R ? "" : "none";
     };
     a.addEventListener("change", d), d();
@@ -453,7 +456,7 @@ class D extends v {
     h.append(p, C), p.addEventListener("click", () => {
       this.setColumnFilter(e.field, null), this._closeFilterPopover();
     }), C.addEventListener("click", () => {
-      const b = a.value, R = b === "blank" || b === "notBlank" ? { filterType: e.filter, type: b } : { filterType: e.filter, type: b, value: c.value, value2: u.value || void 0 };
+      const _ = a.value, R = _ === "blank" || _ === "notBlank" ? { filterType: e.filter, type: _ } : { filterType: e.filter, type: _, value: c.value, value2: u.value || void 0 };
       this.setColumnFilter(e.field, R), this._closeFilterPopover();
     }), r.append(
       f("label", {}, "Condition"),
@@ -581,7 +584,7 @@ class D extends v {
     const i = this.state.columnDefs.find((r) => r.field === t);
     if (!i || !i.editable) return;
     const n = this.state.rowData.find((r) => this._rowId(r) === e);
-    n && (this.state.editing = { rowId: e, colId: t, originalValue: _(n, i) }, this.scheduleRender("cells"));
+    n && (this.state.editing = { rowId: e, colId: t, originalValue: b(n, i) }, this.scheduleRender("cells"));
   }
   stopEditing(e = !1) {
     if (!this.state.editing) return;
@@ -735,7 +738,7 @@ class D extends v {
       const h = t.querySelector(`th[data-header-cell-field-value="${S(d.field)}"]`) || t.querySelector(`th[data-field="${S(d.field)}"]`);
       if (!h) continue;
       const p = this.state.sortModel.find((C) => C.colId === d.field);
-      L(h, {
+      I(h, {
         "data-sortable": d.sortable ? "true" : null,
         "data-filterable": d.filter ? "true" : null,
         "data-filter-active": this.state.filterModel[d.field] ? "true" : null,
@@ -812,7 +815,7 @@ class D extends v {
     let r = i.get(n);
     r || (r = f("tr")), r.dataset.rowId = n, r.classList.remove("sg-spacer");
     const a = this.state.selection.has(this._rowId(e));
-    return L(r, { "data-selected": a ? "true" : null }), this._renderRow(r, e, t), r;
+    return I(r, { "data-selected": a ? "true" : null }), this._renderRow(r, e, t), r;
   }
   _spacerRow(e, t) {
     if (e <= 0) {
@@ -840,7 +843,7 @@ class D extends v {
       }
       if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === o.field) {
         u.setAttribute("data-editing", "true");
-        const { node: h, control: p } = this._buildEditor(o, _(t, o));
+        const { node: h, control: p } = this._buildEditor(o, b(t, o));
         u.appendChild(h), queueMicrotask(() => {
           p?.focus(), p?.select?.();
         });
@@ -851,9 +854,9 @@ class D extends v {
   }
   _renderCellContent(e, t, i) {
     if (i.cellRenderer) {
-      const n = I(i.cellRenderer);
+      const n = L(i.cellRenderer);
       if (n) {
-        const r = _(t, i), a = y(t, i);
+        const r = b(t, i), a = y(t, i);
         (n.dataset.bind || n.dataset.bindText !== void 0) && (n.textContent = n.dataset.bind ? String(t[n.dataset.bind] ?? "") : a), n.dataset.bindAttr && n.setAttribute(n.dataset.bindAttr, r), n.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((o) => {
           o.dataset.bindText !== void 0 ? o.textContent = a : o.dataset.bind && (o.textContent = String(t[o.dataset.bind] ?? "")), o.dataset.bindAttr && o.setAttribute(o.dataset.bindAttr, r);
         }), e.appendChild(n);
@@ -867,7 +870,7 @@ class D extends v {
   // <template> (col.cellEditor); otherwise a type-appropriate input is built.
   _buildEditor(e, t) {
     if (e.cellEditor) {
-      const n = I(e.cellEditor);
+      const n = L(e.cellEditor);
       if (n) {
         const r = n.matches?.("input,select,textarea") ? n : n.querySelector?.("[data-editor-input]") || n.querySelector?.("input,select,textarea");
         return r && (this._seedEditorValue(r, e, t), r.addEventListener("keydown", this._onEditorKey), r.addEventListener("blur", this._onEditorBlur)), { node: n, control: r };
@@ -913,16 +916,22 @@ class D extends v {
       return;
     }
     if (n) {
-      const a = this.state.rowData.find((c) => this._rowId(c) === i), o = n.dataset.colId;
-      g(this.element, "grid:cellClicked", { rowId: i, colId: o, value: a?.[o], event: e });
+      const r = this.state.rowData.find((o) => this._rowId(o) === i), a = n.dataset.colId;
+      g(this.element, "grid:cellClicked", { rowId: i, colId: a, value: r?.[a], event: e });
     }
     if (this._cellDragMoved) {
       this._cellDragMoved = !1;
       return;
     }
-    if (this.suppressRowClickSelectionValue || this.rowSelectionValue === "") return;
-    const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
-    this.toggleRowSelection(i, r), g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((a) => this._rowId(a) === i), event: e });
+    if (!this.suppressRowClickSelectionValue && this.rowSelectionValue !== "") {
+      if (this.cellSelectionValue)
+        e.metaKey || e.ctrlKey ? this.toggleRowSelection(i, "toggle") : e.shiftKey || this.state.selection.size && this.deselectAll();
+      else {
+        const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
+        this.toggleRowSelection(i, r);
+      }
+      g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
+    }
   }
   // ----- Cell selection (click = active cell, drag / shift+click = range) -----
   _cellAt(e) {
@@ -983,6 +992,17 @@ class D extends v {
       rowCount: e ? e.r1 - e.r0 + 1 : 0,
       colCount: e ? e.c1 - e.c0 + 1 : 0
     };
+  }
+  // Row ids covered by the current cell selection rectangle.
+  getCellSelectionRowIds() {
+    const e = this._cellSelRect();
+    if (!e) return [];
+    const t = [];
+    for (let i = e.r0; i <= e.r1; i++) {
+      const n = e.rows[i];
+      n && t.push(this._rowId(n));
+    }
+    return t;
   }
   _onBodyDblClick(e) {
     const t = e.target.closest("tr"), i = e.target.closest("td");
@@ -1058,8 +1078,10 @@ m(D, "values", {
   // '' | 'autoHeight'
   serverSide: { type: Boolean, default: !1 },
   // rowData is one server page
-  rowCount: { type: Number, default: 0 }
+  rowCount: { type: Number, default: 0 },
   // total rows on the server
+  cellSelection: { type: Boolean, default: !0 }
+  // click=cell; modifier/checkbox=row
 });
 function ie(s, l) {
   const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox"];
