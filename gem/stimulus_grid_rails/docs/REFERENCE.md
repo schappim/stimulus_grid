@@ -130,6 +130,7 @@ Constructed as `YourGrid.new(user: current_user)`.
 | `search_and_filter` | `(relation, q:, filters:) => Relation` | Applies global search + per-column filters. |
 | `apply_search` | `(relation, q) => Relation` | OR of each searchable column's `search_predicate`. |
 | `apply_filters` | `(relation, filters) => Relation` | AND of each column's `filter_predicate`. |
+| `apply_sort` | `(relation, sort_model) => Relation` | Server-side sort (Arel) from `[{ "colId":, "sort":"asc"|"desc" }]`; real columns only. |
 | `row_id` | `(row) => Object` | `row.id` (or `row[:id]`). |
 
 ### Computed columns
@@ -287,7 +288,7 @@ demo uses `/admin/grids`). All mutating requests require the CSRF token in
 |---|---|---|---|---|
 | PATCH | `/:resource/:row_id/cells/:column` | `cells#update` | `{ value, optimistic_id, lock_version? }` | `200` turbo-stream `cell-confirm` (+ `bulk` cascade); `422` `cell-revert`; `200` `cell-conflict` on stale version; `403` if not editable |
 | POST | `/:resource/bulk` | `cells#bulk` | `{ mutations: [{row_id, column, value}], optimistic_id }` | `200` `bulk` of `cell-confirm` |
-| GET | `/:resource/rows?q=&filters=` | `rows#index` | — (query params; `filters` is JSON) | `200` JSON `{ rows: [...], total, limited }` |
+| GET | `/:resource/rows?q=&filters=&page=&page_size=&sort=` | `rows#index` | query params (`filters`/`sort` are JSON) | `200` JSON `{ rows, total, page?, page_size?, limited }`. With `page` → a window; without → the capped (`MAX_ROWS=5000`) full set |
 | POST | `/:resource/rows` | `rows#create` | `{ attributes: {…} }` | `200` (empty; auto-broadcasts `row-insert-sorted`); `422` JSON `{ errors }` |
 | DELETE | `/:resource/rows/:row_id` | `rows#destroy` | — | `200` (auto-broadcasts `row-remove`) |
 | DELETE | `/:resource/rows/bulk` | `rows#destroy_bulk` | `{ ids: [...] }` | `200` |
@@ -391,6 +392,8 @@ the current value, focused, and read on commit. A column may declare both.
 | `pagination:` | no | `true` | Render the pagination nav. |
 | `page_size:` | no | `25` | Rows per page. |
 | `row_selection:` | no | `nil` | `"single"` \| `"multiple"`. |
+| `server_side:` | no | `false` | Server-side row model: render only the first page as `rows:`; the grid fetches windows. |
+| `total:` | no | `rows.size` | Full server row count (required when `server_side:` is true) — drives pagination. |
 
 The partial renders the table + columns + rows, the pagination nav, and a
 tenant-scoped `turbo_stream_from(*StimulusGridRails.streamables_for(resource))`.

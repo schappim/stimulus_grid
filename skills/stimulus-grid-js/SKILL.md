@@ -148,6 +148,25 @@ Double-click an editable cell to edit. **Enter** commits, **Escape** cancels,
 cell (wrapping within the page). On commit the grid fires `grid:cellValueChanged`
 and updates its dataset; persist by listening to that event.
 
+## Cell selection & copy
+
+Cells aren't browser-text-selectable; the grid has its own model: click sets an
+active cell, drag or shift+click selects a rectangular range (highlighted via
+`data-cell-active` / `data-cell-range`). `Cmd/Ctrl+C` copies the range as TSV.
+`gridApi.getCellSelection()` returns `{ anchor, focus, rowCount, colCount }`;
+`gridApi.getCellRangeValues()` returns the range as a 2D array;
+`grid:cellSelectionChanged` fires on change.
+
+## Server-side row model
+
+For very large datasets, run the grid in server-side mode: set
+`data-grid-server-side-value="true"` and `data-grid-row-count-value="<total>"`,
+load only the current page into `rowData`, and on `grid:paginationChanged` /
+`grid:sortChanged` fetch that window from your server and call
+`gridApi.setRowData(window)` + `gridApi.setRowCount(total)`. Pagination math then
+reflects the full server total though only one page is in the DOM. (The
+`stimulus_grid_rails` gem wires this end-to-end.)
+
 ## Gotchas
 
 - The grid manages its own `<tbody>` (re-renders rows, virtualizes). Don't mutate

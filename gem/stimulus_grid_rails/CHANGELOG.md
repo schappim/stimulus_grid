@@ -52,3 +52,11 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
   from streamables_for + tenant token since the automatic-broadcast refactor).
 - Added docs/REFERENCE.md — complete API reference (Ruby API, endpoints, Turbo
   Stream protocol, client contract, config, tenancy).
+- Server-side row model (RAILS.md §21) for large tables (50-100K+ rows): only
+  one page is loaded client-side; rows#index returns a window (page/page_size)
+  + the full total; Grid#apply_sort sorts server-side; grid-sync fetches windows
+  on page/sort/filter/search; base grid gains serverSide/rowCount + setRowCount.
+  Render with `server_side: true, total:` partial locals.
+- Bulk paste (RAILS.md §9): paste tab/newline-separated data from an anchor cell;
+  grid-sync fills the range and POSTs to /bulk.
+- Full Minitest suite for the Rails side (62 examples) under demo/test.

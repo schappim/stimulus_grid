@@ -196,6 +196,36 @@ bin/rails db:migrate
 
 Until the table exists, auditing + undo/redo are a quiet no-op.
 
+## Large tables — server-side row model (50-100K+ rows)
+
+Render only the first page and pass `server_side: true` + `total:`; the grid
+fetches windows as the user pages/sorts/searches (only one page is ever in the
+DOM):
+
+```ruby
+def index
+  @grid  = ThingGrid.new(user: current_user)
+  @total = @grid.scope(current_user).count
+  @rows  = @grid.scope(current_user).order(:id).limit(50)
+end
+```
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: @grid, rows: @rows, total: @total, server_side: true, page_size: 50 } %>
+```
+
+The grid fetches `GET …/rows?page=&page_size=&sort=&q=&filters=` and applies it
+with `setRowData` + `setRowCount`. Sorting is server-side (`Grid#apply_sort`).
+Don't pass the full relation as `rows` in server-side mode — pass one page.
+
+## Cells: selection, copy, paste
+
+- Cells aren't browser-text-selectable; click = active cell, drag/shift+click =
+  rectangular range (highlighted).
+- `Cmd/Ctrl+C` copies the range as TSV.
+- **Bulk paste** (§9): click an editable anchor cell, paste tab/newline data; the
+  grid fills the range and POSTs one `/bulk` request (server validates each cell).
+
 ## Multi-tenancy & auth (Devise + ActsAsTenant) — avoid data leaks
 
 ```ruby

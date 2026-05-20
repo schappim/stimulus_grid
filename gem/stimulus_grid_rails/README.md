@@ -35,8 +35,8 @@ broadcast), because a Rails app *knows its schema*.
 | §15 | Delete rows: per-row + multi-select bulk → `row-remove` broadcast | ✅ |
 | §16 | Undo / redo: server-side audit log; `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` (or `Ctrl+Y`) redo; replayed as normal mutations | ✅ |
 | §17 | `editable:` lambda re-checked on every PATCH; auth/tenant via inherited `parent_controller` | ✅ |
-| §9 (bulk paste) | Excel multi-cell paste | ⏳ deferred |
-| §21 | Server-side global search + per-column filtering | ✅ |
+| §9 (bulk paste) | Paste tab/newline-separated data from an anchor cell → `/bulk` | ✅ |
+| §21 | Server-side global search + per-column filtering, **and a server-side row model** (windowed fetch) for 50-100K+ rows | ✅ |
 
 ---
 
@@ -306,17 +306,46 @@ bin/rails db:migrate
 
 Until the table exists, auditing and undo/redo are a quiet no-op.
 
+## Large tables — server-side row model (RAILS.md §21)
+
+For 50-100K+ rows, render only the first page and let the grid fetch windows:
+
+```ruby
+def index
+  @grid  = ThingGrid.new(user: current_user)
+  @total = @grid.scope(current_user).count
+  @rows  = @grid.scope(current_user).order(:id).limit(50)   # just page 1
+end
+```
+
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: @grid, rows: @rows, total: @total,
+                     server_side: true, page_size: 50 } %>
+```
+
+Only one page is ever in the DOM. Paging, **server-side sorting**, and
+search/filter all fetch a window from `GET …/rows?page=&page_size=&sort=&q=&filters=`;
+the grid swaps it with `setRowData` and tracks the total via `setRowCount`. Edits
+still broadcast live. See `gem/demo` (the `/big_rows` page seeds 50k rows).
+
+## Cells: selection, copy, paste
+
+- Cells use a **custom selection model** (no browser text highlight): click for an
+  active cell, drag or shift+click for a rectangular range.
+- **Copy** the range with `Cmd/Ctrl+C` (TSV).
+- **Bulk paste** (§9): click an editable anchor cell, then paste tab/newline data
+  (e.g. from a spreadsheet). The grid fills the range and POSTs one request to
+  `/bulk`; the server validates/coerces/saves each cell and returns confirms.
+
 ## Roadmap
 
 Deferred (PRs welcome):
 
-- **Bulk paste** (§9): Excel multi-cell paste → `POST /grids/:resource/bulk` →
-  `bulk` stream with per-mutation confirm/revert + partial-success toast. *(The
-  `/bulk` endpoint and `bulk` action exist; the client-side paste detection does
-  not.)*
 - **Field-locking & presence** (§13 field-locked, §1 `presence`): the `presence`
   Turbo Stream action is wired client-side; the lock lifecycle is not.
 - **Yjs text cells**: `collaborative: :yjs` per-column (see above).
+- **Server-side infinite scroll** (current server-side mode is page-based).
 
 ## License
 

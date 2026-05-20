@@ -91,6 +91,7 @@ via `element.gridApi.setRowData([...])`.
 | `height` | CSS height of the scroll viewport (e.g. `"480px"`) |
 | `get-row-id` | row-object field used as identity (default `id`) |
 | `dom-layout` | `""` \| `"autoHeight"` |
+| `server-side` / `row-count` | server-side row model: `rowData` is one page; `row-count` is the server total (drives pagination) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -104,7 +105,8 @@ via `element.gridApi.setRowData([...])`.
 
 Available after the `grid:ready` event. Highlights:
 
-- **Data:** `setRowData(rows)`, `getRowData()`, `applyTransaction({add,update,remove})`
+- **Data:** `setRowData(rows)`, `getRowData()`, `applyTransaction({add,update,remove})`, `setRowCount(total)` / `getRowCount()` (server-side)
+- **Cell selection:** `getCellSelection()` (active + range), `getCellRangeValues()` — click for an active cell, drag/shift+click for a range, `Cmd/Ctrl+C` copies it as TSV
 - **Columns:** `setColumnDefs`, `getColumnDefs`, `setColumnVisible`, `setColumnPinned`, `setColumnWidth`, `moveColumn`, `autoSizeColumn`, `autoSizeAllColumns`, `sizeColumnsToFit`
 - **Sort:** `setSortModel`, `getSortModel`
 - **Filter:** `setFilterModel`, `getFilterModel`, `setColumnFilter`, `setQuickFilter`, `getQuickFilter`
