@@ -56,6 +56,10 @@ export function createGridApi(grid) {
     paginationGetPageSize() { return grid.state.pagination.pageSize; },
     paginationIsEnabled() { return grid.state.pagination.enabled; },
 
+    // ---- Cell selection ----
+    getCellSelection() { return grid.getCellSelectionDetail(); },
+    getCellRangeValues() { return grid._cellRangeRows(); },
+
     // ---- Editing ----
     startEditingCell({ rowId, colId }) { grid.startEditingCell(rowId, colId); },
     stopEditing(cancel = false) { grid.stopEditing(cancel); },

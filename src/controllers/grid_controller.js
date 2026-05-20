@@ -35,6 +35,7 @@ export default class GridController extends Controller {
       quickFilter: '',
       selection: new Set(),
       focusedCell: null,
+      cellSel: { anchor: null, focus: null },   // {rowId, colId} rectangle
       editing: null,
       pagination: { enabled: false, page: 0, pageSize: DEFAULT_PAGE_SIZE },
       scrollTop: 0,
@@ -78,6 +79,8 @@ export default class GridController extends Controller {
 
   disconnect() {
     this.element.gridApi = null;
+    document.removeEventListener('mouseup', this._onCellMouseUp);
+    document.removeEventListener('copy', this._onCopy);
   }
 
   // ----- Initial data + setup -----
@@ -808,6 +811,7 @@ export default class GridController extends Controller {
     if (!this._tbody) return;
     const cols = this._visibleCols();
     const allRows = this._displayList.pageRows;
+    this._selKeys = this._computeCellSelKeys();   // cell range highlight lookup
 
     // Decide whether to virtualise. Virtualisation is auto-on whenever the
     // current display list exceeds the threshold, regardless of pagination —
@@ -879,10 +883,15 @@ export default class GridController extends Controller {
     // Rebuild cells in column order. Cheap because table-layout is fixed.
     tr.innerHTML = '';
     const pin = this._pinOffsets();
+    const selKeys = this._selKeys || { active: null, range: null };
+    const rowKey = String(this._rowId(row));
     for (const col of cols) {
+      const key = `${rowKey}:${col.field}`;
       const td = el('td', {
         'data-col-id': col.field,
         'data-pinned': col.pinned || null,
+        'data-cell-active': selKeys.active === key ? 'true' : null,
+        'data-cell-range': selKeys.range && selKeys.range.has(key) ? 'true' : null,
       });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
@@ -1002,6 +1011,10 @@ export default class GridController extends Controller {
     this._listenersAttached = true;
     this._tbody.addEventListener('click', (e) => this._onBodyClick(e));
     this._tbody.addEventListener('dblclick', (e) => this._onBodyDblClick(e));
+    this._tbody.addEventListener('mousedown', this._onCellMouseDown);
+    this._tbody.addEventListener('mouseover', this._onCellMouseOver);
+    document.addEventListener('mouseup', this._onCellMouseUp);
+    document.addEventListener('copy', this._onCopy);
     this._viewport.addEventListener('scroll', this._onScroll, { passive: true });
   }
 
@@ -1030,11 +1043,128 @@ export default class GridController extends Controller {
       const colId = td.dataset.colId;
       emit(this.element, 'grid:cellClicked', { rowId, colId, value: row?.[colId], event: e });
     }
+    // A drag that selected a cell range shouldn't also toggle row selection.
+    if (this._cellDragMoved) { this._cellDragMoved = false; return; }
     if (this.suppressRowClickSelectionValue) return;
     if (this.rowSelectionValue === '') return;
     const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
     this.toggleRowSelection(rowId, mode);
     emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
+  }
+
+  // ----- Cell selection (click = active cell, drag / shift+click = range) -----
+
+  _cellAt(target) {
+    const td = target.closest?.('td');
+    const tr = target.closest?.('tr');
+    if (!td || !tr || td.classList.contains('sg-checkbox-cell') || !td.dataset.colId) return null;
+    if (td.dataset.editing === 'true') return null;
+    return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
+  }
+
+  _onCellMouseDown = (e) => {
+    if (e.button !== 0) return;
+    const cell = this._cellAt(e.target);
+    if (!cell) return;
+    if (e.shiftKey && this.state.cellSel.anchor) {
+      this.state.cellSel.focus = cell;          // extend existing range
+    } else {
+      this.state.cellSel = { anchor: cell, focus: cell };
+      this._cellDragging = true;
+    }
+    this._cellDragMoved = false;
+    this.scheduleRender('selection');
+    emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
+  };
+
+  _onCellMouseOver = (e) => {
+    if (!this._cellDragging) return;
+    const cell = this._cellAt(e.target);
+    if (!cell) return;
+    const f = this.state.cellSel.focus;
+    if (f && f.rowId === cell.rowId && f.colId === cell.colId) return;
+    this.state.cellSel.focus = cell;
+    this._cellDragMoved = true;
+    this.scheduleRender('selection');
+    emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
+  };
+
+  _onCellMouseUp = () => { this._cellDragging = false; };
+
+  // Copy the selected cell range to the clipboard as TSV (rows \n, cols \t).
+  _onCopy = (e) => {
+    if (this.state.editing) return;
+    const ae = document.activeElement;
+    if (ae && /^(input|textarea|select)$/i.test(ae.tagName)) return;
+    const rect = this._cellSelRect();
+    if (!rect) return;
+    const tsv = this._cellRangeRows(rect)
+      .map((r) => r.map((v) => String(v ?? '')).join('\t')).join('\n');
+    if (!tsv) return;
+    e.clipboardData?.setData('text/plain', tsv);
+    e.preventDefault();
+  };
+
+  // Rectangle of the selection in display indices, or null.
+  _cellSelRect() {
+    const sel = this.state.cellSel;
+    if (!sel?.anchor) return null;
+    const rows = this._displayList.pageRows;
+    const cols = this._visibleCols();
+    const ri = (id) => rows.findIndex((r) => this._rowId(r) === id);
+    const ci = (f) => cols.findIndex((c) => c.field === f);
+    const ar = ri(sel.anchor.rowId), ac = ci(sel.anchor.colId);
+    if (ar < 0 || ac < 0) return null;
+    const fr = sel.focus ? ri(sel.focus.rowId) : ar;
+    const fc = sel.focus ? ci(sel.focus.colId) : ac;
+    return {
+      r0: Math.min(ar, fr < 0 ? ar : fr), r1: Math.max(ar, fr < 0 ? ar : fr),
+      c0: Math.min(ac, fc < 0 ? ac : fc), c1: Math.max(ac, fc < 0 ? ac : fc),
+      rows, cols,
+    };
+  }
+
+  _cellRangeRows(rect = this._cellSelRect()) {
+    if (!rect) return [];
+    const out = [];
+    for (let r = rect.r0; r <= rect.r1; r++) {
+      const row = rect.rows[r];
+      if (!row) continue;
+      const line = [];
+      for (let c = rect.c0; c <= rect.c1; c++) {
+        const col = rect.cols[c];
+        if (col) line.push(formatValue(row, col));
+      }
+      out.push(line);
+    }
+    return out;
+  }
+
+  // Lookup used by the renderer to flag active + in-range cells.
+  _computeCellSelKeys() {
+    const rect = this._cellSelRect();
+    const sel = this.state.cellSel;
+    if (!rect || !sel?.anchor) return { active: null, range: null };
+    const range = new Set();
+    for (let r = rect.r0; r <= rect.r1; r++) {
+      const row = rect.rows[r];
+      if (!row) continue;
+      for (let c = rect.c0; c <= rect.c1; c++) {
+        const col = rect.cols[c];
+        if (col) range.add(`${this._rowId(row)}:${col.field}`);
+      }
+    }
+    return { active: `${sel.anchor.rowId}:${sel.anchor.colId}`, range };
+  }
+
+  getCellSelectionDetail() {
+    const rect = this._cellSelRect();
+    return {
+      anchor: this.state.cellSel.anchor,
+      focus: this.state.cellSel.focus,
+      rowCount: rect ? rect.r1 - rect.r0 + 1 : 0,
+      colCount: rect ? rect.c1 - rect.c0 + 1 : 0,
+    };
   }
 
   _onBodyDblClick(e) {

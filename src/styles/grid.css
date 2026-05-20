@@ -147,8 +147,27 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   vertical-align: middle;
+  /* Cells use a custom selection model (click/drag/shift); suppress the
+     browser's native text highlight so range-selection reads cleanly. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 .sg-grid tbody td:last-child { border-right: none; }
+/* …but the editor's input/textarea must allow text selection. */
+.sg-grid tbody td[data-editing="true"] input,
+.sg-grid tbody td[data-editing="true"] textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* Cell range-selection highlight + active (anchor) cell outline. */
+.sg-grid tbody td[data-cell-range="true"] { background: var(--sg-bg-selected); }
+.sg-grid tbody tr[data-selected="true"] td[data-cell-range="true"] { background: var(--sg-bg-selected-hover); }
+.sg-grid tbody td[data-cell-active="true"] {
+  outline: 2px solid var(--sg-accent);
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
 .sg-grid tbody td[data-editing="true"] { padding: 0; }
 .sg-grid tbody td[data-editing="true"] input,
 .sg-grid tbody td[data-editing="true"] select {
