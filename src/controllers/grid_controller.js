@@ -87,7 +87,10 @@ export default class GridController extends Controller {
       this._initialRows = Array.from(existingTbody.querySelectorAll('tr')).map((tr, idx) => {
         const row = {};
         const idAttr = tr.getAttribute('data-row-id') || tr.getAttribute('data-row-row-id-value');
-        row[this.getRowIdValue] = idAttr != null ? idAttr : idx + 1;
+        // Coerce the parsed id the same way event handlers coerce data-row-id,
+        // so row lookups (edit, select) match. Otherwise a string "1" parsed
+        // here never equals the numeric 1 produced by _coerceRowId on click.
+        row[this.getRowIdValue] = idAttr != null ? this._coerceRowId(idAttr) : idx + 1;
         tr.querySelectorAll('td').forEach((td) => {
           const colId = td.getAttribute('data-cell-col-id-value') || td.getAttribute('data-col-id');
           if (colId) row[colId] = td.textContent.trim();

@@ -27,7 +27,19 @@ export function start(app) {
   return application;
 }
 
+const StimulusGrid = {
+  start,
+  GridController,
+  HeaderCellController,
+  RowController,
+  CellController,
+  FilterController,
+  PaginationController,
+};
+
+export default StimulusGrid;
+
 if (typeof window !== 'undefined' && !window.__stimulusGridStarted) {
   window.__stimulusGridStarted = true;
-  window.StimulusGrid = { start };
+  window.StimulusGrid = StimulusGrid;
 }
