@@ -1,326 +1,326 @@
 var q = Object.defineProperty;
-var z = (s, l, e) => l in s ? q(s, l, { enumerable: !0, configurable: !0, writable: !0, value: e }) : s[l] = e;
-var m = (s, l, e) => z(s, typeof l != "symbol" ? l + "" : l, e);
-import { Controller as v, Application as B } from "@hotwired/stimulus";
-function y(s, l) {
-  return typeof l.valueGetter == "function" ? l.valueGetter(s) : s?.[l.field];
+var z = (n, l, e) => l in n ? q(n, l, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[l] = e;
+var m = (n, l, e) => z(n, typeof l != "symbol" ? l + "" : l, e);
+import { Controller as S, Application as B } from "@hotwired/stimulus";
+function b(n, l) {
+  return typeof l.valueGetter == "function" ? l.valueGetter(n) : n?.[l.field];
 }
-function b(s, l) {
-  const e = y(s, l);
-  return typeof l.valueFormatter == "function" ? l.valueFormatter(e, s) : e == null ? "" : l.type === "date" && e instanceof Date ? e.toLocaleDateString() : l.type === "boolean" ? e ? "✓" : "" : String(e);
+function C(n, l) {
+  const e = b(n, l);
+  return typeof l.valueFormatter == "function" ? l.valueFormatter(e, n) : e == null ? "" : l.type === "date" && e instanceof Date ? e.toLocaleDateString() : l.type === "boolean" ? e ? "✓" : "" : String(e);
 }
-const A = {
-  contains: (s, l) => String(s ?? "").toLowerCase().includes(String(l ?? "").toLowerCase()),
-  notContains: (s, l) => !String(s ?? "").toLowerCase().includes(String(l ?? "").toLowerCase()),
-  equals: (s, l) => String(s ?? "").toLowerCase() === String(l ?? "").toLowerCase(),
-  notEqual: (s, l) => String(s ?? "").toLowerCase() !== String(l ?? "").toLowerCase(),
-  startsWith: (s, l) => String(s ?? "").toLowerCase().startsWith(String(l ?? "").toLowerCase()),
-  endsWith: (s, l) => String(s ?? "").toLowerCase().endsWith(String(l ?? "").toLowerCase()),
-  blank: (s) => s == null || s === "",
-  notBlank: (s) => s != null && s !== ""
-}, W = {
-  equals: (s, l) => Number(s) === Number(l),
-  notEqual: (s, l) => Number(s) !== Number(l),
-  lessThan: (s, l) => Number(s) < Number(l),
-  lessThanOrEqual: (s, l) => Number(s) <= Number(l),
-  greaterThan: (s, l) => Number(s) > Number(l),
-  greaterThanOrEqual: (s, l) => Number(s) >= Number(l),
-  inRange: (s, l, e) => Number(s) >= Number(l) && Number(s) <= Number(e),
-  blank: (s) => s == null || s === "",
-  notBlank: (s) => s != null && s !== ""
+const k = {
+  contains: (n, l) => String(n ?? "").toLowerCase().includes(String(l ?? "").toLowerCase()),
+  notContains: (n, l) => !String(n ?? "").toLowerCase().includes(String(l ?? "").toLowerCase()),
+  equals: (n, l) => String(n ?? "").toLowerCase() === String(l ?? "").toLowerCase(),
+  notEqual: (n, l) => String(n ?? "").toLowerCase() !== String(l ?? "").toLowerCase(),
+  startsWith: (n, l) => String(n ?? "").toLowerCase().startsWith(String(l ?? "").toLowerCase()),
+  endsWith: (n, l) => String(n ?? "").toLowerCase().endsWith(String(l ?? "").toLowerCase()),
+  blank: (n) => n == null || n === "",
+  notBlank: (n) => n != null && n !== ""
+}, K = {
+  equals: (n, l) => Number(n) === Number(l),
+  notEqual: (n, l) => Number(n) !== Number(l),
+  lessThan: (n, l) => Number(n) < Number(l),
+  lessThanOrEqual: (n, l) => Number(n) <= Number(l),
+  greaterThan: (n, l) => Number(n) > Number(l),
+  greaterThanOrEqual: (n, l) => Number(n) >= Number(l),
+  inRange: (n, l, e) => Number(n) >= Number(l) && Number(n) <= Number(e),
+  blank: (n) => n == null || n === "",
+  notBlank: (n) => n != null && n !== ""
 };
-function w(s) {
-  if (s == null || s === "") return null;
-  if (s instanceof Date) return s;
-  const l = new Date(s);
+function w(n) {
+  if (n == null || n === "") return null;
+  if (n instanceof Date) return n;
+  const l = new Date(n);
   return Number.isNaN(l.valueOf()) ? null : l;
 }
 const G = {
-  equals: (s, l) => w(s)?.toDateString() === w(l)?.toDateString(),
-  notEqual: (s, l) => w(s)?.toDateString() !== w(l)?.toDateString(),
-  lessThan: (s, l) => (w(s)?.valueOf() ?? -1 / 0) < (w(l)?.valueOf() ?? 1 / 0),
-  greaterThan: (s, l) => (w(s)?.valueOf() ?? 1 / 0) > (w(l)?.valueOf() ?? -1 / 0),
-  inRange: (s, l, e) => {
-    const t = w(s)?.valueOf();
+  equals: (n, l) => w(n)?.toDateString() === w(l)?.toDateString(),
+  notEqual: (n, l) => w(n)?.toDateString() !== w(l)?.toDateString(),
+  lessThan: (n, l) => (w(n)?.valueOf() ?? -1 / 0) < (w(l)?.valueOf() ?? 1 / 0),
+  greaterThan: (n, l) => (w(n)?.valueOf() ?? 1 / 0) > (w(l)?.valueOf() ?? -1 / 0),
+  inRange: (n, l, e) => {
+    const t = w(n)?.valueOf();
     return t != null && t >= (w(l)?.valueOf() ?? -1 / 0) && t <= (w(e)?.valueOf() ?? 1 / 0);
   },
-  blank: (s) => s == null || s === "",
-  notBlank: (s) => s != null && s !== ""
+  blank: (n) => n == null || n === "",
+  notBlank: (n) => n != null && n !== ""
+}, W = {
+  equals: (n, l) => l === "true" ? !!n : l === "false" ? !n : !0
 }, H = {
-  equals: (s, l) => l === "true" ? !!s : l === "false" ? !s : !0
-}, K = {
-  in: (s, l) => Array.isArray(l) && l.includes(String(s ?? ""))
-}, $ = { text: A, number: W, date: G, boolean: H, set: K };
-function j(s, l, e) {
+  in: (n, l) => Array.isArray(l) && l.includes(String(n ?? ""))
+}, $ = { text: k, number: K, date: G, boolean: W, set: H };
+function j(n, l, e) {
   if (!e) return !0;
-  const t = e.filterType || l.filter || "text", n = ($[t] || A)[e.type];
-  if (!n) return !0;
-  const r = y(s, l);
-  return n(r, e.value, e.value2);
+  const t = e.filterType || l.filter || "text", s = ($[t] || k)[e.type];
+  if (!s) return !0;
+  const r = b(n, l);
+  return s(r, e.value, e.value2);
 }
-function P(s, l, e) {
+function T(n, l, e) {
   const t = Object.entries(l || {}).filter(([, i]) => i != null);
-  return t.length === 0 ? s : s.filter((i) => t.every(([n, r]) => {
-    const a = e[n];
-    return a ? j(i, a, r) : !0;
+  return t.length === 0 ? n : n.filter((i) => t.every(([s, r]) => {
+    const o = e[s];
+    return o ? j(i, o, r) : !0;
   }));
 }
-function T(s, l, e) {
-  if (!l) return s;
+function V(n, l, e) {
+  if (!l) return n;
   const t = String(l).toLowerCase();
-  return s.filter((i) => {
-    for (const n of e) {
-      const r = b(i, n);
+  return n.filter((i) => {
+    for (const s of e) {
+      const r = C(i, s);
       if (r && String(r).toLowerCase().includes(t)) return !0;
     }
     return !1;
   });
 }
-function U(s, l, e) {
-  if (s == null && l == null) return 0;
-  if (s == null) return -1;
+function U(n, l, e) {
+  if (n == null && l == null) return 0;
+  if (n == null) return -1;
   if (l == null) return 1;
-  if (e === "number") return Number(s) - Number(l);
+  if (e === "number") return Number(n) - Number(l);
   if (e === "date") {
-    const t = w(s)?.valueOf() ?? 0, i = w(l)?.valueOf() ?? 0;
+    const t = w(n)?.valueOf() ?? 0, i = w(l)?.valueOf() ?? 0;
     return t - i;
   }
-  return e === "boolean" ? s === l ? 0 : s ? 1 : -1 : String(s).localeCompare(String(l), void 0, { numeric: !0, sensitivity: "base" });
+  return e === "boolean" ? n === l ? 0 : n ? 1 : -1 : String(n).localeCompare(String(l), void 0, { numeric: !0, sensitivity: "base" });
 }
-function X(s, l, e) {
-  if (!l || l.length === 0) return s;
-  const t = s.slice();
-  return t.sort((i, n) => {
-    for (const { colId: r, sort: a } of l) {
-      const o = e[r];
-      if (!o) continue;
-      const c = y(i, o), u = y(n, o), d = typeof o.comparator == "function" ? o.comparator(c, u, i, n) : U(c, u, o.type);
-      if (d !== 0) return a === "desc" ? -d : d;
+function X(n, l, e) {
+  if (!l || l.length === 0) return n;
+  const t = n.slice();
+  return t.sort((i, s) => {
+    for (const { colId: r, sort: o } of l) {
+      const a = e[r];
+      if (!a) continue;
+      const c = b(i, a), u = b(s, a), d = typeof a.comparator == "function" ? a.comparator(c, u, i, s) : U(c, u, a.type);
+      if (d !== 0) return o === "desc" ? -d : d;
     }
     return 0;
   }), t;
 }
-function Q(s, l) {
-  if (!l || !l.enabled) return { rows: s, total: s.length, pageRows: s };
-  const e = s.length, t = Math.max(1, Math.ceil(e / l.pageSize)), i = Math.min(l.page, t - 1), n = i * l.pageSize, r = s.slice(n, n + l.pageSize);
-  return { rows: s, total: e, totalPages: t, page: i, pageRows: r };
+function Q(n, l) {
+  if (!l || !l.enabled) return { rows: n, total: n.length, pageRows: n };
+  const e = n.length, t = Math.max(1, Math.ceil(e / l.pageSize)), i = Math.min(l.page, t - 1), s = i * l.pageSize, r = n.slice(s, s + l.pageSize);
+  return { rows: n, total: e, totalPages: t, page: i, pageRows: r };
 }
-function Y(s) {
-  if (s.serverSide) {
-    const n = s.rowData, r = s.pagination?.pageSize || n.length || 1, a = s.serverRowCount ?? n.length, o = Math.max(1, Math.ceil(a / r)), c = Math.min(s.pagination?.page || 0, o - 1);
-    return { filteredSorted: n, rows: n, total: a, totalPages: o, page: c, pageRows: n };
+function Y(n) {
+  if (n.serverSide) {
+    const s = n.rowData, r = n.pagination?.pageSize || s.length || 1, o = n.serverRowCount ?? s.length, a = Math.max(1, Math.ceil(o / r)), c = Math.min(n.pagination?.page || 0, a - 1);
+    return { filteredSorted: s, rows: s, total: o, totalPages: a, page: c, pageRows: s };
   }
-  const l = Object.fromEntries(s.columnDefs.map((n) => [n.field, n])), e = s.columnDefs.filter((n) => !n.hidden && !n._isCheckbox);
-  let t = s.rowData;
-  t = P(t, s.filterModel, l), t = T(t, s.quickFilter, e), t = X(t, s.sortModel, l);
-  const i = Q(t, s.pagination);
+  const l = Object.fromEntries(n.columnDefs.map((s) => [s.field, s])), e = n.columnDefs.filter((s) => !s.hidden && !s._isCheckbox);
+  let t = n.rowData;
+  t = T(t, n.filterModel, l), t = V(t, n.quickFilter, e), t = X(t, n.sortModel, l);
+  const i = Q(t, n.pagination);
   return { filteredSorted: t, ...i };
 }
-function Z(s, l, e, t, i = 6) {
-  const n = Math.ceil(l / e), r = Math.max(0, Math.floor(s / e) - i), a = Math.min(t, r + n + i * 2);
-  return { first: r, last: a };
+function Z(n, l, e, t, i = 6) {
+  const s = Math.ceil(l / e), r = Math.max(0, Math.floor(n / e) - i), o = Math.min(t, r + s + i * 2);
+  return { first: r, last: o };
 }
-function J(s) {
+function J(n) {
   return {
     // ---- Data ----
     setRowData(l) {
-      s.setRowData(l);
+      n.setRowData(l);
     },
     getRowData() {
-      return s.state.rowData.slice();
+      return n.state.rowData.slice();
     },
     applyTransaction(l) {
-      return s.applyTransaction(l);
+      return n.applyTransaction(l);
     },
     // Server-side row model
     setRowCount(l) {
-      s.setRowCount(l);
+      n.setRowCount(l);
     },
     getRowCount() {
-      return s.state.serverSide ? s.state.serverRowCount : s.state.rowData.length;
+      return n.state.serverSide ? n.state.serverRowCount : n.state.rowData.length;
     },
     isServerSide() {
-      return !!s.state.serverSide;
+      return !!n.state.serverSide;
     },
     // ---- Columns ----
     setColumnDefs(l) {
-      s.setColumnDefs(l);
+      n.setColumnDefs(l);
     },
     getColumnDefs() {
-      return s.state.columnDefs.slice();
+      return n.state.columnDefs.slice();
     },
     setColumnVisible(l, e) {
-      s.setColumnVisible(l, e);
+      n.setColumnVisible(l, e);
     },
     setColumnPinned(l, e) {
-      s.setColumnPinned(l, e);
+      n.setColumnPinned(l, e);
     },
     setColumnWidth(l, e) {
-      s.setColumnWidth(l, e);
+      n.setColumnWidth(l, e);
     },
     moveColumn(l, e) {
-      s.moveColumn(l, e);
+      n.moveColumn(l, e);
     },
     autoSizeColumn(l) {
-      s.autoSizeColumn(l);
+      n.autoSizeColumn(l);
     },
     autoSizeAllColumns() {
-      s.state.columnDefs.forEach((l) => s.autoSizeColumn(l.field));
+      n.state.columnDefs.forEach((l) => n.autoSizeColumn(l.field));
     },
     sizeColumnsToFit() {
-      s.sizeColumnsToFit();
+      n.sizeColumnsToFit();
     },
     // ---- Sort ----
     setSortModel(l) {
-      s.setSortModel(l);
+      n.setSortModel(l);
     },
     getSortModel() {
-      return s.state.sortModel.slice();
+      return n.state.sortModel.slice();
     },
     // ---- Filter ----
     setFilterModel(l) {
-      s.setFilterModel(l);
+      n.setFilterModel(l);
     },
     getFilterModel() {
-      return { ...s.state.filterModel };
+      return { ...n.state.filterModel };
     },
     setColumnFilter(l, e) {
-      s.setColumnFilter(l, e);
+      n.setColumnFilter(l, e);
     },
     destroyFilter(l) {
-      s.setColumnFilter(l, null);
+      n.setColumnFilter(l, null);
     },
     setQuickFilter(l) {
-      s.setQuickFilter(l);
+      n.setQuickFilter(l);
     },
     getQuickFilter() {
-      return s.getQuickFilter();
+      return n.getQuickFilter();
     },
     // ---- Selection ----
     selectAll() {
-      s.selectAll();
+      n.selectAll();
     },
     deselectAll() {
-      s.deselectAll();
+      n.deselectAll();
     },
     selectRow(l) {
-      s.setSelected(l, !0);
+      n.setSelected(l, !0);
     },
     deselectRow(l) {
-      s.setSelected(l, !1);
+      n.setSelected(l, !1);
     },
     getSelectedRows() {
-      return s.getSelectedRows();
+      return n.getSelectedRows();
     },
     getSelectedRowIds() {
-      return Array.from(s.state.selection);
+      return Array.from(n.state.selection);
     },
     // ---- Pagination ----
     paginationGoToPage(l) {
-      s.goToPage(l);
+      n.goToPage(l);
     },
     paginationGoToFirstPage() {
-      s.goToPage(0);
+      n.goToPage(0);
     },
     paginationGoToNextPage() {
-      s.goToPage(s.state.pagination.page + 1);
+      n.goToPage(n.state.pagination.page + 1);
     },
     paginationGoToPreviousPage() {
-      s.goToPage(s.state.pagination.page - 1);
+      n.goToPage(n.state.pagination.page - 1);
     },
     paginationGoToLastPage() {
-      s.goToPage(s.lastPageIndex());
+      n.goToPage(n.lastPageIndex());
     },
     paginationSetPageSize(l) {
-      s.setPageSize(l);
+      n.setPageSize(l);
     },
     paginationGetCurrentPage() {
-      return s.state.pagination.page;
+      return n.state.pagination.page;
     },
     paginationGetTotalPages() {
-      return s.totalPages();
+      return n.totalPages();
     },
     paginationGetRowCount() {
-      return s.filteredCount();
+      return n.filteredCount();
     },
     paginationGetPageSize() {
-      return s.state.pagination.pageSize;
+      return n.state.pagination.pageSize;
     },
     paginationIsEnabled() {
-      return s.state.pagination.enabled;
+      return n.state.pagination.enabled;
     },
     // ---- Cell selection ----
     getCellSelection() {
-      return s.getCellSelectionDetail();
+      return n.getCellSelectionDetail();
     },
     getCellRangeValues() {
-      return s._cellRangeRows();
+      return n._cellRangeRows();
     },
     getCellSelectionRowIds() {
-      return s.getCellSelectionRowIds();
+      return n.getCellSelectionRowIds();
     },
     // ---- Editing ----
     startEditingCell({ rowId: l, colId: e }) {
-      s.startEditingCell(l, e);
+      n.startEditingCell(l, e);
     },
     stopEditing(l = !1) {
-      s.stopEditing(l);
+      n.stopEditing(l);
     },
     // ---- Export ----
     getDataAsCsv(l = {}) {
-      return s.getDataAsCsv(l);
+      return n.getDataAsCsv(l);
     },
     exportDataAsCsv(l = {}) {
-      return s.exportDataAsCsv(l);
+      return n.exportDataAsCsv(l);
     },
     // ---- Display ----
     refreshCells(l = {}) {
-      s.refresh(l);
+      n.refresh(l);
     },
     redrawRows(l = {}) {
-      s.refresh(l);
+      n.refresh(l);
     },
     // ---- Events ----
     addEventListener(l, e) {
-      s.element.addEventListener(l, e);
+      n.element.addEventListener(l, e);
     },
     removeEventListener(l, e) {
-      s.element.removeEventListener(l, e);
+      n.element.removeEventListener(l, e);
     }
   };
 }
-function f(s, l = {}, e = []) {
-  const t = document.createElement(s);
-  for (const [i, n] of Object.entries(l))
-    n === !1 || n == null || (i === "class" ? t.className = n : i === "style" && typeof n == "object" ? Object.assign(t.style, n) : i.startsWith("on") && typeof n == "function" ? t.addEventListener(i.slice(2).toLowerCase(), n) : n === !0 ? t.setAttribute(i, "") : t.setAttribute(i, String(n)));
+function f(n, l = {}, e = []) {
+  const t = document.createElement(n);
+  for (const [i, s] of Object.entries(l))
+    s === !1 || s == null || (i === "class" ? t.className = s : i === "style" && typeof s == "object" ? Object.assign(t.style, s) : i.startsWith("on") && typeof s == "function" ? t.addEventListener(i.slice(2).toLowerCase(), s) : s === !0 ? t.setAttribute(i, "") : t.setAttribute(i, String(s)));
   for (const i of [].concat(e))
     i == null || i === !1 || t.appendChild(typeof i == "string" ? document.createTextNode(i) : i);
   return t;
 }
-function I(s, l) {
+function A(n, l) {
   for (const [e, t] of Object.entries(l))
-    t == null || t === !1 ? s.removeAttribute(e) : t === !0 ? s.setAttribute(e, "") : s.setAttribute(e, String(t));
+    t == null || t === !1 ? n.removeAttribute(e) : t === !0 ? n.setAttribute(e, "") : n.setAttribute(e, String(t));
 }
-function L(s) {
-  const l = document.getElementById(s);
+function M(n) {
+  const l = document.getElementById(n);
   return !l || l.tagName !== "TEMPLATE" ? null : l.content.firstElementChild.cloneNode(!0);
 }
-function g(s, l, e) {
-  s.dispatchEvent(new CustomEvent(l, { detail: e, bubbles: !0 }));
+function p(n, l, e) {
+  n.dispatchEvent(new CustomEvent(l, { detail: e, bubbles: !0 }));
 }
-function ee(s, l, e) {
-  let t = s.parentElement;
+function ee(n, l, e) {
+  let t = n.parentElement;
   for (; t; ) {
     if ((t.getAttribute("data-controller") || "").split(/\s+/).includes(l)) {
-      const n = e.getControllerForElementAndIdentifier(t, l);
-      if (n) return n;
+      const s = e.getControllerForElementAndIdentifier(t, l);
+      if (s) return s;
     }
     t = t.parentElement;
   }
   return null;
 }
-const te = 32, k = 100;
-class D extends v {
+const te = 32, L = 100;
+class I extends S {
   constructor() {
     super(...arguments);
     m(this, "_onDocMouseDown", (e) => {
@@ -333,28 +333,71 @@ class D extends v {
       if (e.button !== 0) return;
       const t = this._cellAt(e.target);
       if (!t) return;
-      e.metaKey || e.ctrlKey ? this.state.cellSel = { anchor: t, focus: t } : e.shiftKey && this.state.cellSel.anchor ? this.state.cellSel.focus = t : (this.state.cellSel = { anchor: t, focus: t }, this._cellDragging = !0), this._cellDragMoved = !1, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
+      const i = e.metaKey || e.ctrlKey;
+      e.shiftKey && this._activeCell() ? this._extendActiveRange(t) : i ? (this._addCellRange(t), this._cellDragging = !0) : (this._setSingleCellSel(t), this._cellDragging = !0), this._cellDragMoved = !1, this._focusGrid(), this._applyCellSelHighlight(), p(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
     });
     m(this, "_onCellMouseOver", (e) => {
       if (!this._cellDragging) return;
       const t = this._cellAt(e.target);
       if (!t) return;
-      const i = this.state.cellSel.focus;
-      i && i.rowId === t.rowId && i.colId === t.colId || (this.state.cellSel.focus = t, this._cellDragMoved = !0, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+      const i = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+      i && i.focus.rowId === t.rowId && i.focus.colId === t.colId || (this._extendActiveRange(t), this._cellDragMoved = !0, this._applyCellSelHighlight(), p(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
     });
     m(this, "_onCellMouseUp", () => {
       this._cellDragging = !1;
     });
-    // Copy the selected cell range to the clipboard as TSV (rows \n, cols \t).
+    // Copy the active cell range to the clipboard as TSV (rows \n, cols \t).
     m(this, "_onCopy", (e) => {
       if (this.state.editing) return;
       const t = document.activeElement;
-      if (t && /^(input|textarea|select)$/i.test(t.tagName)) return;
-      const i = this._cellSelRect();
+      if (t && /^(input|textarea|select)$/i.test(t.tagName) && !this.element.contains(t)) return;
+      const i = this._activeRect();
       if (!i) return;
-      const n = this._cellRangeRows(i).map((r) => r.map((a) => String(a ?? "")).join("	")).join(`
+      const s = this._cellRangeRows(i).map((r) => r.map((o) => String(o ?? "")).join("	")).join(`
 `);
-      n && (e.clipboardData?.setData("text/plain", n), e.preventDefault());
+      s && (e.clipboardData?.setData("text/plain", s), e.preventDefault());
+    });
+    m(this, "_onGridKeydown", (e) => {
+      if (!this.cellSelectionValue || this.state.editing) return;
+      const t = document.activeElement;
+      if (t && /^(input|textarea|select)$/i.test(t.tagName) && this.element.contains(t)) return;
+      const i = e.key, s = e.metaKey || e.ctrlKey;
+      if (s && i.toLowerCase() === "a") {
+        e.preventDefault(), this._selectAllCells();
+        return;
+      }
+      if (s) return;
+      const r = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+      if (r[i]) {
+        e.preventDefault();
+        const [o, a] = r[i];
+        this._moveActiveCell(o, a, e.shiftKey);
+        return;
+      }
+      if (i === "Tab") {
+        e.preventDefault(), this._moveActiveCell(0, e.shiftKey ? -1 : 1, !1);
+        return;
+      }
+      if (i === "Enter") {
+        const o = this._activeCell();
+        o && (e.preventDefault(), this.startEditingCell(o.rowId, o.colId));
+        return;
+      }
+      if (i === "Escape") {
+        this.clearCellSelection();
+        return;
+      }
+      if (i === "Delete" || i === "Backspace") {
+        this._clearSelectedCells() && e.preventDefault();
+        return;
+      }
+      if (i.length === 1 && !e.altKey) {
+        const o = this._activeCell();
+        if (!o) return;
+        const a = this._colByField(o.colId);
+        if (!a || !a.editable) return;
+        e.preventDefault(), this.startEditingCell(o.rowId, o.colId, i);
+      }
     });
     m(this, "_onEditorKey", (e) => {
       this.state.editing && (e.key === "Enter" ? (e.preventDefault(), this.stopEditing(!1)) : e.key === "Escape" ? (e.preventDefault(), this.stopEditing(!0)) : e.key === "Tab" && (e.preventDefault(), this._tabToEditableCell(e.shiftKey ? -1 : 1)));
@@ -372,33 +415,33 @@ class D extends v {
       quickFilter: "",
       selection: /* @__PURE__ */ new Set(),
       focusedCell: null,
-      cellSel: { anchor: null, focus: null },
-      // {rowId, colId} rectangle
+      cellSel: { ranges: [], activeIdx: -1 },
+      // multi-range: [{anchor,focus}], active range
       editing: null,
-      pagination: { enabled: !1, page: 0, pageSize: k },
+      pagination: { enabled: !1, page: 0, pageSize: L },
       scrollTop: 0,
       viewportHeight: 400
     }, this._displayList = { filteredSorted: [], pageRows: [], total: 0, totalPages: 1, page: 0 }, this._renderPending = !1, this._dirty = /* @__PURE__ */ new Set(), this._lastRenderedRowIds = /* @__PURE__ */ new Set(), this._runtimeOverrides = /* @__PURE__ */ Object.create(null);
   }
   connect() {
-    this.element.classList.add("sg-grid"), this.heightValue && (this.element.style.height = this.heightValue), this.state.rowHeight = this.rowHeightValue, this.state.pagination = {
+    this.element.classList.add("sg-grid"), this.heightValue && (this.element.style.height = this.heightValue), this.element.hasAttribute("tabindex") || (this.element.tabIndex = 0), this.element.addEventListener("keydown", this._onGridKeydown), this.state.rowHeight = this.rowHeightValue, this.state.pagination = {
       enabled: this.paginationValue,
       page: 0,
       pageSize: this.pageSizeValue
     }, this.state.serverSide = this.serverSideValue, this.state.serverRowCount = this.rowCountValue, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = J(this), queueMicrotask(() => this._initialLoad());
   }
   disconnect() {
-    this.element.gridApi = null, document.removeEventListener("mouseup", this._onCellMouseUp), document.removeEventListener("copy", this._onCopy);
+    this.element.gridApi = null, this.element.removeEventListener("keydown", this._onGridKeydown), document.removeEventListener("mouseup", this._onCellMouseUp), document.removeEventListener("copy", this._onCopy);
   }
   // ----- Initial data + setup -----
   _captureInitialMarkup() {
     const e = this.element.querySelector("tbody");
     e && (this._initialBodyHTML = e.innerHTML, this._initialRows = Array.from(e.querySelectorAll("tr")).map((t, i) => {
-      const n = {}, r = t.getAttribute("data-row-id") || t.getAttribute("data-row-row-id-value");
-      return n[this.getRowIdValue] = r != null ? this._coerceRowId(r) : i + 1, t.querySelectorAll("td").forEach((a) => {
-        const o = a.getAttribute("data-cell-col-id-value") || a.getAttribute("data-col-id");
-        o && (n[o] = a.textContent.trim());
-      }), n;
+      const s = {}, r = t.getAttribute("data-row-id") || t.getAttribute("data-row-row-id-value");
+      return s[this.getRowIdValue] = r != null ? this._coerceRowId(r) : i + 1, t.querySelectorAll("td").forEach((o) => {
+        const a = o.getAttribute("data-cell-col-id-value") || o.getAttribute("data-col-id");
+        a && (s[a] = o.textContent.trim());
+      }), s;
     }), e.innerHTML = ""), this._initialHead = this.element.querySelector("thead");
   }
   _buildChrome() {
@@ -428,7 +471,7 @@ class D extends v {
         console.error("[stimulus_grid] failed to fetch rowDataUrl", e), this.state.rowData = [];
       }
     else this._initialRows && this._initialRows.length > 0 && (this.state.rowData = this._initialRows);
-    this._dirty.add("data"), this._dirty.add("columns"), this._render(), this._attachBodyListeners(), g(this.element, "grid:ready", { api: this.element.gridApi }), g(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
+    this._dirty.add("data"), this._dirty.add("columns"), this._render(), this._attachBodyListeners(), p(this.element, "grid:ready", { api: this.element.gridApi }), p(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
   }
   // Filter UI bridge — implemented by filter_controller, but the grid is the
   // single source of truth so it brokers the popover.
@@ -446,35 +489,35 @@ class D extends v {
     this._filterPopover && (this._filterPopover.remove(), this._filterPopover = null, document.removeEventListener("mousedown", this._onDocMouseDown));
   }
   _openFallbackFilterPopover(e, t) {
-    const i = this.state.filterModel[e.field] || {}, n = se(e.filter), r = f("div", { class: "sg-filter-popover" }), a = f("select");
-    n.forEach((_) => a.append(new Option(_.label, _.value, !1, _.value === i.type)));
-    const o = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", c = f("input", { type: o, value: i.value ?? "" }), u = f("input", { type: o, value: i.value2 ?? "", style: { display: "none" } }), d = () => {
-      const _ = a.value, R = _ === "inRange", O = !(_ === "blank" || _ === "notBlank");
-      c.style.display = O ? "" : "none", u.style.display = R ? "" : "none";
+    const i = this.state.filterModel[e.field] || {}, s = se(e.filter), r = f("div", { class: "sg-filter-popover" }), o = f("select");
+    s.forEach((_) => o.append(new Option(_.label, _.value, !1, _.value === i.type)));
+    const a = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", c = f("input", { type: a, value: i.value ?? "" }), u = f("input", { type: a, value: i.value2 ?? "", style: { display: "none" } }), d = () => {
+      const _ = o.value, x = _ === "inRange", O = !(_ === "blank" || _ === "notBlank");
+      c.style.display = O ? "" : "none", u.style.display = x ? "" : "none";
     };
-    a.addEventListener("change", d), d();
-    const h = f("div", { class: "sg-filter-actions" }), p = f("button", { type: "button" }, "Clear"), C = f("button", { type: "button", class: "primary" }, "Apply");
-    h.append(p, C), p.addEventListener("click", () => {
+    o.addEventListener("change", d), d();
+    const h = f("div", { class: "sg-filter-actions" }), g = f("button", { type: "button" }, "Clear"), y = f("button", { type: "button", class: "primary" }, "Apply");
+    h.append(g, y), g.addEventListener("click", () => {
       this.setColumnFilter(e.field, null), this._closeFilterPopover();
-    }), C.addEventListener("click", () => {
-      const _ = a.value, R = _ === "blank" || _ === "notBlank" ? { filterType: e.filter, type: _ } : { filterType: e.filter, type: _, value: c.value, value2: u.value || void 0 };
-      this.setColumnFilter(e.field, R), this._closeFilterPopover();
+    }), y.addEventListener("click", () => {
+      const _ = o.value, x = _ === "blank" || _ === "notBlank" ? { filterType: e.filter, type: _ } : { filterType: e.filter, type: _, value: c.value, value2: u.value || void 0 };
+      this.setColumnFilter(e.field, x), this._closeFilterPopover();
     }), r.append(
       f("label", {}, "Condition"),
-      a,
+      o,
       c,
       u,
       h
     ), document.body.appendChild(r);
-    const M = t.getBoundingClientRect();
-    r.style.left = `${M.left + window.scrollX}px`, r.style.top = `${M.bottom + window.scrollY + 2}px`, this._filterPopover = r, document.addEventListener("mousedown", this._onDocMouseDown), c.focus();
+    const v = t.getBoundingClientRect();
+    r.style.left = `${v.left + window.scrollX}px`, r.style.top = `${v.bottom + window.scrollY + 2}px`, this._filterPopover = r, document.addEventListener("mousedown", this._onDocMouseDown), c.focus();
   }
   // ----- Column registration (called by header_cell_controller) -----
   registerColumn(e, t) {
-    const i = this.state.columnDefs.findIndex((a) => a.field === e.field), n = this._runtimeOverrides[e.field] || {}, r = { ...e, ...n, _headerEl: t };
+    const i = this.state.columnDefs.findIndex((o) => o.field === e.field), s = this._runtimeOverrides[e.field] || {}, r = { ...e, ...s, _headerEl: t };
     if (i >= 0) {
-      const a = this.state.columnDefs[i];
-      if (a._headerEl === t && ie(a, r)) return;
+      const o = this.state.columnDefs[i];
+      if (o._headerEl === t && ie(o, r)) return;
       this.state.columnDefs[i] = r;
     } else
       this.state.columnDefs.push(r);
@@ -486,22 +529,22 @@ class D extends v {
   // ----- Sort -----
   toggleSort(e, t = !1) {
     const i = this.state.sortModel.findIndex((r) => r.colId === e);
-    let n;
-    i === -1 ? n = { colId: e, sort: "asc" } : this.state.sortModel[i].sort === "asc" ? n = { colId: e, sort: "desc" } : n = null, t ? (i >= 0 && this.state.sortModel.splice(i, 1), n && this.state.sortModel.push(n)) : this.state.sortModel = n ? [n] : [], this.scheduleRender("sort"), g(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
+    let s;
+    i === -1 ? s = { colId: e, sort: "asc" } : this.state.sortModel[i].sort === "asc" ? s = { colId: e, sort: "desc" } : s = null, t ? (i >= 0 && this.state.sortModel.splice(i, 1), s && this.state.sortModel.push(s)) : this.state.sortModel = s ? [s] : [], this.scheduleRender("sort"), p(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
   }
   setSortModel(e) {
-    this.state.sortModel = Array.isArray(e) ? e.slice() : [], this.scheduleRender("sort"), g(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
+    this.state.sortModel = Array.isArray(e) ? e.slice() : [], this.scheduleRender("sort"), p(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
   }
   // ----- Filter -----
   setColumnFilter(e, t) {
-    t == null ? delete this.state.filterModel[e] : this.state.filterModel[e] = t, this.state.pagination.page = 0, this.scheduleRender("filter"), g(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
+    t == null ? delete this.state.filterModel[e] : this.state.filterModel[e] = t, this.state.pagination.page = 0, this.scheduleRender("filter"), p(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
   }
   setFilterModel(e) {
-    this.state.filterModel = { ...e || {} }, this.state.pagination.page = 0, this.scheduleRender("filter"), g(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
+    this.state.filterModel = { ...e || {} }, this.state.pagination.page = 0, this.scheduleRender("filter"), p(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
   }
   setQuickFilter(e) {
     const t = e == null ? "" : String(e);
-    t !== this.state.quickFilter && (this.state.quickFilter = t, this.state.pagination.page = 0, this.scheduleRender("filter"), g(this.element, "grid:filterChanged", {
+    t !== this.state.quickFilter && (this.state.quickFilter = t, this.state.pagination.page = 0, this.scheduleRender("filter"), p(this.element, "grid:filterChanged", {
       filterModel: { ...this.state.filterModel },
       quickFilter: t
     }));
@@ -513,47 +556,47 @@ class D extends v {
   toggleRowSelection(e, t = "single") {
     if (this.rowSelectionValue === "") return;
     const i = this.state.selection;
-    this.rowSelectionValue === "single" ? (i.clear(), i.add(e)) : t === "range" && this._lastSelectedId != null ? this._selectRange(this._lastSelectedId, e) : t === "toggle" ? i.has(e) ? i.delete(e) : i.add(e) : (i.clear(), i.add(e)), this._lastSelectedId = e, this.scheduleRender("selection"), g(this.element, "grid:selectionChanged", {
+    this.rowSelectionValue === "single" ? (i.clear(), i.add(e)) : t === "range" && this._lastSelectedId != null ? this._selectRange(this._lastSelectedId, e) : t === "toggle" ? i.has(e) ? i.delete(e) : i.add(e) : (i.clear(), i.add(e)), this._lastSelectedId = e, this.scheduleRender("selection"), p(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(i)
     });
   }
   setSelected(e, t) {
-    t ? this.state.selection.add(e) : this.state.selection.delete(e), this.scheduleRender("selection"), g(this.element, "grid:selectionChanged", {
+    t ? this.state.selection.add(e) : this.state.selection.delete(e), this.scheduleRender("selection"), p(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(this.state.selection)
     });
   }
   selectAll() {
-    this._displayList.filteredSorted.forEach((e) => this.state.selection.add(this._rowId(e))), this.scheduleRender("selection"), g(this.element, "grid:selectionChanged", {
+    this._displayList.filteredSorted.forEach((e) => this.state.selection.add(this._rowId(e))), this.scheduleRender("selection"), p(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(this.state.selection)
     });
   }
   deselectAll() {
-    this.state.selection.clear(), this.scheduleRender("selection"), g(this.element, "grid:selectionChanged", { selectedRows: [], selectedIds: [] });
+    this.state.selection.clear(), this.scheduleRender("selection"), p(this.element, "grid:selectionChanged", { selectedRows: [], selectedIds: [] });
   }
   getSelectedRows() {
     const e = this.state.selection;
     return this.state.rowData.filter((t) => e.has(this._rowId(t)));
   }
   _selectRange(e, t) {
-    const i = this._displayList.filteredSorted, n = i.findIndex((c) => this._rowId(c) === e), r = i.findIndex((c) => this._rowId(c) === t);
-    if (n < 0 || r < 0) return;
-    const [a, o] = n <= r ? [n, r] : [r, n];
-    for (let c = a; c <= o; c++) this.state.selection.add(this._rowId(i[c]));
+    const i = this._displayList.filteredSorted, s = i.findIndex((c) => this._rowId(c) === e), r = i.findIndex((c) => this._rowId(c) === t);
+    if (s < 0 || r < 0) return;
+    const [o, a] = s <= r ? [s, r] : [r, s];
+    for (let c = o; c <= a; c++) this.state.selection.add(this._rowId(i[c]));
   }
   // ----- Pagination -----
   goToPage(e) {
     const t = this.totalPages() - 1;
-    this.state.pagination.page = Math.max(0, Math.min(e, t)), this.scheduleRender("page"), g(this.element, "grid:paginationChanged", {
+    this.state.pagination.page = Math.max(0, Math.min(e, t)), this.scheduleRender("page"), p(this.element, "grid:paginationChanged", {
       page: this.state.pagination.page,
       pageSize: this.state.pagination.pageSize,
       totalPages: this.totalPages()
     });
   }
   setPageSize(e) {
-    this.state.pagination.pageSize = Math.max(1, e), this.state.pagination.page = 0, this.scheduleRender("page"), g(this.element, "grid:paginationChanged", {
+    this.state.pagination.pageSize = Math.max(1, e), this.state.pagination.page = 0, this.scheduleRender("page"), p(this.element, "grid:paginationChanged", {
       page: 0,
       pageSize: this.state.pagination.pageSize,
       totalPages: this.totalPages()
@@ -566,9 +609,9 @@ class D extends v {
   }
   filteredCount() {
     if (this.state.serverSide) return this.state.serverRowCount;
-    const e = Object.fromEntries(this.state.columnDefs.map((n) => [n.field, n])), t = this.state.columnDefs.filter((n) => !n.hidden && !n._isCheckbox);
-    let i = P(this.state.rowData, this.state.filterModel, e);
-    return i = T(i, this.state.quickFilter, t), i.length;
+    const e = Object.fromEntries(this.state.columnDefs.map((s) => [s.field, s])), t = this.state.columnDefs.filter((s) => !s.hidden && !s._isCheckbox);
+    let i = T(this.state.rowData, this.state.filterModel, e);
+    return i = V(i, this.state.quickFilter, t), i.length;
   }
   // Server-side row model: set the total row count so pagination reflects the
   // full table even though only one page is loaded client-side. No event is
@@ -581,90 +624,90 @@ class D extends v {
     return this.totalPages() - 1;
   }
   // ----- Editing -----
-  startEditingCell(e, t) {
-    const i = this.state.columnDefs.find((r) => r.field === t);
-    if (!i || !i.editable) return;
-    const n = this.state.rowData.find((r) => this._rowId(r) === e);
-    n && (this.state.editing = { rowId: e, colId: t, originalValue: y(n, i) }, this.scheduleRender("cells"));
+  startEditingCell(e, t, i = void 0) {
+    const s = this.state.columnDefs.find((o) => o.field === t);
+    if (!s || !s.editable) return;
+    const r = this.state.rowData.find((o) => this._rowId(o) === e);
+    r && (this.state.editing = { rowId: e, colId: t, originalValue: b(r, s), initialValue: i }, this.scheduleRender("cells"));
   }
   stopEditing(e = !1) {
     if (!this.state.editing) return;
-    const { rowId: t, colId: i, originalValue: n, draftValue: r } = this.state.editing, a = this._tbody.querySelector(`tr[data-row-id="${S(t)}"] td[data-col-id="${S(i)}"]`);
-    let o = n;
-    if (!e && a) {
-      const c = a.querySelector("[data-editor-input]") || a.querySelector("input,select,textarea");
-      c ? o = ne(c.value, this._colByField(i)?.type) : r !== void 0 && (o = r);
+    const { rowId: t, colId: i, originalValue: s, draftValue: r } = this.state.editing, o = this._tbody.querySelector(`tr[data-row-id="${R(t)}"] td[data-col-id="${R(i)}"]`);
+    let a = s;
+    if (!e && o) {
+      const c = o.querySelector("[data-editor-input]") || o.querySelector("input,select,textarea");
+      c ? a = ne(c.value, this._colByField(i)?.type) : r !== void 0 && (a = r);
     }
-    if (this.state.editing = null, !e && o !== n) {
+    if (this.state.editing = null, !e && a !== s) {
       const c = this.state.rowData.find((d) => this._rowId(d) === t), u = c[i];
-      c[i] = o, g(this.element, "grid:cellValueChanged", { rowId: t, colId: i, oldValue: u, newValue: o });
+      c[i] = a, p(this.element, "grid:cellValueChanged", { rowId: t, colId: i, oldValue: u, newValue: a });
     }
     this.scheduleRender("cells");
   }
   // ----- Column-level mutations from API or interactions -----
   setColumnVisible(e, t) {
     const i = this._colByField(e);
-    i && (i.hidden = !t, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, hidden: !t }, this.scheduleRender("columns"), g(this.element, "grid:columnVisible", { colId: e, visible: t }));
+    i && (i.hidden = !t, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, hidden: !t }, this.scheduleRender("columns"), p(this.element, "grid:columnVisible", { colId: e, visible: t }));
   }
   setColumnPinned(e, t) {
     const i = this._colByField(e);
     if (!i) return;
-    const n = t || null;
-    i.pinned = n, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, pinned: n }, this._reorderForPinning(), this.scheduleRender("columns"), g(this.element, "grid:columnPinned", { colId: e, pinned: n });
+    const s = t || null;
+    i.pinned = s, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, pinned: s }, this._reorderForPinning(), this.scheduleRender("columns"), p(this.element, "grid:columnPinned", { colId: e, pinned: s });
   }
   setColumnWidth(e, t) {
     const i = this._colByField(e);
     if (!i) return;
-    const n = Math.max(i.minWidth || 40, Math.min(i.maxWidth || 4e3, t));
-    i.width = n, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, width: n }, this.scheduleRender("columns"), g(this.element, "grid:columnResized", { colId: e, width: n });
+    const s = Math.max(i.minWidth || 40, Math.min(i.maxWidth || 4e3, t));
+    i.width = s, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, width: s }, this.scheduleRender("columns"), p(this.element, "grid:columnResized", { colId: e, width: s });
   }
   moveColumn(e, t) {
     const i = this.state.columnDefs.findIndex((r) => r.field === e);
     if (i < 0 || i === t) return;
-    const [n] = this.state.columnDefs.splice(i, 1);
-    this.state.columnDefs.splice(t, 0, n), this.scheduleRender("columns"), g(this.element, "grid:columnMoved", { colId: e, fromIndex: i, toIndex: t });
+    const [s] = this.state.columnDefs.splice(i, 1);
+    this.state.columnDefs.splice(t, 0, s), this.scheduleRender("columns"), p(this.element, "grid:columnMoved", { colId: e, fromIndex: i, toIndex: t });
   }
   autoSizeColumn(e) {
     const t = this._colByField(e);
     if (!t) return;
-    const i = (t.headerName || t.field || "").length, n = this.state.rowData.slice(0, 200);
+    const i = (t.headerName || t.field || "").length, s = this.state.rowData.slice(0, 200);
     let r = i;
-    for (const a of n) {
-      const o = String(b(a, t) ?? "").length;
-      o > r && (r = o);
+    for (const o of s) {
+      const a = String(C(o, t) ?? "").length;
+      a > r && (r = a);
     }
     this.setColumnWidth(e, Math.min(400, Math.max(60, r * 8 + 24)));
   }
   sizeColumnsToFit() {
     const e = this._viewport?.clientWidth || this.element.clientWidth || 0;
     if (!e) return;
-    const t = this._visibleCols(), i = t.reduce((r, a) => r + (a.width || 150), 0);
+    const t = this._visibleCols(), i = t.reduce((r, o) => r + (o.width || 150), 0);
     if (i === 0) return;
-    const n = e / i;
+    const s = e / i;
     t.forEach((r) => {
-      r.width = Math.max(r.minWidth || 40, Math.floor((r.width || 150) * n));
+      r.width = Math.max(r.minWidth || 40, Math.floor((r.width || 150) * s));
     }), this.scheduleRender("columns");
   }
   _reorderForPinning() {
-    const e = this.state.columnDefs.filter((n) => n.pinned === "left"), t = this.state.columnDefs.filter((n) => n.pinned === "right"), i = this.state.columnDefs.filter((n) => !n.pinned);
+    const e = this.state.columnDefs.filter((s) => s.pinned === "left"), t = this.state.columnDefs.filter((s) => s.pinned === "right"), i = this.state.columnDefs.filter((s) => !s.pinned);
     this.state.columnDefs = [...e, ...i, ...t];
   }
   // ----- Data mutations -----
   setRowData(e) {
-    this.state.rowData = Array.isArray(e) ? e : [], this.state.selection.clear(), this.state.serverSide || (this.state.pagination.page = 0), this.scheduleRender("data"), g(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
+    this.state.rowData = Array.isArray(e) ? e : [], this.state.selection.clear(), this.state.serverSide || (this.state.pagination.page = 0), this.scheduleRender("data"), p(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
   }
   applyTransaction(e) {
-    const t = [], i = [], n = [], r = new Map(this.state.rowData.map((a) => [this._rowId(a), a]));
-    return (e.remove || []).forEach((a) => {
-      const o = this._rowId(a);
-      r.delete(o) && n.push(a);
-    }), (e.update || []).forEach((a) => {
-      const o = this._rowId(a);
-      r.has(o) && (r.set(o, { ...r.get(o), ...a }), i.push(a));
-    }), (e.add || []).forEach((a) => {
-      const o = this._rowId(a);
-      r.has(o) || (r.set(o, a), t.push(a));
-    }), this.state.rowData = Array.from(r.values()), this.scheduleRender("data"), g(this.element, "grid:rowDataChanged", { rows: this.state.rowData }), { added: t, updated: i, removed: n };
+    const t = [], i = [], s = [], r = new Map(this.state.rowData.map((o) => [this._rowId(o), o]));
+    return (e.remove || []).forEach((o) => {
+      const a = this._rowId(o);
+      r.delete(a) && s.push(o);
+    }), (e.update || []).forEach((o) => {
+      const a = this._rowId(o);
+      r.has(a) && (r.set(a, { ...r.get(a), ...o }), i.push(o));
+    }), (e.add || []).forEach((o) => {
+      const a = this._rowId(o);
+      r.has(a) || (r.set(a, o), t.push(o));
+    }), this.state.rowData = Array.from(r.values()), this.scheduleRender("data"), p(this.element, "grid:rowDataChanged", { rows: this.state.rowData }), { added: t, updated: i, removed: s };
   }
   setColumnDefs(e) {
     this.state.columnDefs = e.map((t) => ({ ...t })), this.scheduleRender("columns");
@@ -674,15 +717,15 @@ class D extends v {
   }
   // ----- Export -----
   getDataAsCsv({ columnSeparator: e = ",", onlySelected: t = !1 } = {}) {
-    const i = this._visibleCols().filter((o) => !o._isCheckbox), n = t ? this.getSelectedRows() : this._displayList.filteredSorted, r = (o) => /[",\n\r]/.test(o) ? `"${String(o).replace(/"/g, '""')}"` : String(o), a = [i.map((o) => r(o.headerName || o.field)).join(e)];
-    for (const o of n)
-      a.push(i.map((c) => r(b(o, c))).join(e));
-    return a.join(`
+    const i = this._visibleCols().filter((a) => !a._isCheckbox), s = t ? this.getSelectedRows() : this._displayList.filteredSorted, r = (a) => /[",\n\r]/.test(a) ? `"${String(a).replace(/"/g, '""')}"` : String(a), o = [i.map((a) => r(a.headerName || a.field)).join(e)];
+    for (const a of s)
+      o.push(i.map((c) => r(C(a, c))).join(e));
+    return o.join(`
 `);
   }
   exportDataAsCsv({ fileName: e = "export.csv", ...t } = {}) {
-    const i = this.getDataAsCsv(t), n = new Blob([i], { type: "text/csv;charset=utf-8" }), r = URL.createObjectURL(n), a = f("a", { href: r, download: e });
-    return document.body.appendChild(a), a.click(), a.remove(), URL.revokeObjectURL(r), i;
+    const i = this.getDataAsCsv(t), s = new Blob([i], { type: "text/csv;charset=utf-8" }), r = URL.createObjectURL(s), o = f("a", { href: r, download: e });
+    return document.body.appendChild(o), o.click(), o.remove(), URL.revokeObjectURL(r), i;
   }
   // ----- Render pipeline -----
   scheduleRender(e) {
@@ -713,73 +756,77 @@ class D extends v {
       const h = d.getAttribute("data-header-cell-field-value") || d.getAttribute("data-field");
       h && i.set(h, d);
     });
-    const n = Array.from(t.children).map((d) => d.getAttribute("data-header-cell-field-value") || d.getAttribute("data-field")).filter(Boolean), r = e.map((d) => d.field);
-    if (!(n.length === r.length && n.every((d, h) => d === r[h]))) {
+    const s = Array.from(t.children).map((d) => d.getAttribute("data-header-cell-field-value") || d.getAttribute("data-field")).filter(Boolean), r = e.map((d) => d.field);
+    if (!(s.length === r.length && s.every((d, h) => d === r[h]))) {
       const d = [];
       for (const h of e) {
-        let p = i.get(h.field);
-        p || (p = f("th", {
+        let g = i.get(h.field);
+        g || (g = f("th", {
           "data-field": h.field,
           "data-synth": "true"
         }, [f("div", { class: "sg-header-content" }, [
           f("span", { class: "sg-header-label" }, h.headerName || h.field || "")
-        ])])), d.push(p);
+        ])])), d.push(g);
       }
       t.replaceChildren(...d);
     }
-    let o = this._table.querySelector("colgroup");
-    o || (o = f("colgroup"), this._table.insertBefore(o, this._thead));
-    const c = Array.from(o.children);
+    let a = this._table.querySelector("colgroup");
+    a || (a = f("colgroup"), this._table.insertBefore(a, this._thead));
+    const c = Array.from(a.children);
     for (e.forEach((d, h) => {
-      let p = c[h];
-      p || (p = f("col"), o.appendChild(p)), p.style.width = d.width ? d.width + "px" : "";
-    }); o.children.length > e.length; ) o.lastElementChild.remove();
+      let g = c[h];
+      g || (g = f("col"), a.appendChild(g)), g.style.width = d.width ? d.width + "px" : "";
+    }); a.children.length > e.length; ) a.lastElementChild.remove();
     const u = this._pinOffsets();
     for (const d of e) {
-      const h = t.querySelector(`th[data-header-cell-field-value="${S(d.field)}"]`) || t.querySelector(`th[data-field="${S(d.field)}"]`);
+      const h = t.querySelector(`th[data-header-cell-field-value="${R(d.field)}"]`) || t.querySelector(`th[data-field="${R(d.field)}"]`);
       if (!h) continue;
-      const p = this.state.sortModel.find((C) => C.colId === d.field);
-      I(h, {
+      const g = this.state.sortModel.find((y) => y.colId === d.field);
+      A(h, {
         "data-sortable": d.sortable ? "true" : null,
         "data-filterable": d.filter ? "true" : null,
         "data-filter-active": this.state.filterModel[d.field] ? "true" : null,
-        "data-sort": p?.sort || null,
+        "data-sort": g?.sort || null,
         "data-pinned": d.pinned || null
-      }), d.width && (h.style.width = d.width + "px"), h.style.left = d.pinned === "left" ? u.left[d.field] + "px" : "", h.style.right = d.pinned === "right" ? u.right[d.field] + "px" : "", this._ensureHeaderChrome(h, d, p);
+      }), d.width && (h.style.width = d.width + "px"), h.style.left = d.pinned === "left" ? u.left[d.field] + "px" : "", h.style.right = d.pinned === "right" ? u.right[d.field] + "px" : "", this._ensureHeaderChrome(h, d, g);
     }
   }
   _ensureHeaderChrome(e, t, i) {
-    if (t._isCheckbox) {
-      e.classList.add("sg-checkbox-header");
-      let o = e.querySelector('input[type="checkbox"]');
-      o || (o = f("input", { type: "checkbox", "aria-label": "Select all" }), o.addEventListener("change", (d) => {
-        d.target.checked ? this.selectAll() : this.deselectAll();
-      }), e.textContent = "", e.appendChild(o));
-      const c = this._displayList.filteredSorted.length, u = this.state.selection.size;
-      o.checked = u > 0 && u >= c, o.indeterminate = u > 0 && u < c;
+    if (t._isRowNumber) {
+      e.classList.add("sg-gutter-header"), e.textContent = "";
       return;
     }
-    let n = e.querySelector(".sg-header-content");
-    if (!n) {
-      const o = e.textContent.trim();
-      e.textContent = "", n = f("div", { class: "sg-header-content" }, [
-        f("span", { class: "sg-header-label" }, o || t.headerName || t.field || "")
-      ]), e.appendChild(n);
+    if (t._isCheckbox) {
+      e.classList.add("sg-checkbox-header");
+      let a = e.querySelector('input[type="checkbox"]');
+      a || (a = f("input", { type: "checkbox", "aria-label": "Select all" }), a.addEventListener("change", (d) => {
+        d.target.checked ? this.selectAll() : this.deselectAll();
+      }), e.textContent = "", e.appendChild(a));
+      const c = this._displayList.filteredSorted.length, u = this.state.selection.size;
+      a.checked = u > 0 && u >= c, a.indeterminate = u > 0 && u < c;
+      return;
     }
-    let r = n.querySelector(".sg-sort-icon");
+    let s = e.querySelector(".sg-header-content");
+    if (!s) {
+      const a = e.textContent.trim();
+      e.textContent = "", s = f("div", { class: "sg-header-content" }, [
+        f("span", { class: "sg-header-label" }, a || t.headerName || t.field || "")
+      ]), e.appendChild(s);
+    }
+    let r = s.querySelector(".sg-sort-icon");
     if (t.sortable)
-      if (r || (r = f("span", { class: "sg-sort-icon" }), n.appendChild(r)), i && this.state.sortModel.length > 1) {
-        let o = n.querySelector(".sg-sort-index");
-        o || (o = f("span", { class: "sg-sort-index" }), n.appendChild(o)), o.textContent = String(this.state.sortModel.indexOf(i) + 1);
+      if (r || (r = f("span", { class: "sg-sort-icon" }), s.appendChild(r)), i && this.state.sortModel.length > 1) {
+        let a = s.querySelector(".sg-sort-index");
+        a || (a = f("span", { class: "sg-sort-index" }), s.appendChild(a)), a.textContent = String(this.state.sortModel.indexOf(i) + 1);
       } else
-        n.querySelector(".sg-sort-index")?.remove();
+        s.querySelector(".sg-sort-index")?.remove();
     else r && r.remove();
-    let a = n.querySelector(".sg-filter-icon");
-    t.filter ? a || (a = f("span", {
+    let o = s.querySelector(".sg-filter-icon");
+    t.filter ? o || (o = f("span", {
       class: "sg-filter-icon",
       "data-action": "click->header-cell#openFilter",
       title: "Filter"
-    }), n.appendChild(a)) : a && a.remove(), t.resizable !== !1 && !e.querySelector(".sg-resize-handle") && !t._isCheckbox && e.appendChild(f("span", {
+    }), s.appendChild(o)) : o && o.remove(), t.resizable !== !1 && !e.querySelector(".sg-resize-handle") && !t._isCheckbox && e.appendChild(f("span", {
       class: "sg-resize-handle",
       "data-action": "mousedown->header-cell#startResize"
     }));
@@ -789,92 +836,94 @@ class D extends v {
     const e = this._visibleCols(), t = this._displayList.pageRows;
     this._selKeys = this._computeCellSelKeys();
     const i = this.virtualValue || t.length > 200;
-    let n = t, r = 0;
+    let s = t, r = 0;
     if (i) {
-      const c = this._viewport?.clientHeight || 400, u = this.state.rowHeight, d = Z(this.state.scrollTop, c, u, t.length, 8);
-      r = d.first, n = t.slice(d.first, d.last);
+      const d = this._viewport?.clientHeight || 400, h = this.state.rowHeight, g = Z(this.state.scrollTop, d, h, t.length, 8);
+      r = g.first, s = t.slice(g.first, g.last);
     }
-    const a = /* @__PURE__ */ new Map();
-    Array.from(this._tbody.children).forEach((c) => {
-      const u = c.dataset.rowId;
-      u != null && a.set(u, c);
+    const o = /* @__PURE__ */ new Map();
+    Array.from(this._tbody.children).forEach((d) => {
+      const h = d.dataset.rowId;
+      h != null && o.set(h, d);
     });
-    const o = document.createDocumentFragment();
+    const a = document.createDocumentFragment(), c = this.state.pagination.enabled ? this.state.pagination.page * this.state.pagination.pageSize : 0, u = (d) => c + r + d + 1;
     if (i) {
-      const c = this.state.rowHeight, u = r * c, d = (t.length - r - n.length) * c;
-      o.appendChild(this._spacerRow(u, e.length));
-      for (const h of n)
-        o.appendChild(this._buildRow(h, e, a));
-      o.appendChild(this._spacerRow(d, e.length));
+      const d = this.state.rowHeight, h = r * d, g = (t.length - r - s.length) * d;
+      a.appendChild(this._spacerRow(h, e.length)), s.forEach((y, v) => a.appendChild(this._buildRow(y, e, o, u(v)))), a.appendChild(this._spacerRow(g, e.length));
     } else
-      for (const c of n)
-        o.appendChild(this._buildRow(c, e, a));
-    this._tbody.replaceChildren(o);
+      s.forEach((d, h) => a.appendChild(this._buildRow(d, e, o, u(h))));
+    this._tbody.replaceChildren(a);
   }
-  _buildRow(e, t, i) {
-    const n = String(this._rowId(e));
-    let r = i.get(n);
-    r || (r = f("tr")), r.dataset.rowId = n, r.classList.remove("sg-spacer");
+  _buildRow(e, t, i, s) {
+    const r = String(this._rowId(e));
+    let o = i.get(r);
+    o || (o = f("tr")), o.dataset.rowId = r, o.classList.remove("sg-spacer");
     const a = this.state.selection.has(this._rowId(e));
-    return I(r, { "data-selected": a ? "true" : null }), this._renderRow(r, e, t), r;
+    return A(o, { "data-selected": a ? "true" : null }), this._renderRow(o, e, t, s), o;
   }
   _spacerRow(e, t) {
     if (e <= 0) {
-      const n = f("tr", { class: "sg-spacer", "aria-hidden": "true" });
-      return n.style.height = "0px", n.appendChild(f("td", { colspan: String(t), style: { height: "0px", padding: "0", border: "0" } })), n;
+      const s = f("tr", { class: "sg-spacer", "aria-hidden": "true" });
+      return s.style.height = "0px", s.appendChild(f("td", { colspan: String(t), style: { height: "0px", padding: "0", border: "0" } })), s;
     }
     const i = f("tr", { class: "sg-spacer", "aria-hidden": "true" });
     return i.style.height = e + "px", i.appendChild(f("td", { colspan: String(t), style: { height: e + "px", padding: "0", border: "0" } })), i;
   }
-  _renderRow(e, t, i) {
+  _renderRow(e, t, i, s) {
     e.innerHTML = "";
-    const n = this._pinOffsets(), r = this._selKeys || { active: null, range: null }, a = String(this._rowId(t));
-    for (const o of i) {
-      const c = `${a}:${o.field}`, u = f("td", {
-        "data-col-id": o.field,
-        "data-pinned": o.pinned || null,
-        "data-cell-active": r.active === c ? "true" : null,
-        "data-cell-range": r.range && r.range.has(c) ? "true" : null
+    const r = this._pinOffsets(), o = this._selKeys || { active: null, range: null }, a = String(this._rowId(t));
+    for (const c of i) {
+      const u = `${a}:${c.field}`, d = f("td", {
+        "data-col-id": c.field,
+        "data-pinned": c.pinned || null,
+        "data-cell-active": o.active === u ? "true" : null,
+        "data-cell-range": o.range && o.range.has(u) ? "true" : null
       });
-      if (o.pinned === "left" ? u.style.left = n.left[o.field] + "px" : o.pinned === "right" && (u.style.right = n.right[o.field] + "px"), o._isCheckbox) {
-        u.classList.add("sg-checkbox-cell");
-        const h = f("input", { type: "checkbox" });
-        h.checked = this.state.selection.has(this._rowId(t)), u.appendChild(h), e.appendChild(u);
+      if (c.pinned === "left" ? d.style.left = r.left[c.field] + "px" : c.pinned === "right" && (d.style.right = r.right[c.field] + "px"), c._isRowNumber) {
+        d.classList.add("sg-gutter-cell"), d.setAttribute("data-gutter", "true"), d.removeAttribute("data-cell-active"), d.removeAttribute("data-cell-range"), d.textContent = s != null ? String(s) : "", e.appendChild(d);
         continue;
       }
-      if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === o.field) {
-        u.setAttribute("data-editing", "true");
-        const { node: h, control: p } = this._buildEditor(o, y(t, o));
-        u.appendChild(h), queueMicrotask(() => {
-          p?.focus(), p?.select?.();
+      if (c._isCheckbox) {
+        d.classList.add("sg-checkbox-cell");
+        const g = f("input", { type: "checkbox" });
+        g.checked = this.state.selection.has(this._rowId(t)), d.appendChild(g), e.appendChild(d);
+        continue;
+      }
+      if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === c.field) {
+        d.setAttribute("data-editing", "true");
+        const g = this.state.editing.initialValue !== void 0 ? this.state.editing.initialValue : b(t, c), { node: y, control: v } = this._buildEditor(c, g);
+        d.appendChild(y);
+        const _ = this.state.editing.initialValue !== void 0;
+        queueMicrotask(() => {
+          v?.focus(), _ || v?.select?.();
         });
       } else
-        this._renderCellContent(u, t, o);
-      e.appendChild(u);
+        this._renderCellContent(d, t, c);
+      e.appendChild(d);
     }
   }
   _renderCellContent(e, t, i) {
     if (i.cellRenderer) {
-      const n = L(i.cellRenderer);
-      if (n) {
-        const r = y(t, i), a = b(t, i);
-        (n.dataset.bind || n.dataset.bindText !== void 0) && (n.textContent = n.dataset.bind ? String(t[n.dataset.bind] ?? "") : a), n.dataset.bindAttr && n.setAttribute(n.dataset.bindAttr, r), n.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((o) => {
-          o.dataset.bindText !== void 0 ? o.textContent = a : o.dataset.bind && (o.textContent = String(t[o.dataset.bind] ?? "")), o.dataset.bindAttr && o.setAttribute(o.dataset.bindAttr, r);
-        }), e.appendChild(n);
+      const s = M(i.cellRenderer);
+      if (s) {
+        const r = b(t, i), o = C(t, i);
+        (s.dataset.bind || s.dataset.bindText !== void 0) && (s.textContent = s.dataset.bind ? String(t[s.dataset.bind] ?? "") : o), s.dataset.bindAttr && s.setAttribute(s.dataset.bindAttr, r), s.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((a) => {
+          a.dataset.bindText !== void 0 ? a.textContent = o : a.dataset.bind && (a.textContent = String(t[a.dataset.bind] ?? "")), a.dataset.bindAttr && a.setAttribute(a.dataset.bindAttr, r);
+        }), e.appendChild(s);
         return;
       }
     }
-    e.textContent = b(t, i);
+    e.textContent = C(t, i);
   }
   // Returns { node, control }: the element to mount and the focusable control
   // whose value is read on commit. A column may supply a custom editor via a
   // <template> (col.cellEditor); otherwise a type-appropriate input is built.
   _buildEditor(e, t) {
     if (e.cellEditor) {
-      const n = L(e.cellEditor);
-      if (n) {
-        const r = n.matches?.("input,select,textarea") ? n : n.querySelector?.("[data-editor-input]") || n.querySelector?.("input,select,textarea");
-        return r && (this._seedEditorValue(r, e, t), r.addEventListener("keydown", this._onEditorKey), r.addEventListener("blur", this._onEditorBlur)), { node: n, control: r };
+      const s = M(e.cellEditor);
+      if (s) {
+        const r = s.matches?.("input,select,textarea") ? s : s.querySelector?.("[data-editor-input]") || s.querySelector?.("input,select,textarea");
+        return r && (this._seedEditorValue(r, e, t), r.addEventListener("keydown", this._onEditorKey), r.addEventListener("blur", this._onEditorBlur)), { node: s, control: r };
       }
     }
     const i = this._buildEditorInput(e, t);
@@ -882,15 +931,15 @@ class D extends v {
   }
   _seedEditorValue(e, t, i) {
     if (t.type === "date" && i) {
-      const n = i instanceof Date ? i : new Date(i);
-      e.value = Number.isNaN(n?.getTime?.()) ? i ?? "" : n.toISOString().slice(0, 10);
+      const s = i instanceof Date ? i : new Date(i);
+      e.value = Number.isNaN(s?.getTime?.()) ? i ?? "" : s.toISOString().slice(0, 10);
     } else t.type === "boolean" ? e.value = i === !0 ? "true" : i === !1 ? "false" : "" : e.value = i ?? "";
   }
   _buildEditorInput(e, t) {
     let i;
     if (e.type === "number") i = f("input", { type: "number", value: t ?? "" });
     else if (e.type === "date") {
-      const n = t instanceof Date ? t : t ? new Date(t) : null, r = n ? n.toISOString().slice(0, 10) : "";
+      const s = t instanceof Date ? t : t ? new Date(t) : null, r = s ? s.toISOString().slice(0, 10) : "";
       i = f("input", { type: "date", value: r });
     } else e.type === "boolean" ? (i = f("select"), i.append(
       new Option("—", ""),
@@ -911,126 +960,211 @@ class D extends v {
   _onBodyClick(e) {
     const t = e.target.closest("tr");
     if (!t || e.target.closest('td[data-editing="true"]')) return;
-    const i = this._coerceRowId(t.dataset.rowId), n = e.target.closest("td");
+    const i = this._coerceRowId(t.dataset.rowId), s = e.target.closest("td");
     if (e.target.matches('input[type="checkbox"]')) {
       this.toggleRowSelection(i, "toggle");
       return;
     }
-    if (n) {
-      const r = this.state.rowData.find((o) => this._rowId(o) === i), a = n.dataset.colId;
-      g(this.element, "grid:cellClicked", { rowId: i, colId: a, value: r?.[a], event: e });
+    if (s && s.dataset.gutter === "true") {
+      if (this.rowSelectionValue !== "") {
+        const o = e.shiftKey ? "range" : e.metaKey || e.ctrlKey ? "toggle" : "replace";
+        this.clearCellSelection(), this.toggleRowSelection(i, o), p(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((a) => this._rowId(a) === i), event: e });
+      }
+      this._cellDragMoved = !1;
+      return;
+    }
+    if (s) {
+      const o = this.state.rowData.find((c) => this._rowId(c) === i), a = s.dataset.colId;
+      p(this.element, "grid:cellClicked", { rowId: i, colId: a, value: o?.[a], event: e });
+    }
+    if (this.cellSelectionValue) {
+      if (this._cellDragMoved) {
+        this._cellDragMoved = !1;
+        return;
+      }
+      !e.shiftKey && !(e.metaKey || e.ctrlKey) && this.state.selection.size && this.deselectAll();
+      return;
     }
     if (this.suppressRowClickSelectionValue || this.rowSelectionValue === "") {
       this._cellDragMoved = !1;
       return;
     }
-    if (this.cellSelectionValue) {
-      if (e.metaKey || e.ctrlKey) {
-        this.toggleRowSelection(i, e.shiftKey ? "range" : "toggle"), this._cellDragMoved = !1, g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
-        return;
-      }
-      if (this._cellDragMoved) {
-        this._cellDragMoved = !1;
-        return;
-      }
-      !e.shiftKey && this.state.selection.size && this.deselectAll();
-    } else {
-      if (this._cellDragMoved) {
-        this._cellDragMoved = !1;
-        return;
-      }
-      const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
-      this.toggleRowSelection(i, r);
+    if (this._cellDragMoved) {
+      this._cellDragMoved = !1;
+      return;
     }
-    g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
+    const r = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
+    this.toggleRowSelection(i, r), p(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((o) => this._rowId(o) === i), event: e });
   }
-  // ----- Cell selection (click = active cell, drag / shift+click = range) -----
+  // ----- Cell selection (Numbers/Sheets-style: multi-range + active cell) -----
   _cellAt(e) {
     const t = e.closest?.("td"), i = e.closest?.("tr");
-    return !t || !i || t.classList.contains("sg-checkbox-cell") || !t.dataset.colId || t.dataset.editing === "true" ? null : { rowId: this._coerceRowId(i.dataset.rowId), colId: t.dataset.colId };
+    return !t || !i || t.classList.contains("sg-checkbox-cell") || t.dataset.gutter === "true" || !t.dataset.colId || t.dataset.editing === "true" ? null : { rowId: this._coerceRowId(i.dataset.rowId), colId: t.dataset.colId };
+  }
+  _activeCell() {
+    const e = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+    return e ? e.anchor : null;
+  }
+  _setSingleCellSel(e) {
+    this.state.cellSel = { ranges: [{ anchor: e, focus: e }], activeIdx: 0 };
+  }
+  _addCellRange(e) {
+    this.state.cellSel.ranges.push({ anchor: e, focus: e }), this.state.cellSel.activeIdx = this.state.cellSel.ranges.length - 1;
+  }
+  _extendActiveRange(e) {
+    const t = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+    t ? t.focus = e : this._setSingleCellSel(e);
+  }
+  clearCellSelection() {
+    this.state.cellSel = { ranges: [], activeIdx: -1 }, this._applyCellSelHighlight();
   }
   // Toggle the active/range data-attrs on the existing cell DOM without
   // rebuilding the tbody (so in-flight mouse interactions aren't disrupted).
   _applyCellSelHighlight() {
     const e = this._computeCellSelKeys();
     this._selKeys = e, this._tbody && this._tbody.querySelectorAll("td[data-col-id]").forEach((t) => {
-      const i = t.parentElement, n = `${i && i.dataset.rowId}:${t.dataset.colId}`;
-      e.active === n ? t.setAttribute("data-cell-active", "true") : t.removeAttribute("data-cell-active"), e.range && e.range.has(n) ? t.setAttribute("data-cell-range", "true") : t.removeAttribute("data-cell-range");
+      const i = t.parentElement, s = `${i && i.dataset.rowId}:${t.dataset.colId}`;
+      e.active === s ? t.setAttribute("data-cell-active", "true") : t.removeAttribute("data-cell-active"), e.range && e.range.has(s) ? t.setAttribute("data-cell-range", "true") : t.removeAttribute("data-cell-range");
     });
   }
-  // Rectangle of the selection in display indices, or null.
-  _cellSelRect() {
-    const e = this.state.cellSel;
-    if (!e?.anchor) return null;
-    const t = this._displayList.pageRows, i = this._visibleCols(), n = (d) => t.findIndex((h) => this._rowId(h) === d), r = (d) => i.findIndex((h) => h.field === d), a = n(e.anchor.rowId), o = r(e.anchor.colId);
-    if (a < 0 || o < 0) return null;
-    const c = e.focus ? n(e.focus.rowId) : a, u = e.focus ? r(e.focus.colId) : o;
+  // Rectangle (display indices) for a {anchor,focus} range, or null.
+  _rangeRect(e) {
+    if (!e) return null;
+    const t = this._displayList.pageRows, i = this._visibleCols(), s = (d) => t.findIndex((h) => this._rowId(h) === d), r = (d) => i.findIndex((h) => h.field === d), o = s(e.anchor.rowId), a = r(e.anchor.colId);
+    if (o < 0 || a < 0) return null;
+    const c = s(e.focus.rowId), u = r(e.focus.colId);
     return {
-      r0: Math.min(a, c < 0 ? a : c),
-      r1: Math.max(a, c < 0 ? a : c),
-      c0: Math.min(o, u < 0 ? o : u),
-      c1: Math.max(o, u < 0 ? o : u),
+      r0: Math.min(o, c < 0 ? o : c),
+      r1: Math.max(o, c < 0 ? o : c),
+      c0: Math.min(a, u < 0 ? a : u),
+      c1: Math.max(a, u < 0 ? a : u),
       rows: t,
       cols: i
     };
   }
-  _cellRangeRows(e = this._cellSelRect()) {
+  _activeRect() {
+    return this._rangeRect(this.state.cellSel.ranges[this.state.cellSel.activeIdx]);
+  }
+  _cellRangeRows(e = this._activeRect()) {
     if (!e) return [];
     const t = [];
     for (let i = e.r0; i <= e.r1; i++) {
-      const n = e.rows[i];
-      if (!n) continue;
+      const s = e.rows[i];
+      if (!s) continue;
       const r = [];
-      for (let a = e.c0; a <= e.c1; a++) {
-        const o = e.cols[a];
-        o && r.push(b(n, o));
+      for (let o = e.c0; o <= e.c1; o++) {
+        const a = e.cols[o];
+        a && r.push(C(s, a));
       }
       t.push(r);
     }
     return t;
   }
-  // Lookup used by the renderer to flag active + in-range cells.
+  // Active cell key + union of all ranges' cells (active stays outlined, unfilled).
   _computeCellSelKeys() {
-    const e = this._cellSelRect(), t = this.state.cellSel;
-    if (!e || !t?.anchor) return { active: null, range: null };
-    const i = `${t.anchor.rowId}:${t.anchor.colId}`, n = /* @__PURE__ */ new Set();
-    for (let r = e.r0; r <= e.r1; r++) {
-      const a = e.rows[r];
-      if (a)
-        for (let o = e.c0; o <= e.c1; o++) {
-          const c = e.cols[o];
-          if (!c) continue;
-          const u = `${this._rowId(a)}:${c.field}`;
-          u !== i && n.add(u);
+    const e = this._activeCell();
+    if (!e) return { active: null, range: null };
+    const t = `${e.rowId}:${e.colId}`, i = /* @__PURE__ */ new Set();
+    for (const s of this.state.cellSel.ranges) {
+      const r = this._rangeRect(s);
+      if (r)
+        for (let o = r.r0; o <= r.r1; o++) {
+          const a = r.rows[o];
+          if (a)
+            for (let c = r.c0; c <= r.c1; c++) {
+              const u = r.cols[c];
+              if (!u) continue;
+              const d = `${this._rowId(a)}:${u.field}`;
+              d !== t && i.add(d);
+            }
         }
     }
-    return { active: i, range: n };
+    return { active: t, range: i };
   }
   getCellSelectionDetail() {
-    const e = this._cellSelRect();
+    const e = this._activeRect();
     return {
-      anchor: this.state.cellSel.anchor,
-      focus: this.state.cellSel.focus,
+      active: this._activeCell(),
+      ranges: this.state.cellSel.ranges.length,
       rowCount: e ? e.r1 - e.r0 + 1 : 0,
       colCount: e ? e.c1 - e.c0 + 1 : 0
     };
   }
-  // Row ids covered by the current cell selection rectangle.
+  // Row ids covered by any cell range.
   getCellSelectionRowIds() {
-    const e = this._cellSelRect();
-    if (!e) return [];
-    const t = [];
-    for (let i = e.r0; i <= e.r1; i++) {
-      const n = e.rows[i];
-      n && t.push(this._rowId(n));
+    const e = /* @__PURE__ */ new Set();
+    for (const t of this.state.cellSel.ranges) {
+      const i = this._rangeRect(t);
+      if (i)
+        for (let s = i.r0; s <= i.r1; s++) {
+          const r = i.rows[s];
+          r && e.add(this._rowId(r));
+        }
     }
-    return t;
+    return Array.from(e);
+  }
+  _focusGrid() {
+    if (document.activeElement !== this.element && !this.element.contains(document.activeElement))
+      try {
+        this.element.focus({ preventScroll: !0 });
+      } catch {
+      }
+  }
+  // ----- Keyboard navigation (Numbers/Sheets-style) -----
+  _navCols() {
+    return this._visibleCols().filter((e) => !e._isCheckbox && !e._isRowNumber);
+  }
+  _moveActiveCell(e, t, i) {
+    const s = this._displayList.pageRows, r = this._navCols();
+    if (!s.length || !r.length) return;
+    const o = (d, h, g) => Math.max(h, Math.min(d, g)), a = this._activeCell();
+    let c = a ? s.findIndex((d) => this._rowId(d) === a.rowId) : 0, u = a ? r.findIndex((d) => d.field === a.colId) : 0;
+    if (c < 0 && (c = 0), u < 0 && (u = 0), i && this.state.cellSel.ranges[this.state.cellSel.activeIdx]) {
+      const d = this.state.cellSel.ranges[this.state.cellSel.activeIdx], h = o(s.findIndex((y) => this._rowId(y) === d.focus.rowId) + e, 0, s.length - 1), g = o(r.findIndex((y) => y.field === d.focus.colId) + t, 0, r.length - 1);
+      this._extendActiveRange({ rowId: this._rowId(s[h]), colId: r[g].field });
+    } else {
+      const d = o(c + e, 0, s.length - 1), h = o(u + t, 0, r.length - 1);
+      this._setSingleCellSel({ rowId: this._rowId(s[d]), colId: r[h].field });
+    }
+    this._applyCellSelHighlight(), this._scrollActiveIntoView(), p(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
+  }
+  _selectAllCells() {
+    const e = this._displayList.pageRows, t = this._navCols();
+    !e.length || !t.length || (this.state.cellSel = {
+      ranges: [{
+        anchor: { rowId: this._rowId(e[0]), colId: t[0].field },
+        focus: { rowId: this._rowId(e[e.length - 1]), colId: t[t.length - 1].field }
+      }],
+      activeIdx: 0
+    }, this._applyCellSelHighlight(), p(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+  }
+  // Clear the value of every selected, editable cell (Delete/Backspace).
+  _clearSelectedCells() {
+    let e = !1;
+    for (const t of this.state.cellSel.ranges) {
+      const i = this._rangeRect(t);
+      if (i)
+        for (let s = i.r0; s <= i.r1; s++) {
+          const r = i.rows[s];
+          if (r)
+            for (let o = i.c0; o <= i.c1; o++) {
+              const a = i.cols[o];
+              if (!a || !a.editable || a._isCheckbox || a._isRowNumber) continue;
+              const c = r[a.field];
+              c === "" || c == null || (r[a.field] = "", e = !0, p(this.element, "grid:cellValueChanged", { rowId: this._rowId(r), colId: a.field, oldValue: c, newValue: "" }));
+            }
+        }
+    }
+    return e && this.scheduleRender("cells"), e;
+  }
+  _scrollActiveIntoView() {
+    this._tbody?.querySelector('td[data-cell-active="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
   _onBodyDblClick(e) {
     const t = e.target.closest("tr"), i = e.target.closest("td");
     if (!t || !i || i.dataset.editing === "true") return;
-    const n = this._coerceRowId(t.dataset.rowId), r = i.dataset.colId;
-    this.startEditingCell(n, r);
+    const s = this._coerceRowId(t.dataset.rowId), r = i.dataset.colId;
+    this.startEditingCell(s, r);
   }
   // Commit the current editor and open the editor on the next (dir=1) or
   // previous (dir=-1) editable cell in reading order, wrapping within the
@@ -1038,12 +1172,12 @@ class D extends v {
   _tabToEditableCell(e) {
     const t = this.state.editing;
     if (!t) return;
-    const i = this._visibleCols().filter((h) => h.editable && !h._isCheckbox), n = this._displayList.pageRows, r = n.findIndex((h) => this._rowId(h) === t.rowId), a = i.findIndex((h) => h.field === t.colId);
-    if (!i.length || !n.length || r < 0 || a < 0) {
+    const i = this._visibleCols().filter((h) => h.editable && !h._isCheckbox), s = this._displayList.pageRows, r = s.findIndex((h) => this._rowId(h) === t.rowId), o = i.findIndex((h) => h.field === t.colId);
+    if (!i.length || !s.length || r < 0 || o < 0) {
       this.stopEditing(!1);
       return;
     }
-    const o = n.length * i.length, c = (r * i.length + a + e + o) % o, u = n[Math.floor(c / i.length)], d = i[c % i.length];
+    const a = s.length * i.length, c = (r * i.length + o + e + a) % a, u = s[Math.floor(c / i.length)], d = i[c % i.length];
     this._navigatingEditor = !0, this.stopEditing(!1), this.startEditingCell(this._rowId(u), d.field), requestAnimationFrame(() => {
       this._navigatingEditor = !1;
     });
@@ -1059,13 +1193,13 @@ class D extends v {
     let i = 0;
     for (const r of e)
       r.pinned === "left" && (t[r.field] = i, i += r.width || 150);
-    const n = {};
+    const s = {};
     i = 0;
     for (let r = e.length - 1; r >= 0; r--) {
-      const a = e[r];
-      a.pinned === "right" && (n[a.field] = i, i += a.width || 150);
+      const o = e[r];
+      o.pinned === "right" && (s[o.field] = i, i += o.width || 150);
     }
-    return { left: t, right: n };
+    return { left: t, right: s };
   }
   _colByField(e) {
     return this.state.columnDefs.find((t) => t.field === e);
@@ -1079,7 +1213,7 @@ class D extends v {
     return Number.isFinite(t) && String(t) === e ? t : e;
   }
 }
-m(D, "values", {
+m(I, "values", {
   rowData: { type: Array, default: [] },
   rowDataUrl: { type: String, default: "" },
   rowSelection: { type: String, default: "" },
@@ -1087,7 +1221,7 @@ m(D, "values", {
   rowMultiSelectWithClick: { type: Boolean, default: !1 },
   suppressRowClickSelection: { type: Boolean, default: !1 },
   pagination: { type: Boolean, default: !1 },
-  pageSize: { type: Number, default: k },
+  pageSize: { type: Number, default: L },
   rowHeight: { type: Number, default: te },
   headerHeight: { type: Number, default: 36 },
   virtual: { type: Boolean, default: !1 },
@@ -1105,13 +1239,13 @@ m(D, "values", {
   cellSelection: { type: Boolean, default: !0 }
   // click=cell; modifier/checkbox=row
 });
-function ie(s, l) {
-  const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox"];
-  for (const t of e) if (s[t] !== l[t]) return !1;
+function ie(n, l) {
+  const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox", "_isRowNumber"];
+  for (const t of e) if (n[t] !== l[t]) return !1;
   return !0;
 }
-function se(s) {
-  return s === "number" || s === "date" ? [
+function se(n) {
+  return n === "number" || n === "date" ? [
     { value: "equals", label: "Equals" },
     { value: "notEqual", label: "Not equal" },
     { value: "lessThan", label: "Less than" },
@@ -1119,7 +1253,7 @@ function se(s) {
     { value: "inRange", label: "In range" },
     { value: "blank", label: "Blank" },
     { value: "notBlank", label: "Not blank" }
-  ] : s === "boolean" ? [
+  ] : n === "boolean" ? [
     { value: "equals", label: "Equals" }
   ] : [
     { value: "contains", label: "Contains" },
@@ -1132,17 +1266,17 @@ function se(s) {
     { value: "notBlank", label: "Not blank" }
   ];
 }
-function ne(s, l) {
+function ne(n, l) {
   if (l === "number") {
-    const e = Number(s);
-    return Number.isFinite(e) ? e : s;
+    const e = Number(n);
+    return Number.isFinite(e) ? e : n;
   }
-  return l === "date" ? s : l === "boolean" ? s === "true" ? !0 : s === "false" ? !1 : null : s;
+  return l === "date" ? n : l === "boolean" ? n === "true" ? !0 : n === "false" ? !1 : null : n;
 }
-function S(s) {
-  return typeof CSS < "u" && CSS.escape ? CSS.escape(String(s)) : String(s).replace(/["\\\n\r]/g, (l) => "\\" + l);
+function R(n) {
+  return typeof CSS < "u" && CSS.escape ? CSS.escape(String(n)) : String(n).replace(/["\\\n\r]/g, (l) => "\\" + l);
 }
-class x extends v {
+class D extends S {
   constructor() {
     super(...arguments);
     /* Single mousedown handler: distinguishes a bare click (→ sort) from a drag
@@ -1151,14 +1285,14 @@ class x extends v {
     m(this, "_onMouseDown", (e) => {
       if (e.button !== 0 || e.target.closest(".sg-resize-handle, .sg-filter-icon, .sg-reorder-handle")) return;
       const t = e.clientX, i = e.clientY;
-      let n = !1;
-      const r = (o) => {
-        const c = Math.abs(o.clientX - t), u = Math.abs(o.clientY - i);
-        !n && (c > 5 || u > 5) && (n = !0, document.removeEventListener("mousemove", r), document.removeEventListener("mouseup", a), this._beginReorder(t));
-      }, a = (o) => {
-        document.removeEventListener("mousemove", r), document.removeEventListener("mouseup", a), n || this.sort(o);
+      let s = !1;
+      const r = (a) => {
+        const c = Math.abs(a.clientX - t), u = Math.abs(a.clientY - i);
+        !s && (c > 5 || u > 5) && (s = !0, document.removeEventListener("mousemove", r), document.removeEventListener("mouseup", o), this._beginReorder(t));
+      }, o = (a) => {
+        document.removeEventListener("mousemove", r), document.removeEventListener("mouseup", o), s || this.sort(a);
       };
-      document.addEventListener("mousemove", r), document.addEventListener("mouseup", a);
+      document.addEventListener("mousemove", r), document.addEventListener("mouseup", o);
     });
   }
   connect() {
@@ -1167,7 +1301,7 @@ class x extends v {
         const e = this.element.textContent.trim();
         e && (this.headerNameValue = e);
       }
-      this.grid.registerColumn(this.toColumnDef(), this.element), this.checkboxValue || this.element.addEventListener("mousedown", this._onMouseDown);
+      this.grid.registerColumn(this.toColumnDef(), this.element), !this.checkboxValue && !this.rowNumberValue && this.element.addEventListener("mousedown", this._onMouseDown);
     }
   }
   disconnect() {
@@ -1189,29 +1323,32 @@ class x extends v {
       resizable: this.resizableValue,
       cellRenderer: this.cellRendererValue || null,
       cellEditor: this.cellEditorValue || null,
-      _isCheckbox: this.checkboxValue
+      _isCheckbox: this.checkboxValue,
+      _isRowNumber: this.rowNumberValue,
+      sortable: this.rowNumberValue ? !1 : this.sortableValue,
+      resizable: this.rowNumberValue ? !1 : this.resizableValue
     };
   }
   _beginReorder(e) {
     if (!this.grid) return;
-    const t = this.element.parentElement, i = Array.from(t.children), n = i.indexOf(this.element);
-    let r = n;
+    const t = this.element.parentElement, i = Array.from(t.children), s = i.indexOf(this.element);
+    let r = s;
     this.element.style.opacity = "0.5", this.element.style.background = "var(--sg-bg-hover, #eef2ff)", document.body.style.cursor = "grabbing";
-    const a = (c) => {
+    const o = (c) => {
       const u = c.clientX;
       let d = i.length;
       for (let h = 0; h < i.length; h++) {
-        const p = i[h].getBoundingClientRect();
-        if (u < p.left + p.width / 2) {
+        const g = i[h].getBoundingClientRect();
+        if (u < g.left + g.width / 2) {
           d = h;
           break;
         }
       }
-      r = d > n ? d - 1 : d;
-    }, o = () => {
-      document.removeEventListener("mousemove", a), document.removeEventListener("mouseup", o), this.element.style.opacity = "", this.element.style.background = "", document.body.style.cursor = "", r !== n && this.grid.moveColumn(this.fieldValue, r);
+      r = d > s ? d - 1 : d;
+    }, a = () => {
+      document.removeEventListener("mousemove", o), document.removeEventListener("mouseup", a), this.element.style.opacity = "", this.element.style.background = "", document.body.style.cursor = "", r !== s && this.grid.moveColumn(this.fieldValue, r);
     };
-    document.addEventListener("mousemove", a), document.addEventListener("mouseup", o);
+    document.addEventListener("mousemove", o), document.addEventListener("mouseup", a);
   }
   sort(e) {
     !this.sortableValue || !this.grid || this.grid.toggleSort(this.fieldValue, e?.shiftKey === !0);
@@ -1223,13 +1360,13 @@ class x extends v {
   startResize(e) {
     if (!this.resizableValue || !this.grid) return;
     e.preventDefault(), e.stopPropagation();
-    const t = e.clientX, i = this.element.offsetWidth, n = (a) => this.grid.setColumnWidth(this.fieldValue, i + (a.clientX - t)), r = () => {
-      document.removeEventListener("mousemove", n), document.removeEventListener("mouseup", r), document.body.style.cursor = "", document.body.style.userSelect = "";
+    const t = e.clientX, i = this.element.offsetWidth, s = (o) => this.grid.setColumnWidth(this.fieldValue, i + (o.clientX - t)), r = () => {
+      document.removeEventListener("mousemove", s), document.removeEventListener("mouseup", r), document.body.style.cursor = "", document.body.style.userSelect = "";
     };
-    document.addEventListener("mousemove", n), document.addEventListener("mouseup", r), document.body.style.cursor = "col-resize", document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", s), document.addEventListener("mouseup", r), document.body.style.cursor = "col-resize", document.body.style.userSelect = "none";
   }
 }
-m(x, "values", {
+m(D, "values", {
   field: String,
   headerName: { type: String, default: "" },
   type: { type: String, default: "text" },
@@ -1247,30 +1384,32 @@ m(x, "values", {
   resizable: { type: Boolean, default: !0 },
   cellRenderer: { type: String, default: "" },
   cellEditor: { type: String, default: "" },
-  checkbox: { type: Boolean, default: !1 }
+  checkbox: { type: Boolean, default: !1 },
+  rowNumber: { type: Boolean, default: !1 }
+  // gutter: shows 1-based row number, click selects row
 });
-class F extends v {
+class P extends S {
   connect() {
   }
 }
-class N extends v {
+class N extends S {
   connect() {
   }
 }
-class V extends v {
+class F extends S {
   connect() {
   }
 }
-class E extends v {
+class E extends S {
   constructor() {
     super(...arguments);
     m(this, "_refresh", () => {
       const e = this._gridEl?.gridApi;
       if (!e) return;
-      const t = e.paginationGetCurrentPage(), i = e.paginationGetTotalPages(), n = e.paginationGetRowCount(), r = e.paginationGetPageSize() || 1;
+      const t = e.paginationGetCurrentPage(), i = e.paginationGetTotalPages(), s = e.paginationGetRowCount(), r = e.paginationGetPageSize() || 1;
       if (this.hasPageInfoTarget) {
-        const a = n === 0 ? 0 : t * r + 1, o = Math.min(n, a + r - 1);
-        this.pageInfoTarget.textContent = n === 0 ? "0 rows" : `${a}–${o} of ${n}`;
+        const o = s === 0 ? 0 : t * r + 1, a = Math.min(s, o + r - 1);
+        this.pageInfoTarget.textContent = s === 0 ? "0 rows" : `${o}–${a} of ${s}`;
       }
       this.hasFirstTarget && (this.firstTarget.disabled = t === 0), this.hasPrevTarget && (this.prevTarget.disabled = t === 0), this.hasNextTarget && (this.nextTarget.disabled = t >= i - 1), this.hasLastTarget && (this.lastTarget.disabled = t >= i - 1), this.hasPageSizeTarget && document.activeElement !== this.pageSizeTarget && (this.pageSizeTarget.value = String(r));
     });
@@ -1316,27 +1455,27 @@ class E extends v {
   }
 }
 m(E, "outlets", ["grid"]), m(E, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
-function le(s) {
-  const l = s ?? B.start();
-  return l.register("grid", D), l.register("header-cell", x), l.register("row", F), l.register("cell", N), l.register("filter", V), l.register("pagination", E), l;
+function le(n) {
+  const l = n ?? B.start();
+  return l.register("grid", I), l.register("header-cell", D), l.register("row", P), l.register("cell", N), l.register("filter", F), l.register("pagination", E), l;
 }
 const re = {
   start: le,
-  GridController: D,
-  HeaderCellController: x,
-  RowController: F,
+  GridController: I,
+  HeaderCellController: D,
+  RowController: P,
   CellController: N,
-  FilterController: V,
+  FilterController: F,
   PaginationController: E
 };
 typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = re);
 export {
   N as CellController,
-  V as FilterController,
-  D as GridController,
-  x as HeaderCellController,
+  F as FilterController,
+  I as GridController,
+  D as HeaderCellController,
   E as PaginationController,
-  F as RowController,
+  P as RowController,
   re as default,
   le as start
 };

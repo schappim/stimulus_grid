@@ -18,6 +18,7 @@ export default class HeaderCellController extends Controller {
     cellRenderer: { type: String, default: '' },
     cellEditor:   { type: String, default: '' },
     checkbox:     { type: Boolean, default: false },
+    rowNumber:    { type: Boolean, default: false },   // gutter: shows 1-based row number, click selects row
   };
 
   connect() {
@@ -29,9 +30,9 @@ export default class HeaderCellController extends Controller {
       if (txt) this.headerNameValue = txt;
     }
     this.grid.registerColumn(this.toColumnDef(), this.element);
-    // Sort/reorder mousedown — but not on a checkbox header, whose only job is
-    // to toggle select-all (handled by the grid itself).
-    if (!this.checkboxValue) {
+    // Sort/reorder mousedown — but not on a checkbox or row-number gutter
+    // header (those don't sort/reorder).
+    if (!this.checkboxValue && !this.rowNumberValue) {
       this.element.addEventListener('mousedown', this._onMouseDown);
     }
   }
@@ -58,6 +59,9 @@ export default class HeaderCellController extends Controller {
       cellRenderer: this.cellRendererValue || null,
       cellEditor:   this.cellEditorValue || null,
       _isCheckbox:  this.checkboxValue,
+      _isRowNumber: this.rowNumberValue,
+      sortable:     this.rowNumberValue ? false : this.sortableValue,
+      resizable:    this.rowNumberValue ? false : this.resizableValue,
     };
   }
 

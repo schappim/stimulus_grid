@@ -36,7 +36,7 @@ export default class GridController extends Controller {
       quickFilter: '',
       selection: new Set(),
       focusedCell: null,
-      cellSel: { anchor: null, focus: null },   // {rowId, colId} rectangle
+      cellSel: { ranges: [], activeIdx: -1 },   // multi-range: [{anchor,focus}], active range
       editing: null,
       pagination: { enabled: false, page: 0, pageSize: DEFAULT_PAGE_SIZE },
       scrollTop: 0,
@@ -55,6 +55,9 @@ export default class GridController extends Controller {
   connect() {
     this.element.classList.add('sg-grid');
     if (this.heightValue) this.element.style.height = this.heightValue;
+    // Make the grid focusable so it can receive keyboard navigation.
+    if (!this.element.hasAttribute('tabindex')) this.element.tabIndex = 0;
+    this.element.addEventListener('keydown', this._onGridKeydown);
 
     this.state.rowHeight = this.rowHeightValue;
     this.state.pagination = {
@@ -80,6 +83,7 @@ export default class GridController extends Controller {
 
   disconnect() {
     this.element.gridApi = null;
+    this.element.removeEventListener('keydown', this._onGridKeydown);
     document.removeEventListener('mouseup', this._onCellMouseUp);
     document.removeEventListener('copy', this._onCopy);
   }
@@ -466,12 +470,14 @@ export default class GridController extends Controller {
 
   // ----- Editing -----
 
-  startEditingCell(rowId, colId) {
+  startEditingCell(rowId, colId, initialValue = undefined) {
     const col = this.state.columnDefs.find((c) => c.field === colId);
     if (!col || !col.editable) return;
     const row = this.state.rowData.find((r) => this._rowId(r) === rowId);
     if (!row) return;
-    this.state.editing = { rowId, colId, originalValue: getValue(row, col) };
+    // `initialValue` (e.g. from type-to-edit) seeds the editor instead of the
+    // current cell value.
+    this.state.editing = { rowId, colId, originalValue: getValue(row, col), initialValue };
     this.scheduleRender('cells');
   }
 
@@ -744,6 +750,11 @@ export default class GridController extends Controller {
   }
 
   _ensureHeaderChrome(th, col, sortEntry) {
+    if (col._isRowNumber) {
+      th.classList.add('sg-gutter-header');
+      th.textContent = '';   // blank corner, like a spreadsheet
+      return;
+    }
     if (col._isCheckbox) {
       th.classList.add('sg-checkbox-header');
       let cb = th.querySelector('input[type="checkbox"]');
@@ -836,25 +847,26 @@ export default class GridController extends Controller {
     });
 
     const fragment = document.createDocumentFragment();
+    // 1-based row number shown in the gutter: pagination page offset + virtual
+    // window offset + position. (Server-side keeps pagination.enabled + page.)
+    const pageOffset = this.state.pagination.enabled
+      ? this.state.pagination.page * this.state.pagination.pageSize : 0;
+    const rowNumOf = (i) => pageOffset + firstIdx + i + 1;
 
     if (virtual) {
       const rh = this.state.rowHeight;
       const topPx = firstIdx * rh;
       const bottomPx = (allRows.length - firstIdx - windowed.length) * rh;
       fragment.appendChild(this._spacerRow(topPx, cols.length));
-      for (const row of windowed) {
-        fragment.appendChild(this._buildRow(row, cols, existing));
-      }
+      windowed.forEach((row, i) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(i))));
       fragment.appendChild(this._spacerRow(bottomPx, cols.length));
     } else {
-      for (const row of windowed) {
-        fragment.appendChild(this._buildRow(row, cols, existing));
-      }
+      windowed.forEach((row, i) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(i))));
     }
     this._tbody.replaceChildren(fragment);
   }
 
-  _buildRow(row, cols, existing) {
+  _buildRow(row, cols, existing, rowNum) {
     const id = String(this._rowId(row));
     let tr = existing.get(id);
     if (!tr) tr = el('tr');
@@ -862,7 +874,7 @@ export default class GridController extends Controller {
     tr.classList.remove('sg-spacer');
     const selected = this.state.selection.has(this._rowId(row));
     setAttrs(tr, { 'data-selected': selected ? 'true' : null });
-    this._renderRow(tr, row, cols);
+    this._renderRow(tr, row, cols, rowNum);
     return tr;
   }
 
@@ -880,7 +892,7 @@ export default class GridController extends Controller {
     return tr;
   }
 
-  _renderRow(tr, row, cols) {
+  _renderRow(tr, row, cols, rowNum) {
     // Rebuild cells in column order. Cheap because table-layout is fixed.
     tr.innerHTML = '';
     const pin = this._pinOffsets();
@@ -896,6 +908,17 @@ export default class GridController extends Controller {
       });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
+      if (col._isRowNumber) {
+        // Spreadsheet-style gutter: shows the 1-based row number; clicking it
+        // selects the row (handled in _onBodyClick via data-gutter).
+        td.classList.add('sg-gutter-cell');
+        td.setAttribute('data-gutter', 'true');
+        td.removeAttribute('data-cell-active');
+        td.removeAttribute('data-cell-range');
+        td.textContent = rowNum != null ? String(rowNum) : '';
+        tr.appendChild(td);
+        continue;
+      }
       if (col._isCheckbox) {
         td.classList.add('sg-checkbox-cell');
         const cb = el('input', { type: 'checkbox' });
@@ -909,9 +932,12 @@ export default class GridController extends Controller {
         this.state.editing.colId === col.field;
       if (editing) {
         td.setAttribute('data-editing', 'true');
-        const { node, control } = this._buildEditor(col, getValue(row, col));
+        const seed = this.state.editing.initialValue !== undefined
+          ? this.state.editing.initialValue : getValue(row, col);
+        const { node, control } = this._buildEditor(col, seed);
         td.appendChild(node);
-        queueMicrotask(() => { control?.focus(); control?.select?.(); });
+        const typed = this.state.editing.initialValue !== undefined;
+        queueMicrotask(() => { control?.focus(); if (typed) { /* cursor at end */ } else control?.select?.(); });
       } else {
         this._renderCellContent(td, row, col);
       }
@@ -1039,45 +1065,70 @@ export default class GridController extends Controller {
       this.toggleRowSelection(rowId, 'toggle');
       return;
     }
+    // Row-number gutter → ROW selection (click=replace, shift=range, cmd=toggle),
+    // exactly like a spreadsheet row header.
+    if (td && td.dataset.gutter === 'true') {
+      if (this.rowSelectionValue !== '') {
+        const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey) ? 'toggle' : 'replace';
+        this.clearCellSelection();
+        this.toggleRowSelection(rowId, mode);
+        emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
+      }
+      this._cellDragMoved = false;
+      return;
+    }
     if (td) {
       const row = this.state.rowData.find((r) => this._rowId(r) === rowId);
       const colId = td.dataset.colId;
       emit(this.element, 'grid:cellClicked', { rowId, colId, value: row?.[colId], event: e });
     }
+    if (this.cellSelectionValue) {
+      // Cell selection is handled on mousedown/drag. A plain click also clears
+      // any row selection (fresh cell focus). Cmd/Shift build CELL ranges and
+      // must not touch row selection. Row selection lives on the gutter.
+      if (this._cellDragMoved) { this._cellDragMoved = false; return; }
+      const plain = !e.shiftKey && !(e.metaKey || e.ctrlKey);
+      if (plain && this.state.selection.size) this.deselectAll();
+      return;
+    }
+    // Legacy row-click selection (cell-selection disabled).
     if (this.suppressRowClickSelectionValue || this.rowSelectionValue === '') {
       this._cellDragMoved = false;
       return;
     }
-    if (this.cellSelectionValue) {
-      // Cell-primary mode (Numbers/Sheets-style). Cmd/Ctrl+click toggles a ROW;
-      // Cmd/Ctrl+Shift+click selects a ROW RANGE from the last row anchor.
-      // Honored even if a tiny drag was registered (reliable on trackpads).
-      if (e.metaKey || e.ctrlKey) {
-        this.toggleRowSelection(rowId, e.shiftKey ? 'range' : 'toggle');
-        this._cellDragMoved = false;
-        emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
-        return;
-      }
-      // A drag that made a cell range shouldn't clear the selection.
-      if (this._cellDragMoved) { this._cellDragMoved = false; return; }
-      // Plain click → fresh single cell (clear any row selection).
-      if (!e.shiftKey && this.state.selection.size) this.deselectAll();
-    } else {
-      if (this._cellDragMoved) { this._cellDragMoved = false; return; }
-      const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
-      this.toggleRowSelection(rowId, mode);
-    }
+    if (this._cellDragMoved) { this._cellDragMoved = false; return; }
+    const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue) ? 'toggle' : 'replace';
+    this.toggleRowSelection(rowId, mode);
     emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
   }
 
-  // ----- Cell selection (click = active cell, drag / shift+click = range) -----
+  // ----- Cell selection (Numbers/Sheets-style: multi-range + active cell) -----
 
   _cellAt(target) {
     const td = target.closest?.('td');
     const tr = target.closest?.('tr');
-    if (!td || !tr || td.classList.contains('sg-checkbox-cell') || !td.dataset.colId) return null;
+    if (!td || !tr || td.classList.contains('sg-checkbox-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
     return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
+  }
+
+  _activeCell() {
+    const r = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+    return r ? r.anchor : null;
+  }
+
+  _setSingleCellSel(cell) { this.state.cellSel = { ranges: [{ anchor: cell, focus: cell }], activeIdx: 0 }; }
+  _addCellRange(cell) {
+    this.state.cellSel.ranges.push({ anchor: cell, focus: cell });
+    this.state.cellSel.activeIdx = this.state.cellSel.ranges.length - 1;
+  }
+  _extendActiveRange(cell) {
+    const r = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+    if (r) r.focus = cell; else this._setSingleCellSel(cell);
+  }
+  clearCellSelection() {
+    this.state.cellSel = { ranges: [], activeIdx: -1 };
+    this._applyCellSelHighlight();
   }
 
   _onCellMouseDown = (e) => {
@@ -1085,20 +1136,19 @@ export default class GridController extends Controller {
     const cell = this._cellAt(e.target);
     if (!cell) return;
     const mod = e.metaKey || e.ctrlKey;
-    if (mod) {
-      // Cmd/Ctrl (± Shift) → ROW selection intent (handled on click). Set the
-      // active cell but don't start a cell-range drag.
-      this.state.cellSel = { anchor: cell, focus: cell };
-    } else if (e.shiftKey && this.state.cellSel.anchor) {
-      this.state.cellSel.focus = cell;          // Shift → extend the cell range
+    if (e.shiftKey && this._activeCell()) {
+      this._extendActiveRange(cell);            // Shift → extend the active range
+    } else if (mod) {
+      this._addCellRange(cell);                  // Cmd/Ctrl → new non-contiguous range
+      this._cellDragging = true;
     } else {
-      this.state.cellSel = { anchor: cell, focus: cell };
-      this._cellDragging = true;                // plain → start a drag range
+      this._setSingleCellSel(cell);              // plain → single cell
+      this._cellDragging = true;
     }
     this._cellDragMoved = false;
+    this._focusGrid();
     // Update the highlight IN PLACE — re-rendering the tbody here would detach
-    // the just-pressed cell before the click fires and can swallow the click
-    // (breaking Cmd-click row select on real browsers).
+    // the just-pressed cell before the click fires and can swallow the click.
     this._applyCellSelHighlight();
     emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
   };
@@ -1107,13 +1157,15 @@ export default class GridController extends Controller {
     if (!this._cellDragging) return;
     const cell = this._cellAt(e.target);
     if (!cell) return;
-    const f = this.state.cellSel.focus;
-    if (f && f.rowId === cell.rowId && f.colId === cell.colId) return;
-    this.state.cellSel.focus = cell;
+    const r = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+    if (r && r.focus.rowId === cell.rowId && r.focus.colId === cell.colId) return;
+    this._extendActiveRange(cell);
     this._cellDragMoved = true;
     this._applyCellSelHighlight();
     emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
   };
+
+  _onCellMouseUp = () => { this._cellDragging = false; };
 
   // Toggle the active/range data-attrs on the existing cell DOM without
   // rebuilding the tbody (so in-flight mouse interactions aren't disrupted).
@@ -1131,14 +1183,12 @@ export default class GridController extends Controller {
     });
   }
 
-  _onCellMouseUp = () => { this._cellDragging = false; };
-
-  // Copy the selected cell range to the clipboard as TSV (rows \n, cols \t).
+  // Copy the active cell range to the clipboard as TSV (rows \n, cols \t).
   _onCopy = (e) => {
     if (this.state.editing) return;
     const ae = document.activeElement;
-    if (ae && /^(input|textarea|select)$/i.test(ae.tagName)) return;
-    const rect = this._cellSelRect();
+    if (ae && /^(input|textarea|select)$/i.test(ae.tagName) && !this.element.contains(ae)) return;
+    const rect = this._activeRect();
     if (!rect) return;
     const tsv = this._cellRangeRows(rect)
       .map((r) => r.map((v) => String(v ?? '')).join('\t')).join('\n');
@@ -1147,18 +1197,16 @@ export default class GridController extends Controller {
     e.preventDefault();
   };
 
-  // Rectangle of the selection in display indices, or null.
-  _cellSelRect() {
-    const sel = this.state.cellSel;
-    if (!sel?.anchor) return null;
+  // Rectangle (display indices) for a {anchor,focus} range, or null.
+  _rangeRect(range) {
+    if (!range) return null;
     const rows = this._displayList.pageRows;
     const cols = this._visibleCols();
     const ri = (id) => rows.findIndex((r) => this._rowId(r) === id);
     const ci = (f) => cols.findIndex((c) => c.field === f);
-    const ar = ri(sel.anchor.rowId), ac = ci(sel.anchor.colId);
+    const ar = ri(range.anchor.rowId), ac = ci(range.anchor.colId);
     if (ar < 0 || ac < 0) return null;
-    const fr = sel.focus ? ri(sel.focus.rowId) : ar;
-    const fc = sel.focus ? ci(sel.focus.colId) : ac;
+    const fr = ri(range.focus.rowId), fc = ci(range.focus.colId);
     return {
       r0: Math.min(ar, fr < 0 ? ar : fr), r1: Math.max(ar, fr < 0 ? ar : fr),
       c0: Math.min(ac, fc < 0 ? ac : fc), c1: Math.max(ac, fc < 0 ? ac : fc),
@@ -1166,7 +1214,9 @@ export default class GridController extends Controller {
     };
   }
 
-  _cellRangeRows(rect = this._cellSelRect()) {
+  _activeRect() { return this._rangeRect(this.state.cellSel.ranges[this.state.cellSel.activeIdx]); }
+
+  _cellRangeRows(rect = this._activeRect()) {
     if (!rect) return [];
     const out = [];
     for (let r = rect.r0; r <= rect.r1; r++) {
@@ -1182,46 +1232,178 @@ export default class GridController extends Controller {
     return out;
   }
 
-  // Lookup used by the renderer to flag active + in-range cells.
+  // Active cell key + union of all ranges' cells (active stays outlined, unfilled).
   _computeCellSelKeys() {
-    const rect = this._cellSelRect();
-    const sel = this.state.cellSel;
-    if (!rect || !sel?.anchor) return { active: null, range: null };
-    const active = `${sel.anchor.rowId}:${sel.anchor.colId}`;
+    const active = this._activeCell();
+    if (!active) return { active: null, range: null };
+    const activeKey = `${active.rowId}:${active.colId}`;
     const range = new Set();
-    for (let r = rect.r0; r <= rect.r1; r++) {
-      const row = rect.rows[r];
-      if (!row) continue;
-      for (let c = rect.c0; c <= rect.c1; c++) {
-        const col = rect.cols[c];
-        if (!col) continue;
-        const key = `${this._rowId(row)}:${col.field}`;
-        if (key !== active) range.add(key);   // active cell stays outlined, not filled (Sheets-style)
+    for (const rg of this.state.cellSel.ranges) {
+      const rect = this._rangeRect(rg);
+      if (!rect) continue;
+      for (let r = rect.r0; r <= rect.r1; r++) {
+        const row = rect.rows[r];
+        if (!row) continue;
+        for (let c = rect.c0; c <= rect.c1; c++) {
+          const col = rect.cols[c];
+          if (!col) continue;
+          const key = `${this._rowId(row)}:${col.field}`;
+          if (key !== activeKey) range.add(key);
+        }
       }
     }
-    return { active, range };
+    return { active: activeKey, range };
   }
 
   getCellSelectionDetail() {
-    const rect = this._cellSelRect();
+    const rect = this._activeRect();
     return {
-      anchor: this.state.cellSel.anchor,
-      focus: this.state.cellSel.focus,
+      active: this._activeCell(),
+      ranges: this.state.cellSel.ranges.length,
       rowCount: rect ? rect.r1 - rect.r0 + 1 : 0,
       colCount: rect ? rect.c1 - rect.c0 + 1 : 0,
     };
   }
 
-  // Row ids covered by the current cell selection rectangle.
+  // Row ids covered by any cell range.
   getCellSelectionRowIds() {
-    const rect = this._cellSelRect();
-    if (!rect) return [];
-    const ids = [];
-    for (let r = rect.r0; r <= rect.r1; r++) {
-      const row = rect.rows[r];
-      if (row) ids.push(this._rowId(row));
+    const ids = new Set();
+    for (const rg of this.state.cellSel.ranges) {
+      const rect = this._rangeRect(rg);
+      if (!rect) continue;
+      for (let r = rect.r0; r <= rect.r1; r++) {
+        const row = rect.rows[r];
+        if (row) ids.add(this._rowId(row));
+      }
     }
-    return ids;
+    return Array.from(ids);
+  }
+
+  _focusGrid() {
+    // For keyboard navigation: make sure the grid (not the page) holds focus.
+    if (document.activeElement !== this.element && !this.element.contains(document.activeElement)) {
+      try { this.element.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+  }
+
+  // ----- Keyboard navigation (Numbers/Sheets-style) -----
+
+  _navCols() {
+    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber);
+  }
+
+  _onGridKeydown = (e) => {
+    if (!this.cellSelectionValue) return;
+    if (this.state.editing) return;                 // editor handles its own keys
+    const ae = document.activeElement;
+    if (ae && /^(input|textarea|select)$/i.test(ae.tagName) && this.element.contains(ae)) return;
+
+    const key = e.key;
+    const mod = e.metaKey || e.ctrlKey;
+
+    if (mod && key.toLowerCase() === 'a') {           // select all cells
+      e.preventDefault();
+      this._selectAllCells();
+      return;
+    }
+    if (mod) return;                                  // leave Cmd+C/V/Z to their handlers
+
+    const DIRS = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    if (DIRS[key]) {
+      e.preventDefault();
+      const [dr, dc] = DIRS[key];
+      this._moveActiveCell(dr, dc, e.shiftKey);
+      return;
+    }
+    if (key === 'Tab') { e.preventDefault(); this._moveActiveCell(0, e.shiftKey ? -1 : 1, false); return; }
+    if (key === 'Enter') {                            // edit the active cell
+      const a = this._activeCell();
+      if (a) { e.preventDefault(); this.startEditingCell(a.rowId, a.colId); }
+      return;
+    }
+    if (key === 'Escape') { this.clearCellSelection(); return; }
+    if (key === 'Delete' || key === 'Backspace') {
+      if (this._clearSelectedCells()) e.preventDefault();
+      return;
+    }
+    // A printable character starts editing the active cell, seeded with it.
+    if (key.length === 1 && !e.altKey) {
+      const a = this._activeCell();
+      if (!a) return;
+      const col = this._colByField(a.colId);
+      if (!col || !col.editable) return;
+      e.preventDefault();
+      this.startEditingCell(a.rowId, a.colId, key);
+    }
+  };
+
+  _moveActiveCell(dr, dc, extend) {
+    const rows = this._displayList.pageRows;
+    const cols = this._navCols();
+    if (!rows.length || !cols.length) return;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+    const active = this._activeCell();
+    let ri = active ? rows.findIndex((r) => this._rowId(r) === active.rowId) : 0;
+    let ci = active ? cols.findIndex((c) => c.field === active.colId) : 0;
+    if (ri < 0) ri = 0;
+    if (ci < 0) ci = 0;
+    if (extend && this.state.cellSel.ranges[this.state.cellSel.activeIdx]) {
+      const rg = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
+      const fr = clamp(rows.findIndex((r) => this._rowId(r) === rg.focus.rowId) + dr, 0, rows.length - 1);
+      const fc = clamp(cols.findIndex((c) => c.field === rg.focus.colId) + dc, 0, cols.length - 1);
+      this._extendActiveRange({ rowId: this._rowId(rows[fr]), colId: cols[fc].field });
+    } else {
+      const nr = clamp(ri + dr, 0, rows.length - 1);
+      const nc = clamp(ci + dc, 0, cols.length - 1);
+      this._setSingleCellSel({ rowId: this._rowId(rows[nr]), colId: cols[nc].field });
+    }
+    this._applyCellSelHighlight();
+    this._scrollActiveIntoView();
+    emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
+  }
+
+  _selectAllCells() {
+    const rows = this._displayList.pageRows;
+    const cols = this._navCols();
+    if (!rows.length || !cols.length) return;
+    this.state.cellSel = {
+      ranges: [{
+        anchor: { rowId: this._rowId(rows[0]), colId: cols[0].field },
+        focus: { rowId: this._rowId(rows[rows.length - 1]), colId: cols[cols.length - 1].field },
+      }],
+      activeIdx: 0,
+    };
+    this._applyCellSelHighlight();
+    emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
+  }
+
+  // Clear the value of every selected, editable cell (Delete/Backspace).
+  _clearSelectedCells() {
+    let any = false;
+    for (const rg of this.state.cellSel.ranges) {
+      const rect = this._rangeRect(rg);
+      if (!rect) continue;
+      for (let r = rect.r0; r <= rect.r1; r++) {
+        const row = rect.rows[r];
+        if (!row) continue;
+        for (let c = rect.c0; c <= rect.c1; c++) {
+          const col = rect.cols[c];
+          if (!col || !col.editable || col._isCheckbox || col._isRowNumber) continue;
+          const oldValue = row[col.field];
+          if (oldValue === '' || oldValue == null) continue;
+          row[col.field] = '';
+          any = true;
+          emit(this.element, 'grid:cellValueChanged', { rowId: this._rowId(row), colId: col.field, oldValue, newValue: '' });
+        }
+      }
+    }
+    if (any) this.scheduleRender('cells');
+    return any;
+  }
+
+  _scrollActiveIntoView() {
+    const td = this._tbody?.querySelector('td[data-cell-active="true"]');
+    td?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   _onBodyDblClick(e) {
@@ -1318,7 +1500,7 @@ export default class GridController extends Controller {
 }
 
 function sameColDef(a, b) {
-  const keys = ['headerName','type','sortable','filter','editable','width','minWidth','maxWidth','pinned','hidden','resizable','cellRenderer','cellEditor','_isCheckbox'];
+  const keys = ['headerName','type','sortable','filter','editable','width','minWidth','maxWidth','pinned','hidden','resizable','cellRenderer','cellEditor','_isCheckbox','_isRowNumber'];
   for (const k of keys) if (a[k] !== b[k]) return false;
   return true;
 }
