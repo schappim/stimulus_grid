@@ -1,4 +1,5 @@
 import { Application } from '@hotwired/stimulus';
+import './styles/grid.css';
 import GridController from './controllers/grid_controller.js';
 import HeaderCellController from './controllers/header_cell_controller.js';
 import RowController from './controllers/row_controller.js';
