@@ -10,6 +10,8 @@ resize/reorder/pin/hide, virtual scrolling for large datasets, and a public
 The HTML is the source of truth: a `stimulus_grid` table is a real `<table>` that
 renders without JS and progressively enhances.
 
+![stimulus_grid — sortable, filterable data grid with pinned columns, custom medal renderers, multi-row selection, and pagination](docs/images/grid-overview.png)
+
 > Looking for the Rails/Hotwire server-driven version (live multi-user editing
 > over Turbo Streams, server-side search/filter, optimistic updates, undo/redo)?
 > See [`gem/stimulus_grid_rails`](gem/stimulus_grid_rails). LLM usage docs live
@@ -76,6 +78,23 @@ StimulusGrid.start(app)                     // registers grid, header-cell, pagi
 Rows can be **server-rendered** (as above — parsed into the dataset on connect),
 loaded from a **URL** (`data-grid-row-data-url-value="/data.json"`), or set in JS
 via `element.gridApi.setRowData([...])`.
+
+## Screenshots
+
+**Spreadsheet-style cell selection** — click for an active cell, click-drag or
+shift-click for a range; `Cmd/Ctrl+C` copies the selection as TSV.
+
+![A block of cells selected by dragging, the active cell outlined and the range filled blue](docs/images/grid-cell-selection.png)
+
+**Per-column filtering** — hover a header for the filter icon; popovers adapt to
+the column type (text / number / date / boolean).
+
+![A column filter popover open over the grid with a "contains United" condition](docs/images/grid-filter.png)
+
+**Inline editing** — double-click an editable cell; type-aware editors commit on
+Enter / Tab / blur and emit `grid:cellValueChanged`.
+
+![A grid cell being edited inline with a focused text input](docs/images/grid-editing.png)
 
 ## Grid attributes (`data-grid-*-value`)
 
