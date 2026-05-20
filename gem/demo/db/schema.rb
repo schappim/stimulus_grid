@@ -26,4 +26,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_20_013735) do
     t.index ["country"], name: "index_athletes_on_country"
     t.index ["sport"], name: "index_athletes_on_sport"
   end
+
+  create_table "stimulus_grid_audits", force: :cascade do |t|
+    t.string "resource", null: false
+    t.string "row_id", null: false
+    t.string "column", null: false
+    t.text "prior_value"
+    t.text "new_value"
+    t.string "user_id"
+    t.boolean "undone", default: false, null: false
+    t.datetime "undone_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["resource", "user_id", "undone", "created_at"], name: "idx_sgr_audits_undo"
+  end
 end

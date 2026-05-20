@@ -1,10 +1,10 @@
 class Athlete < ApplicationRecord
   include StimulusGridRails::Broadcastable
 
-  # All edits broadcast to subscribers of the "athletes" stream. The grid
-  # view renders <%= turbo_stream_from "athletes" %> so every connected tab
-  # receives cell updates.
-  broadcasts_grid AthleteGrid, stream: ->(_athlete) { "athletes" }
+  # Every create / update / destroy automatically broadcasts the right Turbo
+  # Stream action to the grid's tenant-scoped stream — no manual wiring. The
+  # grid view subscribes to the matching stream.
+  broadcasts_grid AthleteGrid
 
   # Optimistic-locking column. Used when a column declares
   # `concurrency: :version_checked` (e.g. :age in AthleteGrid below).
