@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:lib": "vite build --config vite.lib.config.js",
-    "build:lib:watch": "vite build --config vite.lib.config.js --watch",
+    "build:lib": "FORMAT=iife vite build --config vite.lib.config.js && FORMAT=es vite build --config vite.lib.config.js",
+    "build:lib:iife": "FORMAT=iife vite build --config vite.lib.config.js",
+    "build:lib:esm": "FORMAT=es vite build --config vite.lib.config.js",
+    "build:lib:watch": "FORMAT=iife vite build --config vite.lib.config.js --watch",
     "preview": "vite preview"
   },
   "dependencies": {
