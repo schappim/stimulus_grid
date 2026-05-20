@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applySort } from '../lib/model.js';
+import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
 
@@ -30,6 +30,7 @@ export default class GridController extends Controller {
       columnDefs: [],
       sortModel: [],
       filterModel: {},
+      quickFilter: '',
       selection: new Set(),
       focusedCell: null,
       editing: null,
@@ -322,6 +323,20 @@ export default class GridController extends Controller {
     emit(this.element, 'grid:filterChanged', { filterModel: { ...this.state.filterModel } });
   }
 
+  setQuickFilter(text) {
+    const next = (text == null ? '' : String(text));
+    if (next === this.state.quickFilter) return;
+    this.state.quickFilter = next;
+    this.state.pagination.page = 0;
+    this.scheduleRender('filter');
+    emit(this.element, 'grid:filterChanged', {
+      filterModel: { ...this.state.filterModel },
+      quickFilter: next,
+    });
+  }
+
+  getQuickFilter() { return this.state.quickFilter; }
+
   // ----- Selection -----
 
   toggleRowSelection(rowId, mode = 'single') {
@@ -419,7 +434,10 @@ export default class GridController extends Controller {
     // Compute on-demand so consumers reading inside grid:filterChanged handlers
     // (which fire before the next render) get up-to-date counts.
     const cols = Object.fromEntries(this.state.columnDefs.map((c) => [c.field, c]));
-    return applyFilters(this.state.rowData, this.state.filterModel, cols).length;
+    const visible = this.state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
+    let rows = applyFilters(this.state.rowData, this.state.filterModel, cols);
+    rows = applyQuickFilter(rows, this.state.quickFilter, visible);
+    return rows.length;
   }
 
   lastPageIndex() { return this.totalPages() - 1; }
@@ -612,6 +630,7 @@ export default class GridController extends Controller {
         columnDefs: this.state.columnDefs,
         sortModel: this.state.sortModel,
         filterModel: this.state.filterModel,
+        quickFilter: this.state.quickFilter,
         pagination: this.state.pagination,
       });
     }

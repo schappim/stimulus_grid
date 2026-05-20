@@ -27,6 +27,8 @@ export function createGridApi(grid) {
     getFilterModel() { return { ...grid.state.filterModel }; },
     setColumnFilter(colId, filter) { grid.setColumnFilter(colId, filter); },
     destroyFilter(colId) { grid.setColumnFilter(colId, null); },
+    setQuickFilter(text) { grid.setQuickFilter(text); },
+    getQuickFilter() { return grid.getQuickFilter(); },
 
     // ---- Selection ----
     selectAll() { grid.selectAll(); },
