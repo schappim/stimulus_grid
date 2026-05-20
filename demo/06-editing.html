@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>06 — Inline editing | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .log {
+      margin-top: 16px;
+      background: #0f172a; color: #e2e8f0;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 12px;
+      max-height: 180px; overflow:auto;
+      white-space: pre-wrap;
+    }
+    .log .ts { color: #94a3b8; }
+    .log .field { color: #fbbf24; }
+    .log .arrow { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>06 — Inline cell editing</h1>
+  <p class="lede">
+    Double-click any cell in an editable column to edit. <kbd>Enter</kbd> commits,
+    <kbd>Escape</kbd> cancels, blur commits. Editors are chosen by the column's
+    <code>data-header-cell-type-value</code> (text, number, date, boolean).
+  </p>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="15">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="140">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="80">Gold</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+
+  <h3 style="margin-top: 20px; font-size: 14px;">Edit log (<code>grid:cellValueChanged</code> events)</h3>
+  <div class="log" id="log">Waiting for edits…</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.getElementById('grid');
+    const log = document.getElementById('log');
+    let lines = [];
+
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      const { rowId, colId, oldValue, newValue } = e.detail;
+      const t = new Date().toLocaleTimeString();
+      lines.unshift(
+        `<span class="ts">${t}</span>  row=${rowId} <span class="field">${colId}</span>: ` +
+        `${JSON.stringify(oldValue)} <span class="arrow">→</span> ${JSON.stringify(newValue)}`
+      );
+      log.innerHTML = lines.slice(0, 20).join('\n');
+    });
+  </script>
+</body>
+</html>
