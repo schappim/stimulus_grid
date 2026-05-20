@@ -18,6 +18,7 @@ export default class GridController extends Controller {
     rowHeight:      { type: Number, default: DEFAULT_ROW_HEIGHT },
     headerHeight:   { type: Number, default: 36 },
     virtual:        { type: Boolean, default: false },
+    virtualThreshold: { type: Number, default: 200 },
     height:         { type: String, default: '' },          // CSS height, e.g. '480px'
     getRowId:       { type: String, default: 'id' },        // field name for row identity
     domLayout:      { type: String, default: '' },          // '' | 'autoHeight'
@@ -754,11 +755,23 @@ export default class GridController extends Controller {
   _renderBody() {
     if (!this._tbody) return;
     const cols = this._visibleCols();
-    const rows = this._displayList.pageRows;
+    const allRows = this._displayList.pageRows;
 
-    // Diff strategy: re-render the tbody in one go but reuse <tr> nodes by rowId
-    // to preserve focus/scroll during incremental updates.
-    const seen = new Set();
+    // Decide whether to virtualise. Virtualisation is auto-on whenever the
+    // current display list exceeds the threshold, regardless of pagination —
+    // a page size larger than the viewport still benefits from windowing.
+    const virtual = this.virtualValue || allRows.length > 200;
+
+    let windowed = allRows;
+    let firstIdx = 0;
+    if (virtual) {
+      const viewportHeight = this._viewport?.clientHeight || 400;
+      const rh = this.state.rowHeight;
+      const win = computeWindow(this.state.scrollTop, viewportHeight, rh, allRows.length, 8);
+      firstIdx = win.first;
+      windowed = allRows.slice(win.first, win.last);
+    }
+
     const existing = new Map();
     Array.from(this._tbody.children).forEach((tr) => {
       const id = tr.dataset.rowId;
@@ -766,19 +779,48 @@ export default class GridController extends Controller {
     });
 
     const fragment = document.createDocumentFragment();
-    for (const row of rows) {
-      const id = String(this._rowId(row));
-      seen.add(id);
-      let tr = existing.get(id);
-      if (!tr) tr = el('tr');
-      tr.dataset.rowId = id;
-      const selected = this.state.selection.has(this._rowId(row));
-      setAttrs(tr, { 'data-selected': selected ? 'true' : null });
-      this._renderRow(tr, row, cols);
-      fragment.appendChild(tr);
+
+    if (virtual) {
+      const rh = this.state.rowHeight;
+      const topPx = firstIdx * rh;
+      const bottomPx = (allRows.length - firstIdx - windowed.length) * rh;
+      fragment.appendChild(this._spacerRow(topPx, cols.length));
+      for (const row of windowed) {
+        fragment.appendChild(this._buildRow(row, cols, existing));
+      }
+      fragment.appendChild(this._spacerRow(bottomPx, cols.length));
+    } else {
+      for (const row of windowed) {
+        fragment.appendChild(this._buildRow(row, cols, existing));
+      }
     }
     this._tbody.replaceChildren(fragment);
-    this._lastRenderedRowIds = seen;
+  }
+
+  _buildRow(row, cols, existing) {
+    const id = String(this._rowId(row));
+    let tr = existing.get(id);
+    if (!tr) tr = el('tr');
+    tr.dataset.rowId = id;
+    tr.classList.remove('sg-spacer');
+    const selected = this.state.selection.has(this._rowId(row));
+    setAttrs(tr, { 'data-selected': selected ? 'true' : null });
+    this._renderRow(tr, row, cols);
+    return tr;
+  }
+
+  _spacerRow(heightPx, colSpan) {
+    if (heightPx <= 0) {
+      // Still need a 0-height marker so we keep tbody children counts stable.
+      const tr = el('tr', { class: 'sg-spacer', 'aria-hidden': 'true' });
+      tr.style.height = '0px';
+      tr.appendChild(el('td', { colspan: String(colSpan), style: { height: '0px', padding: '0', border: '0' } }));
+      return tr;
+    }
+    const tr = el('tr', { class: 'sg-spacer', 'aria-hidden': 'true' });
+    tr.style.height = heightPx + 'px';
+    tr.appendChild(el('td', { colspan: String(colSpan), style: { height: heightPx + 'px', padding: '0', border: '0' } }));
+    return tr;
   }
 
   _renderRow(tr, row, cols) {
@@ -872,8 +914,15 @@ export default class GridController extends Controller {
     this._listenersAttached = true;
     this._tbody.addEventListener('click', (e) => this._onBodyClick(e));
     this._tbody.addEventListener('dblclick', (e) => this._onBodyDblClick(e));
-    this._viewport.addEventListener('scroll', () => { this.state.scrollTop = this._viewport.scrollTop; });
+    this._viewport.addEventListener('scroll', this._onScroll, { passive: true });
   }
+
+  _onScroll = () => {
+    this.state.scrollTop = this._viewport.scrollTop;
+    if (this.virtualValue || this._displayList.pageRows.length > 200) {
+      this.scheduleRender('scroll');
+    }
+  };
 
   _onBodyClick(e) {
     const tr = e.target.closest('tr');
