@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>04 — Selection | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
+    .panel { height: 360px; }
+    .single .panel { height: 280px; }
+    h3 { margin: 8px 0; font-size: 14px; color: #374151; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .stat { color:#6b7280; font-size:13px; }
+    .selected-list {
+      background:#f9fafb; border:1px solid #e5e7eb; border-radius:4px;
+      padding:8px; font-size:12px; min-height:60px; margin-top:8px;
+      max-height:120px; overflow:auto;
+    }
+    .selected-list ul { margin:0; padding-left:18px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>04 — Selection</h1>
+  <p class="lede">
+    Two grids side-by-side: single-row select (left), multi-row with a checkbox column and select-all (right).
+    Try clicking, shift-clicking for ranges, ⌘/Ctrl-clicking to toggle, and the header checkbox to select all.
+  </p>
+
+  <div class="row">
+    <!-- ===== Single select ===== -->
+    <div class="single">
+      <h3>Single select <code>data-grid-row-selection-value="single"</code></h3>
+      <div class="panel"
+           data-controller="grid"
+           data-grid-row-data-url-value="./data/athletes.json"
+           data-grid-row-selection-value="single">
+        <table>
+          <thead>
+            <tr>
+              <th data-controller="header-cell" data-header-cell-field-value="athlete"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="180">Athlete</th>
+              <th data-controller="header-cell" data-header-cell-field-value="country"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="160">Country</th>
+              <th data-controller="header-cell" data-header-cell-field-value="sport"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="160">Sport</th>
+              <th data-controller="header-cell" data-header-cell-field-value="gold"
+                  data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+                  data-header-cell-width-value="80">Gold</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="toolbar">
+        <span class="stat" id="single-stat">Click a row</span>
+      </div>
+    </div>
+
+    <!-- ===== Multi select ===== -->
+    <div class="multi">
+      <h3>Multi select + checkbox column</h3>
+      <div class="panel"
+           data-controller="grid"
+           data-grid-row-data-url-value="./data/athletes.json"
+           data-grid-row-selection-value="multiple">
+        <table>
+          <thead>
+            <tr>
+              <th data-controller="header-cell" data-header-cell-field-value="_select"
+                  data-header-cell-checkbox-value="true" data-header-cell-width-value="36"></th>
+              <th data-controller="header-cell" data-header-cell-field-value="athlete"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="180">Athlete</th>
+              <th data-controller="header-cell" data-header-cell-field-value="country"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="160">Country</th>
+              <th data-controller="header-cell" data-header-cell-field-value="sport"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="160">Sport</th>
+              <th data-controller="header-cell" data-header-cell-field-value="gold"
+                  data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+                  data-header-cell-width-value="80">Gold</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="toolbar">
+        <button id="select-all-btn">Select all</button>
+        <button id="deselect-all-btn">Deselect all</button>
+        <button id="export-csv">Export selected to CSV</button>
+        <span class="stat" id="multi-stat">0 rows selected</span>
+      </div>
+      <div class="selected-list" id="selected-list">Nothing selected</div>
+    </div>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const single = document.querySelector('.single .panel');
+    const multi  = document.querySelector('.multi  .panel');
+    const singleStat = document.getElementById('single-stat');
+    const multiStat  = document.getElementById('multi-stat');
+    const list = document.getElementById('selected-list');
+
+    single.addEventListener('grid:selectionChanged', (e) => {
+      const r = e.detail.selectedRows[0];
+      singleStat.textContent = r
+        ? `Selected: ${r.athlete} (${r.country})`
+        : 'Click a row';
+    });
+
+    function refreshMulti() {
+      const rows = multi.gridApi.getSelectedRows();
+      multiStat.textContent = `${rows.length} rows selected`;
+      list.innerHTML = rows.length
+        ? '<ul>' + rows.slice(0, 8).map(r =>
+            `<li>${r.athlete} — ${r.country} (${r.gold} gold)</li>`).join('') +
+          (rows.length > 8 ? `<li>… and ${rows.length - 8} more</li>` : '') + '</ul>'
+        : 'Nothing selected';
+    }
+    multi.addEventListener('grid:selectionChanged', refreshMulti);
+
+    document.getElementById('select-all-btn').onclick = () => multi.gridApi.selectAll();
+    document.getElementById('deselect-all-btn').onclick = () => multi.gridApi.deselectAll();
+    document.getElementById('export-csv').onclick = () =>
+      multi.gridApi.exportDataAsCsv({ onlySelected: true, fileName: 'selected-athletes.csv' });
+  </script>
+</body>
+</html>

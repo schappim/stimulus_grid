@@ -598,7 +598,7 @@ export default class GridController extends Controller {
         pagination: this.state.pagination,
       });
     }
-    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter')) this._renderHeader();
+    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection')) this._renderHeader();
     this._renderBody();
     this._renderPagination();
   }
@@ -660,6 +660,24 @@ export default class GridController extends Controller {
   }
 
   _ensureHeaderChrome(th, col, sortEntry) {
+    if (col._isCheckbox) {
+      th.classList.add('sg-checkbox-header');
+      let cb = th.querySelector('input[type="checkbox"]');
+      if (!cb) {
+        cb = el('input', { type: 'checkbox', 'aria-label': 'Select all' });
+        cb.addEventListener('change', (e) => {
+          if (e.target.checked) this.selectAll();
+          else this.deselectAll();
+        });
+        th.textContent = '';
+        th.appendChild(cb);
+      }
+      const total = this._displayList.filteredSorted.length;
+      const selCount = this.state.selection.size;
+      cb.checked = selCount > 0 && selCount >= total;
+      cb.indeterminate = selCount > 0 && selCount < total;
+      return;
+    }
     let content = th.querySelector('.sg-header-content');
     if (!content) {
       const userText = th.textContent.trim();

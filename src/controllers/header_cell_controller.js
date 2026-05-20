@@ -28,8 +28,11 @@ export default class HeaderCellController extends Controller {
       if (txt) this.headerNameValue = txt;
     }
     this.grid.registerColumn(this.toColumnDef(), this.element);
-    // One mousedown handler dispatches to sort (bare click) or reorder (drag).
-    this.element.addEventListener('mousedown', this._onMouseDown);
+    // Sort/reorder mousedown — but not on a checkbox header, whose only job is
+    // to toggle select-all (handled by the grid itself).
+    if (!this.checkboxValue) {
+      this.element.addEventListener('mousedown', this._onMouseDown);
+    }
   }
 
   disconnect() {
