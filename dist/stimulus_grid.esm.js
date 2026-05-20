@@ -332,7 +332,8 @@ class D extends v {
     m(this, "_onCellMouseDown", (e) => {
       if (e.button !== 0) return;
       const t = this._cellAt(e.target);
-      t && (e.shiftKey && this.state.cellSel.anchor ? this.state.cellSel.focus = t : (this.state.cellSel = { anchor: t, focus: t }, this._cellDragging = !0), this._cellDragMoved = !1, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+      if (!t) return;
+      e.metaKey || e.ctrlKey ? this.state.cellSel = { anchor: t, focus: t } : e.shiftKey && this.state.cellSel.anchor ? this.state.cellSel.focus = t : (this.state.cellSel = { anchor: t, focus: t }, this._cellDragging = !0), this._cellDragMoved = !1, this._applyCellSelHighlight(), g(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
     });
     m(this, "_onCellMouseOver", (e) => {
       if (!this._cellDragging) return;
@@ -925,7 +926,7 @@ class D extends v {
     }
     if (this.cellSelectionValue) {
       if (e.metaKey || e.ctrlKey) {
-        this.toggleRowSelection(i, "toggle"), this._cellDragMoved = !1, g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
+        this.toggleRowSelection(i, e.shiftKey ? "range" : "toggle"), this._cellDragMoved = !1, g(this.element, "grid:rowClicked", { rowId: i, row: this.state.rowData.find((r) => this._rowId(r) === i), event: e });
         return;
       }
       if (this._cellDragMoved) {
@@ -992,16 +993,18 @@ class D extends v {
   _computeCellSelKeys() {
     const e = this._cellSelRect(), t = this.state.cellSel;
     if (!e || !t?.anchor) return { active: null, range: null };
-    const i = /* @__PURE__ */ new Set();
-    for (let n = e.r0; n <= e.r1; n++) {
-      const r = e.rows[n];
-      if (r)
-        for (let a = e.c0; a <= e.c1; a++) {
-          const o = e.cols[a];
-          o && i.add(`${this._rowId(r)}:${o.field}`);
+    const i = `${t.anchor.rowId}:${t.anchor.colId}`, n = /* @__PURE__ */ new Set();
+    for (let r = e.r0; r <= e.r1; r++) {
+      const a = e.rows[r];
+      if (a)
+        for (let o = e.c0; o <= e.c1; o++) {
+          const c = e.cols[o];
+          if (!c) continue;
+          const u = `${this._rowId(a)}:${c.field}`;
+          u !== i && n.add(u);
         }
     }
-    return { active: `${t.anchor.rowId}:${t.anchor.colId}`, range: i };
+    return { active: i, range: n };
   }
   getCellSelectionDetail() {
     const e = this._cellSelRect();

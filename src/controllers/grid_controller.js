@@ -1049,10 +1049,11 @@ export default class GridController extends Controller {
       return;
     }
     if (this.cellSelectionValue) {
-      // Cell-primary mode. Cmd/Ctrl+click toggles ROW selection — honored even
-      // if a tiny drag was registered, so it's reliable on real trackpads.
+      // Cell-primary mode (Numbers/Sheets-style). Cmd/Ctrl+click toggles a ROW;
+      // Cmd/Ctrl+Shift+click selects a ROW RANGE from the last row anchor.
+      // Honored even if a tiny drag was registered (reliable on trackpads).
       if (e.metaKey || e.ctrlKey) {
-        this.toggleRowSelection(rowId, 'toggle');
+        this.toggleRowSelection(rowId, e.shiftKey ? 'range' : 'toggle');
         this._cellDragMoved = false;
         emit(this.element, 'grid:rowClicked', { rowId, row: this.state.rowData.find((r) => this._rowId(r) === rowId), event: e });
         return;
@@ -1083,11 +1084,16 @@ export default class GridController extends Controller {
     if (e.button !== 0) return;
     const cell = this._cellAt(e.target);
     if (!cell) return;
-    if (e.shiftKey && this.state.cellSel.anchor) {
-      this.state.cellSel.focus = cell;          // extend existing range
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod) {
+      // Cmd/Ctrl (± Shift) → ROW selection intent (handled on click). Set the
+      // active cell but don't start a cell-range drag.
+      this.state.cellSel = { anchor: cell, focus: cell };
+    } else if (e.shiftKey && this.state.cellSel.anchor) {
+      this.state.cellSel.focus = cell;          // Shift → extend the cell range
     } else {
       this.state.cellSel = { anchor: cell, focus: cell };
-      this._cellDragging = true;
+      this._cellDragging = true;                // plain → start a drag range
     }
     this._cellDragMoved = false;
     // Update the highlight IN PLACE — re-rendering the tbody here would detach
@@ -1181,16 +1187,19 @@ export default class GridController extends Controller {
     const rect = this._cellSelRect();
     const sel = this.state.cellSel;
     if (!rect || !sel?.anchor) return { active: null, range: null };
+    const active = `${sel.anchor.rowId}:${sel.anchor.colId}`;
     const range = new Set();
     for (let r = rect.r0; r <= rect.r1; r++) {
       const row = rect.rows[r];
       if (!row) continue;
       for (let c = rect.c0; c <= rect.c1; c++) {
         const col = rect.cols[c];
-        if (col) range.add(`${this._rowId(row)}:${col.field}`);
+        if (!col) continue;
+        const key = `${this._rowId(row)}:${col.field}`;
+        if (key !== active) range.add(key);   // active cell stays outlined, not filled (Sheets-style)
       }
     }
-    return { active: `${sel.anchor.rowId}:${sel.anchor.colId}`, range };
+    return { active, range };
   }
 
   getCellSelectionDetail() {
