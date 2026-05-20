@@ -258,8 +258,16 @@ export default class GridController extends Controller {
   registerColumn(def, headerEl) {
     const existing = this.state.columnDefs.findIndex((c) => c.field === def.field);
     const enriched = { ...def, _headerEl: headerEl };
-    if (existing >= 0) this.state.columnDefs[existing] = enriched;
-    else this.state.columnDefs.push(enriched);
+    // No-op when the same header re-registers with identical defs — avoids
+    // an infinite render loop if a re-render briefly detaches and reattaches
+    // header elements (Stimulus then re-runs connect() → registerColumn).
+    if (existing >= 0) {
+      const old = this.state.columnDefs[existing];
+      if (old._headerEl === headerEl && sameColDef(old, enriched)) return;
+      this.state.columnDefs[existing] = enriched;
+    } else {
+      this.state.columnDefs.push(enriched);
+    }
     this.scheduleRender('columns');
   }
 
@@ -610,39 +618,61 @@ export default class GridController extends Controller {
       const r = el('tr'); this._thead.appendChild(r); return r;
     })();
 
-    // Detach existing user-supplied <th>s (which are themselves header-cell controllers).
-    // We rebuild the colgroup + insertion order around them.
     const existingThs = new Map();
     Array.from(row.querySelectorAll('th')).forEach((th) => {
       const colId = th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field');
       if (colId) existingThs.set(colId, th);
     });
 
-    // Update or create colgroup so widths line up between header + body.
+    // Only mutate DOM structure when the visible column ORDER or SET differs
+    // from what's already in the row. Avoids detaching + reattaching <th>
+    // controllers on every render (which would trigger Stimulus disconnect →
+    // header_cell.disconnect → unregisterColumn → scheduleRender → loop).
+    const currentOrder = Array.from(row.children)
+      .map((th) => th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field'))
+      .filter(Boolean);
+    const desiredOrder = visible.map((c) => c.field);
+    const orderMatches = currentOrder.length === desiredOrder.length
+      && currentOrder.every((f, i) => f === desiredOrder[i]);
+
+    if (!orderMatches) {
+      // Detach without using innerHTML='' so the elements aren't fully removed
+      // mid-tick (which Stimulus could observe as a disconnect/connect cycle).
+      const ths = [];
+      for (const col of visible) {
+        let th = existingThs.get(col.field);
+        if (!th) {
+          th = el('th', {
+            'data-field': col.field,
+            'data-synth': 'true',
+          }, [el('div', { class: 'sg-header-content' }, [
+            el('span', { class: 'sg-header-label' }, col.headerName || col.field || ''),
+          ])]);
+        }
+        ths.push(th);
+      }
+      row.replaceChildren(...ths);
+    }
+
+    // Always refresh the colgroup so col widths reflect current state.
     let colgroup = this._table.querySelector('colgroup');
     if (!colgroup) {
       colgroup = el('colgroup');
       this._table.insertBefore(colgroup, this._thead);
     }
-    colgroup.innerHTML = '';
+    const cols = Array.from(colgroup.children);
+    visible.forEach((col, i) => {
+      let colNode = cols[i];
+      if (!colNode) { colNode = el('col'); colgroup.appendChild(colNode); }
+      colNode.style.width = col.width ? col.width + 'px' : '';
+    });
+    while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
 
-    row.innerHTML = '';
+    // Always update each th's state-driven attrs + chrome (no structure churn).
     for (const col of visible) {
-      const colNode = el('col');
-      if (col.width) colNode.style.width = col.width + 'px';
-      colgroup.appendChild(colNode);
-
-      let th = existingThs.get(col.field);
-      if (!th) {
-        // Synthesized header (e.g. checkbox column) — build a minimal one.
-        th = el('th', {
-          'data-field': col.field,
-          'data-synth': 'true',
-        }, [el('div', { class: 'sg-header-content' }, [
-          el('span', { class: 'sg-header-label' }, col.headerName || col.field || ''),
-        ])]);
-      }
-      // Decorate th with current state for CSS hooks.
+      const th = row.querySelector(`th[data-header-cell-field-value="${cssEscape(col.field)}"]`)
+        || row.querySelector(`th[data-field="${cssEscape(col.field)}"]`);
+      if (!th) continue;
       const sortEntry = this.state.sortModel.find((s) => s.colId === col.field);
       setAttrs(th, {
         'data-sortable': col.sortable ? 'true' : null,
@@ -652,10 +682,7 @@ export default class GridController extends Controller {
         'data-pinned': col.pinned || null,
       });
       if (col.width) th.style.width = col.width + 'px';
-
-      // Ensure standard header chrome exists inside the th.
       this._ensureHeaderChrome(th, col, sortEntry);
-      row.appendChild(th);
     }
   }
 
@@ -910,6 +937,12 @@ export default class GridController extends Controller {
     const n = Number(s);
     return Number.isFinite(n) && String(n) === s ? n : s;
   }
+}
+
+function sameColDef(a, b) {
+  const keys = ['headerName','type','sortable','filter','editable','width','minWidth','maxWidth','pinned','hidden','resizable','cellRenderer','_isCheckbox'];
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
 }
 
 function filterOptionsFor(type) {
