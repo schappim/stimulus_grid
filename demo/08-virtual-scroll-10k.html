@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>08 — Virtual scroll, 10,000 rows | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .meter {
+      display: inline-flex; gap: 8px; align-items: center;
+      background: #0f172a; color: #e2e8f0;
+      padding: 6px 10px; border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 12px;
+      margin-top: 12px;
+    }
+    .meter b { color: #fbbf24; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>08 — Virtual scroll, 10,000 rows</h1>
+  <p class="lede">
+    The grid keeps only the visible window of <code>&lt;tr&gt;</code> nodes
+    rendered (plus a small over-scan buffer), with top + bottom spacer rows
+    that take up the rest of the height. Scroll, sort, and filter all stay
+    snappy on a 10k-row dataset.
+  </p>
+
+  <div class="meter">
+    <span>Rendered <code>&lt;tr&gt;</code> nodes in body: <b id="tr-count">…</b></span>
+    <span>· Data rows: <b id="data-count">10,000</b></span>
+    <span>· Scroll top: <b id="scroll-top">0</b>px</span>
+  </div>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-virtual-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="id"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">#</th>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="240">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const FIRSTS = ['Michael','Sarah','David','Emma','Alex','Maria','James','Linda','Robert','Patricia','John','Jennifer','Daniel','Susan','Karim','Yuki','Nikolai','Wei','Aisha','Olga','Carlos','Sofia','Hiroshi','Ingrid','Lars','Anya','Diego','Lucia','Hans','Greta'];
+    const LASTS = ['Phelps','Smith','Johnson','Williams','Brown','Jones','Garcia','Davis','Rodriguez','Martinez','Hernandez','Lopez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Petrov','Tanaka','Khan','Schmidt','Müller','Andersen','Park','Wang','Singh','Fernández'];
+    const COUNTRIES = ['United States','China','Russia','Germany','Japan','Great Britain','Australia','France','Italy','South Korea','Canada','Brazil','Netherlands','Spain','Jamaica','Norway','Kenya','Ethiopia','New Zealand','Sweden'];
+    const SPORTS = ['Swimming','Athletics','Gymnastics','Cycling','Rowing','Diving','Sailing','Wrestling','Boxing','Tennis','Fencing','Shooting','Archery','Equestrian','Weightlifting','Skiing','Snowboard','Speed Skating','Biathlon'];
+
+    function gen(n) {
+      const rows = new Array(n);
+      let seed = 1;
+      const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+      for (let i = 0; i < n; i++) {
+        const f = FIRSTS[Math.floor(rnd() * FIRSTS.length)];
+        const l = LASTS[Math.floor(rnd() * LASTS.length)];
+        rows[i] = {
+          id: i + 1,
+          athlete: `${f} ${l}`,
+          country: COUNTRIES[Math.floor(rnd() * COUNTRIES.length)],
+          sport: SPORTS[Math.floor(rnd() * SPORTS.length)],
+          age: 16 + Math.floor(rnd() * 30),
+          gold: Math.floor(rnd() * 6),
+          silver: Math.floor(rnd() * 6),
+          bronze: Math.floor(rnd() * 6),
+        };
+      }
+      return rows;
+    }
+
+    const grid = document.getElementById('grid');
+    const trCount = document.getElementById('tr-count');
+    const dataCount = document.getElementById('data-count');
+    const scrollTop = document.getElementById('scroll-top');
+
+    grid.addEventListener('grid:ready', (e) => {
+      const t0 = performance.now();
+      const data = gen(10000);
+      console.log(`Generated 10k rows in ${(performance.now() - t0).toFixed(1)}ms`);
+      const t1 = performance.now();
+      e.detail.api.setRowData(data);
+      requestAnimationFrame(() => {
+        console.log(`First render: ${(performance.now() - t1).toFixed(1)}ms`);
+        updateMeter();
+      });
+
+      // Wire scroll → meter once the viewport exists (it's built during connect).
+      const viewport = grid.querySelector('.sg-body-viewport');
+      viewport?.addEventListener('scroll', (e) => {
+        scrollTop.textContent = Math.round(e.target.scrollTop).toLocaleString();
+        requestAnimationFrame(updateMeter);
+      }, { passive: true });
+    });
+
+    function updateMeter() {
+      const tbody = grid.querySelector('tbody');
+      if (!tbody) return;
+      const trs = tbody.querySelectorAll('tr:not(.sg-spacer)').length;
+      trCount.textContent = trs.toString();
+      dataCount.textContent = grid.gridApi.getRowData().length.toLocaleString();
+    }
+
+    ['grid:sortChanged', 'grid:filterChanged'].forEach(ev =>
+      grid.addEventListener(ev, () => requestAnimationFrame(updateMeter)));
+  </script>
+</body>
+</html>
