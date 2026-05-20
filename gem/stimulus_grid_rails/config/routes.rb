@@ -8,6 +8,9 @@ StimulusGridRails::Engine.routes.draw do
   # Bulk cell paste — RAILS.md §9 fill-down / bulk paste.
   post "/:resource/bulk", to: "cells#bulk", as: :bulk
 
+  # Server-side search/filter — RAILS.md §21. Returns matching rows as JSON.
+  get "/:resource/rows", to: "rows#index", as: :index_rows
+
   # Row create/destroy — RAILS.md §14/§15. `rows/bulk` must precede the
   # `:row_id` route so "bulk" isn't captured as an id.
   post   "/:resource/rows",         to: "rows#create",       as: :rows

@@ -6,7 +6,7 @@ module StimulusGridRails
   # Created via the `column` DSL inside an ApplicationGrid subclass; not
   # instantiated directly. See StimulusGridRails::Grid for usage.
   class Column
-    TYPES = %i[string text integer decimal money boolean enum date datetime reference].freeze
+    TYPES = %i[string text integer bigint decimal money boolean enum date datetime reference].freeze
 
     attr_reader :name, :type, :editor, :editor_config, :enum_values, :concurrency,
                 :depends_on, :validators, :header, :width, :pinned, :cell_renderer
@@ -15,7 +15,7 @@ module StimulusGridRails
                    enum_values: nil, concurrency: :last_write_wins,
                    computed: false, depends_on: [], validate: nil,
                    header: nil, width: nil, pinned: nil, cell_renderer: nil,
-                   sortable: true, filterable: true)
+                   sortable: true, filterable: true, searchable: nil)
       raise ArgumentError, "Unknown column type #{type.inspect}" unless TYPES.include?(type)
       @name          = name.to_sym
       @type          = type
@@ -33,6 +33,8 @@ module StimulusGridRails
       @cell_renderer = cell_renderer
       @sortable      = sortable
       @filterable    = filterable
+      # Global search defaults to text-ish columns; numeric/date/boolean opt in.
+      @searchable    = searchable.nil? ? %i[string text enum reference].include?(type) : searchable
     end
 
     # Per-row, per-user editable check. RAILS.md §17 — server re-evaluates on
@@ -57,7 +59,7 @@ module StimulusGridRails
     def coerce(raw)
       case @type
       when :string, :text, :enum, :reference then [raw.to_s, nil]
-      when :integer
+      when :integer, :bigint
         Integer(raw.to_s, 10).then { |i| [i, nil] }
       when :decimal, :money
         [BigDecimal(raw.to_s), nil]
@@ -72,6 +74,40 @@ module StimulusGridRails
       end
     rescue ArgumentError, TypeError => e
       [nil, "invalid #{@type}: #{e.message}"]
+    end
+
+    def searchable? = @searchable && !@computed && !name.to_s.start_with?("_")
+
+    # Arel predicate for the global search term, or nil if this column doesn't
+    # participate. Case-insensitive contains over the column's text. Computed
+    # and action columns never match (no DB column to query).
+    def search_predicate(arel_table, term)
+      return nil unless searchable?
+      pattern = "%#{like_escape(term.to_s.downcase)}%"
+      arel_table[@name].lower.matches(pattern)
+    end
+
+    # Arel predicate for a per-column filter. `criteria` mirrors the client
+    # filterModel shape: { "type" => op, "value" => v, "value2" => v2 }.
+    # Returns nil for computed/unknown columns or unparseable values.
+    def filter_predicate(arel_table, criteria)
+      return nil if @computed || name.to_s.start_with?("_")
+      col = arel_table[@name]
+      op  = (criteria["type"] || criteria[:type]).to_s
+      raw = criteria["value"]  || criteria[:value]
+      raw2 = criteria["value2"] || criteria[:value2]
+
+      case @type
+      when :string, :text, :enum, :reference
+        text_predicate(col, op, raw.to_s)
+      when :integer, :bigint, :decimal, :money
+        numeric_predicate(col, op, raw, raw2)
+      when :date, :datetime
+        date_predicate(col, op, raw, raw2)
+      when :boolean
+        v, err = coerce(raw)
+        err ? nil : col.eq(v)
+      end
     end
 
     # Run client-defined validators. Returns Array of error strings.
@@ -117,10 +153,60 @@ module StimulusGridRails
 
     private
 
+    # Escape LIKE wildcards so a literal % or _ in the search term isn't treated
+    # as a pattern. Arel still quotes the value, so this is only about semantics.
+    def like_escape(str)
+      str.gsub(/[\\%_]/) { |c| "\\#{c}" }
+    end
+
+    def text_predicate(col, op, val)
+      lc = col.lower
+      v  = val.downcase
+      case op
+      when "equals"     then lc.eq(v)
+      when "notEqual"   then lc.not_eq(v)
+      when "startsWith" then lc.matches("#{like_escape(v)}%")
+      when "endsWith"   then lc.matches("%#{like_escape(v)}")
+      when "blank"      then col.eq(nil).or(col.eq(""))
+      when "notBlank"   then col.not_eq(nil).and(col.not_eq(""))
+      else                   lc.matches("%#{like_escape(v)}%")   # contains (default)
+      end
+    end
+
+    def numeric_predicate(col, op, raw, raw2)
+      v, err = coerce(raw)
+      return nil if err
+      case op
+      when "greaterThan"        then col.gt(v)
+      when "greaterThanOrEqual" then col.gteq(v)
+      when "lessThan"           then col.lt(v)
+      when "lessThanOrEqual"    then col.lteq(v)
+      when "notEqual"           then col.not_eq(v)
+      when "inRange"
+        v2, e2 = coerce(raw2)
+        e2 ? col.gteq(v) : col.between(v..v2)
+      else col.eq(v)
+      end
+    end
+
+    def date_predicate(col, op, raw, raw2)
+      v, err = coerce(raw)
+      return nil if err
+      case op
+      when "greaterThan" then col.gt(v)
+      when "lessThan"    then col.lt(v)
+      when "notEqual"    then col.not_eq(v)
+      when "inRange"
+        v2, e2 = coerce(raw2)
+        e2 ? col.gteq(v) : col.between(v..v2)
+      else col.eq(v)
+      end
+    end
+
     def default_editor_for(t)
       case t
       when :string, :text, :reference then "text"
-      when :integer, :decimal, :money then "number"
+      when :integer, :bigint, :decimal, :money then "number"
       when :boolean                   then "checkbox"
       when :enum                      then "select"
       when :date                      then "date"
@@ -131,7 +217,7 @@ module StimulusGridRails
 
     def header_cell_type
       case @type
-      when :integer, :decimal, :money then "number"
+      when :integer, :bigint, :decimal, :money then "number"
       when :date, :datetime           then "date"
       when :boolean                   then "boolean"
       else "text"
@@ -140,7 +226,7 @@ module StimulusGridRails
 
     def filter_type_for_client
       case @type
-      when :integer, :decimal, :money then "number"
+      when :integer, :bigint, :decimal, :money then "number"
       when :date, :datetime           then "date"
       when :boolean                   then "boolean"
       else "text"

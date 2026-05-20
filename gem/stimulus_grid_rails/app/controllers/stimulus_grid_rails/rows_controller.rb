@@ -16,6 +16,26 @@ module StimulusGridRails
     protect_from_forgery with: :exception
     skip_before_action :verify_authenticity_token, if: -> { request.format.symbol == :json }
 
+    # GET /grids/:resource/rows.json?q=<term>&filters=<json>
+    # Server-side global search + per-column filtering (RAILS.md §21). Returns
+    # the matching rows as the JSON shape the client grid consumes via setRowData.
+    MAX_ROWS = 5_000
+
+    def index
+      grid_class = StimulusGridRails.lookup_grid(params[:resource])
+      grid       = grid_class.new(user: current_grid_user)
+
+      relation = grid.search_and_filter(
+        grid.scope(current_grid_user),
+        q: params[:q],
+        filters: parse_filters,
+      )
+      total = relation.count
+      rows  = relation.limit(MAX_ROWS).map { |r| grid.row_to_h(r) }
+
+      render json: { rows: rows, total: total, limited: total > MAX_ROWS }
+    end
+
     def create
       grid_class = StimulusGridRails.lookup_grid(params[:resource])
       grid       = grid_class.new(user: current_grid_user)
@@ -66,6 +86,21 @@ module StimulusGridRails
       raw = params[:attributes]
       return {} if raw.blank?
       raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw.to_h
+    end
+
+    # `filters` arrives as a JSON string (query param) or a nested hash.
+    def parse_filters
+      raw = params[:filters]
+      return {} if raw.blank?
+      if raw.is_a?(String)
+        JSON.parse(raw)
+      elsif raw.respond_to?(:to_unsafe_h)
+        raw.to_unsafe_h
+      else
+        raw.to_h
+      end
+    rescue JSON::ParserError
+      {}
     end
 
     def current_grid_user

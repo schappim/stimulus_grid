@@ -139,6 +139,44 @@ module StimulusGridRails
       JSON.generate(row_to_h(row))
     end
 
+    # ----- Server-side search / filter (RAILS.md §21) -----
+
+    # The base relation a request may see. Override for per-user authorization
+    # scoping (e.g. `model_class.where(team: user.team)`).
+    def scope(_user = user)
+      self.class.model_class.all
+    end
+
+    # Apply a global search term + per-column filters to a relation. `filters`
+    # is { col_name => { "type" =>, "value" =>, "value2" => } } (the client
+    # filterModel shape). Unknown columns and unparseable values are ignored.
+    def search_and_filter(relation, q: nil, filters: {})
+      relation = apply_search(relation, q)
+      relation = apply_filters(relation, filters)
+      relation
+    end
+
+    def apply_search(relation, q)
+      return relation if q.blank?
+      table = self.class.model_class.arel_table
+      preds = columns.filter_map { |c| c.search_predicate(table, q) }
+      return relation if preds.empty?
+      relation.where(preds.reduce(:or))
+    end
+
+    def apply_filters(relation, filters)
+      return relation if filters.blank?
+      table = self.class.model_class.arel_table
+      filters.each do |col_name, criteria|
+        next if criteria.blank?
+        col = self.class.columns_registry[col_name.to_sym]
+        next unless col
+        pred = col.filter_predicate(table, criteria)
+        relation = relation.where(pred) if pred
+      end
+      relation
+    end
+
     def cell_value(row, column)
       if column.computed?
         method = "compute_#{column.name}"
@@ -164,7 +202,7 @@ module StimulusGridRails
     # ISO strings, everything else stringifies sensibly.
     def serialize_value(v, column)
       case column.type
-      when :integer        then v.to_i
+      when :integer, :bigint then v.to_i
       when :decimal, :money then v.to_f
       when :boolean        then !!v
       when :date           then v.respond_to?(:to_date) ? v.to_date.iso8601 : v

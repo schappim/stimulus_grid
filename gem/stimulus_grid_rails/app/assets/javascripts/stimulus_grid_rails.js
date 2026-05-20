@@ -38,6 +38,11 @@ function csrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || ""
 }
 
+function debounce(fn, ms) {
+  let t = null
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) }
+}
+
 // ---------- Stimulus: GridSyncController ----------
 // Mount on the same element as data-controller="grid". Listens for
 // `grid:cellValueChanged` from the base grid controller and converts edits
@@ -81,6 +86,29 @@ class GridSyncController extends Controller {
     }
     this._gridEl.addEventListener("click", this._onDelegatedClick)
 
+    // Server-side search / filtering. The grid fetches matching rows from the
+    // index endpoint and swaps the dataset via setRowData. Driven by events:
+    //   gridEl.dispatchEvent(new CustomEvent("grid-sync:search", { detail: { q } }))
+    //   gridEl.dispatchEvent(new CustomEvent("grid-sync:filter", { detail: { column, criteria } }))  // criteria=null clears
+    //   gridEl.dispatchEvent(new CustomEvent("grid-sync:clear-filters"))
+    this._query = { q: "", filters: {} }
+    this._debouncedFetch = debounce(() => this._fetchRows(), 200)
+    this._onSearch = (e) => { this._query.q = e?.detail?.q ?? ""; this._debouncedFetch() }
+    this._onFilter = (e) => {
+      const { column, criteria } = e?.detail || {}
+      if (!column) return
+      if (criteria == null || criteria === "") delete this._query.filters[column]
+      else this._query.filters[column] = criteria
+      this._debouncedFetch()
+    }
+    this._onClearFilters = () => {
+      this._query = { q: "", filters: {} }
+      this._fetchRows()
+    }
+    this._gridEl.addEventListener("grid-sync:search", this._onSearch)
+    this._gridEl.addEventListener("grid-sync:filter", this._onFilter)
+    this._gridEl.addEventListener("grid-sync:clear-filters", this._onClearFilters)
+
     this._opCounter = 0
   }
 
@@ -89,6 +117,40 @@ class GridSyncController extends Controller {
     this._gridEl.removeEventListener("grid-sync:add-row", this._onAddRow)
     this._gridEl.removeEventListener("grid-sync:delete-selected", this._onDeleteSelected)
     this._gridEl.removeEventListener("click", this._onDelegatedClick)
+    this._gridEl.removeEventListener("grid-sync:search", this._onSearch)
+    this._gridEl.removeEventListener("grid-sync:filter", this._onFilter)
+    this._gridEl.removeEventListener("grid-sync:clear-filters", this._onClearFilters)
+  }
+
+  // GET /grids/:resource/rows?q=&filters= — server applies the global search +
+  // per-column filters via the column registry, returns matching rows, and we
+  // swap the grid's dataset. This is the scalable path for large tables.
+  async fetchRows() { return this._fetchRows() }
+
+  async _fetchRows() {
+    if (!this.hasRowsPathValue) return
+    const api = this._gridEl.gridApi
+    if (!api) return
+    const url = new URL(this.rowsPathValue, window.location.origin)
+    if (this._query.q) url.searchParams.set("q", this._query.q)
+    if (Object.keys(this._query.filters).length) {
+      url.searchParams.set("filters", JSON.stringify(this._query.filters))
+    }
+    try {
+      const res = await fetch(url, {
+        method: "GET", credentials: "same-origin",
+        headers: { "Accept": "application/json", "X-CSRF-Token": csrfToken() },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      api.setRowData(data.rows)
+      this._gridEl.dispatchEvent(new CustomEvent("grid-sync:rows-fetched", {
+        detail: { total: data.total, shown: data.rows.length, limited: data.limited },
+        bubbles: true,
+      }))
+    } catch (err) {
+      console.error("[stimulus_grid_rails] fetchRows failed:", err)
+    }
   }
 
   _headers(extra = {}) {
