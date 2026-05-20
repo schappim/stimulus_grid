@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildDisplayList, computeWindow, formatValue, getValue } from '../lib/model.js';
+import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applySort } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
 
@@ -404,7 +404,10 @@ export default class GridController extends Controller {
   }
 
   filteredCount() {
-    return this._displayList.filteredSorted.length;
+    // Compute on-demand so consumers reading inside grid:filterChanged handlers
+    // (which fire before the next render) get up-to-date counts.
+    const cols = Object.fromEntries(this.state.columnDefs.map((c) => [c.field, c]));
+    return applyFilters(this.state.rowData, this.state.filterModel, cols).length;
   }
 
   lastPageIndex() { return this.totalPages() - 1; }

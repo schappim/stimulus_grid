@@ -6,30 +6,26 @@ const demoDir = resolve(__dirname, 'demo');
 const demoPages = Object.fromEntries(
   readdirSync(demoDir)
     .filter((f) => f.endsWith('.html'))
-    .map((f) => [f.replace(/\.html$/, ''), resolve(demoDir, f)])
+    .map((f) => [`demo/${f.replace(/\.html$/, '')}`, resolve(demoDir, f)])
 );
 
+/* Vite roots at the project root so `<script src="../dist/...">` from demo HTMLs
+ * resolves to the dist bundle (which lives at <project>/dist/). Demos are served
+ * at http://localhost:5173/demo/<page>.html. */
 export default defineConfig({
-  root: 'demo',
-  publicDir: resolve(__dirname, 'demo/public'),
-  resolve: {
-    alias: {
-      'stimulus_grid': resolve(__dirname, 'src/index.js'),
-    },
-  },
+  root: '.',
+  publicDir: false,
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    outDir: resolve(__dirname, 'dist-demos'),
     emptyOutDir: true,
     rollupOptions: {
-      input: demoPages,
+      input: { index: resolve(demoDir, 'index.html'), ...demoPages },
     },
   },
   server: {
     port: 5173,
     open: false,
     strictPort: false,
-    fs: {
-      allow: [resolve(__dirname, '.')],
-    },
+    fs: { allow: [resolve(__dirname, '.')] },
   },
 });

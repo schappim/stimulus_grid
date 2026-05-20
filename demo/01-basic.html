@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>01 — Basic grid | stimulus_grid</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
   <style>
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
     h1 { margin-bottom: 4px; }
@@ -61,12 +62,10 @@
   </div>
 
   <p style="margin-top:16px;color:#6b7280;font-size:13px;">
-    Try: click headers to sort, shift-click for multi-sort, drag the right edge of a header to resize.
+    Try: click headers to sort, shift-click for multi-sort, drag the right edge of a header to resize, drag the header itself to reorder.
   </p>
 
-  <script type="module">
-    import { start } from '../src/index.js';
-    start();
-  </script>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>StimulusGrid.start();</script>
 </body>
 </html>
