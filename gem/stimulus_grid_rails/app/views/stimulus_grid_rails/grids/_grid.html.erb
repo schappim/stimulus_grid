@@ -1,0 +1,63 @@
+<%#
+  Renders a server-driven grid for the given resource.
+
+  Required locals:
+    grid:  an instance of an ApplicationGrid subclass
+    rows:  the collection of model instances to render
+
+  Optional locals:
+    id:           DOM id for the grid element (default: "<resource>-grid")
+    css_class:    extra CSS classes on the grid wrapper
+    pagination:   true|false (default true)
+    page_size:    default 25
+    row_selection: nil | "single" | "multiple"
+%>
+<%
+  resource     = grid.class.resource_name
+  grid_id      = local_assigns[:id] || "#{resource}-grid"
+  pagination   = local_assigns.fetch(:pagination, true)
+  page_size    = local_assigns.fetch(:page_size, 25)
+  row_selection = local_assigns[:row_selection]
+%>
+
+<div id="<%= grid_id %>"
+     class="<%= local_assigns[:css_class] %> sgr-panel"
+     data-controller="grid grid-sync"
+     data-grid-name="<%= resource %>"
+     data-grid-row-selection-value="<%= row_selection %>"
+     data-grid-pagination-value="<%= pagination %>"
+     data-grid-page-size-value="<%= page_size %>"
+     data-grid-sync-resource-value="<%= resource %>"
+     data-grid-sync-cells-path-template-value="<%= stimulus_grid_rails.cell_path(resource: ':resource', row_id: ':row_id', column: ':column') %>">
+  <table>
+    <thead>
+      <tr>
+        <% grid.columns.each do |col| %>
+          <th <% col.header_data_attrs.each do |k, v| %><%= k %>="<%= v %>" <% end %>><%= col.header %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.each do |row| %>
+        <%= render partial: "stimulus_grid_rails/grids/row", locals: { grid: grid, row: row } %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if pagination %>
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#<%= grid_id %>">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+<% end %>
+
+<%# Turbo Stream subscription so broadcasts from other users land in this grid. %>
+<%= turbo_stream_from grid.stream_name_for(local_assigns[:current_user]) %>

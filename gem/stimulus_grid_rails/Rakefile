@@ -1,0 +1,16 @@
+require "bundler/setup"
+
+task default: :build
+
+desc "Build the gem"
+task :build do
+  sh "gem build stimulus_grid_rails.gemspec"
+end
+
+desc "Sync the JS bundle from the parent stimulus_grid dist/ into the gem assets"
+task :sync_js do
+  root = File.expand_path("../..", __dir__)
+  cp "#{root}/dist/stimulus_grid.esm.js", "app/assets/javascripts/stimulus_grid.js"
+  cp "#{root}/dist/stimulus_grid.css",    "app/assets/stylesheets/stimulus_grid.css"
+  puts "Synced stimulus_grid.js + stimulus_grid.css from dist/"
+end
