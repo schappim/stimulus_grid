@@ -56,6 +56,8 @@ class GridSyncController extends Controller {
     rowsPath:          String,   // "/grids/:resource/rows"
     rowPathTemplate:   String,   // "/grids/:resource/rows/:row_id"
     bulkRowsPath:      String,   // "/grids/:resource/rows/bulk"
+    undoPath:          String,   // "/grids/:resource/undo"
+    redoPath:          String,   // "/grids/:resource/redo"
     optimisticIdPrefix: { type: String, default: "" },
   }
 
@@ -109,6 +111,22 @@ class GridSyncController extends Controller {
     this._gridEl.addEventListener("grid-sync:filter", this._onFilter)
     this._gridEl.addEventListener("grid-sync:clear-filters", this._onClearFilters)
 
+    // Undo / redo keyboard shortcuts (RAILS.md §16). Cmd/Ctrl+Z undoes,
+    // Cmd/Ctrl+Shift+Z (or Cmd/Ctrl+Y) redoes. Skipped while a cell editor or
+    // any text field is focused, so native text undo still works there.
+    this._onKeydown = (e) => {
+      const mod = e.metaKey || e.ctrlKey
+      const key = e.key.toLowerCase()
+      if (!mod || (key !== "z" && key !== "y")) return
+      const ae = document.activeElement
+      if (ae && /^(input|textarea|select)$/i.test(ae.tagName)) return
+      if (this._gridEl.querySelector('td[data-editing="true"]')) return
+      const isRedo = key === "y" || (key === "z" && e.shiftKey)
+      e.preventDefault()
+      isRedo ? this.redo() : this.undo()
+    }
+    document.addEventListener("keydown", this._onKeydown)
+
     this._opCounter = 0
   }
 
@@ -120,6 +138,26 @@ class GridSyncController extends Controller {
     this._gridEl.removeEventListener("grid-sync:search", this._onSearch)
     this._gridEl.removeEventListener("grid-sync:filter", this._onFilter)
     this._gridEl.removeEventListener("grid-sync:clear-filters", this._onClearFilters)
+    document.removeEventListener("keydown", this._onKeydown)
+  }
+
+  // POST /grids/:resource/undo (or /redo). The server replays the inverse /
+  // forward value as a normal mutation, which auto-broadcasts back to this tab.
+  async undo() { return this._history(this.hasUndoPathValue && this.undoPathValue) }
+  async redo() { return this._history(this.hasRedoPathValue && this.redoPathValue) }
+
+  async _history(path) {
+    if (!path) return
+    try {
+      const res = await fetch(path, {
+        method: "POST", credentials: "same-origin", headers: this._headers(),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const html = await res.text()
+      if (html.trim()) window.Turbo?.renderStreamMessage(html)
+    } catch (err) {
+      console.error("[stimulus_grid_rails] history failed:", err)
+    }
   }
 
   // GET /grids/:resource/rows?q=&filters= — server applies the global search +

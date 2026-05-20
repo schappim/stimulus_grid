@@ -8,6 +8,10 @@ StimulusGridRails::Engine.routes.draw do
   # Bulk cell paste — RAILS.md §9 fill-down / bulk paste.
   post "/:resource/bulk", to: "cells#bulk", as: :bulk
 
+  # Undo / redo — RAILS.md §16.
+  post "/:resource/undo", to: "history#undo",        as: :undo
+  post "/:resource/redo", to: "history#redo_change", as: :redo
+
   # Server-side search/filter — RAILS.md §21. Returns matching rows as JSON.
   get "/:resource/rows", to: "rows#index", as: :index_rows
 

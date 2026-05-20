@@ -1,72 +1,91 @@
 require "active_support/concern"
 
 module StimulusGridRails
-  # Mixin for Active Record models that participate in a grid. Adds two
-  # affordances:
+  # Mixin for Active Record models backing a grid. Once included and wired with
+  # `broadcasts_grid`, every create / update / destroy AUTOMATICALLY broadcasts
+  # the right Turbo Stream action to the grid's tenant-scoped stream — no manual
+  # broadcast calls anywhere:
   #
-  #   - `broadcast_cell(grid:, column:, value: nil, optimistic_id: nil)` —
-  #     pushes a cell delta to every subscriber of the model's stream name.
-  #   - `after_update_commit` hook that auto-broadcasts changed cells for
-  #     any column declared on the model's matching Grid (resolved via the
-  #     `:grid` class option).
+  #   create  → row-insert-sorted   (the full row as JSON)
+  #   update  → cell                (each changed registered column + any
+  #                                   computed column whose deps changed)
+  #   destroy → row-remove
   #
   # Usage:
   #
   #     class Athlete < ApplicationRecord
   #       include StimulusGridRails::Broadcastable
-  #       broadcasts_grid AthleteGrid, stream: ->(athlete) { "athletes" }
+  #       broadcasts_grid AthleteGrid
   #     end
+  #
+  # Streams are tenant-scoped via StimulusGridRails.streamables_for, so with
+  # ActsAsTenant a tenant's changes never reach another tenant's subscribers.
   module Broadcastable
     extend ActiveSupport::Concern
 
+    included do
+      # Set by the cells controller before a grid-driven save so the broadcast
+      # carries the originating client's optimistic id (RAILS.md §4) and that
+      # client suppresses its own echo. nil for changes made outside the grid
+      # (console, jobs) — those broadcast to everyone with no suppression.
+      attr_accessor :_sgr_optimistic_id
+    end
+
     class_methods do
-      # `auto_broadcast_updates:` — when true, every model update broadcasts
-      # changed cells. Default false because grid edits flow through the cells
-      # controller, which broadcasts with an optimistic_id so the originating
-      # client can suppress its own echo (RAILS.md §4). Turn it on if you
-      # mutate rows outside the grid (console, jobs, other controllers) and
-      # want those changes to appear live.
-      def broadcasts_grid(grid_class, stream:, auto_broadcast_updates: false)
-        @stimulus_grid_class  = grid_class
-        @stimulus_grid_stream = stream
-        after_update_commit { broadcast_changed_grid_cells } if auto_broadcast_updates
-        after_destroy_commit { broadcast_grid_row_removed }
+      def broadcasts_grid(grid_class)
+        @stimulus_grid_class = grid_class
+        after_create_commit  { stimulus_grid_broadcast_insert }
+        after_update_commit  { stimulus_grid_broadcast_changes }
+        after_destroy_commit { stimulus_grid_broadcast_remove }
       end
 
-      def stimulus_grid_class;  @stimulus_grid_class;  end
-      def stimulus_grid_stream; @stimulus_grid_stream; end
+      def stimulus_grid_class
+        @stimulus_grid_class
+      end
     end
 
-    def broadcast_cell(column:, value: nil, optimistic_id: nil)
-      grid_class = self.class.stimulus_grid_class
-      stream     = self.class.stimulus_grid_stream.call(self)
-      col        = grid_class.resolve_column!(column)
-      v          = value.nil? ? send(col.name) : value
-      message = StimulusGridRails::TurboStreams.cell(
-        grid: grid_class.resource_name, row_id: id, column: col.name,
-        value: v, optimistic_id: optimistic_id,
+    def stimulus_grid_streamables
+      StimulusGridRails.streamables_for(self.class.stimulus_grid_class.resource_name)
+    end
+
+    def stimulus_grid_broadcast_insert
+      grid = self.class.stimulus_grid_class.new
+      message = StimulusGridRails::TurboStreams.row_insert_sorted(
+        grid: grid.class.resource_name, row_id: id, payload: grid.row_to_json(self),
       )
-      ::Turbo::StreamsChannel.broadcast_stream_to(stream, content: message)
+      stimulus_grid_broadcast(message)
     end
 
-    def broadcast_changed_grid_cells
-      return unless self.class.stimulus_grid_class
+    def stimulus_grid_broadcast_changes
       grid_class = self.class.stimulus_grid_class
-      columns    = grid_class.columns_registry || {}
-      previous_changes.each_key do |col_name|
-        col = columns[col_name.to_sym]
-        next unless col
-        broadcast_cell(column: col.name)
+      grid       = grid_class.new
+      registry   = grid_class.columns_registry || {}
+      changed    = previous_changes.keys.map(&:to_sym)
+
+      direct   = registry.values.select { |c| !c.computed? && !c.name.to_s.start_with?("_") && changed.include?(c.name) }
+      computed = registry.values.select { |c| c.computed? && (c.depends_on & changed).any? }
+
+      (direct + computed).each do |col|
+        message = StimulusGridRails::TurboStreams.cell(
+          grid: grid_class.resource_name, row_id: id, column: col.name,
+          value: grid.cell_value(self, col), optimistic_id: _sgr_optimistic_id,
+        )
+        stimulus_grid_broadcast(message)
       end
     end
 
-    def broadcast_grid_row_removed
+    def stimulus_grid_broadcast_remove
       grid_class = self.class.stimulus_grid_class
-      stream     = self.class.stimulus_grid_stream.call(self)
       message = StimulusGridRails::TurboStreams.row_remove(
         grid: grid_class.resource_name, row_id: id,
       )
-      ::Turbo::StreamsChannel.broadcast_stream_to(stream, content: message)
+      stimulus_grid_broadcast(message)
+    end
+
+    private
+
+    def stimulus_grid_broadcast(message)
+      ::Turbo::StreamsChannel.broadcast_stream_to(*stimulus_grid_streamables, content: message)
     end
   end
 end
