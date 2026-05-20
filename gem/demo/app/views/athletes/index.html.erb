@@ -16,7 +16,7 @@
     <li><strong>Version-checked concurrency</strong> (§13): the <em>age</em> column carries <code>lock_version</code></li>
     <li><strong>Add / remove rows</strong> (§14/§15): the toolbar adds; the × on each row (or "Delete selected") removes — live in every tab</li>
     <li><strong>Server-side global search + filtering</strong> (§21): the search box and per-column filters query the DB via the column registry (<code>GET /grids/athletes/rows</code>) and swap the dataset</li>
-    <li><strong>Custom cells</strong>: the <em>Medals</em> column is a client-side renderer (<code>&lt;template id="sgr-medals"&gt;</code> with <code>data-bind</code>)</li>
+    <li><strong>Custom cells</strong>: <em>Medals</em> is a read-only renderer; <em>Sport</em> is an <strong>editable</strong> custom cell — a pill for display + a custom <code>&lt;select&gt;</code> editor (double-click it)</li>
     <li><strong>Cross-tab live sync</strong> via <code>turbo_stream_from "athletes"</code></li>
     <li><strong>Server validation</strong>: try setting age to 999 — server rejects, cell reverts with a tooltip</li>
   </ul>
@@ -34,6 +34,18 @@
     <span class="medal silver" data-bind="silver" title="Silver"></span>
     <span class="medal bronze" data-bind="bronze" title="Bronze"></span>
   </span>
+</template>
+
+<%# Editable custom cell: a pill for display, a <select> for editing. %>
+<template id="sgr-sport">
+  <span class="sport-pill" data-bind="sport" data-bind-attr="data-sport"></span>
+</template>
+<template id="sgr-sport-editor">
+  <select class="sport-editor" data-editor-input>
+    <% AthleteGrid.columns_registry[:sport].enum_values.each do |s| %>
+      <option value="<%= s %>"><%= s %></option>
+    <% end %>
+  </select>
 </template>
 
 <div class="searchbar" data-grid-id="athletes-grid">
@@ -218,6 +230,21 @@
   .medal.silver { background: #e5e7eb; color: #374151; }
   .medal.bronze { background: #fce7d6; color: #9a3412; }
   .medal[data-zero="true"] { opacity: 0.25; }
+
+  /* --- Editable custom cell: sport pill + select editor --- */
+  .sport-pill {
+    display: inline-block; padding: 1px 9px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; background: #eef2ff; color: #3730a3;
+  }
+  .sport-pill[data-sport="Swimming"]   { background: #e0f2fe; color: #075985; }
+  .sport-pill[data-sport="Cycling"]    { background: #dcfce7; color: #166534; }
+  .sport-pill[data-sport="Gymnastics"] { background: #fae8ff; color: #86198f; }
+  .sport-pill[data-sport="Athletics"]  { background: #fef9c3; color: #854d0e; }
+  .sport-pill[data-sport="Boxing"]     { background: #ffe4e6; color: #9f1239; }
+  .sport-editor {
+    width: 100%; box-sizing: border-box; font: inherit; padding: 2px 4px;
+    border: 1px solid #2563eb; border-radius: 4px;
+  }
 
   .sgr-panel { height: 600px; margin-top: 10px; }
   kbd {

@@ -8,7 +8,11 @@ class AthleteGrid < StimulusGridRails::Grid
 
   column :athlete, type: :string,  editable: true, width: 220, pinned: :left
   column :country, type: :string,  editable: true, width: 160
+  # Custom cell that is ALSO editable: a pill renderer for display
+  # (template "sgr-sport") and a custom <select> editor (template
+  # "sgr-sport-editor") that opens on double-click.
   column :sport,   type: :enum,    editable: true, width: 160,
+                   cell_renderer: "sgr-sport", cell_editor: "sgr-sport-editor",
                    enum_values: ["Swimming", "Cycling", "Gymnastics", "Athletics",
                                  "Boxing", "Diving", "Fencing", "Rowing", "Wrestling"]
   column :age,     type: :integer, editable: true, width: 80,
