@@ -17,10 +17,11 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"]   = "https://github.com/schappim/stimulus_grid/blob/main/gem/stimulus_grid_rails/CHANGELOG.md"
 
   spec.files = Dir[
-    "{app,config,lib}/**/*",
+    "{app,config,db,lib}/**/*",
     "MIT-LICENSE",
     "Rakefile",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ]
 
   spec.add_dependency "rails",         ">= 7.0"
