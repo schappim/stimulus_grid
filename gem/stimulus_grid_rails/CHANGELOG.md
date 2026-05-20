@@ -30,3 +30,16 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
   `grid-sync:delete-selected` events + delegated per-row delete buttons.
 - Editor cell navigation: Tab / Shift+Tab move the open editor to the next /
   previous editable cell (wraps within the page), committing as they go.
+- Server-side global search + per-column filtering (RAILS.md §21): Column
+  searchable:/search_predicate/filter_predicate (Arel), Grid scope/search_and_filter,
+  GET /grids/:resource/rows JSON endpoint, grid-sync debounced fetch → setRowData.
+- New :bigint column type (alongside :integer).
+- Automatic broadcasts (RAILS.md §1/§4): Broadcastable auto-broadcasts
+  create/update/destroy (incl. computed cascade) from commit callbacks;
+  broadcasts_grid now takes only the grid class.
+- Tenant/auth safety (RAILS.md §2/§17): controllers inherit
+  StimulusGridRails.parent_controller (Devise + ActsAsTenant before_actions);
+  scoped row lookups (grid.scope(user).find); tenant-scoped stream names.
+- Undo/redo (RAILS.md §16): StimulusGridRails::Audit + migration; per cell-commit
+  recording; POST /undo and /redo replay via apply_cell!; Cmd/Ctrl+Z and
+  Cmd/Ctrl+Shift+Z (Ctrl+Y) shortcuts in grid-sync.

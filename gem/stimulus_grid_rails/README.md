@@ -21,7 +21,8 @@ Rails app *knows its schema*.
 
 | RAILS.md § | Feature | Status |
 |---|---|---|
-| §1 | Custom Turbo Stream actions: `cell`, `cell-attr`, `cell-confirm`, `cell-revert`, `cell-conflict`, `row-insert-sorted`, `row-remove`, `aggregate`, `bulk`, `presence` | ✅ |
+| §1 | Custom Turbo Stream actions (`cell`, `cell-confirm`, `cell-revert`, `cell-conflict`, `row-insert-sorted`, `row-remove`, `aggregate`, `bulk`, `presence`), **broadcast automatically** on every create/update/destroy | ✅ |
+| §2 | Tenant-scoped streams — broadcasts isolated per `ActsAsTenant.current_tenant`; scoped row lookups (no bare `Model.find`) | ✅ |
 | §4 | Optimistic updates: cell marked `data-pending`, `X-Optimistic-Id` header, server `cell-confirm`/`cell-revert`, originator suppresses its own broadcast echo | ✅ |
 | §7 | Server-side column registry: per-column `type`, `editable` (bool or lambda), `editor`, `editor_config`, `validate`, `concurrency`, `computed`/`depends_on` | ✅ |
 | §8 | One cell-mutation endpoint `PATCH /grids/:resource/:row_id/cells/:column` | ✅ |
@@ -32,8 +33,10 @@ Rails app *knows its schema*.
 | §13 | Version-checked concurrency (`lock_version` → `cell-conflict`) | ✅ |
 | §14 | Create rows: `POST /grids/:resource/rows` → `row-insert-sorted` broadcast | ✅ |
 | §15 | Delete rows: per-row + multi-select bulk → `row-remove` broadcast | ✅ |
-| §17 | `editable:` lambda re-checked on every PATCH (never trust the client) | ✅ |
-| §9 (bulk paste), §16 | Excel paste / undo-redo | ⏳ deferred |
+| §16 | Undo / redo: server-side audit log; `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` (or `Ctrl+Y`) redo; replayed as normal mutations | ✅ |
+| §17 | `editable:` lambda re-checked on every PATCH; auth/tenant via inherited `parent_controller` | ✅ |
+| §9 (bulk paste) | Excel multi-cell paste | ⏳ deferred |
+| §21 | Server-side global search + per-column filtering | ✅ |
 
 ---
 
@@ -228,19 +231,78 @@ def new_row_defaults = { athlete: "New athlete", sport: "Swimming", age: 20, gol
 </template>
 ```
 
-Create persists with `new_row_defaults`, returns + broadcasts `row-insert-sorted`
-(idempotent by id, so the originator doesn't double-add). Delete relies on the
-model's `after_destroy_commit` `row-remove` broadcast for other tabs.
+Create/delete broadcast automatically (see below) — the gem's controllers just
+persist; the model's commit callbacks broadcast.
+
+## Automatic broadcasts
+
+`include StimulusGridRails::Broadcastable; broadcasts_grid YourGrid` is all the
+wiring. From then on **every** create / update / destroy broadcasts the right
+Turbo Stream action — no manual `broadcast_*` calls, even for changes made from
+the console, a job, or another controller:
+
+| Model event | Broadcast |
+|---|---|
+| `create` | `row-insert-sorted` (full row as JSON) |
+| `update` | `cell` per changed registered column **+ computed cascade** |
+| `destroy` | `row-remove` |
+
+Grid edits made through the cells endpoint stash the originator's
+`optimistic_id` on the record before save, so the auto-broadcast still carries
+it and the originating tab suppresses its own echo (RAILS.md §4).
+
+## Multi-tenancy & auth (Devise + ActsAsTenant)
+
+Two things keep tenants isolated:
+
+1. **Inherited controller.** Gem controllers inherit
+   `StimulusGridRails.parent_controller` (default `"ApplicationController"`), so
+   your `authenticate_user!` and `set_current_tenant_through_filter`
+   before_actions run for the grid's cell/row endpoints too:
+
+   ```ruby
+   # config/initializers/stimulus_grid_rails.rb
+   StimulusGridRails.parent_controller = "ApplicationController"
+   ```
+
+2. **Scoped lookups + scoped streams.** Every row is fetched through
+   `grid.scope(current_user).find(...)` — never a bare `Model.find` — so a row
+   outside the tenant raises `RecordNotFound` instead of leaking. Override
+   `scope` for custom authorization:
+
+   ```ruby
+   class InvoiceGrid < StimulusGridRails::Grid
+     def scope(user) = model_class.where(account: user.account)
+   end
+   ```
+
+   Stream names are tenant-scoped automatically via `ActsAsTenant.current_tenant`
+   (`StimulusGridRails.streamables_for`), so a broadcast for one tenant never
+   reaches another's subscribers — even when grids share a logical stream.
+
+## Undo / redo (RAILS.md §16)
+
+Install the audit table, then `Cmd/Ctrl+Z` undoes and `Cmd/Ctrl+Shift+Z` (or
+`Ctrl+Y`) redoes the current user's last cell mutation. Undo/redo replay the
+prior/new value through `apply_cell!`, so validations re-run, computed columns
+cascade, and the change broadcasts to every tab. Shortcuts are ignored while a
+cell editor or text field is focused (native text undo still works there).
+
+```bash
+bin/rails stimulus_grid_rails:install:migrations   # copies the audit migration
+bin/rails db:migrate
+```
+
+Until the table exists, auditing and undo/redo are a quiet no-op.
 
 ## Roadmap
 
-Deferred from this MVP slice (PRs welcome):
+Deferred (PRs welcome):
 
 - **Bulk paste** (§9): Excel multi-cell paste → `POST /grids/:resource/bulk` →
   `bulk` stream with per-mutation confirm/revert + partial-success toast. *(The
   `/bulk` endpoint and `bulk` action exist; the client-side paste detection does
   not.)*
-- **Undo/redo** (§16): server-side audit row + inverse-mutation replay.
 - **Field-locking & presence** (§13 field-locked, §1 `presence`): the `presence`
   Turbo Stream action is wired client-side; the lock lifecycle is not.
 - **Yjs text cells**: `collaborative: :yjs` per-column (see above).
