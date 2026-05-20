@@ -2,13 +2,13 @@
 
 Rails + Hotwire bindings for [`stimulus_grid`](../../). It turns the HTML-first
 stimulus_grid into a **server-driven, multi-user editable data grid** using
-Turbo Streams over Action Cable — no React, no ag-grid, no JS build step
-(importmap-pinnable).
+Turbo Streams over Action Cable — no React, no client-side grid framework, no JS
+build step (importmap-pinnable).
 
 This is the Rails-native realisation of the scope in [`RAILS.md`](../../RAILS.md):
-the **server column definition does 80% of what ag-grid pushes onto the client**
-(auth, coercion, validation, editor selection, cascade, broadcast), because a
-Rails app *knows its schema*.
+the **server column definition does 80% of what a generic client-side grid
+pushes onto the client** (auth, coercion, validation, editor selection, cascade,
+broadcast), because a Rails app *knows its schema*.
 
 > Status: **v0.1 / MVP slice.** Implemented: single-cell commit with optimistic
 > update + server reconcile, the `ApplicationGrid` column registry, standard

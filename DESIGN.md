@@ -1,7 +1,7 @@
 # stimulus_grid — Design Doc
 
-A clean-room, Stimulus-first port of [AG Grid](https://www.ag-grid.com/react-data-grid/grid-api/).
-No AG Grid source is read or copied; we take API shape inspiration only.
+A Stimulus-first, HTML-first data grid. Clean-room — no third-party grid source
+is read or copied; we take API-shape inspiration from common JS data grids only.
 
 > Status: design draft, v0.1
 > Owner: Marcus
@@ -11,12 +11,12 @@ No AG Grid source is read or copied; we take API shape inspiration only.
 
 ## 1. Goal
 
-Bring the *feel* of AG Grid — sortable, filterable, editable, selectable, paginated, virtualised
-data grid with a rich public API — to a Stimulus.js codebase, without React, without a build-time
-configuration object, and without AG Grid as a dependency.
+Bring the *feel* of a full-featured data grid — sortable, filterable, editable, selectable,
+paginated, virtualised, with a rich public API — to a Stimulus.js codebase, without React, without
+a build-time configuration object, and without a third-party grid dependency.
 
-> "A grid you can render from the server, that progressively enhances into something that
-> behaves like AG Grid."
+> "A grid you can render from the server, that progressively enhances into a full-featured,
+> interactive data grid."
 
 The library exports a small bundle of Stimulus controllers. A consumer drops table-like HTML
 on a page, annotates it with `data-controller="grid"` and a handful of `data-grid-*` attributes,
@@ -34,15 +34,15 @@ These features are deliberately deferred so v0.1 ships something coherent:
 - Built-in CSV/Excel/clipboard interop — v0.2 (CSV first)
 - Integrated charts — out of scope
 - Sparklines — out of scope
-- AG Grid's enterprise filters (set / advanced filter builder UI) — v0.2
+- Enterprise-style filters (set filter / advanced filter builder UI) — v0.2
 
 What we *do* commit to in v0.1: columns, rows, sort, filter (text/number/date), single + multi
 row selection, pagination, inline cell editing, column resize/reorder/pin/hide, virtual row
-scrolling, and a public `gridApi` mirroring the most-used AG Grid methods.
+scrolling, and a public `gridApi` covering the most-used data-grid methods.
 
 ## 3. Philosophy: Stimulus-first
 
-AG Grid's API starts from a JS configuration object. Stimulus inverts that: **the HTML is the
+Most JS data grids start from a JS configuration object. Stimulus inverts that: **the HTML is the
 configuration**. Three rules follow:
 
 1. **HTML works without JS.** A `stimulus_grid` table is a real `<table>` (or `role="grid"` div
@@ -55,9 +55,9 @@ configuration**. Three rules follow:
    not the Stimulus way. The grid controller is the brain; per-column/header/row/cell behaviour
    lives in dedicated leaf controllers that talk back via outlets.
 
-The public API surface is still recognisable to an AG Grid user: `grid.api.setRowData(...)`,
+The public API surface uses familiar data-grid method names: `grid.api.setRowData(...)`,
 `grid.api.getSelectedRows()`, `grid.api.exportDataAsCsv()`, etc. The mental model is
-"AG Grid with HTML as the source of truth, Stimulus as the binding layer."
+"a data grid with HTML as the source of truth and Stimulus as the binding layer."
 
 ## 4. Architecture overview
 
@@ -310,8 +310,8 @@ no virtual DOM — just a template clone with data-binding hooks.
 
 ## 8. Public API — `gridApi`
 
-After `connect()`, `element.gridApi` is the public surface. Names mirror AG Grid where they
-make sense.
+After `connect()`, `element.gridApi` is the public surface. Names follow common data-grid
+conventions where they make sense.
 
 ```ts
 interface GridApi {
@@ -461,11 +461,11 @@ focus/selection styling stable during scroll.
 - Sparklines
 - Pivoting
 
-## 12. AG Grid feature mapping
+## 12. Migration cheatsheet (from a React data grid)
 
-| AG Grid concept                          | stimulus_grid equivalent                                              |
+| Typical React data-grid concept          | stimulus_grid equivalent                                              |
 |------------------------------------------|-----------------------------------------------------------------------|
-| `<AgGridReact rowData={...} columnDefs={...} />` | `<div data-controller="grid" data-grid-row-data-value="...">` + `<th data-controller="header-cell">` |
+| `<DataGrid rowData={...} columnDefs={...} />` | `<div data-controller="grid" data-grid-row-data-value="...">` + `<th data-controller="header-cell">` |
 | `gridOptions`                            | `data-grid-*-value` attributes                                        |
 | `columnDef.field`                        | `data-header-cell-field-value`                                        |
 | `columnDef.sortable / filter / editable` | `data-header-cell-{sortable,filter,editable}-value`                   |
@@ -477,7 +477,7 @@ focus/selection styling stable during scroll.
 | `pagination: true, paginationPageSize: 50` | `data-grid-pagination-value="true" data-grid-page-size-value="50"`  |
 | `domLayout: 'autoHeight'`                | `data-grid-dom-layout-value="autoHeight"`                             |
 | `rowHeight: 32`                          | `data-grid-row-height-value="32"`                                     |
-| Themes (`ag-theme-alpine` etc.)          | `class="grid-theme-default"` + CSS custom properties                  |
+| Themes (a vendor theme class)            | `class="grid-theme-default"` + CSS custom properties                  |
 
 ## 13. File layout
 

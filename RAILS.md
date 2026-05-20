@@ -1,6 +1,6 @@
 # Hotwire-Native Grid: Build Checklist
 
-A scoping checklist for building an ag-grid-equivalent on top of Rails, Stimulus, Turbo Streams, and Action Cable. Designed for dense tabular data with frequent partial updates, multi-user live edits, and server-driven schema.
+A scoping checklist for building a spreadsheet-grade editable data grid on top of Rails, Stimulus, Turbo Streams, and Action Cable. Designed for dense tabular data with frequent partial updates, multi-user live edits, and server-driven schema.
 
 ---
 
@@ -229,9 +229,9 @@ One source of truth per resource — auth, coercion, validation, cascade, broadc
 ## 19. What NOT to Build (Out of Scope)
 
 - [ ] ~~Pivot tables~~
-- [ ] ~~Full 100% ag-grid Enterprise feature parity~~
+- [ ] ~~Full 100% enterprise data-grid feature parity~~
 
-Resist generality. ag-grid is general because it doesn't know your schema. A Rails-native grid *does* know the schema, so the column definition does 80% of what ag-grid pushes onto the client.
+Resist generality. A generic client-side grid is general because it doesn't know your schema. A Rails-native grid *does* know the schema, so the column definition does 80% of what a generic grid pushes onto the client.
 
 ---
 
