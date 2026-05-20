@@ -6,6 +6,9 @@ attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
 resize/reorder/pin/hide, virtual scrolling for large datasets, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
+With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
+edits also **stream live to every connected client over Turbo Streams** (Action
+Cable) — optimistic updates, server-side validation, and undo/redo included.
 
 The HTML is the source of truth: a `stimulus_grid` table is a real `<table>` that
 renders without JS and progressively enhances.
