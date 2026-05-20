@@ -1,0 +1,47 @@
+/* Visual states for cells managed by stimulus_grid_rails. Loaded on top of
+   stimulus_grid.css. */
+
+.sgr-cell-pending {
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.08) 25%,
+    rgba(59, 130, 246, 0.18) 50%,
+    rgba(59, 130, 246, 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: sgr-cell-pulse 1.2s linear infinite;
+}
+
+@keyframes sgr-cell-pulse {
+  0%   { background-position: 100% 0; }
+  100% { background-position:   0% 0; }
+}
+
+.sgr-cell-just-confirmed {
+  background-color: rgba(16, 185, 129, 0.18);
+  transition: background-color 0.5s ease-out;
+}
+
+.sgr-cell-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  outline: 1px solid #ef4444;
+}
+
+.sgr-cell-conflict {
+  background-color: rgba(245, 158, 11, 0.18);
+  outline: 1px dashed #f59e0b;
+}
+
+.sgr-presence {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 8px;
+  background: #6366f1;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+}

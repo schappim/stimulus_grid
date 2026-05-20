@@ -1,0 +1,222 @@
+# stimulus_grid_rails
+
+Rails + Hotwire bindings for [`stimulus_grid`](../../). It turns the HTML-first
+stimulus_grid into a **server-driven, multi-user editable data grid** using
+Turbo Streams over Action Cable — no React, no ag-grid, no JS build step
+(importmap-pinnable).
+
+This is the Rails-native realisation of the scope in [`RAILS.md`](../../RAILS.md):
+the **server column definition does 80% of what ag-grid pushes onto the client**
+(auth, coercion, validation, editor selection, cascade, broadcast), because a
+Rails app *knows its schema*.
+
+> Status: **v0.1 / MVP slice.** Implemented: single-cell commit with optimistic
+> update + server reconcile, the `ApplicationGrid` column registry, standard
+> editors, the cell-grained Turbo Stream actions, computed-column cascade, and
+> version-checked concurrency. See [Roadmap](#roadmap) for what's deferred.
+
+---
+
+## What you get
+
+| RAILS.md § | Feature | Status |
+|---|---|---|
+| §1 | Custom Turbo Stream actions: `cell`, `cell-attr`, `cell-confirm`, `cell-revert`, `cell-conflict`, `row-insert-sorted`, `row-remove`, `aggregate`, `bulk`, `presence` | ✅ |
+| §4 | Optimistic updates: cell marked `data-pending`, `X-Optimistic-Id` header, server `cell-confirm`/`cell-revert`, originator suppresses its own broadcast echo | ✅ |
+| §7 | Server-side column registry: per-column `type`, `editable` (bool or lambda), `editor`, `editor_config`, `validate`, `concurrency`, `computed`/`depends_on` | ✅ |
+| §8 | One cell-mutation endpoint `PATCH /grids/:resource/:row_id/cells/:column` | ✅ |
+| §9 | Single-cell commit edit mode (Tab/Enter/Esc) | ✅ |
+| §10 | Standard editors: string/text/integer/decimal/money/boolean/enum/date/datetime | ✅ (via base grid) |
+| §11 | Server-side validation → `cell-revert` with `errors` payload | ✅ |
+| §12 | Computed columns + cascade replayed server-side as a `bulk` stream | ✅ |
+| §13 | Version-checked concurrency (`lock_version` → `cell-conflict`) | ✅ |
+| §17 | `editable:` lambda re-checked on every PATCH (never trust the client) | ✅ |
+| §9 (bulk), §14, §15, §16 | Bulk paste / inline create / delete / undo-redo | ⏳ partial / deferred |
+
+---
+
+## Why Action Cable + version-checking, and not Yjs?
+
+You asked whether collaboration should use [Yjs / `Y.Doc`](https://docs.yjs.dev/api/y.doc).
+Short answer: **not for cell-grained edits — Action Cable is the right primitive
+here, and Yjs is reserved as an opt-in for long-form text cells.** Reasoning:
+
+- **CRDTs solve a problem this grid mostly doesn't have.** Yjs shines when many
+  users concurrently edit the *same unstructured value* (a paragraph, a drawing)
+  and you need automatic, intention-preserving merge without a server referee.
+  A grid cell holding a number, enum, date, or short string has a **natural
+  authority — the server** — and a dead-simple conflict story: last-write-wins,
+  or `lock_version` for the few columns that need it (RAILS.md §13). You don't
+  need an RGA/YATA sequence CRDT to set `age = 31`.
+- **The server already owns correctness.** Permissions (`editable:` lambdas),
+  type coercion, validation, computed-column cascade, and audit all live in the
+  column registry and run on every PATCH. A pure-Yjs model pushes deltas
+  peer-to-peer (or through a dumb relay) and **bypasses** that authority — you'd
+  have to rebuild auth/validation/cascade on top of document observers anyway.
+- **It's lighter.** No `y-websocket` server, no document GC tuning, no awareness
+  protocol, no client-side CRDT bundle. The transport is the Action Cable you
+  already run; the wire format is a tiny `<turbo-stream>` tag.
+
+**Where Yjs *is* the right tool** is a single cell that holds **collaborative
+long-form text** (a Notion-style `notes`/`description` field where two people
+type in the same paragraph at once). That's a genuine sequence-merge problem.
+The intended path (not yet built — see roadmap) is to make it **per-column,
+opt-in**:
+
+```ruby
+column :notes, type: :text, editable: true,
+       collaborative: :yjs            # mounts a Y.Text editor + y-websocket for THIS cell only
+```
+
+So the architecture is: **Action Cable + version-checking for the structured
+grid (the 95% case), Yjs surgically inside text cells that need true co-editing.**
+You don't pay CRDT complexity for the whole grid to get collaboration on a few
+fields.
+
+---
+
+## Installation
+
+```ruby
+# Gemfile
+gem "stimulus_grid_rails"          # from the repo: gem "stimulus_grid_rails", path: "gem/stimulus_grid_rails"
+```
+
+```bash
+bundle install
+```
+
+The engine auto-registers two importmap pins (`stimulus_grid`,
+`stimulus_grid_rails`) and ships the CSS, so no `bin/importmap pin` is needed.
+
+```js
+// app/javascript/application.js
+import "@hotwired/turbo-rails"
+import { Application } from "@hotwired/stimulus"
+import StimulusGrid from "stimulus_grid"
+import StimulusGridRails from "stimulus_grid_rails"
+
+const application = Application.start()
+StimulusGrid.start(application)        // grid, header-cell, pagination, …
+StimulusGridRails.start(application)   // grid-sync, cell-editor + Turbo Stream actions
+```
+
+```erb
+<%# app/views/layouts/application.html.erb (head) %>
+<%= stylesheet_link_tag "stimulus_grid", "stimulus_grid_rails" %>
+<%= javascript_importmap_tags %>
+```
+
+```ruby
+# config/routes.rb
+mount ActionCable.server => "/cable"
+mount StimulusGridRails::Engine => "/grids"
+```
+
+## Usage
+
+**1. Declare the grid** (one source of truth — RAILS.md §7):
+
+```ruby
+# app/grids/athlete_grid.rb
+class AthleteGrid < StimulusGridRails::Grid
+  resource :athletes
+  model    Athlete
+  stream_name { |_user| "athletes" }
+
+  column :athlete, type: :string,  editable: true, pinned: :left, width: 220
+  column :country, type: :string,  editable: ->(row, user) { user&.admin? }   # per-row/user
+  column :sport,   type: :enum,    editable: true, enum_values: %w[Swimming Cycling Gymnastics]
+  column :age,     type: :integer, editable: true, concurrency: :version_checked,
+                   validate: ->(v, _r) { "must be 10–80" unless (10..80).cover?(v.to_i) }
+  column :gold,    type: :integer, editable: true
+  column :silver,  type: :integer, editable: true
+  column :bronze,  type: :integer, editable: true
+  column :total,   type: :integer, computed: true, depends_on: %i[gold silver bronze]
+
+  def compute_total(row) = row.gold.to_i + row.silver.to_i + row.bronze.to_i
+end
+```
+
+**2. Make the model broadcastable:**
+
+```ruby
+class Athlete < ApplicationRecord
+  include StimulusGridRails::Broadcastable
+  broadcasts_grid AthleteGrid, stream: ->(_a) { "athletes" }
+  self.locking_column = :lock_version   # needed for version-checked columns
+end
+```
+
+**3. Render it:**
+
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: AthleteGrid.new(user: current_user),
+                     rows: Athlete.order(:id),
+                     row_selection: "multiple", page_size: 25 } %>
+```
+
+That's it. Double-click a cell → edit → Enter commits → optimistic pending
+(blue pulse) → server reconciles (green flash) or reverts (red + tooltip) →
+every other connected tab updates live.
+
+## Try the demo
+
+A complete, runnable Rails app lives in [`../demo`](../demo):
+
+```bash
+cd gem/demo
+bundle install
+bin/rails db:create db:migrate db:seed
+bin/rails server
+# open http://localhost:3000 in two windows side by side
+```
+
+Edit a cell in one window and watch the other update. Edit gold/silver/bronze
+and watch **total** cascade. Set age to `999` and watch the server reject it.
+
+## Architecture
+
+```
+ ┌─ browser tab A ─────────────┐         ┌─ browser tab B ─────────────┐
+ │ grid + grid-sync controllers│         │ grid + grid-sync controllers│
+ │  dblclick→edit→Enter        │         │                             │
+ │  optimistic: cell pending   │         │                             │
+ └──────────┬──────────────────┘         └─────────────▲───────────────┘
+            │ PATCH /grids/athletes/1/cells/age         │ turbo-stream "cell"
+            │ {value, optimistic_id, lock_version}      │ (Action Cable)
+            ▼                                           │
+ ┌─ CellsController#update (≈30 lines) ─────────────────┴──────────────┐
+ │ grid = AthleteGrid.new(user:)                                       │
+ │ column.editable_for?(row, user)   ← re-checked server-side (§17)    │
+ │ value, err = column.coerce(raw)                                     │
+ │ ok, errors, mutations = grid.apply_cell!(row, column, value)        │
+ │   └─ validate → save → cascade compute_total → [confirm + cascade]  │
+ │ response  : turbo-stream cell-confirm (+ bulk cascade) to originator │
+ │ broadcast : turbo-stream cell (w/ optimistic_id) to "athletes"      │
+ └─────────────────────────────────────────────────────────────────────┘
+```
+
+The originating client carries its own optimistic-id set and **suppresses the
+broadcast echo of its own edit**, so it doesn't double-apply.
+
+## Roadmap
+
+Deferred from this MVP slice (PRs welcome):
+
+- **Bulk paste** (§9): Excel multi-cell paste → `POST /grids/:resource/bulk` →
+  `bulk` stream with per-mutation confirm/revert + partial-success toast. *(The
+  `/bulk` endpoint and `bulk` action exist; the client-side paste detection does
+  not.)*
+- **Inline create** (§14): sentinel row → `POST /grids/:resource` → replace with
+  persisted row.
+- **Delete** (§15): multi-select + Delete key → `DELETE /grids/:resource/bulk`.
+- **Undo/redo** (§16): server-side audit row + inverse-mutation replay.
+- **Field-locking & presence** (§13 field-locked, §1 `presence`): the `presence`
+  Turbo Stream action is wired client-side; the lock lifecycle is not.
+- **Yjs text cells**: `collaborative: :yjs` per-column (see above).
+
+## License
+
+MIT.

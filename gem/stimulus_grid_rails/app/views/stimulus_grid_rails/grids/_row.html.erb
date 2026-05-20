@@ -1,0 +1,15 @@
+<%#
+  One row. Cell editability and editor metadata flow from the column
+  registry. We emit data-editable only for columns the user can actually
+  edit — Stimulus refuses to enter edit mode otherwise (RAILS.md §17).
+%>
+<tr data-row-id="<%= grid.row_id(row) %>"
+    <% if row.respond_to?(:lock_version) %>data-lock-version="<%= row.lock_version %>"<% end %>>
+  <% grid.columns.each do |col| %>
+    <%
+      attrs = col.client_data_attrs(row, local_assigns[:current_user])
+      attrs["data-pinned"] = col.pinned if col.pinned
+    %>
+    <td <% attrs.each do |k, v| %><%= k %>="<%= v %>" <% end %>><%= grid.format_cell(row, col) %></td>
+  <% end %>
+</tr>
