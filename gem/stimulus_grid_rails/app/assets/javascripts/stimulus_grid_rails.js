@@ -48,6 +48,9 @@ class GridSyncController extends Controller {
   static values = {
     resource:        String,
     cellsPathTemplate: String,   // "/grids/:resource/:row_id/cells/:column"
+    rowsPath:          String,   // "/grids/:resource/rows"
+    rowPathTemplate:   String,   // "/grids/:resource/rows/:row_id"
+    bulkRowsPath:      String,   // "/grids/:resource/rows/bulk"
     optimisticIdPrefix: { type: String, default: "" },
   }
 
@@ -56,11 +59,104 @@ class GridSyncController extends Controller {
     this._gridEl.dataset.gridName = this.resourceValue
     this._onCellChange = this._onCellChange.bind(this)
     this._gridEl.addEventListener("grid:cellValueChanged", this._onCellChange)
+
+    // Row add/delete are driven by events dispatched on the grid element, so a
+    // toolbar living anywhere in the page can trigger them without being inside
+    // this controller's Stimulus scope:
+    //   gridEl.dispatchEvent(new CustomEvent("grid-sync:add-row", { detail: { attributes } }))
+    //   gridEl.dispatchEvent(new CustomEvent("grid-sync:delete-selected"))
+    this._onAddRow = (e) => this.addRow(e?.detail?.attributes || {})
+    this._onDeleteSelected = () => this.deleteSelected()
+    this._gridEl.addEventListener("grid-sync:add-row", this._onAddRow)
+    this._gridEl.addEventListener("grid-sync:delete-selected", this._onDeleteSelected)
+
+    // Per-row delete buttons rendered by a cell renderer live inside the grid,
+    // so a single delegated listener handles them.
+    this._onDelegatedClick = (e) => {
+      const btn = e.target.closest('[data-sgr-action="delete-row"]')
+      if (!btn) return
+      e.preventDefault()
+      const tr = btn.closest("tr[data-row-id]")
+      if (tr) this.removeRow(tr.dataset.rowId)
+    }
+    this._gridEl.addEventListener("click", this._onDelegatedClick)
+
     this._opCounter = 0
   }
 
   disconnect() {
     this._gridEl.removeEventListener("grid:cellValueChanged", this._onCellChange)
+    this._gridEl.removeEventListener("grid-sync:add-row", this._onAddRow)
+    this._gridEl.removeEventListener("grid-sync:delete-selected", this._onDeleteSelected)
+    this._gridEl.removeEventListener("click", this._onDelegatedClick)
+  }
+
+  _headers(extra = {}) {
+    return {
+      "Content-Type":  "application/json",
+      "Accept":        "text/vnd.turbo-stream.html",
+      "X-CSRF-Token":  csrfToken(),
+      ...extra,
+    }
+  }
+
+  // POST /grids/:resource/rows — create a row with the grid's server defaults
+  // (optionally merged with `attributes`). Server returns + broadcasts a
+  // row-insert-sorted, which adds the persisted row (real id) to the grid.
+  async addRow(attributes = {}) {
+    if (!this.hasRowsPathValue) return
+    try {
+      const res = await fetch(this.rowsPathValue, {
+        method: "POST", credentials: "same-origin",
+        headers: this._headers(),
+        body: JSON.stringify({ attributes }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const html = await res.text()
+      window.Turbo?.renderStreamMessage(html)
+    } catch (err) {
+      console.error("[stimulus_grid_rails] addRow failed:", err)
+    }
+  }
+
+  // DELETE a single row by id.
+  async removeRow(rowId) {
+    if (!this.hasRowPathTemplateValue) return
+    const path = this.rowPathTemplateValue.replace(":row_id", encodeURIComponent(String(rowId)))
+    try {
+      const res = await fetch(path, {
+        method: "DELETE", credentials: "same-origin", headers: this._headers(),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const html = await res.text()
+      if (html.trim()) window.Turbo?.renderStreamMessage(html)
+    } catch (err) {
+      console.error("[stimulus_grid_rails] removeRow failed:", err)
+    }
+  }
+
+  // DELETE every selected row in one bulk request.
+  async deleteSelected() {
+    const api = this._gridEl.gridApi
+    if (!api) return
+    const ids = api.getSelectedRowIds ? api.getSelectedRowIds() : []
+    if (!ids.length) return
+    if (this.hasBulkRowsPathValue) {
+      try {
+        const res = await fetch(this.bulkRowsPathValue, {
+          method: "DELETE", credentials: "same-origin",
+          headers: this._headers(),
+          body: JSON.stringify({ ids }),
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const html = await res.text()
+        if (html.trim()) window.Turbo?.renderStreamMessage(html)
+      } catch (err) {
+        console.error("[stimulus_grid_rails] deleteSelected failed:", err)
+      }
+    } else {
+      for (const id of ids) await this.removeRow(id)
+    }
   }
 
   _nextOptimisticId() {

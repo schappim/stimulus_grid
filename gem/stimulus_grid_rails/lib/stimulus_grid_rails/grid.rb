@@ -111,6 +111,34 @@ module StimulusGridRails
       row.respond_to?(:id) ? row.id : row[:id]
     end
 
+    # ----- Row create/destroy support (RAILS.md §14/§15) -----
+
+    # Default attributes for a freshly-created row. Override in subclasses.
+    def new_row_defaults
+      {}
+    end
+
+    # Build (unsaved) a new model instance merging defaults with caller overrides.
+    def build_new_row(overrides = {})
+      attrs = new_row_defaults.merge((overrides || {}).symbolize_keys)
+      self.class.model_class.new(attrs)
+    end
+
+    # Serialize a row to the JSON shape the client grid expects: { id, <col>: <value>, … }
+    # including computed columns. Used as the row-insert-sorted payload.
+    def row_to_h(row)
+      h = { "id" => row_id(row) }
+      self.class.columns_registry.each_value do |col|
+        next if col.name.to_s.start_with?("_")   # skip action/renderer-only columns
+        h[col.name.to_s] = serialize_value(cell_value(row, col), col)
+      end
+      h
+    end
+
+    def row_to_json(row)
+      JSON.generate(row_to_h(row))
+    end
+
     def cell_value(row, column)
       if column.computed?
         method = "compute_#{column.name}"
@@ -129,6 +157,19 @@ module StimulusGridRails
       when :datetime then v.respond_to?(:iso8601) ? v.iso8601 : v.to_s
       when :boolean then v ? "✓" : ""
       else v.to_s
+      end
+    end
+
+    # JSON-friendly value for row_to_h — numbers stay numeric, dates become
+    # ISO strings, everything else stringifies sensibly.
+    def serialize_value(v, column)
+      case column.type
+      when :integer        then v.to_i
+      when :decimal, :money then v.to_f
+      when :boolean        then !!v
+      when :date           then v.respond_to?(:to_date) ? v.to_date.iso8601 : v
+      when :datetime       then v.respond_to?(:iso8601) ? v.iso8601 : v
+      else v
       end
     end
   end

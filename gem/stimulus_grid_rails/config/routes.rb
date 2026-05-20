@@ -5,6 +5,13 @@ StimulusGridRails::Engine.routes.draw do
         as: :cell,
         constraints: { row_id: /[^\/]+/, column: /[^\/]+/ }
 
-  # Bulk paste — RAILS.md §9 fill-down / bulk paste.
+  # Bulk cell paste — RAILS.md §9 fill-down / bulk paste.
   post "/:resource/bulk", to: "cells#bulk", as: :bulk
+
+  # Row create/destroy — RAILS.md §14/§15. `rows/bulk` must precede the
+  # `:row_id` route so "bulk" isn't captured as an id.
+  post   "/:resource/rows",         to: "rows#create",       as: :rows
+  delete "/:resource/rows/bulk",    to: "rows#destroy_bulk",  as: :bulk_rows
+  delete "/:resource/rows/:row_id", to: "rows#destroy",      as: :row,
+         constraints: { row_id: /[^\/]+/ }
 end

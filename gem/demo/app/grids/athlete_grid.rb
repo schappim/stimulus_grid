@@ -26,7 +26,20 @@ class AthleteGrid < StimulusGridRails::Grid
   column :total,   type: :integer, computed: true, depends_on: %i[gold silver bronze],
                    editable: false, width: 70, header: "Total"
 
+  # Action column — a client-side renderer (template id "sgr-row-actions")
+  # supplies a per-row delete button. Not a model attribute, so name starts
+  # with "_" (skipped by row_to_h) and it's non-sortable / non-filterable.
+  column :_actions, type: :string, editable: false, sortable: false,
+                    filterable: false, width: 56, header: "", pinned: :right,
+                    cell_renderer: "sgr-row-actions"
+
   def compute_total(row)
     row.gold.to_i + row.silver.to_i + row.bronze.to_i
+  end
+
+  # Defaults for a row created via the "+ Add athlete" button (RAILS.md §14).
+  def new_row_defaults
+    { athlete: "New athlete", country: "—", sport: "Swimming",
+      age: 20, date: Date.current, gold: 0, silver: 0, bronze: 0 }
   end
 end

@@ -55,10 +55,13 @@ module StimulusGridRails
                            server_value: server_value, client_value: client_value)
     end
 
-    # Insert a row, respecting the client's current sort order.
-    # `payload` is the rendered <tr>...</tr> HTML.
+    # Insert a row, respecting the client's current sort order. `payload` is a
+    # JSON row object; it's HTML-escaped here and decoded by the client's
+    # textContent read, so names containing & or < stay valid JSON.
     def row_insert_sorted(grid:, row_id:, payload:)
-      tag("row-insert-sorted", grid: grid, row_id: row_id) { payload }
+      tag("row-insert-sorted", grid: grid, row_id: row_id) do
+        ERB::Util.html_escape(payload)
+      end
     end
 
     # Remove a row by id.

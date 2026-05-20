@@ -14,10 +14,22 @@
     <li><strong>Optimistic updates</strong> with reconcile (§4): blue pulse during commit, green flash on confirm, red on revert</li>
     <li><strong>Computed cascade</strong> (§12): edit gold/silver/bronze and watch <em>total</em> update in the same broadcast</li>
     <li><strong>Version-checked concurrency</strong> (§13): the <em>age</em> column carries <code>lock_version</code></li>
+    <li><strong>Add / remove rows</strong> (§14/§15): the toolbar adds; the × on each row (or "Delete selected") removes — live in every tab</li>
     <li><strong>Cross-tab live sync</strong> via <code>turbo_stream_from "athletes"</code></li>
     <li><strong>Server validation</strong>: try setting age to 999 — server rejects, cell reverts with a tooltip</li>
   </ul>
 </header>
+
+<%# Per-row delete button cloned by the _actions column's cell renderer. %>
+<template id="sgr-row-actions">
+  <button type="button" class="sgr-del" data-sgr-action="delete-row" title="Delete row">×</button>
+</template>
+
+<div class="toolbar" data-grid-id="athletes-grid">
+  <button type="button" id="add-row">+ Add athlete</button>
+  <button type="button" id="delete-selected">Delete selected</button>
+  <span class="stat" id="stat">…</span>
+</div>
 
 <%= render partial: "stimulus_grid_rails/grids/grid",
            locals: { grid: @grid, rows: @athletes, row_selection: "multiple", page_size: 25 } %>
@@ -28,6 +40,34 @@
     open <code>/cable</code> in two tabs to see the WebSocket frames.
   </small>
 </footer>
+
+<script>
+  // Toolbar → grid: dispatch events the grid-sync controller listens for. The
+  // toolbar lives outside the grid element, so we target the grid by id rather
+  // than relying on Stimulus action scope.
+  (function () {
+    const gridEl = document.getElementById("athletes-grid");
+    const stat = document.getElementById("stat");
+
+    document.getElementById("add-row").addEventListener("click", () => {
+      gridEl.dispatchEvent(new CustomEvent("grid-sync:add-row"));
+    });
+    document.getElementById("delete-selected").addEventListener("click", () => {
+      gridEl.dispatchEvent(new CustomEvent("grid-sync:delete-selected"));
+    });
+
+    function refreshStat() {
+      const api = gridEl.gridApi;
+      if (!api) return;
+      const total = api.getRowData().length;
+      const selected = api.getSelectedRowIds ? api.getSelectedRowIds().length : 0;
+      stat.textContent = `${total} rows` + (selected ? ` · ${selected} selected` : "");
+    }
+    ["grid:ready", "grid:rowDataChanged", "grid:selectionChanged"].forEach((ev) =>
+      gridEl.addEventListener(ev, refreshStat));
+    requestAnimationFrame(refreshStat);
+  })();
+</script>
 
 <style>
   body {
@@ -46,7 +86,24 @@
   }
   .features li { margin: 4px 0; }
   .features strong { color: #111827; }
-  .sgr-panel { height: 600px; margin-top: 14px; }
+  .toolbar {
+    display: flex; align-items: center; gap: 8px; margin-top: 14px;
+  }
+  .toolbar button {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 5px;
+    padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  .toolbar button:hover { background: #f3f4f6; }
+  .toolbar #add-row { border-color: #2563eb; color: #1d4ed8; }
+  .toolbar #delete-selected { border-color: #fca5a5; color: #dc2626; }
+  .toolbar .stat { margin-left: auto; color: #6b7280; font-size: 13px; }
+  .sgr-del {
+    background: transparent; border: 1px solid #fca5a5; color: #dc2626;
+    border-radius: 4px; padding: 0 8px; font-size: 15px; line-height: 20px;
+    cursor: pointer;
+  }
+  .sgr-del:hover { background: #fee2e2; }
+  .sgr-panel { height: 600px; margin-top: 10px; }
   kbd {
     background: #f3f4f6; border: 1px solid #d1d5db; border-bottom-width: 2px;
     border-radius: 3px; padding: 1px 5px; font-family: ui-monospace, monospace;

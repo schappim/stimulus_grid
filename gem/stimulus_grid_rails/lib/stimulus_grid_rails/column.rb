@@ -14,7 +14,8 @@ module StimulusGridRails
     def initialize(name, type:, editable: false, editor: nil, editor_config: {},
                    enum_values: nil, concurrency: :last_write_wins,
                    computed: false, depends_on: [], validate: nil,
-                   header: nil, width: nil, pinned: nil, cell_renderer: nil)
+                   header: nil, width: nil, pinned: nil, cell_renderer: nil,
+                   sortable: true, filterable: true)
       raise ArgumentError, "Unknown column type #{type.inspect}" unless TYPES.include?(type)
       @name          = name.to_sym
       @type          = type
@@ -30,6 +31,8 @@ module StimulusGridRails
       @width         = width
       @pinned        = pinned
       @cell_renderer = cell_renderer
+      @sortable      = sortable
+      @filterable    = filterable
     end
 
     # Per-row, per-user editable check. RAILS.md §17 — server re-evaluates on
@@ -103,8 +106,8 @@ module StimulusGridRails
         "data-controller" => "header-cell",
         "data-header-cell-field-value" => name,
         "data-header-cell-type-value" => header_cell_type,
-        "data-header-cell-sortable-value" => "true",
-        "data-header-cell-filter-value" => filter_type_for_client,
+        "data-header-cell-sortable-value" => @sortable.to_s,
+        "data-header-cell-filter-value" => (@filterable ? filter_type_for_client : nil),
         "data-header-cell-editable-value" => editable_static?.to_s,
         "data-header-cell-pinned-value" => @pinned,
         "data-header-cell-width-value" => @width,
