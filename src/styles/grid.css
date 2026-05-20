@@ -162,6 +162,34 @@
   -webkit-user-select: text;
 }
 .sg-grid:focus, .sg-grid:focus-visible { outline: none; }
+/* Row drag-and-drop: ghost preview + drop indicator. */
+.sg-drag-ghost {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0.9;
+  background: var(--sg-bg);
+  border: 1px solid var(--sg-accent);
+  border-radius: 5px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.sg-drag-ghost table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.sg-drag-ghost td {
+  height: 30px; padding: 0 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 13px; color: var(--sg-fg);
+  border-bottom: 1px solid var(--sg-border);
+  position: static !important; background: var(--sg-bg) !important;
+}
+.sg-drag-ghost-more {
+  padding: 4px 10px; font-size: 11px; color: var(--sg-fg-muted);
+  background: var(--sg-bg-alt); border-top: 1px solid var(--sg-border);
+}
+.sg-drop-indicator { position: fixed; height: 2px; background: var(--sg-accent); z-index: 9999; pointer-events: none; }
+body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
+.sg-grid[data-row-drag-value="true"] .sg-gutter-cell { cursor: grab; }
+
 /* Row-number gutter (spreadsheet-style). */
 .sg-grid .sg-gutter-cell, .sg-grid th.sg-gutter-header {
   background: var(--sg-bg-header);

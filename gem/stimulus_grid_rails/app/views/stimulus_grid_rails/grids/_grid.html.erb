@@ -33,6 +33,9 @@
   row_gutter   = local_assigns.fetch(:row_gutter, false)
   row_gutter   = :numbers if row_gutter == true
 
+  # Drag selected rows by the gutter to reorder them (ghost preview).
+  row_drag     = local_assigns.fetch(:row_drag, false)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -49,6 +52,7 @@
      data-grid-page-size-value="<%= page_size %>"
      data-grid-server-side-value="<%= server_side %>"
      data-grid-row-count-value="<%= total_rows %>"
+     data-grid-row-drag-value="<%= row_drag %>"
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"

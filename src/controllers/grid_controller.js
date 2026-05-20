@@ -25,6 +25,7 @@ export default class GridController extends Controller {
     serverSide:     { type: Boolean, default: false },       // rowData is one server page
     rowCount:       { type: Number, default: 0 },            // total rows on the server
     cellSelection:  { type: Boolean, default: true },        // click=cell; modifier/checkbox=row
+    rowDrag:        { type: Boolean, default: false },        // drag selected rows by the gutter to reorder
   };
 
   initialize() {
@@ -86,6 +87,9 @@ export default class GridController extends Controller {
     this.element.removeEventListener('keydown', this._onGridKeydown);
     document.removeEventListener('mouseup', this._onCellMouseUp);
     document.removeEventListener('copy', this._onCopy);
+    document.removeEventListener('mousemove', this._onRowDragMove);
+    this._rowDrag?.ghost?.remove();
+    this._rowDrag?.indicator?.remove();
   }
 
   // ----- Initial data + setup -----
@@ -1068,6 +1072,8 @@ export default class GridController extends Controller {
     // Row-number gutter → ROW selection (click=replace, shift=range, cmd=toggle),
     // exactly like a spreadsheet row header.
     if (td && td.dataset.gutter === 'true') {
+      // A row drag shouldn't also fire a select-click.
+      if (this._rowDragMoved) { this._rowDragMoved = false; return; }
       if (this.rowSelectionValue !== '') {
         const mode = e.shiftKey ? 'range' : (e.metaKey || e.ctrlKey) ? 'toggle' : 'replace';
         this.clearCellSelection();
@@ -1133,6 +1139,17 @@ export default class GridController extends Controller {
 
   _onCellMouseDown = (e) => {
     if (e.button !== 0) return;
+    // Row drag: grabbing a gutter cell starts a potential row move.
+    if (this.rowDragValue) {
+      const gutterTd = e.target.closest?.('td[data-gutter="true"]');
+      if (gutterTd) {
+        const tr = gutterTd.closest('tr');
+        this._rowDragPending = { rowId: this._coerceRowId(tr.dataset.rowId), x: e.clientX, y: e.clientY };
+        this._rowDragMoved = false;
+        document.addEventListener('mousemove', this._onRowDragMove);
+        return;   // don't start a cell selection from the gutter
+      }
+    }
     const cell = this._cellAt(e.target);
     if (!cell) return;
     const mod = e.metaKey || e.ctrlKey;
@@ -1165,7 +1182,111 @@ export default class GridController extends Controller {
     emit(this.element, 'grid:cellSelectionChanged', this.getCellSelectionDetail());
   };
 
-  _onCellMouseUp = () => { this._cellDragging = false; };
+  _onCellMouseUp = () => {
+    this._cellDragging = false;
+    if (this._rowDragPending) {
+      document.removeEventListener('mousemove', this._onRowDragMove);
+      if (this._rowDrag) this._finishRowDrag();
+      this._rowDragPending = null;
+    }
+  };
+
+  // ----- Row drag-and-drop (reorder) with a ghost preview -----
+
+  _onRowDragMove = (e) => {
+    const pend = this._rowDragPending;
+    if (!pend) return;
+    if (!this._rowDrag) {
+      if (Math.abs(e.clientY - pend.y) < 5 && Math.abs(e.clientX - pend.x) < 5) return;
+      this._startRowDrag(pend.rowId);
+    }
+    if (this._rowDrag) {
+      this._rowDragMoved = true;
+      this._rowDrag.ghost.style.left = `${e.clientX + 14}px`;
+      this._rowDrag.ghost.style.top = `${e.clientY + 10}px`;
+      this._updateDropIndicator(e.clientY);
+    }
+  };
+
+  _startRowDrag(grabbedId) {
+    // Drag the whole selection if the grabbed row is in it, else just that row.
+    const selIds = Array.from(this.state.selection).map(String);
+    const ids = new Set(selIds.includes(String(grabbedId)) ? selIds : [String(grabbedId)]);
+
+    // Ghost: a floating clone of the dragged rows' cells (capped).
+    const ghost = el('div', { class: 'sg-drag-ghost sg-grid' });
+    const table = el('table');
+    const tbody = el('tbody');
+    let shown = 0;
+    this._tbody.querySelectorAll('tr[data-row-id]').forEach((tr) => {
+      if (ids.has(tr.dataset.rowId) && shown < 6) {
+        const clone = tr.cloneNode(true);
+        clone.removeAttribute('data-selected');
+        clone.querySelectorAll('td').forEach((td) => {
+          td.style.left = ''; td.style.right = '';
+          td.removeAttribute('data-pinned');
+          td.removeAttribute('data-cell-active');
+          td.removeAttribute('data-cell-range');
+        });
+        tbody.appendChild(clone);
+        shown += 1;
+      }
+    });
+    table.appendChild(tbody);
+    ghost.appendChild(table);
+    if (ids.size > shown) ghost.appendChild(el('div', { class: 'sg-drag-ghost-more' }, `+${ids.size - shown} more rows`));
+    ghost.style.width = `${Math.min(this._tbody.offsetWidth, 520)}px`;
+    document.body.appendChild(ghost);
+
+    const indicator = el('div', { class: 'sg-drop-indicator' });
+    document.body.appendChild(indicator);
+
+    this._rowDrag = { ids, ghost, indicator, dropRowId: null, dropBefore: true };
+    document.body.classList.add('sg-row-dragging');
+  }
+
+  _updateDropIndicator(y) {
+    const rowsEls = Array.from(this._tbody.querySelectorAll('tr[data-row-id]'));
+    let target = null;
+    let before = true;
+    for (const tr of rowsEls) {
+      const r = tr.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { target = tr; before = true; break; }
+      target = tr; before = false;
+    }
+    if (!target) return;
+    const r = target.getBoundingClientRect();
+    const bodyRect = this._viewport.getBoundingClientRect();
+    const ind = this._rowDrag.indicator;
+    ind.style.left = `${bodyRect.left}px`;
+    ind.style.width = `${bodyRect.width}px`;
+    ind.style.top = `${(before ? r.top : r.bottom) - 1}px`;
+    this._rowDrag.dropRowId = this._coerceRowId(target.dataset.rowId);
+    this._rowDrag.dropBefore = before;
+  }
+
+  _finishRowDrag() {
+    const { ids, ghost, indicator, dropRowId, dropBefore } = this._rowDrag;
+    ghost.remove();
+    indicator.remove();
+    document.body.classList.remove('sg-row-dragging');
+    this._rowDrag = null;
+    if (dropRowId == null || ids.has(String(dropRowId))) return;   // dropped onto self / nowhere
+
+    const data = this.state.rowData;
+    const dragged = data.filter((r) => ids.has(String(this._rowId(r))));
+    const rest = data.filter((r) => !ids.has(String(this._rowId(r))));
+    let idx = rest.findIndex((r) => this._rowId(r) === dropRowId);
+    if (idx < 0) idx = rest.length; else if (!dropBefore) idx += 1;
+    rest.splice(idx, 0, ...dragged);
+    this.state.rowData = rest;
+    // Manual order now governs — drop any active sort so the reorder sticks.
+    this.state.sortModel = [];
+    this.scheduleRender('data');
+    emit(this.element, 'grid:rowDragEnd', {
+      ids: dragged.map((r) => this._rowId(r)), toRowId: dropRowId, before: dropBefore,
+    });
+  }
 
   // Toggle the active/range data-attrs on the existing cell DOM without
   // rebuilding the tbody (so in-flight mouse interactions aren't disrupted).
