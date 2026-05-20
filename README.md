@@ -1,5 +1,7 @@
 # stimulus_grid
 
+[![stimulus_grid_rails gem](https://img.shields.io/gem/v/stimulus_grid_rails?label=stimulus_grid_rails)](https://rubygems.org/gems/stimulus_grid_rails)
+
 An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hotwire)**.
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
@@ -47,6 +49,18 @@ StimulusGrid.start(app)                     // registers grid, header-cell, pagi
 
 `StimulusGrid.start(app?)` registers all controllers on the given Stimulus
 `Application` (or starts a new one) and returns it.
+
+**Option C — Rails / Hotwire (gem from RubyGems).** The
+[`stimulus_grid_rails`](https://rubygems.org/gems/stimulus_grid_rails) gem bundles
+this grid *and* the live-sync layer, importmap-pinned — no JS build, no `dist/`
+to vendor:
+
+```bash
+bundle add stimulus_grid_rails
+```
+
+Full setup (importmap, stylesheet, routes, optional migration) is in the
+**Rails & Hotwire** section below.
 
 ## Quick start
 
@@ -194,15 +208,17 @@ selection, computed-column cascade, and broadcasting.
 - **Multi-tenancy & auth** — tenant-scoped streams (ActsAsTenant), scoped row lookups, and auth inherited from your `parent_controller`.
 - **Scale** — server-side global search, per-column filtering, and a windowed server-side row model for 50–100K+ rows.
 
-**Install**
-
-```ruby
-# Gemfile
-gem "stimulus_grid_rails"
-```
+**Install** — published on RubyGems as
+[`stimulus_grid_rails`](https://rubygems.org/gems/stimulus_grid_rails). Add it
+with Bundler:
 
 ```bash
-bundle install
+bundle add stimulus_grid_rails
+```
+
+```ruby
+# …or pin it in your Gemfile, then run `bundle install`:
+gem "stimulus_grid_rails"
 ```
 
 The engine auto-registers two importmap pins (`stimulus_grid`,
