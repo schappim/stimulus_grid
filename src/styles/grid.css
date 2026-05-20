@@ -313,3 +313,12 @@
 .sg-grid thead th[data-pinned="right"] { background: var(--sg-bg-header); z-index: 3; }
 .sg-grid tbody tr:nth-child(even) td[data-pinned="right"] { background: var(--sg-bg-alt); }
 .sg-grid tbody tr[data-selected="true"] td[data-pinned="right"] { background: var(--sg-bg-row-selected); }
+
+/* Pinned columns set their own opaque backgrounds (so scrolled content doesn't
+   show through), which would otherwise hide the cell-range highlight. These
+   higher-specificity rules let the range blue win on pinned cells too. */
+.sg-grid tbody td[data-pinned][data-cell-range="true"],
+.sg-grid tbody tr:nth-child(even) td[data-pinned][data-cell-range="true"],
+.sg-grid tbody tr[data-selected="true"] td[data-pinned][data-cell-range="true"] {
+  background: var(--sg-bg-selected);
+}
