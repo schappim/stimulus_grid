@@ -9,13 +9,14 @@ module StimulusGridRails
     TYPES = %i[string text integer bigint decimal money boolean enum date datetime reference].freeze
 
     attr_reader :name, :type, :editor, :editor_config, :enum_values, :concurrency,
-                :depends_on, :validators, :header, :width, :pinned, :cell_renderer
+                :depends_on, :validators, :header, :width, :pinned, :cell_renderer,
+                :cell_editor
 
     def initialize(name, type:, editable: false, editor: nil, editor_config: {},
                    enum_values: nil, concurrency: :last_write_wins,
                    computed: false, depends_on: [], validate: nil,
                    header: nil, width: nil, pinned: nil, cell_renderer: nil,
-                   sortable: true, filterable: true, searchable: nil)
+                   cell_editor: nil, sortable: true, filterable: true, searchable: nil)
       raise ArgumentError, "Unknown column type #{type.inspect}" unless TYPES.include?(type)
       @name          = name.to_sym
       @type          = type
@@ -31,6 +32,7 @@ module StimulusGridRails
       @width         = width
       @pinned        = pinned
       @cell_renderer = cell_renderer
+      @cell_editor   = cell_editor
       @sortable      = sortable
       @filterable    = filterable
       # Global search defaults to text-ish columns; numeric/date/boolean opt in.
@@ -148,6 +150,7 @@ module StimulusGridRails
         "data-header-cell-pinned-value" => @pinned,
         "data-header-cell-width-value" => @width,
         "data-header-cell-cell-renderer-value" => @cell_renderer,
+        "data-header-cell-cell-editor-value" => @cell_editor,
       }.compact
     end
 

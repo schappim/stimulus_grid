@@ -16,6 +16,7 @@ export default class HeaderCellController extends Controller {
     hidden:       { type: Boolean, default: false },
     resizable:    { type: Boolean, default: true },
     cellRenderer: { type: String, default: '' },
+    cellEditor:   { type: String, default: '' },
     checkbox:     { type: Boolean, default: false },
   };
 
@@ -55,6 +56,7 @@ export default class HeaderCellController extends Controller {
       hidden:       this.hiddenValue,
       resizable:    this.resizableValue,
       cellRenderer: this.cellRendererValue || null,
+      cellEditor:   this.cellEditorValue || null,
       _isCheckbox:  this.checkboxValue,
     };
   }

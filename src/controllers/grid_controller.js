@@ -462,7 +462,7 @@ export default class GridController extends Controller {
     const td = this._tbody.querySelector(`tr[data-row-id="${cssEscape(rowId)}"] td[data-col-id="${cssEscape(colId)}"]`);
     let newValue = originalValue;
     if (!cancel && td) {
-      const input = td.querySelector('input,select,textarea');
+      const input = td.querySelector('[data-editor-input]') || td.querySelector('input,select,textarea');
       if (input) newValue = coerceByType(input.value, this._colByField(colId)?.type);
       else if (draftValue !== undefined) newValue = draftValue;
     }
@@ -880,9 +880,9 @@ export default class GridController extends Controller {
         this.state.editing.colId === col.field;
       if (editing) {
         td.setAttribute('data-editing', 'true');
-        const input = this._buildEditorInput(col, getValue(row, col));
-        td.appendChild(input);
-        queueMicrotask(() => { input.focus(); input.select?.(); });
+        const { node, control } = this._buildEditor(col, getValue(row, col));
+        td.appendChild(node);
+        queueMicrotask(() => { control?.focus(); control?.select?.(); });
       } else {
         this._renderCellContent(td, row, col);
       }
@@ -913,6 +913,39 @@ export default class GridController extends Controller {
       }
     }
     td.textContent = formatValue(row, col);
+  }
+
+  // Returns { node, control }: the element to mount and the focusable control
+  // whose value is read on commit. A column may supply a custom editor via a
+  // <template> (col.cellEditor); otherwise a type-appropriate input is built.
+  _buildEditor(col, value) {
+    if (col.cellEditor) {
+      const node = cloneTemplate(col.cellEditor);
+      if (node) {
+        const control = node.matches?.('input,select,textarea')
+          ? node
+          : (node.querySelector?.('[data-editor-input]') || node.querySelector?.('input,select,textarea'));
+        if (control) {
+          this._seedEditorValue(control, col, value);
+          control.addEventListener('keydown', this._onEditorKey);
+          control.addEventListener('blur', this._onEditorBlur);
+        }
+        return { node, control };
+      }
+    }
+    const input = this._buildEditorInput(col, value);
+    return { node: input, control: input };
+  }
+
+  _seedEditorValue(control, col, value) {
+    if (col.type === 'date' && value) {
+      const d = value instanceof Date ? value : new Date(value);
+      control.value = Number.isNaN(d?.getTime?.()) ? (value ?? '') : d.toISOString().slice(0, 10);
+    } else if (col.type === 'boolean') {
+      control.value = value === true ? 'true' : value === false ? 'false' : '';
+    } else {
+      control.value = value ?? '';
+    }
   }
 
   _buildEditorInput(col, value) {
@@ -1079,7 +1112,7 @@ export default class GridController extends Controller {
 }
 
 function sameColDef(a, b) {
-  const keys = ['headerName','type','sortable','filter','editable','width','minWidth','maxWidth','pinned','hidden','resizable','cellRenderer','_isCheckbox'];
+  const keys = ['headerName','type','sortable','filter','editable','width','minWidth','maxWidth','pinned','hidden','resizable','cellRenderer','cellEditor','_isCheckbox'];
   for (const k of keys) if (a[k] !== b[k]) return false;
   return true;
 }

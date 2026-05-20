@@ -1,15 +1,15 @@
-var O = Object.defineProperty;
-var q = (i, n, e) => n in i ? O(i, n, { enumerable: !0, configurable: !0, writable: !0, value: e }) : i[n] = e;
-var y = (i, n, e) => q(i, typeof n != "symbol" ? n + "" : n, e);
-import { Controller as _, Application as z } from "@hotwired/stimulus";
+var q = Object.defineProperty;
+var z = (i, n, e) => n in i ? q(i, n, { enumerable: !0, configurable: !0, writable: !0, value: e }) : i[n] = e;
+var y = (i, n, e) => z(i, typeof n != "symbol" ? n + "" : n, e);
+import { Controller as _, Application as B } from "@hotwired/stimulus";
 function w(i, n) {
   return typeof n.valueGetter == "function" ? n.valueGetter(i) : i?.[n.field];
 }
-function v(i, n) {
+function C(i, n) {
   const e = w(i, n);
   return typeof n.valueFormatter == "function" ? n.valueFormatter(e, i) : e == null ? "" : n.type === "date" && e instanceof Date ? e.toLocaleDateString() : n.type === "boolean" ? e ? "✓" : "" : String(e);
 }
-const A = {
+const T = {
   contains: (i, n) => String(i ?? "").toLowerCase().includes(String(n ?? "").toLowerCase()),
   notContains: (i, n) => !String(i ?? "").toLowerCase().includes(String(n ?? "").toLowerCase()),
   equals: (i, n) => String(i ?? "").toLowerCase() === String(n ?? "").toLowerCase(),
@@ -18,7 +18,7 @@ const A = {
   endsWith: (i, n) => String(i ?? "").toLowerCase().endsWith(String(n ?? "").toLowerCase()),
   blank: (i) => i == null || i === "",
   notBlank: (i) => i != null && i !== ""
-}, B = {
+}, W = {
   equals: (i, n) => Number(i) === Number(n),
   notEqual: (i, n) => Number(i) !== Number(n),
   lessThan: (i, n) => Number(i) < Number(n),
@@ -35,7 +35,7 @@ function m(i) {
   const n = new Date(i);
   return Number.isNaN(n.valueOf()) ? null : n;
 }
-const W = {
+const G = {
   equals: (i, n) => m(i)?.toDateString() === m(n)?.toDateString(),
   notEqual: (i, n) => m(i)?.toDateString() !== m(n)?.toDateString(),
   lessThan: (i, n) => (m(i)?.valueOf() ?? -1 / 0) < (m(n)?.valueOf() ?? 1 / 0),
@@ -46,14 +46,14 @@ const W = {
   },
   blank: (i) => i == null || i === "",
   notBlank: (i) => i != null && i !== ""
-}, G = {
-  equals: (i, n) => n === "true" ? !!i : n === "false" ? !i : !0
 }, H = {
+  equals: (i, n) => n === "true" ? !!i : n === "false" ? !i : !0
+}, j = {
   in: (i, n) => Array.isArray(n) && n.includes(String(i ?? ""))
-}, j = { text: A, number: B, date: W, boolean: G, set: H };
-function U(i, n, e) {
+}, U = { text: T, number: W, date: G, boolean: H, set: j };
+function X(i, n, e) {
   if (!e) return !0;
-  const t = e.filterType || n.filter || "text", l = (j[t] || A)[e.type];
+  const t = e.filterType || n.filter || "text", l = (U[t] || T)[e.type];
   if (!l) return !0;
   const r = w(i, n);
   return l(r, e.value, e.value2);
@@ -62,21 +62,21 @@ function P(i, n, e) {
   const t = Object.entries(n || {}).filter(([, s]) => s != null);
   return t.length === 0 ? i : i.filter((s) => t.every(([l, r]) => {
     const o = e[l];
-    return o ? U(s, o, r) : !0;
+    return o ? X(s, o, r) : !0;
   }));
 }
-function T(i, n, e) {
+function I(i, n, e) {
   if (!n) return i;
   const t = String(n).toLowerCase();
   return i.filter((s) => {
     for (const l of e) {
-      const r = v(s, l);
+      const r = C(s, l);
       if (r && String(r).toLowerCase().includes(t)) return !0;
     }
     return !1;
   });
 }
-function X(i, n, e) {
+function $(i, n, e) {
   if (i == null && n == null) return 0;
   if (i == null) return -1;
   if (n == null) return 1;
@@ -87,36 +87,36 @@ function X(i, n, e) {
   }
   return e === "boolean" ? i === n ? 0 : i ? 1 : -1 : String(i).localeCompare(String(n), void 0, { numeric: !0, sensitivity: "base" });
 }
-function $(i, n, e) {
+function K(i, n, e) {
   if (!n || n.length === 0) return i;
   const t = i.slice();
   return t.sort((s, l) => {
     for (const { colId: r, sort: o } of n) {
       const a = e[r];
       if (!a) continue;
-      const c = w(s, a), f = w(l, a), d = typeof a.comparator == "function" ? a.comparator(c, f, s, l) : X(c, f, a.type);
+      const c = w(s, a), f = w(l, a), d = typeof a.comparator == "function" ? a.comparator(c, f, s, l) : $(c, f, a.type);
       if (d !== 0) return o === "desc" ? -d : d;
     }
     return 0;
   }), t;
 }
-function K(i, n) {
+function Q(i, n) {
   if (!n || !n.enabled) return { rows: i, total: i.length, pageRows: i };
   const e = i.length, t = Math.max(1, Math.ceil(e / n.pageSize)), s = Math.min(n.page, t - 1), l = s * n.pageSize, r = i.slice(l, l + n.pageSize);
   return { rows: i, total: e, totalPages: t, page: s, pageRows: r };
 }
-function Q(i) {
+function Y(i) {
   const n = Object.fromEntries(i.columnDefs.map((l) => [l.field, l])), e = i.columnDefs.filter((l) => !l.hidden && !l._isCheckbox);
   let t = i.rowData;
-  t = P(t, i.filterModel, n), t = T(t, i.quickFilter, e), t = $(t, i.sortModel, n);
-  const s = K(t, i.pagination);
+  t = P(t, i.filterModel, n), t = I(t, i.quickFilter, e), t = K(t, i.sortModel, n);
+  const s = Q(t, i.pagination);
   return { filteredSorted: t, ...s };
 }
-function Y(i, n, e, t, s = 6) {
+function Z(i, n, e, t, s = 6) {
   const l = Math.ceil(n / e), r = Math.max(0, Math.floor(i / e) - s), o = Math.min(t, r + l + s * 2);
   return { first: r, last: o };
 }
-function Z(i) {
+function J(i) {
   return {
     // ---- Data ----
     setRowData(n) {
@@ -277,7 +277,7 @@ function k(i, n) {
   for (const [e, t] of Object.entries(n))
     t == null || t === !1 ? i.removeAttribute(e) : t === !0 ? i.setAttribute(e, "") : i.setAttribute(e, String(t));
 }
-function J(i) {
+function M(i) {
   const n = document.getElementById(i);
   return !n || n.tagName !== "TEMPLATE" ? null : n.content.firstElementChild.cloneNode(!0);
 }
@@ -295,7 +295,7 @@ function ee(i, n, e) {
   }
   return null;
 }
-const te = 32, M = 100;
+const te = 32, A = 100;
 class D extends _ {
   constructor() {
     super(...arguments);
@@ -322,7 +322,7 @@ class D extends _ {
       selection: /* @__PURE__ */ new Set(),
       focusedCell: null,
       editing: null,
-      pagination: { enabled: !1, page: 0, pageSize: M },
+      pagination: { enabled: !1, page: 0, pageSize: A },
       scrollTop: 0,
       viewportHeight: 400
     }, this._displayList = { filteredSorted: [], pageRows: [], total: 0, totalPages: 1, page: 0 }, this._renderPending = !1, this._dirty = /* @__PURE__ */ new Set(), this._lastRenderedRowIds = /* @__PURE__ */ new Set(), this._runtimeOverrides = /* @__PURE__ */ Object.create(null);
@@ -332,7 +332,7 @@ class D extends _ {
       enabled: this.paginationValue,
       page: 0,
       pageSize: this.pageSizeValue
-    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = Z(this), queueMicrotask(() => this._initialLoad());
+    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = J(this), queueMicrotask(() => this._initialLoad());
   }
   disconnect() {
     this.element.gridApi = null;
@@ -396,14 +396,14 @@ class D extends _ {
     const s = this.state.filterModel[e.field] || {}, l = se(e.filter), r = u("div", { class: "sg-filter-popover" }), o = u("select");
     l.forEach((b) => o.append(new Option(b.label, b.value, !1, b.value === s.type)));
     const a = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", c = u("input", { type: a, value: s.value ?? "" }), f = u("input", { type: a, value: s.value2 ?? "", style: { display: "none" } }), d = () => {
-      const b = o.value, x = b === "inRange", V = !(b === "blank" || b === "notBlank");
-      c.style.display = V ? "" : "none", f.style.display = x ? "" : "none";
+      const b = o.value, x = b === "inRange", O = !(b === "blank" || b === "notBlank");
+      c.style.display = O ? "" : "none", f.style.display = x ? "" : "none";
     };
     o.addEventListener("change", d), d();
-    const h = u("div", { class: "sg-filter-actions" }), p = u("button", { type: "button" }, "Clear"), C = u("button", { type: "button", class: "primary" }, "Apply");
-    h.append(p, C), p.addEventListener("click", () => {
+    const h = u("div", { class: "sg-filter-actions" }), p = u("button", { type: "button" }, "Clear"), v = u("button", { type: "button", class: "primary" }, "Apply");
+    h.append(p, v), p.addEventListener("click", () => {
       this.setColumnFilter(e.field, null), this._closeFilterPopover();
-    }), C.addEventListener("click", () => {
+    }), v.addEventListener("click", () => {
       const b = o.value, x = b === "blank" || b === "notBlank" ? { filterType: e.filter, type: b } : { filterType: e.filter, type: b, value: c.value, value2: f.value || void 0 };
       this.setColumnFilter(e.field, x), this._closeFilterPopover();
     }), r.append(
@@ -514,7 +514,7 @@ class D extends _ {
   filteredCount() {
     const e = Object.fromEntries(this.state.columnDefs.map((l) => [l.field, l])), t = this.state.columnDefs.filter((l) => !l.hidden && !l._isCheckbox);
     let s = P(this.state.rowData, this.state.filterModel, e);
-    return s = T(s, this.state.quickFilter, t), s.length;
+    return s = I(s, this.state.quickFilter, t), s.length;
   }
   lastPageIndex() {
     return this.totalPages() - 1;
@@ -531,7 +531,7 @@ class D extends _ {
     const { rowId: t, colId: s, originalValue: l, draftValue: r } = this.state.editing, o = this._tbody.querySelector(`tr[data-row-id="${S(t)}"] td[data-col-id="${S(s)}"]`);
     let a = l;
     if (!e && o) {
-      const c = o.querySelector("input,select,textarea");
+      const c = o.querySelector("[data-editor-input]") || o.querySelector("input,select,textarea");
       c ? a = ne(c.value, this._colByField(s)?.type) : r !== void 0 && (a = r);
     }
     if (this.state.editing = null, !e && a !== l) {
@@ -569,7 +569,7 @@ class D extends _ {
     const s = (t.headerName || t.field || "").length, l = this.state.rowData.slice(0, 200);
     let r = s;
     for (const o of l) {
-      const a = String(v(o, t) ?? "").length;
+      const a = String(C(o, t) ?? "").length;
       a > r && (r = a);
     }
     this.setColumnWidth(e, Math.min(400, Math.max(60, r * 8 + 24)));
@@ -615,7 +615,7 @@ class D extends _ {
   getDataAsCsv({ columnSeparator: e = ",", onlySelected: t = !1 } = {}) {
     const s = this._visibleCols().filter((a) => !a._isCheckbox), l = t ? this.getSelectedRows() : this._displayList.filteredSorted, r = (a) => /[",\n\r]/.test(a) ? `"${String(a).replace(/"/g, '""')}"` : String(a), o = [s.map((a) => r(a.headerName || a.field)).join(e)];
     for (const a of l)
-      o.push(s.map((c) => r(v(a, c))).join(e));
+      o.push(s.map((c) => r(C(a, c))).join(e));
     return o.join(`
 `);
   }
@@ -631,7 +631,7 @@ class D extends _ {
   }
   _render() {
     const e = this._dirty;
-    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.size === 0) && (this._displayList = Q({
+    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.size === 0) && (this._displayList = Y({
       rowData: this.state.rowData,
       columnDefs: this.state.columnDefs,
       sortModel: this.state.sortModel,
@@ -675,7 +675,7 @@ class D extends _ {
     for (const d of e) {
       const h = t.querySelector(`th[data-header-cell-field-value="${S(d.field)}"]`) || t.querySelector(`th[data-field="${S(d.field)}"]`);
       if (!h) continue;
-      const p = this.state.sortModel.find((C) => C.colId === d.field);
+      const p = this.state.sortModel.find((v) => v.colId === d.field);
       k(h, {
         "data-sortable": d.sortable ? "true" : null,
         "data-filterable": d.filter ? "true" : null,
@@ -726,7 +726,7 @@ class D extends _ {
     const e = this._visibleCols(), t = this._displayList.pageRows, s = this.virtualValue || t.length > 200;
     let l = t, r = 0;
     if (s) {
-      const c = this._viewport?.clientHeight || 400, f = this.state.rowHeight, d = Y(this.state.scrollTop, c, f, t.length, 8);
+      const c = this._viewport?.clientHeight || 400, f = this.state.rowHeight, d = Z(this.state.scrollTop, c, f, t.length, 8);
       r = d.first, l = t.slice(d.first, d.last);
     }
     const o = /* @__PURE__ */ new Map();
@@ -777,9 +777,9 @@ class D extends _ {
       }
       if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === r.field) {
         o.setAttribute("data-editing", "true");
-        const c = this._buildEditorInput(r, w(t, r));
+        const { node: c, control: f } = this._buildEditor(r, w(t, r));
         o.appendChild(c), queueMicrotask(() => {
-          c.focus(), c.select?.();
+          f?.focus(), f?.select?.();
         });
       } else
         this._renderCellContent(o, t, r);
@@ -788,16 +788,36 @@ class D extends _ {
   }
   _renderCellContent(e, t, s) {
     if (s.cellRenderer) {
-      const l = J(s.cellRenderer);
+      const l = M(s.cellRenderer);
       if (l) {
-        const r = w(t, s), o = v(t, s);
+        const r = w(t, s), o = C(t, s);
         (l.dataset.bind || l.dataset.bindText !== void 0) && (l.textContent = l.dataset.bind ? String(t[l.dataset.bind] ?? "") : o), l.dataset.bindAttr && l.setAttribute(l.dataset.bindAttr, r), l.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((a) => {
           a.dataset.bindText !== void 0 ? a.textContent = o : a.dataset.bind && (a.textContent = String(t[a.dataset.bind] ?? "")), a.dataset.bindAttr && a.setAttribute(a.dataset.bindAttr, r);
         }), e.appendChild(l);
         return;
       }
     }
-    e.textContent = v(t, s);
+    e.textContent = C(t, s);
+  }
+  // Returns { node, control }: the element to mount and the focusable control
+  // whose value is read on commit. A column may supply a custom editor via a
+  // <template> (col.cellEditor); otherwise a type-appropriate input is built.
+  _buildEditor(e, t) {
+    if (e.cellEditor) {
+      const l = M(e.cellEditor);
+      if (l) {
+        const r = l.matches?.("input,select,textarea") ? l : l.querySelector?.("[data-editor-input]") || l.querySelector?.("input,select,textarea");
+        return r && (this._seedEditorValue(r, e, t), r.addEventListener("keydown", this._onEditorKey), r.addEventListener("blur", this._onEditorBlur)), { node: l, control: r };
+      }
+    }
+    const s = this._buildEditorInput(e, t);
+    return { node: s, control: s };
+  }
+  _seedEditorValue(e, t, s) {
+    if (t.type === "date" && s) {
+      const l = s instanceof Date ? s : new Date(s);
+      e.value = Number.isNaN(l?.getTime?.()) ? s ?? "" : l.toISOString().slice(0, 10);
+    } else t.type === "boolean" ? e.value = s === !0 ? "true" : s === !1 ? "false" : "" : e.value = s ?? "";
   }
   _buildEditorInput(e, t) {
     let s;
@@ -898,7 +918,7 @@ y(D, "values", {
   rowMultiSelectWithClick: { type: Boolean, default: !1 },
   suppressRowClickSelection: { type: Boolean, default: !1 },
   pagination: { type: Boolean, default: !1 },
-  pageSize: { type: Number, default: M },
+  pageSize: { type: Number, default: A },
   rowHeight: { type: Number, default: te },
   headerHeight: { type: Number, default: 36 },
   virtual: { type: Boolean, default: !1 },
@@ -911,7 +931,7 @@ y(D, "values", {
   // '' | 'autoHeight'
 });
 function ie(i, n) {
-  const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "_isCheckbox"];
+  const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox"];
   for (const t of e) if (i[t] !== n[t]) return !1;
   return !0;
 }
@@ -993,6 +1013,7 @@ class R extends _ {
       hidden: this.hiddenValue,
       resizable: this.resizableValue,
       cellRenderer: this.cellRendererValue || null,
+      cellEditor: this.cellEditorValue || null,
       _isCheckbox: this.checkboxValue
     };
   }
@@ -1050,17 +1071,18 @@ y(R, "values", {
   hidden: { type: Boolean, default: !1 },
   resizable: { type: Boolean, default: !0 },
   cellRenderer: { type: String, default: "" },
+  cellEditor: { type: String, default: "" },
   checkbox: { type: Boolean, default: !1 }
 });
 class F extends _ {
   connect() {
   }
 }
-class I extends _ {
+class N extends _ {
   connect() {
   }
 }
-class N extends _ {
+class V extends _ {
   connect() {
   }
 }
@@ -1120,22 +1142,22 @@ class E extends _ {
 }
 y(E, "outlets", ["grid"]), y(E, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
 function le(i) {
-  const n = i ?? z.start();
-  return n.register("grid", D), n.register("header-cell", R), n.register("row", F), n.register("cell", I), n.register("filter", N), n.register("pagination", E), n;
+  const n = i ?? B.start();
+  return n.register("grid", D), n.register("header-cell", R), n.register("row", F), n.register("cell", N), n.register("filter", V), n.register("pagination", E), n;
 }
 const re = {
   start: le,
   GridController: D,
   HeaderCellController: R,
   RowController: F,
-  CellController: I,
-  FilterController: N,
+  CellController: N,
+  FilterController: V,
   PaginationController: E
 };
 typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = re);
 export {
-  I as CellController,
-  N as FilterController,
+  N as CellController,
+  V as FilterController,
   D as GridController,
   R as HeaderCellController,
   E as PaginationController,
