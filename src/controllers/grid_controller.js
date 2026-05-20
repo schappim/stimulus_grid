@@ -1001,11 +1001,42 @@ export default class GridController extends Controller {
     if (!this.state.editing) return;
     if (e.key === 'Enter') { e.preventDefault(); this.stopEditing(false); }
     else if (e.key === 'Escape') { e.preventDefault(); this.stopEditing(true); }
+    else if (e.key === 'Tab') { e.preventDefault(); this._tabToEditableCell(e.shiftKey ? -1 : 1); }
   };
 
   _onEditorBlur = () => {
+    // Suppress the blur that fires when a Tab move detaches the old editor —
+    // otherwise it would immediately close the editor we're moving into.
+    if (this._navigatingEditor) return;
     if (this.state.editing) this.stopEditing(false);
   };
+
+  // Commit the current editor and open the editor on the next (dir=1) or
+  // previous (dir=-1) editable cell in reading order, wrapping within the
+  // current page. RAILS.md §9 — Tab/Shift+Tab cell navigation.
+  _tabToEditableCell(dir) {
+    const cur = this.state.editing;
+    if (!cur) return;
+    const cols = this._visibleCols().filter((c) => c.editable && !c._isCheckbox);
+    const rows = this._displayList.pageRows;
+    const rowIdx = rows.findIndex((r) => this._rowId(r) === cur.rowId);
+    const colIdx = cols.findIndex((c) => c.field === cur.colId);
+    if (!cols.length || !rows.length || rowIdx < 0 || colIdx < 0) {
+      this.stopEditing(false);
+      return;
+    }
+    const n = rows.length * cols.length;
+    const flat = (rowIdx * cols.length + colIdx + dir + n) % n;
+    const nextRow = rows[Math.floor(flat / cols.length)];
+    const nextCol = cols[flat % cols.length];
+
+    this._navigatingEditor = true;
+    this.stopEditing(false);                                  // commit current cell
+    this.startEditingCell(this._rowId(nextRow), nextCol.field); // open the adjacent one
+    // Clear the guard after the render (scheduled above via rAF) has run, so
+    // the detach-blur of the old input is suppressed but real blurs aren't.
+    requestAnimationFrame(() => { this._navigatingEditor = false; });
+  }
 
   // Wire editor listeners whenever a cell mounts an input.
   // Done lazily via MutationObserver on tbody (cheap because tbody is small per page).
