@@ -150,12 +150,19 @@ and updates its dataset; persist by listening to that event.
 
 ## Cell selection & copy
 
-Cells aren't browser-text-selectable; the grid has its own model: click sets an
-active cell, drag or shift+click selects a rectangular range (highlighted via
-`data-cell-active` / `data-cell-range`). `Cmd/Ctrl+C` copies the range as TSV.
-`gridApi.getCellSelection()` returns `{ anchor, focus, rowCount, colCount }`;
-`gridApi.getCellRangeValues()` returns the range as a 2D array;
-`grid:cellSelectionChanged` fires on change.
+Cells aren't browser-text-selectable; the grid has its own model (default
+`data-grid-cell-selection-value="true"`):
+- **plain click** → active cell only (no row selection)
+- **Cmd/Ctrl+click** → toggle row selection
+- **drag / shift+click** → rectangular cell range
+
+Highlights are distinct: active cell = accent **outline box**; cell range = **blue**
+fill (`data-cell-range`); row selection = **green** fill (`data-selected`).
+`Cmd/Ctrl+C` copies the range as TSV. `gridApi.getCellSelection()` →
+`{ anchor, focus, rowCount, colCount }`; `getCellRangeValues()` → 2D array;
+`getCellSelectionRowIds()` → row ids in the range; `grid:cellSelectionChanged`
+fires on change. Set `cell-selection-value="false"` to restore plain-click row
+selection (for row-selection-centric grids).
 
 ## Server-side row model
 
