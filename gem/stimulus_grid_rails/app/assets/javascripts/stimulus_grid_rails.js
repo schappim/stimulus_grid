@@ -56,6 +56,7 @@ class GridSyncController extends Controller {
     rowsPath:          String,   // "/grids/:resource/rows"
     rowPathTemplate:   String,   // "/grids/:resource/rows/:row_id"
     bulkRowsPath:      String,   // "/grids/:resource/rows/bulk"
+    cellsBulkPath:     String,   // "/grids/:resource/bulk"
     undoPath:          String,   // "/grids/:resource/undo"
     redoPath:          String,   // "/grids/:resource/redo"
     serverSide:        Boolean,  // server-side row model (windowed fetch)
@@ -88,6 +89,13 @@ class GridSyncController extends Controller {
       if (tr) this.removeRow(tr.dataset.rowId)
     }
     this._gridEl.addEventListener("click", this._onDelegatedClick)
+
+    // Bulk paste (RAILS.md §9). Track the last-clicked cell as the paste anchor;
+    // a multi-cell clipboard paste fills from there and POSTs to /bulk.
+    this._onCellClicked = (e) => { this._anchor = { rowId: e.detail.rowId, colId: e.detail.colId } }
+    this._gridEl.addEventListener("grid:cellClicked", this._onCellClicked)
+    this._onPaste = (e) => this._handlePaste(e)
+    document.addEventListener("paste", this._onPaste)
 
     // Server-side search / filtering. The grid fetches matching rows from the
     // index endpoint and swaps the dataset via setRowData. Driven by events:
@@ -158,7 +166,56 @@ class GridSyncController extends Controller {
     this._gridEl.removeEventListener("grid-sync:clear-filters", this._onClearFilters)
     if (this._onSrvPage) this._gridEl.removeEventListener("grid:paginationChanged", this._onSrvPage)
     if (this._onSrvSort) this._gridEl.removeEventListener("grid:sortChanged", this._onSrvSort)
+    this._gridEl.removeEventListener("grid:cellClicked", this._onCellClicked)
     document.removeEventListener("keydown", this._onKeydown)
+    document.removeEventListener("paste", this._onPaste)
+  }
+
+  // Bulk paste: parse TSV from the clipboard and fill cells from the anchor
+  // (last-clicked cell) rightward + downward across editable columns and the
+  // loaded rows, then POST one /bulk request. The server validates + coerces +
+  // saves each mutation and returns cell-confirms (which fill the cells).
+  _handlePaste(e) {
+    if (!this._anchor || !this.hasCellsBulkPathValue) return
+    if (this._gridEl.querySelector('td[data-editing="true"]')) return   // editing → native paste
+    const ae = document.activeElement
+    if (ae && /^(input|textarea|select)$/i.test(ae.tagName) && !this._gridEl.contains(ae)) return
+
+    const text = e.clipboardData?.getData("text/plain")
+    if (!text) return
+    const grid = text.replace(/\r\n?/g, "\n").replace(/\n$/, "")
+      .split("\n").map((line) => line.split("\t"))
+    if (!grid.length) return
+
+    const api = this._gridEl.gridApi
+    const cols = api.getColumnDefs().filter((c) =>
+      c.editable && !c.hidden && !c._isCheckbox && !String(c.field).startsWith("_"))
+    const rows = api.getRowData()
+    const colStart = cols.findIndex((c) => c.field === this._anchor.colId)
+    const rowStart = rows.findIndex((r) => String(r.id) === String(this._anchor.rowId))
+    if (colStart < 0 || rowStart < 0) return   // anchor must be an editable cell
+
+    e.preventDefault()
+    const mutations = []
+    grid.forEach((line, r) => {
+      const row = rows[rowStart + r]
+      if (!row) return
+      line.forEach((value, c) => {
+        const col = cols[colStart + c]
+        if (col) mutations.push({ row_id: row.id, column: col.field, value })
+      })
+    })
+    if (!mutations.length) return
+
+    const optimisticId = this._nextOptimisticId()
+    ;(this._gridEl.__sgrOwnOps ||= new Set()).add(optimisticId)   // suppress broadcast echo
+    fetch(this.cellsBulkPathValue, {
+      method: "POST", credentials: "same-origin", headers: this._headers(),
+      body: JSON.stringify({ mutations, optimistic_id: optimisticId }),
+    })
+      .then((res) => res.ok ? res.text() : Promise.reject(new Error(`HTTP ${res.status}`)))
+      .then((html) => { if (html.trim()) window.Turbo?.renderStreamMessage(html) })
+      .catch((err) => console.error("[stimulus_grid_rails] bulk paste failed:", err))
   }
 
   // POST /grids/:resource/undo (or /redo). The server replays the inverse /

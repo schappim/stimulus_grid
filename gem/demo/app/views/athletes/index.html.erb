@@ -17,6 +17,7 @@
     <li><strong>Add / remove rows</strong> (§14/§15): the toolbar adds; the × on each row (or "Delete selected") removes — live in every tab</li>
     <li><strong>Server-side global search + filtering</strong> (§21): the search box and per-column filters query the DB via the column registry (<code>GET /grids/athletes/rows</code>) and swap the dataset</li>
     <li><strong>Custom cells</strong>: <em>Medals</em> is a read-only renderer; <em>Sport</em> is an <strong>editable</strong> custom cell — a pill for display + a custom <code>&lt;select&gt;</code> editor (double-click it)</li>
+    <li><strong>Bulk paste</strong> (§9): click an editable cell, then paste tab/newline-separated data (e.g. from a spreadsheet) — it fills the range and saves via <code>POST /bulk</code></li>
     <li><strong>Cross-tab live sync</strong> via <code>turbo_stream_from "athletes"</code></li>
     <li><strong>Server validation</strong>: try setting age to 999 — server rejects, cell reverts with a tooltip</li>
   </ul>
