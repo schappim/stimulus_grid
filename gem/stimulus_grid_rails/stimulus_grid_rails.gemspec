@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name        = "stimulus_grid_rails"
   spec.version     = StimulusGridRails::VERSION
   spec.authors     = ["Marcus Schappi"]
-  spec.email       = ["marcus@chickcom.com"]
+  spec.email       = ["marcus@schappi.com"]
   spec.homepage    = "https://github.com/schappim/stimulus_grid"
   spec.summary     = "Rails + Hotwire bindings for stimulus_grid — server-side column registry, custom Turbo Stream actions, optimistic cell updates."
   spec.description = "Brings the stimulus_grid data-grid into Rails as a first-class engine. Provides ApplicationGrid for declaring columns server-side; cell-grained Turbo Stream actions (cell, cell-confirm, cell-revert, row-insert-sorted, row-remove, bulk); a single PATCH endpoint for cell mutations with optimistic-id reconciliation; and importmap-pinnable JS for both the grid and the live-sync layer."
