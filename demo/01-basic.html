@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>01 — Basic grid | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 360px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>01 — Basic grid</h1>
+  <p class="lede">Server-rendered rows with click-to-sort headers. No JS data hand-off — the grid reads its initial rows from the table cells.</p>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell"
+              data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell"
+              data-header-cell-field-value="age"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell"
+              data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="180">Country</th>
+          <th data-controller="header-cell"
+              data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Sport</th>
+          <th data-controller="header-cell"
+              data-header-cell-field-value="gold"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Gold</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td data-cell-col-id-value="athlete">Michael Phelps</td><td data-cell-col-id-value="age">23</td><td data-cell-col-id-value="country">United States</td><td data-cell-col-id-value="sport">Swimming</td><td data-cell-col-id-value="gold">8</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Larisa Latynina</td><td data-cell-col-id-value="age">22</td><td data-cell-col-id-value="country">Soviet Union</td><td data-cell-col-id-value="sport">Gymnastics</td><td data-cell-col-id-value="gold">9</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Paavo Nurmi</td><td data-cell-col-id-value="age">23</td><td data-cell-col-id-value="country">Finland</td><td data-cell-col-id-value="sport">Athletics</td><td data-cell-col-id-value="gold">9</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Mark Spitz</td><td data-cell-col-id-value="age">22</td><td data-cell-col-id-value="country">United States</td><td data-cell-col-id-value="sport">Swimming</td><td data-cell-col-id-value="gold">9</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Carl Lewis</td><td data-cell-col-id-value="age">35</td><td data-cell-col-id-value="country">United States</td><td data-cell-col-id-value="sport">Athletics</td><td data-cell-col-id-value="gold">9</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Bjørn Dæhlie</td><td data-cell-col-id-value="age">31</td><td data-cell-col-id-value="country">Norway</td><td data-cell-col-id-value="sport">Cross Country Skiing</td><td data-cell-col-id-value="gold">8</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Birgit Fischer</td><td data-cell-col-id-value="age">42</td><td data-cell-col-id-value="country">Germany</td><td data-cell-col-id-value="sport">Canoeing</td><td data-cell-col-id-value="gold">8</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Sawao Kato</td><td data-cell-col-id-value="age">26</td><td data-cell-col-id-value="country">Japan</td><td data-cell-col-id-value="sport">Gymnastics</td><td data-cell-col-id-value="gold">8</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Jenny Thompson</td><td data-cell-col-id-value="age">27</td><td data-cell-col-id-value="country">United States</td><td data-cell-col-id-value="sport">Swimming</td><td data-cell-col-id-value="gold">8</td></tr>
+        <tr><td data-cell-col-id-value="athlete">Matt Biondi</td><td data-cell-col-id-value="age">25</td><td data-cell-col-id-value="country">United States</td><td data-cell-col-id-value="sport">Swimming</td><td data-cell-col-id-value="gold">8</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:16px;color:#6b7280;font-size:13px;">
+    Try: click headers to sort, shift-click for multi-sort, drag the right edge of a header to resize.
+  </p>
+
+  <script type="module">
+    import { start } from '../src/index.js';
+    start();
+  </script>
+</body>
+</html>

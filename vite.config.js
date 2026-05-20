@@ -28,5 +28,8 @@ export default defineConfig({
     port: 5173,
     open: false,
     strictPort: false,
+    fs: {
+      allow: [resolve(__dirname, '.')],
+    },
   },
 });
