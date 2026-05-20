@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>10 — Live filter | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 2fr repeat(6, 1fr);
+      gap: 8px;
+      margin: 16px 0 8px;
+      align-items: center;
+    }
+    .toolbar input, .toolbar select {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:6px 8px;
+      font: inherit; box-sizing: border-box; width: 100%;
+    }
+    .toolbar .quick-wrap {
+      grid-column: 1 / -1;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .toolbar .quick-wrap input {
+      flex: 1;
+      font-size: 15px; padding: 8px 12px;
+    }
+    .toolbar .quick-wrap button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:6px 12px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar label {
+      font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;
+      display: block; margin-bottom: 2px;
+    }
+    .toolbar .col-wrap { display: flex; flex-direction: column; }
+    .panel { height: 520px; margin-top: 12px; }
+    .stat { color:#6b7280; font-size:13px; margin-top: 6px; text-align: right; }
+    mark.hit { background: #fde68a; padding: 0 1px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>10 — Live filter (rows × single-col × all-cols)</h1>
+  <p class="lede">
+    Three layers of filtering, all live as you type:
+    <strong>Quick filter</strong> (top, full-width) searches every visible column
+    via <code>gridApi.setQuickFilter()</code>;
+    <strong>per-column inputs</strong> each call <code>setColumnFilter()</code>
+    with a <em>contains</em> match on that column;
+    <strong>built-in popovers</strong> (click the <code>≡</code> icon on a header)
+    still work for richer conditions.
+  </p>
+
+  <div class="toolbar">
+    <div class="quick-wrap">
+      <input id="quick" type="search" placeholder="🔎  Quick filter — searches every column…" autocomplete="off" />
+      <button id="clear-all">Clear all filters</button>
+    </div>
+    <div class="col-wrap">
+      <label>Athlete</label>
+      <input type="search" data-col="athlete" placeholder="contains…" autocomplete="off" />
+    </div>
+    <div class="col-wrap">
+      <label>Country</label>
+      <input type="search" data-col="country" placeholder="contains…" autocomplete="off" />
+    </div>
+    <div class="col-wrap">
+      <label>Sport</label>
+      <input type="search" data-col="sport" placeholder="contains…" autocomplete="off" />
+    </div>
+    <div class="col-wrap">
+      <label>Age</label>
+      <input type="number" data-col="age" data-op="equals" placeholder="exact" />
+    </div>
+    <div class="col-wrap">
+      <label>Min gold</label>
+      <input type="number" data-col="gold" data-op="greaterThanOrEqual" placeholder="≥" />
+    </div>
+    <div class="col-wrap">
+      <label>Date after</label>
+      <input type="date" data-col="date" data-op="greaterThan" />
+    </div>
+  </div>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="20">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="160">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="180">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="date" data-header-cell-width-value="120">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+
+  <div class="stat" id="stat">…</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.getElementById('grid');
+    const quick = document.getElementById('quick');
+    const stat = document.getElementById('stat');
+    const colInputs = document.querySelectorAll('[data-col]');
+
+    function debounce(fn, ms) {
+      let t = null;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    // Quick filter (debounced — input fires fast)
+    const applyQuick = debounce((q) => grid.gridApi.setQuickFilter(q), 120);
+    quick.addEventListener('input', () => applyQuick(quick.value));
+
+    // Per-column filters
+    const applyCol = debounce((input) => {
+      const col = input.dataset.col;
+      const op = input.dataset.op || 'contains';
+      const val = input.value.trim();
+      if (val === '') {
+        grid.gridApi.setColumnFilter(col, null);
+      } else {
+        const type = input.type === 'number' ? 'number'
+                   : input.type === 'date' ? 'date' : 'text';
+        grid.gridApi.setColumnFilter(col, { filterType: type, type: op, value: val });
+      }
+    }, 120);
+    colInputs.forEach((inp) => inp.addEventListener('input', () => applyCol(inp)));
+
+    // Clear-all
+    document.getElementById('clear-all').addEventListener('click', () => {
+      quick.value = '';
+      colInputs.forEach((inp) => { inp.value = ''; });
+      grid.gridApi.setQuickFilter('');
+      grid.gridApi.setFilterModel({});
+    });
+
+    function refreshStat() {
+      const api = grid.gridApi;
+      if (!api) return;
+      const total = api.getRowData().length;
+      const after = api.paginationGetRowCount();
+      stat.textContent = after === total
+        ? `${total.toLocaleString()} rows`
+        : `${after.toLocaleString()} of ${total.toLocaleString()} rows after filter`;
+    }
+    grid.addEventListener('grid:ready', refreshStat);
+    grid.addEventListener('grid:filterChanged', refreshStat);
+    grid.addEventListener('grid:rowDataChanged', refreshStat);
+  </script>
+</body>
+</html>

@@ -89,6 +89,20 @@ export function applyFilters(rows, filterModel, columnsByField) {
   }));
 }
 
+/* Quick filter: case-insensitive substring match across all visible column
+ * values for a row. Used for "search everything" UI. */
+export function applyQuickFilter(rows, query, visibleCols) {
+  if (!query) return rows;
+  const q = String(query).toLowerCase();
+  return rows.filter((row) => {
+    for (const col of visibleCols) {
+      const v = formatValue(row, col);
+      if (v && String(v).toLowerCase().includes(q)) return true;
+    }
+    return false;
+  });
+}
+
 /* -------- Sorting -------- */
 
 function defaultComparator(a, b, type) {
@@ -140,8 +154,10 @@ export function applyPagination(rows, pagination) {
 
 export function buildDisplayList(state) {
   const columnsByField = Object.fromEntries(state.columnDefs.map((c) => [c.field, c]));
+  const visibleCols = state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
   let rows = state.rowData;
   rows = applyFilters(rows, state.filterModel, columnsByField);
+  rows = applyQuickFilter(rows, state.quickFilter, visibleCols);
   rows = applySort(rows, state.sortModel, columnsByField);
   const paged = applyPagination(rows, state.pagination);
   return { filteredSorted: rows, ...paged };
