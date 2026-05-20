@@ -25,8 +25,13 @@
   server_side  = local_assigns.fetch(:server_side, false)
   total_rows   = local_assigns[:total] || (rows.respond_to?(:size) ? rows.size : 0)
 
-  # Spreadsheet-style row-number gutter (click # = select row).
+  # Optional left gutter for row selection:
+  #   row_gutter: :numbers   → 1-based row numbers (click # = select row)
+  #   row_gutter: :checkbox  → a checkbox per row + select-all in the header
+  #   row_gutter: false      → none (default)
+  # (true is treated as :numbers for convenience.)
   row_gutter   = local_assigns.fetch(:row_gutter, false)
+  row_gutter   = :numbers if row_gutter == true
 
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
@@ -56,7 +61,11 @@
   <table>
     <thead>
       <tr>
-        <% if row_gutter %>
+        <% if row_gutter == :checkbox %>
+          <th data-controller="header-cell" data-header-cell-field-value="_select"
+              data-header-cell-checkbox-value="true" data-header-cell-pinned-value="left"
+              data-header-cell-width-value="40"></th>
+        <% elsif row_gutter == :numbers %>
           <th data-controller="header-cell" data-header-cell-field-value="_rownum"
               data-header-cell-row-number-value="true" data-header-cell-pinned-value="left"
               data-header-cell-width-value="46"></th>

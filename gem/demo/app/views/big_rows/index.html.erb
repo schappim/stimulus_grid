@@ -22,7 +22,7 @@
 <%= render partial: "stimulus_grid_rails/grids/grid",
            locals: { grid: @grid, rows: @rows, total: @total,
                      server_side: true, page_size: BigRowsController::PAGE_SIZE,
-                     row_selection: "multiple", row_gutter: true } %>
+                     row_selection: "multiple", row_gutter: :checkbox } %>
 
 <script>
   (function () {

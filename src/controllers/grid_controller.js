@@ -1301,9 +1301,15 @@ export default class GridController extends Controller {
     const key = e.key;
     const mod = e.metaKey || e.ctrlKey;
 
-    if (mod && key.toLowerCase() === 'a') {           // select all cells
+    if (mod && key.toLowerCase() === 'a') {           // select all
       e.preventDefault();
-      this._selectAllCells();
+      if (this.rowSelectionValue !== '') {            // grids with row selection → all rows
+        this.clearCellSelection();
+        this.deselectAll();
+        this.selectAll();
+      } else {
+        this._selectAllCells();                        // otherwise → all cells
+      }
       return;
     }
     if (mod) return;                                  // leave Cmd+C/V/Z to their handlers

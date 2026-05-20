@@ -58,14 +58,14 @@ function j(n, l, e) {
   const r = b(n, l);
   return s(r, e.value, e.value2);
 }
-function T(n, l, e) {
+function V(n, l, e) {
   const t = Object.entries(l || {}).filter(([, i]) => i != null);
   return t.length === 0 ? n : n.filter((i) => t.every(([s, r]) => {
     const o = e[s];
     return o ? j(i, o, r) : !0;
   }));
 }
-function V(n, l, e) {
+function T(n, l, e) {
   if (!l) return n;
   const t = String(l).toLowerCase();
   return n.filter((i) => {
@@ -112,7 +112,7 @@ function Y(n) {
   }
   const l = Object.fromEntries(n.columnDefs.map((s) => [s.field, s])), e = n.columnDefs.filter((s) => !s.hidden && !s._isCheckbox);
   let t = n.rowData;
-  t = T(t, n.filterModel, l), t = V(t, n.quickFilter, e), t = X(t, n.sortModel, l);
+  t = V(t, n.filterModel, l), t = T(t, n.quickFilter, e), t = X(t, n.sortModel, l);
   const i = Q(t, n.pagination);
   return { filteredSorted: t, ...i };
 }
@@ -363,7 +363,7 @@ class I extends S {
       if (t && /^(input|textarea|select)$/i.test(t.tagName) && this.element.contains(t)) return;
       const i = e.key, s = e.metaKey || e.ctrlKey;
       if (s && i.toLowerCase() === "a") {
-        e.preventDefault(), this._selectAllCells();
+        e.preventDefault(), this.rowSelectionValue !== "" ? (this.clearCellSelection(), this.deselectAll(), this.selectAll()) : this._selectAllCells();
         return;
       }
       if (s) return;
@@ -610,8 +610,8 @@ class I extends S {
   filteredCount() {
     if (this.state.serverSide) return this.state.serverRowCount;
     const e = Object.fromEntries(this.state.columnDefs.map((s) => [s.field, s])), t = this.state.columnDefs.filter((s) => !s.hidden && !s._isCheckbox);
-    let i = T(this.state.rowData, this.state.filterModel, e);
-    return i = V(i, this.state.quickFilter, t), i.length;
+    let i = V(this.state.rowData, this.state.filterModel, e);
+    return i = T(i, this.state.quickFilter, t), i.length;
   }
   // Server-side row model: set the total row count so pagination reflects the
   // full table even though only one page is loaded client-side. No event is
