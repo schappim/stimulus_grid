@@ -24,6 +24,24 @@ class RowsEndpointTest < ActionDispatch::IntegrationTest
     assert_equal [@phelps.id], response.parsed_body["rows"].map { |r| r["id"] }
   end
 
+  test "index returns a single window with page/page_size and the full total" do
+    20.times { |i| create_athlete(athlete: "A#{format('%02d', i)}") }
+    get "#{@base}/athletes/rows", as: :json, params: { page: 1, page_size: 10 }
+    assert_response :success
+    body = response.parsed_body
+    assert_equal Athlete.count, body["total"]   # full count, not the window size
+    assert_equal 1, body["page"]
+    assert_equal 10, body["rows"].size
+  end
+
+  test "index sorts server-side" do
+    get "#{@base}/athletes/rows", as: :json,
+        params: { page: 0, page_size: 5, sort: [{ colId: "gold", sort: "desc" }].to_json }
+    assert_response :success
+    golds = response.parsed_body["rows"].map { |r| r["gold"] }
+    assert_equal golds.sort.reverse, golds
+  end
+
   test "create persists a row with new_row_defaults merged with attributes" do
     assert_difference -> { Athlete.count }, 1 do
       post "#{@base}/athletes/rows", as: :json, params: { attributes: { athlete: "Created" } }

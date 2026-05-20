@@ -1,0 +1,57 @@
+<% content_for :title, "Big table (server-side) — stimulus_grid_rails" %>
+
+<header class="page">
+  <p class="crumbs"><a href="/">← athletes demo</a></p>
+  <h1>Big table — <%= number_with_delimiter(@total) %> rows, server-side</h1>
+  <p class="lede">
+    A <strong>server-side row model</strong>: only one page (<%= BigRowsController::PAGE_SIZE %> rows)
+    is ever in the DOM. Paging, sorting, and searching all run on the server
+    (<code>GET <%= StimulusGridRails.mount_path %>/big_rows/rows?page=&amp;sort=&amp;q=</code>);
+    the grid swaps the window via <code>setRowData</code> and tracks the total
+    with <code>setRowCount</code>. Edits still broadcast live. Try sorting by
+    amount, searching, or jumping to the last page.
+  </p>
+</header>
+
+<div class="searchbar" data-grid-id="big_rows-grid">
+  <input type="search" id="big-search" autocomplete="off"
+         placeholder="🔎  Search name / category / status (server-side)…" />
+  <span class="stat" id="big-stat">…</span>
+</div>
+
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: @grid, rows: @rows, total: @total,
+                     server_side: true, page_size: BigRowsController::PAGE_SIZE,
+                     row_selection: "multiple" } %>
+
+<script>
+  (function () {
+    const grid = document.getElementById("big_rows-grid");
+    const stat = document.getElementById("big-stat");
+    document.getElementById("big-search").addEventListener("input", (e) => {
+      grid.dispatchEvent(new CustomEvent("grid-sync:search", { detail: { q: e.target.value } }));
+    });
+    function refresh() {
+      const api = grid.gridApi; if (!api) return;
+      stat.textContent = `${api.getRowCount().toLocaleString()} rows · page ${api.paginationGetCurrentPage() + 1}/${api.paginationGetTotalPages()}`;
+    }
+    ["grid:ready", "grid:rowDataChanged", "grid:paginationChanged", "grid-sync:rows-fetched"]
+      .forEach((ev) => grid.addEventListener(ev, refresh));
+    requestAnimationFrame(refresh);
+  })();
+</script>
+
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 30px auto; padding: 0 20px; color: #1f2937; }
+  .crumbs a { color: #2563eb; text-decoration: none; }
+  .lede { color: #4b5563; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-family: ui-monospace, monospace; font-size: .9em; }
+  .searchbar { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .searchbar #big-search {
+    flex: 1; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px;
+    font: inherit; font-size: 15px;
+  }
+  .searchbar #big-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+  .searchbar .stat { color: #6b7280; font-size: 13px; white-space: nowrap; }
+  .sgr-panel { height: 600px; margin-top: 10px; }
+</style>

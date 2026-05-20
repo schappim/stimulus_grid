@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   mount StimulusGridRails::Engine => StimulusGridRails.mount_path, as: :stimulus_grid_rails
 
   resources :athletes, only: %i[index]
+  resources :big_rows, only: %i[index]
 
   root "athletes#index"
 end

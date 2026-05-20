@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_20_013735) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_20_020000) do
   create_table "athletes", force: :cascade do |t|
     t.string "athlete"
     t.string "country"
@@ -25,6 +25,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_20_013735) do
     t.datetime "updated_at", null: false
     t.index ["country"], name: "index_athletes_on_country"
     t.index ["sport"], name: "index_athletes_on_sport"
+  end
+
+  create_table "big_rows", force: :cascade do |t|
+    t.string "name"
+    t.string "category"
+    t.integer "amount", default: 0, null: false
+    t.string "status"
+    t.date "created_on"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["amount"], name: "index_big_rows_on_amount"
+    t.index ["category"], name: "index_big_rows_on_category"
+    t.index ["status"], name: "index_big_rows_on_status"
   end
 
   create_table "stimulus_grid_audits", force: :cascade do |t|
