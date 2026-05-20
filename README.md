@@ -12,10 +12,11 @@ renders without JS and progressively enhances.
 
 ![stimulus_grid — sortable, filterable data grid with pinned columns, custom medal renderers, multi-row selection, and pagination](docs/images/grid-overview.png)
 
-> Looking for the Rails/Hotwire server-driven version (live multi-user editing
-> over Turbo Streams, server-side search/filter, optimistic updates, undo/redo)?
-> See [`gem/stimulus_grid_rails`](gem/stimulus_grid_rails). LLM usage docs live
-> in [`skills/`](skills).
+> Prefer the Rails/Hotwire server-driven version — live multi-user editing over
+> Turbo Streams, server-side search/filter, optimistic updates, and undo/redo? It
+> ships as the **`stimulus_grid_rails`** gem; see the **Rails & Hotwire** section
+> below, [`gem/stimulus_grid_rails`](gem/stimulus_grid_rails), and
+> [`RAILS.md`](RAILS.md). LLM usage docs live in [`skills/`](skills).
 
 ---
 
@@ -170,6 +171,112 @@ grid.addEventListener("grid:cellValueChanged", (e) => console.log(e.detail))
 - **Editor** clones the template on edit. The control marked `[data-editor-input]`
   (or the first `input`/`select`/`textarea`) is seeded with the current value,
   focused, and read back on commit (Enter / Tab / blur).
+
+## Rails & Hotwire (`stimulus_grid_rails`)
+
+For Rails apps, the **[`stimulus_grid_rails`](gem/stimulus_grid_rails)** gem turns
+the grid into a **server-driven, multi-user editable** grid over Turbo Streams +
+Action Cable — no React, no client-side grid framework, no JS build step. Because
+a Rails app knows its schema, the **server** column definition does the work a
+generic client grid pushes onto the browser: auth, coercion, validation, editor
+selection, computed-column cascade, and broadcasting.
+
+**Capabilities**
+
+- **Live multi-user editing** — every create/update/destroy broadcasts cell-grained Turbo Stream actions to all connected tabs.
+- **Optimistic cell edits** — a committed cell pulses pending (blue), then the server reconciles (green flash) or reverts (red + error tooltip), with `X-Optimistic-Id` echo-suppression for the originator.
+- **Server-side column registry** — per-column `type`, `editable` (boolean *or* lambda), `editor`/`editor_config`, `validate`, `concurrency`, and `computed`/`depends_on`.
+- **Concurrency & validation** — version-checked edits (`lock_version` → conflict), server-side validation → revert with errors, computed-column cascade replayed as a bulk stream.
+- **Rows** — create / delete (single + multi-select bulk), tab/newline bulk paste, and undo/redo backed by a server-side audit log (`Cmd/Ctrl+Z`, `Cmd/Ctrl+Shift+Z`).
+- **Multi-tenancy & auth** — tenant-scoped streams (ActsAsTenant), scoped row lookups, and auth inherited from your `parent_controller`.
+- **Scale** — server-side global search, per-column filtering, and a windowed server-side row model for 50–100K+ rows.
+
+**Install**
+
+```ruby
+# Gemfile
+gem "stimulus_grid_rails"
+```
+
+```bash
+bundle install
+```
+
+The engine auto-registers two importmap pins (`stimulus_grid`,
+`stimulus_grid_rails`) and ships the CSS, so no `bin/importmap pin` is needed:
+
+```js
+// app/javascript/application.js
+import "@hotwired/turbo-rails"
+import { Application } from "@hotwired/stimulus"
+import StimulusGrid from "stimulus_grid"
+import StimulusGridRails from "stimulus_grid_rails"
+
+const application = Application.start()
+StimulusGrid.start(application)        // grid, header-cell, pagination, …
+StimulusGridRails.start(application)   // grid-sync, cell-editor + Turbo Stream actions
+```
+
+```erb
+<%# app/views/layouts/application.html.erb (head) %>
+<%= stylesheet_link_tag "stimulus_grid", "stimulus_grid_rails" %>
+<%= javascript_importmap_tags %>
+```
+
+```ruby
+# config/routes.rb
+mount ActionCable.server => "/cable"
+mount StimulusGridRails::Engine => StimulusGridRails.mount_path   # default "/grids"
+```
+
+Undo/redo and the audit log are opt-in — install the bundled migration when you
+want them (everything else works without it):
+
+```bash
+bin/rails stimulus_grid_rails:install:migrations && bin/rails db:migrate
+```
+
+**Usage**
+
+```ruby
+# app/grids/athlete_grid.rb — one source of truth for the columns
+class AthleteGrid < StimulusGridRails::Grid
+  resource :athletes
+  model    Athlete
+  stream_name { |_user| "athletes" }
+
+  column :athlete, type: :string,  editable: true, pinned: :left, width: 220
+  column :country, type: :string,  editable: ->(row, user) { user&.admin? }   # per-row/user
+  column :age,     type: :integer, editable: true, concurrency: :version_checked,
+                   validate: ->(v, _r) { "must be 10–80" unless (10..80).cover?(v.to_i) }
+  column :total,   type: :integer, computed: true, depends_on: %i[gold silver bronze]
+
+  def compute_total(row) = row.gold.to_i + row.silver.to_i + row.bronze.to_i
+end
+```
+
+```ruby
+# app/models/athlete.rb — make the model broadcast its changes
+class Athlete < ApplicationRecord
+  include StimulusGridRails::Broadcastable
+  broadcasts_grid AthleteGrid, stream: ->(_a) { "athletes" }
+  self.locking_column = :lock_version   # needed for version-checked columns
+end
+```
+
+```erb
+<%# render it anywhere %>
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: AthleteGrid.new(user: current_user),
+                     rows: Athlete.order(:id),
+                     row_selection: "multiple", page_size: 25 } %>
+```
+
+Double-click a cell → edit → Enter commits → optimistic pending → the server
+reconciles or reverts → every other connected tab updates live. A complete
+runnable app is in [`gem/demo`](gem/demo); full docs in
+[`gem/stimulus_grid_rails/README.md`](gem/stimulus_grid_rails/README.md) and
+[`RAILS.md`](RAILS.md).
 
 ## Demos
 
