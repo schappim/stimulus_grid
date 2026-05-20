@@ -1,0 +1,24 @@
+{
+  "name": "stimulus_grid",
+  "version": "0.1.0",
+  "description": "Stimulus.js port of AG Grid — HTML-first data grid with sort, filter, selection, pagination, editing, virtual scrolling, and an AG-Grid-compatible public API.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "^3.2.2"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schappim/stimulus_grid.git"
+  },
+  "keywords": ["stimulus", "hotwire", "grid", "data-grid", "ag-grid", "table"],
+  "license": "MIT"
+}
