@@ -150,11 +150,12 @@ and updates its dataset; persist by listening to that event.
 
 ## Cell selection & copy
 
-Cells aren't browser-text-selectable; the grid has its own model (default
-`data-grid-cell-selection-value="true"`):
-- **plain click** → active cell only (no row selection)
-- **Cmd/Ctrl+click** → toggle row selection
-- **drag / shift+click** → rectangular cell range
+Cells aren't browser-text-selectable; the grid has its own Numbers/Sheets-style
+model (default `data-grid-cell-selection-value="true"`):
+- **plain click** → active cell only (outline; no row selection)
+- **shift+click / drag** → rectangular cell range (active cell stays outlined, not filled)
+- **Cmd/Ctrl+click** → toggle a row
+- **Cmd/Ctrl+Shift+click** → select a row range (from the last row anchor)
 
 Highlights are distinct: active cell = accent **outline box**; cell range = **blue**
 fill (`data-cell-range`); row selection = **green** fill (`data-selected`).
