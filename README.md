@@ -1,7 +1,7 @@
 # stimulus_grid
 
 [![CI](https://github.com/schappim/stimulus_grid/actions/workflows/ci.yml/badge.svg)](https://github.com/schappim/stimulus_grid/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/stimulus_grid?label=npm)](https://www.npmjs.com/package/stimulus_grid)
+[![npm version](https://img.shields.io/npm/v/@ninjaai/stimulus_grid?label=npm)](https://www.npmjs.com/package/@ninjaai/stimulus_grid)
 [![stimulus_grid_rails gem](https://img.shields.io/gem/v/stimulus_grid_rails?label=stimulus_grid_rails)](https://rubygems.org/gems/stimulus_grid_rails)
 
 An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hotwire)**.
@@ -34,8 +34,8 @@ Stimulus included; works over `file://`, a static server, anything. Vendor the
 files from `dist/`, or load them from a CDN:
 
 ```html
-<link rel="stylesheet" href="https://unpkg.com/stimulus_grid/dist/stimulus_grid.css" />
-<script src="https://unpkg.com/stimulus_grid/dist/stimulus_grid.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@ninjaai/stimulus_grid/dist/stimulus_grid.css" />
+<script src="https://unpkg.com/@ninjaai/stimulus_grid/dist/stimulus_grid.js"></script>
 <script> StimulusGrid.start() </script>
 ```
 
@@ -43,13 +43,13 @@ files from `dist/`, or load them from a CDN:
 dependency, so install it alongside:
 
 ```bash
-npm install stimulus_grid @hotwired/stimulus
+npm install @ninjaai/stimulus_grid @hotwired/stimulus
 ```
 
 ```js
 import { Application } from "@hotwired/stimulus"
-import StimulusGrid from "stimulus_grid"   // resolves to dist/stimulus_grid.esm.js
-import "stimulus_grid/style.css"
+import StimulusGrid from "@ninjaai/stimulus_grid"   // resolves to dist/stimulus_grid.esm.js
+import "@ninjaai/stimulus_grid/style.css"
 
 const app = Application.start()
 StimulusGrid.start(app)                     // registers grid, header-cell, pagination, …
