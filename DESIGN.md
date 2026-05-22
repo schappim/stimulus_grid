@@ -26,15 +26,15 @@ and gets the grid behaviour automatically.
 
 These features are deliberately deferred so v0.1 ships something coherent:
 
-- Server-side row model (infinite/paged remote loading) — v0.2
+- Server-side row model (infinite/paged remote loading) — v0.2 ✓ **shipped** (paged; infinite scroll still deferred)
 - Row grouping & aggregation — v0.3
 - Pivoting — out of scope until grouping lands
 - Master/detail (expandable detail rows) — v0.3
 - Tree data — v0.3
-- Built-in CSV/Excel/clipboard interop — v0.2 (CSV first)
+- Built-in CSV/Excel/clipboard interop — v0.2 ✓ **shipped** (CSV export + clipboard copy/paste)
 - Integrated charts — out of scope
 - Sparklines — out of scope
-- Enterprise-style filters (set filter / advanced filter builder UI) — v0.2
+- Enterprise-style filters (set filter / advanced filter builder UI) — set-filter **engine** shipped; distinct-values UI still deferred
 
 What we *do* commit to in v0.1: columns, rows, sort, filter (text/number/date), single + multi
 row selection, pagination, inline cell editing, column resize/reorder/pin/hide, virtual row
@@ -175,7 +175,7 @@ memoised on its input identity, so a sort-only change skips the filter pass.
   - `number` → input + condition select (=, !=, <, ≤, >, ≥, in-range)
   - `date` → date input + condition select (=, !=, <, >, between)
   - `boolean` → toggle
-  - `set` → checkbox list of distinct values (v0.2)
+  - `set` → checkbox list of distinct values (engine supports `set`/`in`; UI not yet built)
 - Action: `change` → `gridOutlet.setColumnFilter(colId, filterModel)`.
 
 ### 6.6 `pagination_controller`
@@ -443,11 +443,11 @@ focus/selection styling stable during scroll.
 
 ### v0.2
 
-- Set filter (distinct-values checkbox UI)
-- CSV export
-- Clipboard copy/paste (range select)
-- Server-side row model (`rowModelType: 'serverSide'` with `getRows({startRow, endRow, sortModel, filterModel})`)
-- Column groups (grouped header cells)
+- [ ] Set filter (distinct-values checkbox UI) — engine supports `set`/`in`; UI not yet built
+- [x] CSV export
+- [x] Clipboard copy/paste (range select)
+- [x] Server-side row model (paged; `getRows`-style infinite scroll still deferred)
+- [ ] Column groups (grouped header cells)
 
 ### v0.3
 
@@ -471,7 +471,7 @@ focus/selection styling stable during scroll.
 | `columnDef.sortable / filter / editable` | `data-header-cell-{sortable,filter,editable}-value`                   |
 | `columnDef.cellRenderer`                 | `data-header-cell-cell-renderer-value` → `<template id="...">`        |
 | `gridApi.setRowData()`                   | `el.gridApi.setRowData()`                                             |
-| `gridApi.exportDataAsCsv()`              | `el.gridApi.exportDataAsCsv()` (v0.2)                                 |
+| `gridApi.exportDataAsCsv()`              | `el.gridApi.exportDataAsCsv()`                                        |
 | `onCellValueChanged` prop                | `grid:cellValueChanged` CustomEvent                                   |
 | `rowSelection: 'multiple'`               | `data-grid-row-selection-value="multiple"`                            |
 | `pagination: true, paginationPageSize: 50` | `data-grid-pagination-value="true" data-grid-page-size-value="50"`  |
@@ -494,13 +494,12 @@ stimulus_grid/
 │   │   ├── row_controller.js
 │   │   ├── cell_controller.js
 │   │   ├── filter_controller.js
-│   │   ├── pagination_controller.js
-│   │   └── cell_editor_controller.js
+│   │   └── pagination_controller.js
 │   ├── lib/
 │   │   ├── model.js           ← display-list pipeline (filter/sort/page/window)
 │   │   ├── api.js             ← gridApi factory
-│   │   ├── csv.js             ← CSV export (v0.2)
 │   │   └── dom.js             ← small DOM helpers (clone template, attrs)
+│   │                            (CSV export lives in grid_controller.js)
 │   └── styles/
 │       └── grid.css           ← default theme via CSS custom properties
 ├── demo/
