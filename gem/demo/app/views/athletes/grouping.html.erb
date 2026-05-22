@@ -1,0 +1,84 @@
+<% content_for :title, "Row grouping — stimulus_grid_rails demo" %>
+
+<header class="page">
+  <h1>Row grouping &amp; aggregation</h1>
+  <p class="lede">
+    The same Olympic dataset, grouped client-side by one or more columns with
+    per-group aggregates rolled up under each column. Grouping is a base-grid
+    feature (no server round-trip) — declared with
+    <code>data-grid-row-group-cols-value</code> /
+    <code>data-grid-agg-funcs-value</code>, or driven through
+    <code>gridApi.setRowGroupColumns()</code>. Click a group row to expand or
+    collapse it.
+  </p>
+  <p><a href="/">← back to the live editable Athletes grid</a></p>
+</header>
+
+<div class="toolbar" style="margin-bottom:12px">
+  <button type="button" id="g-country" aria-pressed="true">Group: Country</button>
+  <button type="button" id="g-country-sport">Group: Country → Sport</button>
+  <button type="button" id="g-sport">Group: Sport</button>
+  <button type="button" id="g-none">No grouping</button>
+  <button type="button" id="expand">Expand all</button>
+  <button type="button" id="collapse">Collapse all</button>
+  <span class="stat" id="stat"></span>
+</div>
+
+<div id="grouping-grid"
+     data-controller="grid"
+     style="height:560px"
+     data-grid-row-data-value="<%= @athletes.as_json(only: %w[id athlete country sport age date gold silver bronze]).to_json %>"
+     data-grid-row-group-cols-value='["country"]'
+     data-grid-agg-funcs-value='{"gold":"sum","silver":"sum","bronze":"sum","age":"avg"}'
+     data-grid-group-default-expanded-value="-1">
+  <table>
+    <thead>
+      <tr>
+        <th data-controller="header-cell" data-header-cell-field-value="athlete"
+            data-header-cell-sortable-value="true" data-header-cell-width-value="220">Athlete</th>
+        <th data-controller="header-cell" data-header-cell-field-value="country"
+            data-header-cell-sortable-value="true" data-header-cell-width-value="150">Country</th>
+        <th data-controller="header-cell" data-header-cell-field-value="sport"
+            data-header-cell-sortable-value="true" data-header-cell-width-value="160">Sport</th>
+        <th data-controller="header-cell" data-header-cell-field-value="age"
+            data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+            data-header-cell-width-value="80">Age</th>
+        <th data-controller="header-cell" data-header-cell-field-value="gold"
+            data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+            data-header-cell-width-value="80">Gold</th>
+        <th data-controller="header-cell" data-header-cell-field-value="silver"
+            data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+            data-header-cell-width-value="80">Silver</th>
+        <th data-controller="header-cell" data-header-cell-field-value="bronze"
+            data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+            data-header-cell-width-value="80">Bronze</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  (function () {
+    const grid = document.getElementById("grouping-grid");
+    const stat = document.getElementById("stat");
+    const groupButtons = ["g-country", "g-country-sport", "g-sport", "g-none"];
+    const press = (id) => groupButtons.forEach((b) =>
+      document.getElementById(b).setAttribute("aria-pressed", String(b === id)));
+    const setGroups = (id, cols) => { grid.gridApi.setRowGroupColumns(cols); press(id); };
+
+    grid.addEventListener("grid:ready", (e) =>
+      stat.textContent = `${e.detail.api.getRowData().length} athletes`);
+    grid.addEventListener("grid:columnRowGroupChanged", (e) =>
+      stat.textContent = e.detail.rowGroupCols.length
+        ? `Grouped by ${e.detail.rowGroupCols.join(" → ")}`
+        : "No grouping");
+
+    document.getElementById("g-country").onclick       = () => setGroups("g-country", ["country"]);
+    document.getElementById("g-country-sport").onclick = () => setGroups("g-country-sport", ["country", "sport"]);
+    document.getElementById("g-sport").onclick         = () => setGroups("g-sport", ["sport"]);
+    document.getElementById("g-none").onclick          = () => setGroups("g-none", []);
+    document.getElementById("expand").onclick   = () => grid.gridApi.expandAll();
+    document.getElementById("collapse").onclick = () => grid.gridApi.collapseAll();
+  })();
+</script>

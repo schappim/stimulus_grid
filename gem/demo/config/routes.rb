@@ -9,7 +9,9 @@ Rails.application.routes.draw do
   # /admin/grids to show the mount path is configurable).
   mount StimulusGridRails::Engine => StimulusGridRails.mount_path, as: :stimulus_grid_rails
 
-  resources :athletes, only: %i[index]
+  resources :athletes, only: %i[index] do
+    get :grouping, on: :collection
+  end
   resources :big_rows, only: %i[index]
 
   root "athletes#index"
