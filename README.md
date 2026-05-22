@@ -1,5 +1,6 @@
 # stimulus_grid
 
+[![CI](https://github.com/schappim/stimulus_grid/actions/workflows/ci.yml/badge.svg)](https://github.com/schappim/stimulus_grid/actions/workflows/ci.yml)
 [![stimulus_grid_rails gem](https://img.shields.io/gem/v/stimulus_grid_rails?label=stimulus_grid_rails)](https://rubygems.org/gems/stimulus_grid_rails)
 
 An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hotwire)**.
@@ -308,6 +309,15 @@ renderers, 10k-row virtual scroll, everything-together, and live filtering.
 ```bash
 npm run build:lib   # builds dist/stimulus_grid.js (IIFE) + dist/stimulus_grid.esm.js (ESM) + .css
 ```
+
+## Tests
+
+```bash
+npm test                          # JS core: display-list pipeline (Vitest)
+cd gem/demo && bin/rails test     # Rails engine: models, controllers, Turbo Streams, audit
+```
+
+Both run on every push/PR via [GitHub Actions](.github/workflows/ci.yml).
 
 See [`DESIGN.md`](DESIGN.md) for architecture and the full API reference, and
 [`skills/`](skills) for LLM-oriented usage guides.
