@@ -362,10 +362,12 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid td.sg-group-cell { white-space: nowrap; }
 .sg-grid .sg-group-caret {
   display: inline-block;
-  width: 1em;
-  margin-right: 4px;
+  width: 1.1em;
+  margin-right: 6px;
   color: var(--sg-fg-muted);
-  font-size: 11px;
+  font-size: 16px;
+  line-height: 1;
+  vertical-align: -1px;
   user-select: none;
 }
 .sg-grid .sg-group-count { color: var(--sg-fg-muted); font-weight: 400; }
