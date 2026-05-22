@@ -27,7 +27,7 @@ and gets the grid behaviour automatically.
 These features are deliberately deferred so v0.1 ships something coherent:
 
 - Server-side row model (infinite/paged remote loading) — v0.2 ✓ **shipped** (paged; infinite scroll still deferred)
-- Row grouping & aggregation — v0.3
+- Row grouping & aggregation — v0.3 ✓ **shipped** (single + multi-column, per-group aggregates)
 - Pivoting — out of scope until grouping lands
 - Master/detail (expandable detail rows) — v0.3
 - Tree data — v0.3
@@ -451,9 +451,9 @@ focus/selection styling stable during scroll.
 
 ### v0.3
 
-- Row grouping + aggregation
-- Tree data
-- Master/detail
+- [x] Row grouping + aggregation (single + multi-column; per-group sum/avg/min/max/count/first/last)
+- [ ] Tree data
+- [ ] Master/detail
 
 ### Out of scope
 

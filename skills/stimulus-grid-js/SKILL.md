@@ -72,7 +72,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-row-multi-select-with-click-value` · `data-grid-suppress-row-click-selection-value` ·
 `data-grid-pagination-value` · `data-grid-page-size-value` · `data-grid-row-height-value` ·
 `data-grid-header-height-value` · `data-grid-virtual-value` · `data-grid-virtual-threshold-value` ·
-`data-grid-height-value` · `data-grid-get-row-id-value` · `data-grid-dom-layout-value` (`autoHeight`).
+`data-grid-height-value` · `data-grid-get-row-id-value` · `data-grid-dom-layout-value` (`autoHeight`) ·
+`data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -98,6 +99,8 @@ api.selectAll(); api.getSelectedRows(); api.getSelectedRowIds()
 api.paginationGoToPage(2); api.paginationGetRowCount()
 api.startEditingCell({ rowId:1, colId:"name" }); api.stopEditing()
 api.exportDataAsCsv({ onlySelected:false, fileName:"data.csv" })
+api.setRowGroupColumns(["country","sport"])  // group rows (multi-col = nested); [] ungroups
+api.setColumnAggFunc("gold","sum"); api.expandAll(); api.collapseAll()
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -110,7 +113,7 @@ the dataset (numbers stay numbers). To update one field, spread the row:
 (`{rowId,colId,value}`) · `grid:rowClicked` · `grid:cellValueChanged`
 (`{rowId,colId,oldValue,newValue}`) · `grid:selectionChanged` ·
 `grid:filterChanged` · `grid:sortChanged` · `grid:paginationChanged` ·
-`grid:columnMoved`/`Pinned`/`Resized`/`Visible`.
+`grid:columnMoved`/`Pinned`/`Resized`/`Visible` · `grid:columnRowGroupChanged` · `grid:groupToggled`.
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -189,6 +192,30 @@ load only the current page into `rowData`, and on `grid:paginationChanged` /
 reflects the full server total though only one page is in the DOM. (The
 `stimulus_grid_rails` gem wires this end-to-end.)
 
+## Row grouping & aggregation
+
+Group rows by one or more columns and roll up per-group aggregates. Declare it
+on the grid element, or drive it at runtime through the API:
+
+```html
+<div data-controller="grid"
+     data-grid-row-group-cols-value='["country","sport"]'
+     data-grid-agg-funcs-value='{"gold":"sum","age":"avg"}'
+     data-grid-group-default-expanded-value="-1">  <!-- -1 all · 0 none · N levels -->
+```
+
+```js
+api.setRowGroupColumns(["country"])   // [] ungroups; multiple fields nest
+api.setColumnAggFunc("gold", "sum")   // sum · avg · min · max · count · first · last
+api.expandAll(); api.collapseAll()    // or click a group row to toggle it
+```
+
+Each group row shows the value + leaf `(count)` in the grouped column and the
+aggregate under each aggregated column; numeric aggregates skip non-numbers.
+Grouping is client-side and composes after sort, so leaves stay sorted within
+their group. Group rows aren't selectable or editable; cell selection, CSV
+export and `getSelectedRows()` operate on leaf rows only.
+
 ## Gotchas
 
 - The grid manages its own `<tbody>` (re-renders rows, virtualizes). Don't mutate
@@ -197,4 +224,4 @@ reflects the full server total though only one page is in the DOM. (The
   (the grid coerces numeric-looking ids from `data-row-id` to numbers).
 - Set a height on the grid element or virtual scrolling has nothing to scroll.
 - Quick filter + per-column filters + sort all compose; the display pipeline is
-  filter → quick filter → sort → paginate → window.
+  filter → quick filter → sort → group → paginate → window.

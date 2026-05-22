@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -137,6 +137,7 @@ Enter / Tab / blur and emit `grid:cellValueChanged`.
 | `get-row-id` | row-object field used as identity (default `id`) |
 | `dom-layout` | `""` \| `"autoHeight"` |
 | `server-side` / `row-count` | server-side row model: `rowData` is one page; `row-count` is the server total (drives pagination) |
+| `row-group-cols` / `agg-funcs` / `group-default-expanded` | row grouping: fields to group by (JSON array), per-column aggregation `{field: fn}` (JSON), and default expand depth (`-1` all · `0` none · `N` levels) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -159,13 +160,15 @@ Available after the `grid:ready` event. Highlights:
 - **Pagination:** `paginationGoToPage/FirstPage/NextPage/PreviousPage/LastPage`, `paginationSetPageSize`, `paginationGetCurrentPage/TotalPages/RowCount/PageSize`
 - **Editing:** `startEditingCell({rowId, colId})`, `stopEditing(cancel?)`
 - **Export:** `getDataAsCsv(opts)`, `exportDataAsCsv(opts)`
+- **Row grouping:** `setRowGroupColumns([...])`, `addRowGroupColumn`, `removeRowGroupColumn`, `getRowGroupColumns`, `setColumnAggFunc(field, fn)` (`sum`/`avg`/`min`/`max`/`count`/`first`/`last`), `expandAll`, `collapseAll`
 
 ## Events (dispatched on the grid element)
 
 `grid:ready` · `grid:rowDataChanged` · `grid:cellClicked` · `grid:rowClicked` ·
 `grid:cellValueChanged` (`{rowId, colId, oldValue, newValue}`) ·
 `grid:selectionChanged` · `grid:filterChanged` · `grid:sortChanged` ·
-`grid:paginationChanged` · `grid:columnMoved/Pinned/Resized/Visible`.
+`grid:paginationChanged` · `grid:columnMoved/Pinned/Resized/Visible` ·
+`grid:columnRowGroupChanged` · `grid:groupToggled`.
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -307,9 +310,10 @@ runnable app is in [`gem/demo`](gem/demo); full docs in
 
 ## Demos
 
-`npm install && npx vite`, then open `http://localhost:5173/demo/` — 10 demos
+`npm install && npx vite`, then open `http://localhost:5173/demo/` — 11 demos
 covering basics, JSON data, filtering, selection, pagination, editing, custom
-renderers, 10k-row virtual scroll, everything-together, and live filtering.
+renderers, 10k-row virtual scroll, everything-together, live filtering, and
+row grouping with aggregation.
 
 ## Build
 
