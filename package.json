@@ -3,28 +3,15 @@
   "version": "0.1.0",
   "description": "HTML-first data grid for Stimulus.js (Hotwire) — sort, filter, global search, selection, pagination, inline editing, custom cell renderers/editors, virtual scrolling, and a full public grid API.",
   "type": "module",
-  "main": "src/index.js",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:lib": "FORMAT=iife vite build --config vite.lib.config.js && FORMAT=es vite build --config vite.lib.config.js",
-    "build:lib:iife": "FORMAT=iife vite build --config vite.lib.config.js",
-    "build:lib:esm": "FORMAT=es vite build --config vite.lib.config.js",
-    "build:lib:watch": "FORMAT=iife vite build --config vite.lib.config.js --watch",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@hotwired/stimulus": "^3.2.2"
-  },
-  "devDependencies": {
-    "vite": "^5.4.0",
-    "vitest": "^2.1.9"
-  },
+  "license": "MIT",
+  "author": "Marcus Schappi",
+  "homepage": "https://github.com/schappim/stimulus_grid#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schappim/stimulus_grid.git"
+  },
+  "bugs": {
+    "url": "https://github.com/schappim/stimulus_grid/issues"
   },
   "keywords": [
     "stimulus",
@@ -35,5 +22,43 @@
     "spreadsheet",
     "table"
   ],
-  "license": "MIT"
+  "main": "dist/stimulus_grid.esm.js",
+  "module": "dist/stimulus_grid.esm.js",
+  "unpkg": "dist/stimulus_grid.js",
+  "jsdelivr": "dist/stimulus_grid.js",
+  "exports": {
+    ".": {
+      "import": "./dist/stimulus_grid.esm.js",
+      "default": "./dist/stimulus_grid.esm.js"
+    },
+    "./style.css": "./dist/stimulus_grid.css",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:lib": "FORMAT=iife vite build --config vite.lib.config.js && FORMAT=es vite build --config vite.lib.config.js",
+    "build:lib:iife": "FORMAT=iife vite build --config vite.lib.config.js",
+    "build:lib:esm": "FORMAT=es vite build --config vite.lib.config.js",
+    "build:lib:watch": "FORMAT=iife vite build --config vite.lib.config.js --watch",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build:lib && npm test"
+  },
+  "peerDependencies": {
+    "@hotwired/stimulus": "^3.2.2"
+  },
+  "devDependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.9"
+  }
 }
