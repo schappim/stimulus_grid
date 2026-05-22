@@ -8,6 +8,9 @@ import {
   applyPagination,
   buildDisplayList,
   computeWindow,
+  aggregateValue,
+  computeAggregates,
+  groupRows,
 } from '../src/lib/model.js';
 
 /* ----------------------------------------------------------------------------
@@ -378,5 +381,130 @@ describe('computeWindow', () => {
   it('respects a custom buffer of zero', () => {
     // first = max(0, floor(300/30) - 0) = 10; last = min(100, 10+10+0) = 20
     expect(computeWindow(300, 300, 30, 100, 0)).toEqual({ first: 10, last: 20 });
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * Grouping + aggregation
+ * ------------------------------------------------------------------------- */
+
+describe('aggregateValue', () => {
+  const gold = { field: 'gold', type: 'number' };
+  const name = { field: 'name' };
+
+  it('counts leaves regardless of column', () => {
+    expect(aggregateValue('count', athletes, name)).toBe(4);
+    expect(aggregateValue('count', [], name)).toBe(0);
+  });
+
+  it('sums / averages / mins / maxes numeric columns', () => {
+    expect(aggregateValue('sum', athletes, gold)).toBe(14); // 3+0+10+1
+    expect(aggregateValue('avg', athletes, gold)).toBe(3.5);
+    expect(aggregateValue('min', athletes, gold)).toBe(0);
+    expect(aggregateValue('max', athletes, gold)).toBe(10);
+  });
+
+  it('skips non-numeric values in numeric aggregates', () => {
+    expect(aggregateValue('sum', athletes, name)).toBe(0); // no numeric names
+  });
+
+  it('returns null for numeric aggregates over no numbers', () => {
+    expect(aggregateValue('avg', [], gold)).toBeNull();
+    expect(aggregateValue('min', [], gold)).toBeNull();
+  });
+
+  it('takes first / last in display order', () => {
+    expect(aggregateValue('first', athletes, name)).toBe('Alice');
+    expect(aggregateValue('last', athletes, name)).toBe('Dana');
+  });
+});
+
+describe('computeAggregates', () => {
+  it('aggregates each field by its declared func', () => {
+    expect(computeAggregates(athletes, { gold: 'sum', name: 'count' }, cols)).toEqual({ gold: 14, name: 4 });
+  });
+
+  it('ignores fields with no matching column', () => {
+    expect(computeAggregates(athletes, { nope: 'sum' }, cols)).toEqual({});
+  });
+});
+
+describe('groupRows', () => {
+  const allExpanded = () => true;
+
+  it('groups by one column, key-sorted, each group followed by its leaves', () => {
+    const { displayList } = groupRows(athletes, [cols.country], cols, { gold: 'sum' }, allExpanded);
+    const shape = displayList.map((r) => (r.__sgGroup ? `G:${r.value}(${r.count})` : `L:${r.id}`));
+    expect(shape).toEqual(['G:Brazil(1)', 'L:4', 'G:Canada(1)', 'L:2', 'G:USA(2)', 'L:1', 'L:3']);
+  });
+
+  it('computes per-group aggregates over the group leaves', () => {
+    const { displayList } = groupRows(athletes, [cols.country], cols, { gold: 'sum' }, allExpanded);
+    const usa = displayList.find((r) => r.__sgGroup && r.value === 'USA');
+    expect(usa.aggregates).toEqual({ gold: 13 }); // Alice 3 + Carlos 10
+  });
+
+  it('omits leaves of a collapsed group but keeps the group row', () => {
+    const collapseUSA = (groupId) => groupId !== 'country=USA';
+    const { displayList } = groupRows(athletes, [cols.country], cols, {}, collapseUSA);
+    const shape = displayList.map((r) => (r.__sgGroup ? `G:${r.value}` : `L:${r.id}`));
+    expect(shape).toEqual(['G:Brazil', 'L:4', 'G:Canada', 'L:2', 'G:USA']); // no L:1 / L:3
+  });
+
+  it('supports multi-level grouping with stable nested group ids', () => {
+    const { displayList } = groupRows(athletes, [cols.country, cols.active], cols, {}, allExpanded);
+    const groups = displayList.filter((r) => r.__sgGroup);
+    expect(groups).toHaveLength(6); // 3 level-0 + 3 level-1
+    const usaActive = groups.find((g) => g.groupId === 'country=USA|active=true');
+    expect(usaActive.level).toBe(1);
+    expect(usaActive.count).toBe(2);
+  });
+});
+
+describe('buildDisplayList (grouped)', () => {
+  const columnDefs = [
+    { field: 'name' }, { field: 'country' },
+    { field: 'gold', type: 'number' }, { field: 'active', type: 'boolean' },
+  ];
+  const base = {
+    columnDefs, rowData: athletes, filterModel: {}, quickFilter: '', sortModel: [],
+    pagination: { enabled: false },
+  };
+
+  it('flattens groups into pageRows and reports grand totals', () => {
+    const out = buildDisplayList({ ...base, rowGroupCols: ['country'], aggModel: { gold: 'sum' } });
+    expect(out.grouped).toBe(true);
+    expect(out.leafCount).toBe(4);
+    expect(out.grandTotals).toEqual({ gold: 14 });
+    expect(out.pageRows[0].__sgGroup).toBe(true);
+    expect(out.pageRows[0].value).toBe('Brazil');
+  });
+
+  it('sorts leaves within each group by the sort model', () => {
+    const out = buildDisplayList({
+      ...base, rowGroupCols: ['country'], aggModel: {}, sortModel: [{ colId: 'gold', sort: 'desc' }],
+    });
+    const usaIdx = out.pageRows.findIndex((r) => r.__sgGroup && r.value === 'USA');
+    expect(out.pageRows[usaIdx + 1].id).toBe(3); // Carlos (10)
+    expect(out.pageRows[usaIdx + 2].id).toBe(1); // Alice (3)
+  });
+
+  it('honors isGroupExpanded to collapse groups', () => {
+    const out = buildDisplayList({
+      ...base, rowGroupCols: ['country'], aggModel: {},
+      isGroupExpanded: (gid) => gid !== 'country=USA',
+    });
+    expect(out.pageRows.some((r) => r.__sgGroup && r.value === 'USA')).toBe(true);
+    expect(out.pageRows.some((r) => !r.__sgGroup && (r.id === 1 || r.id === 3))).toBe(false);
+  });
+
+  it('drops groups left empty after filtering', () => {
+    const out = buildDisplayList({
+      ...base, rowGroupCols: ['country'], aggModel: {},
+      filterModel: { gold: { filterType: 'number', type: 'greaterThan', value: 0 } },
+    });
+    expect(out.leafCount).toBe(3); // Bob (gold 0) filtered out
+    expect(out.pageRows.some((r) => r.__sgGroup && r.value === 'Canada')).toBe(false);
+    expect(out.pageRows.some((r) => r.__sgGroup && r.value === 'USA')).toBe(true);
   });
 });
