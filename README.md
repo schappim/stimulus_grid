@@ -137,7 +137,7 @@ Enter / Tab / blur and emit `grid:cellValueChanged`.
 | `get-row-id` | row-object field used as identity (default `id`) |
 | `dom-layout` | `""` \| `"autoHeight"` |
 | `server-side` / `row-count` | server-side row model: `rowData` is one page; `row-count` is the server total (drives pagination) |
-| `row-group-cols` / `agg-funcs` / `group-default-expanded` | row grouping: fields to group by (JSON array), per-column aggregation `{field: fn}` (JSON), and default expand depth (`-1` all · `0` none · `N` levels) |
+| `row-group-cols` / `agg-funcs` / `group-default-expanded` / `group-reorder-columns` | row grouping: fields to group by (JSON array), per-column aggregation `{field: fn}` (JSON), default expand depth (`-1` all · `0` none · `N` levels), and whether to float grouped columns to the front while grouping (default `true`) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -199,6 +199,57 @@ grid.addEventListener("grid:cellValueChanged", (e) => console.log(e.detail))
 - **Editor** clones the template on edit. The control marked `[data-editor-input]`
   (or the first `input`/`select`/`textarea`) is seeded with the current value,
   focused, and read back on commit (Enter / Tab / blur).
+
+## Row grouping & aggregation
+
+Group rows by one or more columns and roll up per-group aggregates — turning the
+grid into a lightweight reporting view. Grouping runs **client-side** and composes
+with sort, filter, pagination and virtual scrolling.
+
+Declare it on the grid element:
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-row-group-cols-value='["country", "sport"]'
+     data-grid-agg-funcs-value='{"gold": "sum", "silver": "sum", "age": "avg"}'
+     data-grid-group-default-expanded-value="-1">
+  <!-- …columns… -->
+</div>
+```
+
+| Attribute | Value |
+|---|---|
+| `row-group-cols` | JSON array of fields to group by, in hierarchy order (`["country","sport"]` nests sport under country) |
+| `agg-funcs` | JSON map of `{ field: fn }`, where `fn` is `sum`, `avg`, `min`, `max`, `count`, `first`, or `last` |
+| `group-default-expanded` | `-1` all expanded (default) · `0` all collapsed · `N` expand the first N levels |
+| `group-reorder-columns` | float grouped columns to the front while grouping (default `true`; `false` keeps your column order) |
+
+…or drive it at runtime through the API:
+
+```js
+const api = el.gridApi
+api.setRowGroupColumns(["country"])   // [] to ungroup; multiple fields nest
+api.addRowGroupColumn("sport")        // append a level
+api.removeRowGroupColumn("sport")
+api.setColumnAggFunc("gold", "sum")   // sum · avg · min · max · count · first · last
+api.expandAll(); api.collapseAll()    // …or click a group row to toggle it
+```
+
+**How it renders.** Each group row shows the group value + leaf `(count)` in the
+grouped column, with each column's aggregate lined up underneath. Numeric
+aggregates skip non-numeric values; `count` counts leaves. Leaves stay sorted
+within their group by the active sort model, and grouped columns float to the
+front so the hierarchy reads left-to-right (opt out with `group-reorder-columns`).
+
+**Events:** `grid:columnRowGroupChanged` (`{ rowGroupCols }`) fires when the
+grouping changes; `grid:groupToggled` (`{ groupId, expanded }`) when a group is
+expanded or collapsed.
+
+Group rows are display-only — they aren't selectable or editable, and cell
+selection, CSV export and `getSelectedRows()` operate on leaf rows. Since grouping
+is client-side, under the server-side row model it groups the rows currently
+loaded. See **[demo 11](demo/11-row-grouping.html)** for a full example.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 

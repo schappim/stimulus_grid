@@ -73,7 +73,7 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-pagination-value` · `data-grid-page-size-value` · `data-grid-row-height-value` ·
 `data-grid-header-height-value` · `data-grid-virtual-value` · `data-grid-virtual-threshold-value` ·
 `data-grid-height-value` · `data-grid-get-row-id-value` · `data-grid-dom-layout-value` (`autoHeight`) ·
-`data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels).
+`data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels) · `data-grid-group-reorder-columns-value` (default `true`).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -213,8 +213,10 @@ api.expandAll(); api.collapseAll()    // or click a group row to toggle it
 Each group row shows the value + leaf `(count)` in the grouped column and the
 aggregate under each aggregated column; numeric aggregates skip non-numbers.
 Grouping is client-side and composes after sort, so leaves stay sorted within
-their group. Group rows aren't selectable or editable; cell selection, CSV
-export and `getSelectedRows()` operate on leaf rows only.
+their group. Grouped columns float to the front while grouping (set
+`data-grid-group-reorder-columns-value="false"` to keep your column order). Group
+rows aren't selectable or editable; cell selection, CSV export and
+`getSelectedRows()` operate on leaf rows only.
 
 ## Gotchas
 
