@@ -29,6 +29,7 @@ export default class GridController extends Controller {
     rowGroupCols:        { type: Array,  default: [] },      // fields to group rows by (in hierarchy order)
     aggFuncs:            { type: Object, default: {} },      // { field: 'sum'|'avg'|'min'|'max'|'count'|'first'|'last' }
     groupDefaultExpanded:{ type: Number, default: -1 },      // -1 all expanded · 0 none · N first-N levels
+    groupReorderColumns: { type: Boolean, default: true },   // float grouped columns to the front while grouping
   };
 
   initialize() {
@@ -685,7 +686,7 @@ export default class GridController extends Controller {
         isGroupExpanded: this._isGroupExpanded,
       });
     }
-    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection')) this._renderHeader();
+    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group')) this._renderHeader();
     this._renderBody();
     this._renderPagination();
   }
@@ -1737,7 +1738,16 @@ export default class GridController extends Controller {
   // ----- Helpers -----
 
   _visibleCols() {
-    return this.state.columnDefs.filter((c) => !c.hidden);
+    const visible = this.state.columnDefs.filter((c) => !c.hidden);
+    const groupFields = this.state.group?.cols || [];
+    if (!groupFields.length || this.groupReorderColumnsValue === false) return visible;
+    // While grouping, float the grouped columns to the front (in group order) so
+    // the hierarchy + group labels read left-to-right. Non-destructive: the
+    // underlying columnDefs order is untouched, so ungrouping restores the
+    // original layout.
+    const grouped = groupFields.map((f) => visible.find((c) => c.field === f)).filter(Boolean);
+    const groupedSet = new Set(grouped);
+    return [...grouped, ...visible.filter((c) => !groupedSet.has(c))];
   }
 
   _pinOffsets() {
