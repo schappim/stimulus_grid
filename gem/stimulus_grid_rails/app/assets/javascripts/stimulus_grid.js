@@ -76,7 +76,7 @@ function T(n, r, e) {
     return !1;
   });
 }
-function P(n, r, e) {
+function F(n, r, e) {
   if (n == null && r == null) return 0;
   if (n == null) return -1;
   if (r == null) return 1;
@@ -94,7 +94,7 @@ function Q(n, r, e) {
     for (const { colId: l, sort: o } of r) {
       const a = e[l];
       if (!a) continue;
-      const d = v(i, a), u = v(s, a), c = typeof a.comparator == "function" ? a.comparator(d, u, i, s) : P(d, u, a.type);
+      const d = v(i, a), u = v(s, a), c = typeof a.comparator == "function" ? a.comparator(d, u, i, s) : F(d, u, a.type);
       if (c !== 0) return o === "desc" ? -c : c;
     }
     return 0;
@@ -124,7 +124,7 @@ function Z(n, r, e) {
       return null;
   }
 }
-function F(n, r, e) {
+function P(n, r, e) {
   const t = {};
   for (const [i, s] of Object.entries(r || {})) {
     const l = e[i];
@@ -139,7 +139,7 @@ function J(n, r, e, t, i = () => !0) {
       const _ = v(m, h), w = _ == null ? "" : String(_);
       g.has(w) || g.set(w, { value: _, rows: [] }), g.get(w).rows.push(m);
     }
-    return Array.from(g.values()).sort((m, _) => P(m.value, _.value, h.type)).map(({ value: m, rows: _ }) => {
+    return Array.from(g.values()).sort((m, _) => F(m.value, _.value, h.type)).map(({ value: m, rows: _ }) => {
       const w = m == null ? "" : String(m), S = c ? `${c}|${h.field}=${w}` : `${h.field}=${w}`;
       return {
         __sgGroup: !0,
@@ -148,7 +148,7 @@ function J(n, r, e, t, i = () => !0) {
         value: m,
         groupId: S,
         count: _.length,
-        aggregates: F(_, t, e),
+        aggregates: P(_, t, e),
         leaves: _,
         children: u + 1 < r.length ? s(_, u + 1, S) : null
       };
@@ -182,7 +182,7 @@ function ee(n) {
       grouped: !0,
       tree: a,
       leafCount: t.length,
-      grandTotals: F(t, n.aggModel, r),
+      grandTotals: P(t, n.aggModel, r),
       filteredSorted: o,
       ...d
     };
@@ -881,7 +881,7 @@ class E extends R {
       rowGroupCols: this.state.group.cols,
       aggModel: this.state.group.aggs,
       isGroupExpanded: this._isGroupExpanded
-    })), (e.has("columns") || e.has("sort") || e.has("filter") || e.has("selection")) && this._renderHeader(), this._renderBody(), this._renderPagination();
+    })), (e.has("columns") || e.has("sort") || e.has("filter") || e.has("selection") || e.has("group")) && this._renderHeader(), this._renderBody(), this._renderPagination();
   }
   _renderHeader() {
     if (!this._thead) return;
@@ -1438,7 +1438,10 @@ class E extends R {
   // Done lazily via MutationObserver on tbody (cheap because tbody is small per page).
   // ----- Helpers -----
   _visibleCols() {
-    return this.state.columnDefs.filter((e) => !e.hidden);
+    const e = this.state.columnDefs.filter((l) => !l.hidden), t = this.state.group?.cols || [];
+    if (!t.length || this.groupReorderColumnsValue === !1) return e;
+    const i = t.map((l) => e.find((o) => o.field === l)).filter(Boolean), s = new Set(i);
+    return [...i, ...e.filter((l) => !s.has(l))];
   }
   _pinOffsets() {
     const e = this._visibleCols(), t = {};
@@ -1496,8 +1499,10 @@ y(E, "values", {
   // fields to group rows by (in hierarchy order)
   aggFuncs: { type: Object, default: {} },
   // { field: 'sum'|'avg'|'min'|'max'|'count'|'first'|'last' }
-  groupDefaultExpanded: { type: Number, default: -1 }
+  groupDefaultExpanded: { type: Number, default: -1 },
   // -1 all expanded · 0 none · N first-N levels
+  groupReorderColumns: { type: Boolean, default: !0 }
+  // float grouped columns to the front while grouping
 });
 function le(n, r) {
   const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox", "_isRowNumber"];
@@ -1652,11 +1657,11 @@ class G extends R {
   connect() {
   }
 }
-class O extends R {
+class B extends R {
   connect() {
   }
 }
-class B extends R {
+class O extends R {
   connect() {
   }
 }
@@ -1717,21 +1722,21 @@ class D extends R {
 y(D, "outlets", ["grid"]), y(D, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
 function ae(n) {
   const r = n ?? K.start();
-  return r.register("grid", E), r.register("header-cell", I), r.register("row", G), r.register("cell", O), r.register("filter", B), r.register("pagination", D), r;
+  return r.register("grid", E), r.register("header-cell", I), r.register("row", G), r.register("cell", B), r.register("filter", O), r.register("pagination", D), r;
 }
 const de = {
   start: ae,
   GridController: E,
   HeaderCellController: I,
   RowController: G,
-  CellController: O,
-  FilterController: B,
+  CellController: B,
+  FilterController: O,
   PaginationController: D
 };
 typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = de);
 export {
-  O as CellController,
-  B as FilterController,
+  B as CellController,
+  O as FilterController,
   E as GridController,
   I as HeaderCellController,
   D as PaginationController,
