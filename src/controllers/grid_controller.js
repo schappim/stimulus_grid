@@ -26,6 +26,9 @@ export default class GridController extends Controller {
     rowCount:       { type: Number, default: 0 },            // total rows on the server
     cellSelection:  { type: Boolean, default: true },        // click=cell; modifier/checkbox=row
     rowDrag:        { type: Boolean, default: false },        // drag selected rows by the gutter to reorder
+    rowGroupCols:        { type: Array,  default: [] },      // fields to group rows by (in hierarchy order)
+    aggFuncs:            { type: Object, default: {} },      // { field: 'sum'|'avg'|'min'|'max'|'count'|'first'|'last' }
+    groupDefaultExpanded:{ type: Number, default: -1 },      // -1 all expanded · 0 none · N first-N levels
   };
 
   initialize() {
@@ -42,6 +45,7 @@ export default class GridController extends Controller {
       pagination: { enabled: false, page: 0, pageSize: DEFAULT_PAGE_SIZE },
       scrollTop: 0,
       viewportHeight: 400,
+      group: { cols: [], aggs: {}, defaultExpanded: -1 },
     };
     this._displayList = { filteredSorted: [], pageRows: [], total: 0, totalPages: 1, page: 0 };
     this._renderPending = false;
@@ -51,6 +55,9 @@ export default class GridController extends Controller {
     // Stored separately from columnDefs so they survive a header re-registration
     // (which could happen on a render that briefly detaches the <th>).
     this._runtimeOverrides = Object.create(null);
+    // Explicit per-group expand/collapse overrides (groupId -> bool); groups not
+    // present here fall back to state.group.defaultExpanded by level.
+    this._groupExpanded = new Map();
   }
 
   connect() {
@@ -68,6 +75,11 @@ export default class GridController extends Controller {
     };
     this.state.serverSide = this.serverSideValue;
     this.state.serverRowCount = this.rowCountValue;
+    this.state.group = {
+      cols: Array.isArray(this.rowGroupColsValue) ? this.rowGroupColsValue.slice() : [],
+      aggs: { ...(this.aggFuncsValue || {}) },
+      defaultExpanded: this.groupDefaultExpandedValue,
+    };
 
     // Snapshot any user-supplied initial markup before we restructure.
     this._captureInitialMarkup();
@@ -391,7 +403,7 @@ export default class GridController extends Controller {
   }
 
   selectAll() {
-    this._displayList.filteredSorted.forEach((r) => this.state.selection.add(this._rowId(r)));
+    this._displayList.filteredSorted.forEach((r) => { if (!r.__sgGroup) this.state.selection.add(this._rowId(r)); });
     this.scheduleRender('selection');
     emit(this.element, 'grid:selectionChanged', {
       selectedRows: this.getSelectedRows(),
@@ -416,7 +428,7 @@ export default class GridController extends Controller {
     const toIdx = list.findIndex((r) => this._rowId(r) === toId);
     if (fromIdx < 0 || toIdx < 0) return;
     const [a, b] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
-    for (let i = a; i <= b; i++) this.state.selection.add(this._rowId(list[i]));
+    for (let i = a; i <= b; i++) { if (!list[i].__sgGroup) this.state.selection.add(this._rowId(list[i])); }
   }
 
   // ----- Pagination -----
@@ -623,7 +635,7 @@ export default class GridController extends Controller {
 
   getDataAsCsv({ columnSeparator = ',', onlySelected = false } = {}) {
     const cols = this._visibleCols().filter((c) => !c._isCheckbox);
-    const rows = onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted;
+    const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup);
     const escape = (s) => /[",\n\r]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
     const lines = [cols.map((c) => escape(c.headerName || c.field)).join(columnSeparator)];
     for (const r of rows) {
@@ -658,7 +670,7 @@ export default class GridController extends Controller {
     const dirty = this._dirty;
     this._dirty = new Set();
     // Anything affecting rows requires recomputing the display list.
-    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.size === 0) {
+    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.has('group') || dirty.size === 0) {
       this._displayList = buildDisplayList({
         rowData: this.state.rowData,
         columnDefs: this.state.columnDefs,
@@ -668,6 +680,9 @@ export default class GridController extends Controller {
         pagination: this.state.pagination,
         serverSide: this.state.serverSide,
         serverRowCount: this.state.serverRowCount,
+        rowGroupCols: this.state.group.cols,
+        aggModel: this.state.group.aggs,
+        isGroupExpanded: this._isGroupExpanded,
       });
     }
     if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection')) this._renderHeader();
@@ -871,6 +886,7 @@ export default class GridController extends Controller {
   }
 
   _buildRow(row, cols, existing, rowNum) {
+    if (row.__sgGroup) return this._buildGroupRow(row, cols, existing);
     const id = String(this._rowId(row));
     let tr = existing.get(id);
     if (!tr) tr = el('tr');
@@ -974,6 +990,119 @@ export default class GridController extends Controller {
     td.textContent = formatValue(row, col);
   }
 
+  // ----- Row grouping + aggregation -----
+
+  // A group is expanded if it has an explicit override; otherwise the
+  // default-by-level applies (-1 = all, 0 = none, N = first N levels).
+  _isGroupExpanded = (groupId, level) => {
+    if (this._groupExpanded.has(groupId)) return this._groupExpanded.get(groupId);
+    const d = this.state.group.defaultExpanded;
+    return d < 0 ? true : level < d;
+  };
+
+  toggleGroup(groupId, level = 0) {
+    this._groupExpanded.set(groupId, !this._isGroupExpanded(groupId, level));
+    this.scheduleRender('group');
+    emit(this.element, 'grid:groupToggled', { groupId, expanded: this._groupExpanded.get(groupId) });
+  }
+
+  expandAll() {
+    this._groupExpanded.clear();
+    this.state.group.defaultExpanded = -1;
+    this.scheduleRender('group');
+  }
+
+  collapseAll() {
+    this._groupExpanded.clear();
+    this.state.group.defaultExpanded = 0;
+    this.scheduleRender('group');
+  }
+
+  setRowGroupColumns(fields) {
+    this.state.group.cols = Array.isArray(fields) ? fields.slice() : [];
+    this._groupExpanded.clear();
+    this.state.selection.clear();
+    this.clearCellSelection();
+    this.state.pagination.page = 0;
+    this.scheduleRender('group');
+    emit(this.element, 'grid:columnRowGroupChanged', { rowGroupCols: this.state.group.cols.slice() });
+  }
+
+  addRowGroupColumn(field) {
+    if (!field || this.state.group.cols.includes(field)) return;
+    this.setRowGroupColumns([...this.state.group.cols, field]);
+  }
+
+  removeRowGroupColumn(field) {
+    this.setRowGroupColumns(this.state.group.cols.filter((f) => f !== field));
+  }
+
+  getRowGroupColumns() { return this.state.group.cols.slice(); }
+
+  setColumnAggFunc(field, func) {
+    if (func == null) delete this.state.group.aggs[field];
+    else this.state.group.aggs[field] = func;
+    this.scheduleRender('group');
+  }
+
+  _buildGroupRow(row, cols, existing) {
+    const id = `__g:${row.groupId}`;
+    let tr = existing.get(id);
+    if (!tr) tr = el('tr');
+    tr.dataset.rowId = id;
+    tr.dataset.group = 'true';
+    tr.dataset.groupLevel = String(row.level);
+    tr.className = 'sg-group-row';
+    this._renderGroupRow(tr, row, cols);
+    return tr;
+  }
+
+  _renderGroupRow(tr, row, cols) {
+    tr.innerHTML = '';
+    const pin = this._pinOffsets();
+    const expanded = this._isGroupExpanded(row.groupId, row.level);
+    // Group label goes in the grouped column's own cell when that column is
+    // visible (so the value sits under its header), else the first data column.
+    const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox);
+    const labelField = dataCols.some((c) => c.field === row.field) ? row.field : dataCols[0]?.field;
+    for (const col of cols) {
+      const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
+      if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
+      else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
+      if (col._isRowNumber || col._isCheckbox) {
+        td.classList.add(col._isRowNumber ? 'sg-gutter-cell' : 'sg-checkbox-cell');
+        tr.appendChild(td);
+        continue;
+      }
+      if (col.field === labelField) {
+        td.classList.add('sg-group-cell');
+        td.style.paddingLeft = `${8 + row.level * 18}px`;
+        td.append(
+          el('span', { class: 'sg-group-caret', 'aria-hidden': 'true' }, expanded ? '▾' : '▸'),
+          el('span', { class: 'sg-group-label' }, this._groupValueLabel(row)),
+          el('span', { class: 'sg-group-count' }, ` (${row.count})`),
+        );
+      } else if (row.aggregates && row.aggregates[col.field] != null) {
+        td.classList.add('sg-agg-cell');
+        td.textContent = this._formatAggregate(row.aggregates[col.field]);
+      }
+      tr.appendChild(td);
+    }
+  }
+
+  _groupValueLabel(row) {
+    const val = row.value;
+    if (val == null || val === '') return '(Blanks)';
+    const col = this._colByField(row.field);
+    return col ? formatValue({ [row.field]: val }, col) : String(val);
+  }
+
+  _formatAggregate(v) {
+    if (v == null) return '';
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+    return String(v);
+  }
+
   // Returns { node, control }: the element to mount and the focusable control
   // whose value is read on commit. A column may supply a custom editor via a
   // <template> (col.cellEditor); otherwise a type-appropriate input is built.
@@ -1059,6 +1188,11 @@ export default class GridController extends Controller {
   _onBodyClick(e) {
     const tr = e.target.closest('tr');
     if (!tr) return;
+    // Group header row → toggle expand/collapse (clicking anywhere on the row).
+    if (tr.dataset.group === 'true') {
+      this.toggleGroup(tr.dataset.rowId.replace(/^__g:/, ''), Number(tr.dataset.groupLevel) || 0);
+      return;
+    }
     // Clicks inside an active editor must not trigger selection. Selection
     // toggles render the row, which rebuilds the cell and destroys the live
     // <input>, so the user can't position their cursor in the editor.
@@ -1113,7 +1247,7 @@ export default class GridController extends Controller {
   _cellAt(target) {
     const td = target.closest?.('td');
     const tr = target.closest?.('tr');
-    if (!td || !tr || td.classList.contains('sg-checkbox-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
+    if (!td || !tr || tr.dataset.group === 'true' || td.classList.contains('sg-checkbox-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
     return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
   }
@@ -1470,9 +1604,11 @@ export default class GridController extends Controller {
     if (!rows.length || !cols.length) return;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
     const active = this._activeCell();
-    let ri = active ? rows.findIndex((r) => this._rowId(r) === active.rowId) : 0;
+    const firstLeaf = () => rows.findIndex((r) => !r.__sgGroup);
+    let ri = active ? rows.findIndex((r) => this._rowId(r) === active.rowId) : firstLeaf();
     let ci = active ? cols.findIndex((c) => c.field === active.colId) : 0;
-    if (ri < 0) ri = 0;
+    if (ri < 0) ri = firstLeaf();
+    if (ri < 0) return;                  // grouped view with everything collapsed
     if (ci < 0) ci = 0;
     if (extend && this.state.cellSel.ranges[this.state.cellSel.activeIdx]) {
       const rg = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
@@ -1480,7 +1616,16 @@ export default class GridController extends Controller {
       const fc = clamp(cols.findIndex((c) => c.field === rg.focus.colId) + dc, 0, cols.length - 1);
       this._extendActiveRange({ rowId: this._rowId(rows[fr]), colId: cols[fc].field });
     } else {
-      const nr = clamp(ri + dr, 0, rows.length - 1);
+      let nr = clamp(ri + dr, 0, rows.length - 1);
+      // Step over group header rows when moving vertically.
+      if (dr !== 0) {
+        while (rows[nr] && rows[nr].__sgGroup) {
+          const next = nr + dr;
+          if (next < 0 || next >= rows.length) break;
+          nr = next;
+        }
+        if (!rows[nr] || rows[nr].__sgGroup) return;
+      }
       const nc = clamp(ci + dc, 0, cols.length - 1);
       this._setSingleCellSel({ rowId: this._rowId(rows[nr]), colId: cols[nc].field });
     }
@@ -1512,7 +1657,7 @@ export default class GridController extends Controller {
       if (!rect) continue;
       for (let r = rect.r0; r <= rect.r1; r++) {
         const row = rect.rows[r];
-        if (!row) continue;
+        if (!row || row.__sgGroup) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
           if (!col || !col.editable || col._isCheckbox || col._isRowNumber) continue;

@@ -150,6 +150,85 @@ export function applyPagination(rows, pagination) {
   return { rows, total, totalPages, page, pageRows };
 }
 
+/* -------- Grouping + aggregation -------- */
+
+// Aggregate a column over a set of leaf rows. `count` ignores the column;
+// `sum`/`avg`/`min`/`max` coerce to Number and skip non-numerics; `first`/`last`
+// take the raw value in display order. Unknown funcs return null.
+export function aggregateValue(func, leaves, col) {
+  if (func === 'count') return leaves.length;
+  const raw = leaves.map((r) => getValue(r, col));
+  if (func === 'first') return raw.length ? raw[0] : null;
+  if (func === 'last') return raw.length ? raw[raw.length - 1] : null;
+  const nums = raw.map(Number).filter((n) => !Number.isNaN(n));
+  switch (func) {
+    case 'sum': return nums.reduce((a, b) => a + b, 0);
+    case 'avg': return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+    case 'min': return nums.length ? Math.min(...nums) : null;
+    case 'max': return nums.length ? Math.max(...nums) : null;
+    default: return null;
+  }
+}
+
+// { field: aggFunc } → { field: value } over the given leaf rows.
+export function computeAggregates(leaves, aggModel, columnsByField) {
+  const out = {};
+  for (const [field, func] of Object.entries(aggModel || {})) {
+    const col = columnsByField[field];
+    if (col) out[field] = aggregateValue(func, leaves, col);
+  }
+  return out;
+}
+
+// Group leaf rows by `groupCols` (column objects, in hierarchy order) into a
+// tree, then flatten to a display list of group rows + the leaf rows of any
+// expanded group. `isExpanded(groupId, level)` decides expansion (default: all
+// expanded). Group rows are tagged `__sgGroup: true` and carry `level`, `value`,
+// `groupId` (a stable path like `country=USA|sport=Swimming`), deep `count`, and
+// `aggregates`. Leaf rows pass through unchanged.
+export function groupRows(rows, groupCols, columnsByField, aggModel, isExpanded = () => true) {
+  const build = (leaves, level, parentId) => {
+    const col = groupCols[level];
+    const buckets = new Map();
+    for (const row of leaves) {
+      const value = getValue(row, col);
+      const k = value == null ? '' : String(value);
+      if (!buckets.has(k)) buckets.set(k, { value, rows: [] });
+      buckets.get(k).rows.push(row);
+    }
+    return Array.from(buckets.values())
+      .sort((a, b) => defaultComparator(a.value, b.value, col.type))
+      .map(({ value, rows: groupLeaves }) => {
+        const keyStr = value == null ? '' : String(value);
+        const groupId = parentId ? `${parentId}|${col.field}=${keyStr}` : `${col.field}=${keyStr}`;
+        return {
+          __sgGroup: true,
+          level,
+          field: col.field,
+          value,
+          groupId,
+          count: groupLeaves.length,
+          aggregates: computeAggregates(groupLeaves, aggModel, columnsByField),
+          leaves: groupLeaves,
+          children: level + 1 < groupCols.length ? build(groupLeaves, level + 1, groupId) : null,
+        };
+      });
+  };
+
+  const tree = build(rows, 0, '');
+  const out = [];
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      out.push(node);
+      if (!isExpanded(node.groupId, node.level)) continue;
+      if (node.children) walk(node.children);
+      else for (const leaf of node.leaves) out.push(leaf);
+    }
+  };
+  walk(tree);
+  return { displayList: out, tree };
+}
+
 /* -------- Top-level pipeline -------- */
 
 export function buildDisplayList(state) {
@@ -171,6 +250,27 @@ export function buildDisplayList(state) {
   rows = applyFilters(rows, state.filterModel, columnsByField);
   rows = applyQuickFilter(rows, state.quickFilter, visibleCols);
   rows = applySort(rows, state.sortModel, columnsByField);
+
+  // Row grouping: replace the flat leaf list with a flattened tree of group
+  // rows + the leaf rows of expanded groups. Aggregates are computed over each
+  // group's leaves; pagination/windowing then run on the flattened list.
+  const groupFields = (state.rowGroupCols || []).filter((f) => columnsByField[f]);
+  if (groupFields.length) {
+    const groupCols = groupFields.map((f) => columnsByField[f]);
+    const { displayList, tree } = groupRows(
+      rows, groupCols, columnsByField, state.aggModel, state.isGroupExpanded,
+    );
+    const paged = applyPagination(displayList, state.pagination);
+    return {
+      grouped: true,
+      tree,
+      leafCount: rows.length,
+      grandTotals: computeAggregates(rows, state.aggModel, columnsByField),
+      filteredSorted: displayList,
+      ...paged,
+    };
+  }
+
   const paged = applyPagination(rows, state.pagination);
   return { filteredSorted: rows, ...paged };
 }

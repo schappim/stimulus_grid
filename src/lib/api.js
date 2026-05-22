@@ -65,6 +65,16 @@ export function createGridApi(grid) {
     startEditingCell({ rowId, colId }) { grid.startEditingCell(rowId, colId); },
     stopEditing(cancel = false) { grid.stopEditing(cancel); },
 
+    // ---- Row grouping + aggregation ----
+    setRowGroupColumns(fields) { grid.setRowGroupColumns(fields); },
+    addRowGroupColumn(field) { grid.addRowGroupColumn(field); },
+    removeRowGroupColumn(field) { grid.removeRowGroupColumn(field); },
+    getRowGroupColumns() { return grid.getRowGroupColumns(); },
+    setColumnAggFunc(field, func) { grid.setColumnAggFunc(field, func); },
+    expandAll() { grid.expandAll(); },
+    collapseAll() { grid.collapseAll(); },
+    toggleGroup(groupId, level) { grid.toggleGroup(groupId, level); },
+
     // ---- Export ----
     getDataAsCsv(opts = {}) { return grid.getDataAsCsv(opts); },
     exportDataAsCsv(opts = {}) { return grid.exportDataAsCsv(opts); },

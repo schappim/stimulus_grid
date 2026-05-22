@@ -350,3 +350,26 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid tbody tr[data-selected="true"] td[data-pinned][data-cell-range="true"] {
   background: var(--sg-bg-selected);
 }
+
+/* ----- Row grouping + aggregation ----- */
+.sg-grid tr.sg-group-row {
+  background: var(--sg-bg-alt);
+  cursor: pointer;
+  font-weight: 500;
+}
+.sg-grid tr.sg-group-row:hover { background: var(--sg-bg-hover); }
+.sg-grid tr.sg-group-row td { border-bottom: 1px solid var(--sg-border-strong); }
+.sg-grid td.sg-group-cell { white-space: nowrap; }
+.sg-grid .sg-group-caret {
+  display: inline-block;
+  width: 1em;
+  margin-right: 4px;
+  color: var(--sg-fg-muted);
+  font-size: 11px;
+  user-select: none;
+}
+.sg-grid .sg-group-count { color: var(--sg-fg-muted); font-weight: 400; }
+.sg-grid td.sg-agg-cell { font-variant-numeric: tabular-nums; font-weight: 500; }
+/* Pinned cells in a group row keep the group-row backgrounds. */
+.sg-grid tr.sg-group-row td[data-pinned] { background: var(--sg-bg-alt); }
+.sg-grid tr.sg-group-row:hover td[data-pinned] { background: var(--sg-bg-hover); }
