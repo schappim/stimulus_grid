@@ -122,6 +122,12 @@ Enter / Tab / blur and emit `grid:cellValueChanged`.
 
 ![A grid cell being edited inline with a focused text input](docs/images/grid-editing.png)
 
+**Row grouping & aggregation** — group by one or more columns; group rows roll up
+per-column aggregates (sum / avg / min / max / count) with the grouped column
+floated to the front. Collapsed here to country subtotals:
+
+![stimulus_grid grouped by country and collapsed to subtotals — each country row shows athlete count, total medals, and average age](docs/images/grid-grouping-collapsed.png)
+
 ## Grid attributes (`data-grid-*-value`)
 
 | Attribute | Meaning |
@@ -205,6 +211,8 @@ grid.addEventListener("grid:cellValueChanged", (e) => console.log(e.detail))
 Group rows by one or more columns and roll up per-group aggregates — turning the
 grid into a lightweight reporting view. Grouping runs **client-side** and composes
 with sort, filter, pagination and virtual scrolling.
+
+![stimulus_grid grouped by country — each group row shows the value, leaf count, and per-column aggregates (medal sums, average age), with the grouped column floated to the front and a disclosure caret to expand/collapse](docs/images/grid-grouping.png)
 
 Declare it on the grid element:
 
