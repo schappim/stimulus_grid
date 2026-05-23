@@ -6,6 +6,12 @@ import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
 const DEFAULT_ROW_HEIGHT = 32;
 const DEFAULT_PAGE_SIZE = 100;
 
+// FontAwesome 7 glyphs used for the disclosure caret on group rows and the
+// column filter button. fill="currentColor" so the colour is themable via
+// CSS (default: var(--sg-icon-accent) set on .sg-grid).
+const CHEVRON_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>';
+const FILTER_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
+
 export default class GridController extends Controller {
   static values = {
     rowData:        { type: Array, default: [] },
@@ -848,6 +854,7 @@ export default class GridController extends Controller {
           'data-action': 'click->header-cell#openFilter',
           title: 'Filter',
         });
+        filterIcon.innerHTML = FILTER_SVG;
         content.appendChild(filterIcon);
       }
     } else if (filterIcon) {
@@ -1110,8 +1117,14 @@ export default class GridController extends Controller {
       if (isLabelCell) {
         td.classList.add('sg-group-cell');
         td.style.paddingLeft = `${8 + row.level * 18}px`;
+        const caret = el('span', {
+          class: 'sg-group-caret',
+          'data-expanded': expanded ? 'true' : 'false',
+          'aria-hidden': 'true',
+        });
+        caret.innerHTML = CHEVRON_SVG;   // rotated via CSS when expanded
         td.append(
-          el('span', { class: 'sg-group-caret', 'aria-hidden': 'true' }, expanded ? '▾' : '▸'),
+          caret,
           el('span', { class: 'sg-group-label' }, this._groupValueLabel(row)),
           el('span', { class: 'sg-group-count' }, ` (${row.count})`),
         );

@@ -14,6 +14,7 @@
   --sg-border: #e5e7eb;
   --sg-border-strong: #d1d5db;
   --sg-accent: #2563eb;
+  --sg-icon-accent: rgb(70, 107, 173);     /* chevron + filter SVG colour */
   --sg-row-height: 32px;
   --sg-header-height: 36px;
   --sg-cell-pad-x: 10px;
@@ -95,20 +96,21 @@
   vertical-align: super;
 }
 .sg-grid .sg-filter-icon {
-  font-size: 12px;
-  color: var(--sg-fg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  color: var(--sg-icon-accent);
   cursor: pointer;
-  opacity: 0.45;
-  padding: 2px 4px;
+  opacity: 0.55;
   border-radius: 2px;
 }
+.sg-grid .sg-filter-icon svg { width: 100%; height: 100%; display: block; }
 .sg-grid thead th[data-filterable="true"]:hover .sg-filter-icon { opacity: 1; }
-.sg-grid .sg-filter-icon:hover { background: rgba(0,0,0,0.06); }
-.sg-grid thead th[data-filter-active="true"] .sg-filter-icon {
-  opacity: 1;
-  color: var(--sg-accent);
-}
-.sg-grid .sg-filter-icon::before { content: "≡"; }
+.sg-grid .sg-filter-icon:hover { background: rgba(70, 107, 173, 0.12); }
+.sg-grid thead th[data-filter-active="true"] .sg-filter-icon { opacity: 1; }
 
 .sg-grid .sg-resize-handle {
   position: absolute;
@@ -362,14 +364,15 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid td.sg-group-cell { white-space: nowrap; }
 .sg-grid .sg-group-caret {
   display: inline-block;
-  width: 1.1em;
-  margin-right: 6px;
-  color: var(--sg-fg-muted);
-  font-size: 16px;
-  line-height: 1;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  color: var(--sg-icon-accent);
   vertical-align: -1px;
-  user-select: none;
+  transition: transform 0.12s ease;
 }
+.sg-grid .sg-group-caret svg { width: 100%; height: 100%; display: block; }
+.sg-grid .sg-group-caret[data-expanded="true"] { transform: rotate(90deg); }
 .sg-grid .sg-group-count { color: var(--sg-fg-muted); font-weight: 400; }
 .sg-grid td.sg-agg-cell { font-variant-numeric: tabular-nums; font-weight: 500; }
 /* Pinned cells in a group row keep the group-row backgrounds. */
