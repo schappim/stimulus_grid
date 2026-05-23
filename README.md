@@ -122,11 +122,11 @@ Enter / Tab / blur and emit `grid:cellValueChanged`.
 
 ![A grid cell being edited inline with a focused text input](docs/images/grid-editing.png)
 
-**Row grouping & aggregation** — group by one or more columns; group rows roll up
-per-column aggregates (sum / avg / min / max / count) with the grouped column
-floated to the front. Collapsed here to country subtotals:
+**Row grouping & aggregation** — group by one or more columns; each group row
+rolls up per-column aggregates (sum / avg / min / max / count) in an auto **Group**
+column on the left. Collapsed here to country subtotals:
 
-![stimulus_grid grouped by country and collapsed to subtotals — each country row shows athlete count, total medals, and average age](docs/images/grid-grouping-collapsed.png)
+![stimulus_grid grouped by country and collapsed to subtotals — the Group column on the left lists each country with its athlete count, and total medals + average age are aggregated under their headers](docs/images/grid-grouping-collapsed.png)
 
 ## Grid attributes (`data-grid-*-value`)
 
@@ -212,7 +212,7 @@ Group rows by one or more columns and roll up per-group aggregates — turning t
 grid into a lightweight reporting view. Grouping runs **client-side** and composes
 with sort, filter, pagination and virtual scrolling.
 
-![stimulus_grid grouped by country — each group row shows the value, leaf count, and per-column aggregates (medal sums, average age), with the grouped column floated to the front and a disclosure caret to expand/collapse](docs/images/grid-grouping.png)
+![stimulus_grid grouped by country then sport — the auto Group column on the left holds the indented hierarchy with leaf counts, and per-column aggregates (medal sums, average age) line up under their headers; the grouped columns themselves are hidden from the main display](docs/images/grid-grouping.png)
 
 Declare it on the grid element:
 
@@ -231,7 +231,8 @@ Declare it on the grid element:
 | `row-group-cols` | JSON array of fields to group by, in hierarchy order (`["country","sport"]` nests sport under country) |
 | `agg-funcs` | JSON map of `{ field: fn }`, where `fn` is `sum`, `avg`, `min`, `max`, `count`, `first`, or `last` |
 | `group-default-expanded` | `-1` all expanded (default) · `0` all collapsed · `N` expand the first N levels |
-| `group-reorder-columns` | float grouped columns to the front while grouping (default `true`; `false` keeps your column order) |
+| `group-display-type` | `'singleColumn'` (default) — auto **Group** column on the left, grouped columns hidden — or `'inline'` to put the label in the grouped column's own cell and keep it visible |
+| `group-reorder-columns` | (`'inline'` mode only) float grouped columns to the front while grouping (default `true`; `false` keeps your column order) |
 
 …or drive it at runtime through the API:
 
@@ -244,11 +245,14 @@ api.setColumnAggFunc("gold", "sum")   // sum · avg · min · max · count · fi
 api.expandAll(); api.collapseAll()    // …or click a group row to toggle it
 ```
 
-**How it renders.** Each group row shows the group value + leaf `(count)` in the
-grouped column, with each column's aggregate lined up underneath. Numeric
-aggregates skip non-numeric values; `count` counts leaves. Leaves stay sorted
-within their group by the active sort model, and grouped columns float to the
-front so the hierarchy reads left-to-right (opt out with `group-reorder-columns`).
+**How it renders.** By default the grid inserts an **auto Group column** on the
+left whose cells hold the indented value + leaf `(count)` for each group row;
+the columns being grouped are hidden from the main display (their values live in
+the Group column). Aggregates line up under every other column on the group row.
+Numeric aggregates skip non-numeric values; `count` counts leaves. Leaves stay
+sorted within their group by the active sort model. Switch to
+`data-grid-group-display-type-value="inline"` to put the label in the grouped
+column's own cell instead and keep that column visible.
 
 **Events:** `grid:columnRowGroupChanged` (`{ rowGroupCols }`) fires when the
 grouping changes; `grid:groupToggled` (`{ groupId, expanded }`) when a group is
