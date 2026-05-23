@@ -833,7 +833,8 @@ export default class GridController extends Controller {
     let sortIcon = content.querySelector('.sg-sort-icon');
     if (col.sortable) {
       if (!sortIcon) {
-        sortIcon = el('span', { class: 'sg-sort-icon' });
+        sortIcon = el('span', { class: 'sg-sort-icon', 'aria-hidden': 'true' });
+        sortIcon.innerHTML = CHEVRON_SVG;       // CSS rotates -90° (asc) / +90° (desc)
         content.appendChild(sortIcon);
       }
       if (sortEntry && this.state.sortModel.length > 1) {
