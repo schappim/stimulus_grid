@@ -29,7 +29,8 @@ export default class GridController extends Controller {
     rowGroupCols:        { type: Array,  default: [] },      // fields to group rows by (in hierarchy order)
     aggFuncs:            { type: Object, default: {} },      // { field: 'sum'|'avg'|'min'|'max'|'count'|'first'|'last' }
     groupDefaultExpanded:{ type: Number, default: -1 },      // -1 all expanded · 0 none · N first-N levels
-    groupReorderColumns: { type: Boolean, default: true },   // float grouped columns to the front while grouping
+    groupReorderColumns: { type: Boolean, default: true },   // (inline mode) float grouped columns to the front while grouping
+    groupDisplayType:    { type: String,  default: 'singleColumn' }, // 'singleColumn' (auto Group col on left) | 'inline' (label in grouped col)
   };
 
   initialize() {
@@ -80,6 +81,7 @@ export default class GridController extends Controller {
       cols: Array.isArray(this.rowGroupColsValue) ? this.rowGroupColsValue.slice() : [],
       aggs: { ...(this.aggFuncsValue || {}) },
       defaultExpanded: this.groupDefaultExpandedValue,
+      displayType: this.groupDisplayTypeValue || 'singleColumn',
     };
 
     // Snapshot any user-supplied initial markup before we restructure.
@@ -309,6 +311,14 @@ export default class GridController extends Controller {
   }
 
   unregisterColumn(field) {
+    // header_cell#disconnect fires not only on real removal but also on
+    // transient moves — `replaceChildren` reorders generate childList mutations
+    // whose removedNodes include moved children, and Stimulus reads that as a
+    // disconnect. If the <th> is still in our thead after the mutation, treat
+    // this as a move and keep the column registered (otherwise columnDefs would
+    // shuffle to the new DOM order on every reorder, breaking grouping which
+    // relies on stable registration order).
+    if (this._thead?.querySelector(`th[data-header-cell-field-value="${cssEscape(field)}"]`)) return;
     this.state.columnDefs = this.state.columnDefs.filter((c) => c.field !== field);
     this.scheduleRender('columns');
   }
@@ -635,7 +645,9 @@ export default class GridController extends Controller {
   // ----- Export -----
 
   getDataAsCsv({ columnSeparator = ',', onlySelected = false } = {}) {
-    const cols = this._visibleCols().filter((c) => !c._isCheckbox);
+    // Use the underlying columnDefs so CSV always exports the real data columns,
+    // including any grouped columns hidden by the auto group column.
+    const cols = this.state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
     const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup);
     const escape = (s) => /[",\n\r]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
     const lines = [cols.map((c) => escape(c.headerName || c.field)).join(columnSeparator)];
@@ -704,22 +716,26 @@ export default class GridController extends Controller {
       if (colId) existingThs.set(colId, th);
     });
 
-    // Only mutate DOM structure when the visible column ORDER or SET differs
-    // from what's already in the row. Avoids detaching + reattaching <th>
-    // controllers on every render (which would trigger Stimulus disconnect →
-    // header_cell.disconnect → unregisterColumn → scheduleRender → loop).
+    // Always keep every registered column's <th> in the row. Hidden cols (e.g.
+    // grouped columns under singleColumn display) get `display: none` and are
+    // appended at the end so their header-cell controllers stay connected —
+    // a removed <th> would disconnect → unregisterColumn → drop from columnDefs
+    // (then buildDisplayList's columnsByField wouldn't see the field, and group
+    // resolution would silently degrade to a shorter hierarchy).
+    const visibleFieldSet = new Set(visible.map((c) => c.field));
+    const hiddenRegistered = this.state.columnDefs.filter((c) => !visibleFieldSet.has(c.field));
+    const orderedCols = [...visible, ...hiddenRegistered];
+
     const currentOrder = Array.from(row.children)
       .map((th) => th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field'))
       .filter(Boolean);
-    const desiredOrder = visible.map((c) => c.field);
+    const desiredOrder = orderedCols.map((c) => c.field);
     const orderMatches = currentOrder.length === desiredOrder.length
       && currentOrder.every((f, i) => f === desiredOrder[i]);
 
     if (!orderMatches) {
-      // Detach without using innerHTML='' so the elements aren't fully removed
-      // mid-tick (which Stimulus could observe as a disconnect/connect cycle).
       const ths = [];
-      for (const col of visible) {
+      for (const col of orderedCols) {
         let th = existingThs.get(col.field);
         if (!th) {
           th = el('th', {
@@ -733,6 +749,12 @@ export default class GridController extends Controller {
       }
       row.replaceChildren(...ths);
     }
+    // Apply visibility every render (covers visibility-only changes where the
+    // order didn't shift).
+    Array.from(row.children).forEach((th) => {
+      const f = th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field');
+      if (f != null) th.style.display = visibleFieldSet.has(f) ? '' : 'none';
+    });
 
     // Always refresh the colgroup so col widths reflect current state.
     let colgroup = this._table.querySelector('colgroup');
@@ -948,6 +970,15 @@ export default class GridController extends Controller {
         tr.appendChild(td);
         continue;
       }
+      if (col._isGroupCol) {
+        // Auto group column: leaf rows get an empty cell (the label lives on
+        // the group row above). Not selectable / not editable.
+        td.classList.add('sg-group-leaf-cell');
+        td.removeAttribute('data-cell-active');
+        td.removeAttribute('data-cell-range');
+        tr.appendChild(td);
+        continue;
+      }
       const editing = this.state.editing &&
         this.state.editing.rowId === this._rowId(row) &&
         this.state.editing.colId === col.field;
@@ -1062,10 +1093,10 @@ export default class GridController extends Controller {
     tr.innerHTML = '';
     const pin = this._pinOffsets();
     const expanded = this._isGroupExpanded(row.groupId, row.level);
-    // Group label goes in the grouped column's own cell when that column is
-    // visible (so the value sits under its header), else the first data column.
-    const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox);
-    const labelField = dataCols.some((c) => c.field === row.field) ? row.field : dataCols[0]?.field;
+    const single = (this.state.group.displayType || 'singleColumn') === 'singleColumn';
+    // Inline mode: label goes in the grouped column's own cell (or first data col).
+    const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox && !c._isGroupCol);
+    const inlineLabelField = dataCols.some((c) => c.field === row.field) ? row.field : dataCols[0]?.field;
     for (const col of cols) {
       const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
@@ -1075,7 +1106,8 @@ export default class GridController extends Controller {
         tr.appendChild(td);
         continue;
       }
-      if (col.field === labelField) {
+      const isLabelCell = single ? col._isGroupCol : col.field === inlineLabelField;
+      if (isLabelCell) {
         td.classList.add('sg-group-cell');
         td.style.paddingLeft = `${8 + row.level * 18}px`;
         td.append(
@@ -1083,7 +1115,7 @@ export default class GridController extends Controller {
           el('span', { class: 'sg-group-label' }, this._groupValueLabel(row)),
           el('span', { class: 'sg-group-count' }, ` (${row.count})`),
         );
-      } else if (row.aggregates && row.aggregates[col.field] != null) {
+      } else if (!col._isGroupCol && row.aggregates && row.aggregates[col.field] != null) {
         td.classList.add('sg-agg-cell');
         td.textContent = this._formatAggregate(row.aggregates[col.field]);
       }
@@ -1248,7 +1280,7 @@ export default class GridController extends Controller {
   _cellAt(target) {
     const td = target.closest?.('td');
     const tr = target.closest?.('tr');
-    if (!td || !tr || tr.dataset.group === 'true' || td.classList.contains('sg-checkbox-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
+    if (!td || !tr || tr.dataset.group === 'true' || td.classList.contains('sg-checkbox-cell') || td.classList.contains('sg-group-leaf-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
     return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
   }
@@ -1545,7 +1577,7 @@ export default class GridController extends Controller {
   // ----- Keyboard navigation (Numbers/Sheets-style) -----
 
   _navCols() {
-    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber);
+    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol);
   }
 
   _onGridKeydown = (e) => {
@@ -1740,11 +1772,27 @@ export default class GridController extends Controller {
   _visibleCols() {
     const visible = this.state.columnDefs.filter((c) => !c.hidden);
     const groupFields = this.state.group?.cols || [];
-    if (!groupFields.length || this.groupReorderColumnsValue === false) return visible;
-    // While grouping, float the grouped columns to the front (in group order) so
-    // the hierarchy + group labels read left-to-right. Non-destructive: the
-    // underlying columnDefs order is untouched, so ungrouping restores the
-    // original layout.
+    if (!groupFields.length) return visible;
+    const mode = this.state.group.displayType || 'singleColumn';
+    if (mode === 'singleColumn') {
+      // Auto group column on the left holds the indented hierarchy + group counts.
+      // The grouped columns are hidden from the visible layout (their values live
+      // in the group col), but stay in columnDefs so CSV, quick filter, etc. still
+      // see them. Non-destructive: ungroup restores the original layout.
+      const grouped = new Set(groupFields);
+      const groupCol = {
+        field: '__group',
+        headerName: 'Group',
+        _isGroupCol: true,
+        width: 240,
+        sortable: false,
+        filter: null,
+        resizable: false,
+      };
+      return [groupCol, ...visible.filter((c) => !grouped.has(c.field))];
+    }
+    // Inline mode: grouped cols stay visible; the label sits in their own cell.
+    if (this.groupReorderColumnsValue === false) return visible;
     const grouped = groupFields.map((f) => visible.find((c) => c.field === f)).filter(Boolean);
     const groupedSet = new Set(grouped);
     return [...grouped, ...visible.filter((c) => !groupedSet.has(c))];
