@@ -1,7 +1,7 @@
-var q = Object.defineProperty;
-var $ = (n, r, e) => r in n ? q(n, r, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[r] = e;
-var y = (n, r, e) => $(n, typeof r != "symbol" ? r + "" : r, e);
-import { Controller as R, Application as K } from "@hotwired/stimulus";
+var $ = Object.defineProperty;
+var K = (n, r, e) => r in n ? $(n, r, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[r] = e;
+var y = (n, r, e) => K(n, typeof r != "symbol" ? r + "" : r, e);
+import { Controller as R, Application as W } from "@hotwired/stimulus";
 function b(n, r) {
   return typeof r.valueGetter == "function" ? r.valueGetter(n) : n?.[r.field];
 }
@@ -9,7 +9,7 @@ function S(n, r) {
   const e = b(n, r);
   return typeof r.valueFormatter == "function" ? r.valueFormatter(e, n) : e == null ? "" : r.type === "date" && e instanceof Date ? e.toLocaleDateString() : r.type === "boolean" ? e ? "✓" : "" : String(e);
 }
-const V = {
+const T = {
   contains: (n, r) => String(n ?? "").toLowerCase().includes(String(r ?? "").toLowerCase()),
   notContains: (n, r) => !String(n ?? "").toLowerCase().includes(String(r ?? "").toLowerCase()),
   equals: (n, r) => String(n ?? "").toLowerCase() === String(r ?? "").toLowerCase(),
@@ -18,7 +18,7 @@ const V = {
   endsWith: (n, r) => String(n ?? "").toLowerCase().endsWith(String(r ?? "").toLowerCase()),
   blank: (n) => n == null || n === "",
   notBlank: (n) => n != null && n !== ""
-}, W = {
+}, H = {
   equals: (n, r) => Number(n) === Number(r),
   notEqual: (n, r) => Number(n) !== Number(r),
   lessThan: (n, r) => Number(n) < Number(r),
@@ -35,7 +35,7 @@ function C(n) {
   const r = new Date(n);
   return Number.isNaN(r.valueOf()) ? null : r;
 }
-const H = {
+const j = {
   equals: (n, r) => C(n)?.toDateString() === C(r)?.toDateString(),
   notEqual: (n, r) => C(n)?.toDateString() !== C(r)?.toDateString(),
   lessThan: (n, r) => (C(n)?.valueOf() ?? -1 / 0) < (C(r)?.valueOf() ?? 1 / 0),
@@ -46,26 +46,26 @@ const H = {
   },
   blank: (n) => n == null || n === "",
   notBlank: (n) => n != null && n !== ""
-}, j = {
-  equals: (n, r) => r === "true" ? !!n : r === "false" ? !n : !0
 }, U = {
+  equals: (n, r) => r === "true" ? !!n : r === "false" ? !n : !0
+}, X = {
   in: (n, r) => Array.isArray(r) && r.includes(String(n ?? ""))
-}, X = { text: V, number: W, date: H, boolean: j, set: U };
-function Y(n, r, e) {
+}, Y = { text: T, number: H, date: j, boolean: U, set: X };
+function Q(n, r, e) {
   if (!e) return !0;
-  const t = e.filterType || r.filter || "text", s = (X[t] || V)[e.type];
+  const t = e.filterType || r.filter || "text", s = (Y[t] || T)[e.type];
   if (!s) return !0;
   const l = b(n, r);
   return s(l, e.value, e.value2);
 }
-function T(n, r, e) {
+function N(n, r, e) {
   const t = Object.entries(r || {}).filter(([, i]) => i != null);
   return t.length === 0 ? n : n.filter((i) => t.every(([s, l]) => {
     const o = e[s];
-    return o ? Y(i, o, l) : !0;
+    return o ? Q(i, o, l) : !0;
   }));
 }
-function N(n, r, e) {
+function F(n, r, e) {
   if (!r) return n;
   const t = String(r).toLowerCase();
   return n.filter((i) => {
@@ -76,7 +76,7 @@ function N(n, r, e) {
     return !1;
   });
 }
-function F(n, r, e) {
+function G(n, r, e) {
   if (n == null && r == null) return 0;
   if (n == null) return -1;
   if (r == null) return 1;
@@ -87,14 +87,14 @@ function F(n, r, e) {
   }
   return e === "boolean" ? n === r ? 0 : n ? 1 : -1 : String(n).localeCompare(String(r), void 0, { numeric: !0, sensitivity: "base" });
 }
-function Q(n, r, e) {
+function Z(n, r, e) {
   if (!r || r.length === 0) return n;
   const t = n.slice();
   return t.sort((i, s) => {
     for (const { colId: l, sort: o } of r) {
       const a = e[l];
       if (!a) continue;
-      const d = b(i, a), u = b(s, a), c = typeof a.comparator == "function" ? a.comparator(d, u, i, s) : F(d, u, a.type);
+      const d = b(i, a), u = b(s, a), c = typeof a.comparator == "function" ? a.comparator(d, u, i, s) : G(d, u, a.type);
       if (c !== 0) return o === "desc" ? -c : c;
     }
     return 0;
@@ -105,7 +105,7 @@ function A(n, r) {
   const e = n.length, t = Math.max(1, Math.ceil(e / r.pageSize)), i = Math.min(r.page, t - 1), s = i * r.pageSize, l = n.slice(s, s + r.pageSize);
   return { rows: n, total: e, totalPages: t, page: i, pageRows: l };
 }
-function Z(n, r, e) {
+function J(n, r, e) {
   if (n === "count") return r.length;
   const t = r.map((s) => b(s, e));
   if (n === "first") return t.length ? t[0] : null;
@@ -124,22 +124,22 @@ function Z(n, r, e) {
       return null;
   }
 }
-function G(n, r, e) {
+function P(n, r, e) {
   const t = {};
   for (const [i, s] of Object.entries(r || {})) {
     const l = e[i];
-    l && (t[i] = Z(s, n, l));
+    l && (t[i] = J(s, n, l));
   }
   return t;
 }
-function J(n, r, e, t, i = () => !0) {
+function ee(n, r, e, t, i = () => !0) {
   const s = (d, u, c) => {
     const f = r[u], m = /* @__PURE__ */ new Map();
     for (const h of d) {
       const p = b(h, f), _ = p == null ? "" : String(p);
       m.has(_) || m.set(_, { value: p, rows: [] }), m.get(_).rows.push(h);
     }
-    return Array.from(m.values()).sort((h, p) => F(h.value, p.value, f.type)).map(({ value: h, rows: p }) => {
+    return Array.from(m.values()).sort((h, p) => G(h.value, p.value, f.type)).map(({ value: h, rows: p }) => {
       const _ = h == null ? "" : String(h), v = c ? `${c}|${f.field}=${_}` : `${f.field}=${_}`;
       return {
         __sgGroup: !0,
@@ -148,7 +148,7 @@ function J(n, r, e, t, i = () => !0) {
         value: h,
         groupId: v,
         count: p.length,
-        aggregates: G(p, t, e),
+        aggregates: P(p, t, e),
         leaves: p,
         children: u + 1 < r.length ? s(p, u + 1, v) : null
       };
@@ -161,17 +161,17 @@ function J(n, r, e, t, i = () => !0) {
   };
   return a(l), { displayList: o, tree: l };
 }
-function ee(n) {
+function te(n) {
   if (n.serverSide) {
     const l = n.rowData, o = n.pagination?.pageSize || l.length || 1, a = n.serverRowCount ?? l.length, d = Math.max(1, Math.ceil(a / o)), u = Math.min(n.pagination?.page || 0, d - 1);
     return { filteredSorted: l, rows: l, total: a, totalPages: d, page: u, pageRows: l };
   }
   const r = Object.fromEntries(n.columnDefs.map((l) => [l.field, l])), e = n.columnDefs.filter((l) => !l.hidden && !l._isCheckbox);
   let t = n.rowData;
-  t = T(t, n.filterModel, r), t = N(t, n.quickFilter, e), t = Q(t, n.sortModel, r);
+  t = N(t, n.filterModel, r), t = F(t, n.quickFilter, e), t = Z(t, n.sortModel, r);
   const i = (n.rowGroupCols || []).filter((l) => r[l]);
   if (i.length) {
-    const l = i.map((u) => r[u]), { displayList: o, tree: a } = J(
+    const l = i.map((u) => r[u]), { displayList: o, tree: a } = ee(
       t,
       l,
       r,
@@ -182,7 +182,7 @@ function ee(n) {
       grouped: !0,
       tree: a,
       leafCount: t.length,
-      grandTotals: G(t, n.aggModel, r),
+      grandTotals: P(t, n.aggModel, r),
       filteredSorted: o,
       ...d
     };
@@ -190,11 +190,11 @@ function ee(n) {
   const s = A(t, n.pagination);
   return { filteredSorted: t, ...s };
 }
-function te(n, r, e, t, i = 6) {
+function ie(n, r, e, t, i = 6) {
   const s = Math.ceil(r / e), l = Math.max(0, Math.floor(n / e) - i), o = Math.min(t, l + s + i * 2);
   return { first: l, last: o };
 }
-function ie(n) {
+function se(n) {
   return {
     // ---- Data ----
     setRowData(r) {
@@ -407,7 +407,7 @@ function M(n) {
 function w(n, r, e) {
   n.dispatchEvent(new CustomEvent(r, { detail: e, bubbles: !0 }));
 }
-function se(n, r, e) {
+function ne(n, r, e) {
   let t = n.parentElement;
   for (; t; ) {
     if ((t.getAttribute("data-controller") || "").split(/\s+/).includes(r)) {
@@ -418,7 +418,7 @@ function se(n, r, e) {
   }
   return null;
 }
-const ne = 32, k = 100, le = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>', re = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
+const le = 32, k = 100, V = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>', re = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
 class E extends R {
   constructor() {
     super(...arguments);
@@ -560,7 +560,7 @@ class E extends R {
       aggs: { ...this.aggFuncsValue || {} },
       defaultExpanded: this.groupDefaultExpandedValue,
       displayType: this.groupDisplayTypeValue || "singleColumn"
-    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = ie(this), queueMicrotask(() => this._initialLoad());
+    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = se(this), queueMicrotask(() => this._initialLoad());
   }
   disconnect() {
     this.element.gridApi = null, this.element.removeEventListener("keydown", this._onGridKeydown), document.removeEventListener("mouseup", this._onCellMouseUp), document.removeEventListener("copy", this._onCopy), document.removeEventListener("mousemove", this._onRowDragMove), this._rowDrag?.ghost?.remove(), this._rowDrag?.indicator?.remove();
@@ -624,8 +624,8 @@ class E extends R {
     const i = this.state.filterModel[e.field] || {}, s = ae(e.filter), l = g("div", { class: "sg-filter-popover" }), o = g("select");
     s.forEach((_) => o.append(new Option(_.label, _.value, !1, _.value === i.type)));
     const a = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", d = g("input", { type: a, value: i.value ?? "" }), u = g("input", { type: a, value: i.value2 ?? "", style: { display: "none" } }), c = () => {
-      const _ = o.value, v = _ === "inRange", z = !(_ === "blank" || _ === "notBlank");
-      d.style.display = z ? "" : "none", u.style.display = v ? "" : "none";
+      const _ = o.value, v = _ === "inRange", q = !(_ === "blank" || _ === "notBlank");
+      d.style.display = q ? "" : "none", u.style.display = v ? "" : "none";
     };
     o.addEventListener("change", c), c();
     const f = g("div", { class: "sg-filter-actions" }), m = g("button", { type: "button" }, "Clear"), h = g("button", { type: "button", class: "primary" }, "Apply");
@@ -745,8 +745,8 @@ class E extends R {
   filteredCount() {
     if (this.state.serverSide) return this.state.serverRowCount;
     const e = Object.fromEntries(this.state.columnDefs.map((s) => [s.field, s])), t = this.state.columnDefs.filter((s) => !s.hidden && !s._isCheckbox);
-    let i = T(this.state.rowData, this.state.filterModel, e);
-    return i = N(i, this.state.quickFilter, t), i.length;
+    let i = N(this.state.rowData, this.state.filterModel, e);
+    return i = F(i, this.state.quickFilter, t), i.length;
   }
   // Server-side row model: set the total row count so pagination reflects the
   // full table even though only one page is loaded client-side. No event is
@@ -870,7 +870,7 @@ class E extends R {
   }
   _render() {
     const e = this._dirty;
-    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.has("group") || e.size === 0) && (this._displayList = ee({
+    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.has("group") || e.size === 0) && (this._displayList = te({
       rowData: this.state.rowData,
       columnDefs: this.state.columnDefs,
       sortModel: this.state.sortModel,
@@ -957,7 +957,7 @@ class E extends R {
     }
     let l = s.querySelector(".sg-sort-icon");
     if (t.sortable)
-      if (l || (l = g("span", { class: "sg-sort-icon" }), s.appendChild(l)), i && this.state.sortModel.length > 1) {
+      if (l || (l = g("span", { class: "sg-sort-icon", "aria-hidden": "true" }), l.innerHTML = V, s.appendChild(l)), i && this.state.sortModel.length > 1) {
         let a = s.querySelector(".sg-sort-index");
         a || (a = g("span", { class: "sg-sort-index" }), s.appendChild(a)), a.textContent = String(this.state.sortModel.indexOf(i) + 1);
       } else
@@ -980,7 +980,7 @@ class E extends R {
     const i = this.virtualValue || t.length > 200;
     let s = t, l = 0;
     if (i) {
-      const c = this._viewport?.clientHeight || 400, f = this.state.rowHeight, m = te(this.state.scrollTop, c, f, t.length, 8);
+      const c = this._viewport?.clientHeight || 400, f = this.state.rowHeight, m = ie(this.state.scrollTop, c, f, t.length, 8);
       l = m.first, s = t.slice(m.first, m.last);
     }
     const o = /* @__PURE__ */ new Map();
@@ -1107,7 +1107,7 @@ class E extends R {
           "data-expanded": l ? "true" : "false",
           "aria-hidden": "true"
         });
-        m.innerHTML = le, c.append(
+        m.innerHTML = V, c.append(
           m,
           g("span", { class: "sg-group-label" }, this._groupValueLabel(t)),
           g("span", { class: "sg-group-count" }, ` (${t.count})`)
@@ -1508,7 +1508,7 @@ y(E, "values", {
   suppressRowClickSelection: { type: Boolean, default: !1 },
   pagination: { type: Boolean, default: !1 },
   pageSize: { type: Number, default: k },
-  rowHeight: { type: Number, default: ne },
+  rowHeight: { type: Number, default: le },
   headerHeight: { type: Number, default: 36 },
   virtual: { type: Boolean, default: !1 },
   virtualThreshold: { type: Number, default: 200 },
@@ -1594,7 +1594,7 @@ class I extends R {
     });
   }
   connect() {
-    if (this.grid = se(this.element, "grid", this.application), !!this.grid) {
+    if (this.grid = ne(this.element, "grid", this.application), !!this.grid) {
       if (!this.headerNameValue) {
         const e = this.element.textContent.trim();
         e && (this.headerNameValue = e);
@@ -1686,15 +1686,15 @@ y(I, "values", {
   rowNumber: { type: Boolean, default: !1 }
   // gutter: shows 1-based row number, click selects row
 });
-class P extends R {
-  connect() {
-  }
-}
 class B extends R {
   connect() {
   }
 }
 class O extends R {
+  connect() {
+  }
+}
+class z extends R {
   connect() {
   }
 }
@@ -1754,26 +1754,26 @@ class D extends R {
 }
 y(D, "outlets", ["grid"]), y(D, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
 function ce(n) {
-  const r = n ?? K.start();
-  return r.register("grid", E), r.register("header-cell", I), r.register("row", P), r.register("cell", B), r.register("filter", O), r.register("pagination", D), r;
+  const r = n ?? W.start();
+  return r.register("grid", E), r.register("header-cell", I), r.register("row", B), r.register("cell", O), r.register("filter", z), r.register("pagination", D), r;
 }
 const ue = {
   start: ce,
   GridController: E,
   HeaderCellController: I,
-  RowController: P,
-  CellController: B,
-  FilterController: O,
+  RowController: B,
+  CellController: O,
+  FilterController: z,
   PaginationController: D
 };
 typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = ue);
 export {
-  B as CellController,
-  O as FilterController,
+  O as CellController,
+  z as FilterController,
   E as GridController,
   I as HeaderCellController,
   D as PaginationController,
-  P as RowController,
+  B as RowController,
   ue as default,
   ce as start
 };
