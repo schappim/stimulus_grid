@@ -39,6 +39,9 @@ export default class GridController extends Controller {
     groupDisplayType:    { type: String,  default: 'singleColumn' }, // 'singleColumn' (auto Group col on left) | 'inline' (label in grouped col)
     statusBar:           { type: Boolean, default: false },                            // bottom footer: row counts + range aggregates
     statusBarAggs:       { type: Array,   default: ['count', 'sum', 'avg', 'min', 'max'] }, // which aggs to show for a cell range (subset, in order)
+    pivotMode:           { type: Boolean, default: false },                            // reshape into a pivot table (rowGroupCols × pivotCols)
+    pivotCols:           { type: Array,   default: [] },                               // fields whose unique values become columns
+    sidePanel:           { type: Boolean, default: false },                            // right-side tool panel for groups/pivots/values
   };
 
   initialize() {
@@ -90,6 +93,13 @@ export default class GridController extends Controller {
       aggs: { ...(this.aggFuncsValue || {}) },
       defaultExpanded: this.groupDefaultExpandedValue,
       displayType: this.groupDisplayTypeValue || 'singleColumn',
+    };
+    // Pivot model lives alongside grouping: rowGroupCols are the vertical axis,
+    // pivotCols the horizontal, and state.group.aggs doubles as the value
+    // columns (the field → aggFunc map is reused so existing API still works).
+    this.state.pivot = {
+      mode: !!this.pivotModeValue,
+      cols: Array.isArray(this.pivotColsValue) ? this.pivotColsValue.slice() : [],
     };
 
     // Snapshot any user-supplied initial markup before we restructure.
@@ -195,6 +205,28 @@ export default class GridController extends Controller {
       this._lastRangeAggs = null;
     } else {
       this._statusBar = null;
+    }
+
+    // Optional side panel — Excel-style tool drawer on the right edge that
+    // drives row groups, pivot columns, value aggregations and column
+    // visibility via drag-and-drop. When enabled we wrap the body viewport
+    // (+ status bar, if any) in an .sg-main flex column, then mount the panel
+    // as an <aside> sibling so .sg-grid can lay them out side-by-side.
+    if (this.sidePanelValue) {
+      const main = el('div', { class: 'sg-main' });
+      this._viewport.parentNode.insertBefore(main, this._viewport);
+      main.appendChild(this._viewport);
+      if (this._statusBar) main.appendChild(this._statusBar);
+      this._main = main;
+      this._sidePanel = el('aside', {
+        class: 'sg-side-panel',
+        'data-controller': 'side-panel',
+      });
+      this.element.appendChild(this._sidePanel);
+      this.element.classList.add('sg-has-side-panel');
+    } else {
+      this._main = null;
+      this._sidePanel = null;
     }
   }
 
@@ -706,7 +738,7 @@ export default class GridController extends Controller {
     const dirty = this._dirty;
     this._dirty = new Set();
     // Anything affecting rows requires recomputing the display list.
-    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.has('group') || dirty.size === 0) {
+    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.has('group') || dirty.has('pivot') || dirty.size === 0) {
       this._displayList = buildDisplayList({
         rowData: this.state.rowData,
         columnDefs: this.state.columnDefs,
@@ -719,9 +751,11 @@ export default class GridController extends Controller {
         rowGroupCols: this.state.group.cols,
         aggModel: this.state.group.aggs,
         isGroupExpanded: this._isGroupExpanded,
+        pivotMode: this.state.pivot.mode,
+        pivotCols: this.state.pivot.cols,
       });
     }
-    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group')) this._renderHeader();
+    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group') || dirty.has('pivot')) this._renderHeader();
     this._renderBody();
     this._renderPagination();
     this._renderStatusBar();
@@ -1101,7 +1135,62 @@ export default class GridController extends Controller {
     if (func == null) delete this.state.group.aggs[field];
     else this.state.group.aggs[field] = func;
     this.scheduleRender('group');
+    emit(this.element, 'grid:columnValueChanged', { valueCols: this.getValueColumns() });
   }
+
+  // ----- Pivot mode -----
+
+  // Toggling pivot mode rebuilds the display list (and therefore the visible
+  // column set). Clears row + cell selection since the underlying cell graph
+  // changes shape entirely.
+  setPivotMode(on) {
+    const next = !!on;
+    if (this.state.pivot.mode === next) return;
+    this.state.pivot.mode = next;
+    this.state.selection.clear();
+    this.clearCellSelection();
+    this.state.pagination.page = 0;
+    this.scheduleRender('pivot');
+    emit(this.element, 'grid:pivotModeChanged', { pivot: next });
+  }
+  isPivotMode() { return !!this.state.pivot.mode; }
+
+  setPivotColumns(fields) {
+    this.state.pivot.cols = Array.isArray(fields) ? fields.slice() : [];
+    this.clearCellSelection();
+    this.state.pagination.page = 0;
+    this.scheduleRender('pivot');
+    emit(this.element, 'grid:columnPivotChanged', { pivotCols: this.state.pivot.cols.slice() });
+  }
+  addPivotColumn(field) {
+    if (!field || this.state.pivot.cols.includes(field)) return;
+    this.setPivotColumns([...this.state.pivot.cols, field]);
+  }
+  removePivotColumn(field) {
+    this.setPivotColumns(this.state.pivot.cols.filter((f) => f !== field));
+  }
+  getPivotColumns() { return this.state.pivot.cols.slice(); }
+
+  // "Value columns" = fields with an entry in state.group.aggs. Same map as the
+  // grouping aggregations — drives both the per-group totals (in plain grouping)
+  // and the pivot cell aggregations (in pivot mode).
+  getValueColumns() {
+    return Object.entries(this.state.group.aggs).map(([field, aggFunc]) => ({ field, aggFunc }));
+  }
+  setValueColumns(list) {
+    const next = {};
+    for (const { field, aggFunc } of (list || [])) {
+      if (field && aggFunc) next[field] = aggFunc;
+    }
+    this.state.group.aggs = next;
+    this.scheduleRender(this.state.pivot.mode ? 'pivot' : 'group');
+    emit(this.element, 'grid:columnValueChanged', { valueCols: this.getValueColumns() });
+  }
+  addValueColumn(field, aggFunc = 'sum') {
+    if (!field) return;
+    this.setColumnAggFunc(field, aggFunc);
+  }
+  removeValueColumn(field) { this.setColumnAggFunc(field, null); }
 
   _buildGroupRow(row, cols, existing) {
     const id = `__g:${row.groupId}`;
@@ -1120,9 +1209,14 @@ export default class GridController extends Controller {
     const pin = this._pinOffsets();
     const expanded = this._isGroupExpanded(row.groupId, row.level);
     const single = (this.state.group.displayType || 'singleColumn') === 'singleColumn';
+    const pivot = !!(this.state.pivot?.mode && this._displayList?.pivot);
+    const isAllRow = row.__pivotAll === true;
     // Inline mode: label goes in the grouped column's own cell (or first data col).
     const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox && !c._isGroupCol);
     const inlineLabelField = dataCols.some((c) => c.field === row.field) ? row.field : dataCols[0]?.field;
+    // "(All)" pivot totals row: indent at level 0, no expand/collapse caret.
+    const indentLevel = Math.max(0, row.level);
+    if (isAllRow) tr.classList.add('sg-pivot-all-row');
     for (const col of cols) {
       const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
@@ -1132,21 +1226,30 @@ export default class GridController extends Controller {
         tr.appendChild(td);
         continue;
       }
-      const isLabelCell = single ? col._isGroupCol : col.field === inlineLabelField;
+      const isLabelCell = (pivot || single) ? col._isGroupCol : col.field === inlineLabelField;
       if (isLabelCell) {
         td.classList.add('sg-group-cell');
-        td.style.paddingLeft = `${8 + row.level * 18}px`;
-        const caret = el('span', {
-          class: 'sg-group-caret',
-          'data-expanded': expanded ? 'true' : 'false',
-          'aria-hidden': 'true',
-        });
-        caret.innerHTML = CHEVRON_SVG;   // rotated via CSS when expanded
+        td.style.paddingLeft = `${8 + indentLevel * 18}px`;
+        if (!isAllRow) {
+          const caret = el('span', {
+            class: 'sg-group-caret',
+            'data-expanded': expanded ? 'true' : 'false',
+            'aria-hidden': 'true',
+          });
+          caret.innerHTML = CHEVRON_SVG;   // rotated via CSS when expanded
+          td.appendChild(caret);
+        }
         td.append(
-          caret,
           el('span', { class: 'sg-group-label' }, this._groupValueLabel(row)),
           el('span', { class: 'sg-group-count' }, ` (${row.count})`),
         );
+      } else if (pivot && col._isPivot) {
+        // Pivot cell: read through valueGetter into __pivotValues; blank if null.
+        const v = getValue(row, col);
+        if (v != null) {
+          td.classList.add('sg-agg-cell');
+          td.textContent = this._formatAggregate(v);
+        }
       } else if (!col._isGroupCol && row.aggregates && row.aggregates[col.field] != null) {
         td.classList.add('sg-agg-cell');
         td.textContent = this._formatAggregate(row.aggregates[col.field]);
@@ -1904,6 +2007,28 @@ export default class GridController extends Controller {
   _visibleCols() {
     const visible = this.state.columnDefs.filter((c) => !c.hidden);
     const groupFields = this.state.group?.cols || [];
+
+    // Pivot mode: replace the data columns entirely with the synthetic pivot
+    // result columns from the last buildDisplayList call. The group column on
+    // the left holds the indented row-group hierarchy + counts; if there are
+    // no rowGroupCols, it still appears (narrow) to host the "(All)" label.
+    if (this.state.pivot?.mode && this._displayList?.pivotResultColumns?.length) {
+      const groupCol = {
+        field: '__group',
+        headerName: groupFields.length
+          ? groupFields
+              .map((f) => this._colByField(f)?.headerName || f)
+              .join(' → ')
+          : '',
+        _isGroupCol: true,
+        width: groupFields.length ? 220 : 90,
+        sortable: false,
+        filter: null,
+        resizable: false,
+      };
+      return [groupCol, ...this._displayList.pivotResultColumns];
+    }
+
     if (!groupFields.length) return visible;
     const mode = this.state.group.displayType || 'singleColumn';
     if (mode === 'singleColumn') {

@@ -76,6 +76,20 @@ export function createGridApi(grid) {
     collapseAll() { grid.collapseAll(); },
     toggleGroup(groupId, level) { grid.toggleGroup(groupId, level); },
 
+    // ---- Pivot ----
+    setPivotMode(on) { grid.setPivotMode(on); },
+    isPivotMode() { return grid.isPivotMode(); },
+    setPivotColumns(fields) { grid.setPivotColumns(fields); },
+    addPivotColumn(field) { grid.addPivotColumn(field); },
+    removePivotColumn(field) { grid.removePivotColumn(field); },
+    getPivotColumns() { return grid.getPivotColumns(); },
+
+    // ---- Value columns (aggregations; shared with grouping) ----
+    setValueColumns(list) { grid.setValueColumns(list); },
+    addValueColumn(field, aggFunc = 'sum') { grid.addValueColumn(field, aggFunc); },
+    removeValueColumn(field) { grid.removeValueColumn(field); },
+    getValueColumns() { return grid.getValueColumns(); },
+
     // ---- Export ----
     getDataAsCsv(opts = {}) { return grid.getDataAsCsv(opts); },
     exportDataAsCsv(opts = {}) { return grid.exportDataAsCsv(opts); },

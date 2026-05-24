@@ -6,6 +6,7 @@ import RowController from './controllers/row_controller.js';
 import CellController from './controllers/cell_controller.js';
 import FilterController from './controllers/filter_controller.js';
 import PaginationController from './controllers/pagination_controller.js';
+import SidePanelController from './controllers/side_panel_controller.js';
 
 export {
   GridController,
@@ -14,6 +15,7 @@ export {
   CellController,
   FilterController,
   PaginationController,
+  SidePanelController,
 };
 
 export function start(app) {
@@ -24,6 +26,7 @@ export function start(app) {
   application.register('cell', CellController);
   application.register('filter', FilterController);
   application.register('pagination', PaginationController);
+  application.register('side-panel', SidePanelController);
   return application;
 }
 
@@ -35,6 +38,7 @@ const StimulusGrid = {
   CellController,
   FilterController,
   PaginationController,
+  SidePanelController,
 };
 
 export default StimulusGrid;

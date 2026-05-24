@@ -266,6 +266,196 @@ export function groupRows(rows, groupCols, columnsByField, aggModel, isExpanded 
   return { displayList: out, tree };
 }
 
+/* -------- Pivoting --------
+ *
+ * Pivot mode reshapes the data into a wide layout: unique combinations of one
+ * or more `pivotCols` field values become columns, while `rowGroupCols` form
+ * the rows. Each cell aggregates a value column over the rows that match its
+ * (row group · pivot combo) bucket. Leaf rows are aggregated away — pivot
+ * mode always shows group rows only (+ an "(All)" totals row at the top).
+ *
+ * The whole thing is pure: caller supplies filtered/sorted leaves + the col
+ * defs + a list of value configs ({col, aggFunc}); we return the synthetic
+ * pivot columns to render, the flattened display list, and the group tree. */
+
+// Stable, unique synthetic field id for a pivot column. Encodes the pivot
+// combo + the value field + the agg func, so different aggregations over the
+// same value field produce distinct columns.
+function pivotFieldId(combo, valueConfig, pivotCols) {
+  const parts = pivotCols.map((c) => {
+    const v = combo[c.field];
+    return `${c.field}=${v == null ? '' : String(v)}`;
+  });
+  return `__p|${parts.join('|')}|${valueConfig.col.field}:${valueConfig.aggFunc}`;
+}
+
+// Bucket key for a single row's pivot combo. Uses U+001F (unit separator) as
+// the delimiter so it can't collide with rendered values.
+function pivotComboKey(row, pivotCols) {
+  return pivotCols.map((c) => {
+    const v = getValue(row, c);
+    return v == null ? '' : String(v);
+  }).join('\x1F');
+}
+
+// Returns the sorted, deduped list of pivot value combinations seen in `rows`.
+// Each entry is an object keyed by pivot field, e.g. { sport: 'Swimming' } or
+// { year: 2020, medal: 'Gold' }. Sorted by each pivot col in declaration order
+// using the column's type-aware comparator.
+export function collectPivotKeys(rows, pivotCols) {
+  if (!pivotCols?.length) return [];
+  const seen = new Map();
+  for (const row of rows) {
+    const k = pivotComboKey(row, pivotCols);
+    if (!seen.has(k)) {
+      const combo = {};
+      pivotCols.forEach((c) => {
+        const v = getValue(row, c);
+        combo[c.field] = v == null ? null : v;
+      });
+      seen.set(k, combo);
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => {
+    for (const col of pivotCols) {
+      const cmp = defaultComparator(a[col.field], b[col.field], col.type);
+      if (cmp !== 0) return cmp;
+    }
+    return 0;
+  });
+}
+
+// Build the synthetic column defs for a pivot. One column per
+// (combo × valueConfig). Each col reads its value from row.__pivotValues[field].
+// With a single value config, headers show just the combo (e.g. "Swimming");
+// with several, they include the agg + value field ("Swimming · sum(gold)").
+export function buildPivotColumns(combos, valueConfigs, pivotCols) {
+  if (!combos.length || !valueConfigs.length) return [];
+  const cols = [];
+  const single = valueConfigs.length === 1;
+  for (const combo of combos) {
+    for (const vc of valueConfigs) {
+      const field = pivotFieldId(combo, vc, pivotCols);
+      const comboLabel = pivotCols
+        .map((c) => combo[c.field] == null ? '(Blank)' : String(combo[c.field]))
+        .join(' · ');
+      const headerName = single
+        ? comboLabel
+        : `${comboLabel} · ${vc.aggFunc}(${vc.col.field})`;
+      cols.push({
+        field,
+        headerName,
+        type: 'number',
+        width: 100,
+        sortable: false,   // sorting on aggregated pivot cols is a future enhancement
+        filter: null,
+        resizable: false,
+        _isPivot: true,
+        pivotKeys: { ...combo },
+        valueField: vc.col.field,
+        aggFunc: vc.aggFunc,
+        valueGetter: (row) => row?.__pivotValues?.[field] ?? null,
+      });
+    }
+  }
+  return cols;
+}
+
+// Compute the __pivotValues map for a set of leaf rows: for each combo × value
+// config, run the configured aggregator over the subset of leaves matching
+// that combo. Buckets the leaves once up front so the loop is O(leaves + combos).
+function computePivotValues(leaves, combos, valueConfigs, pivotCols) {
+  const out = {};
+  const buckets = new Map();
+  for (const row of leaves) {
+    const k = pivotComboKey(row, pivotCols);
+    if (!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k).push(row);
+  }
+  for (const combo of combos) {
+    const k = pivotCols.map((c) => {
+      const v = combo[c.field];
+      return v == null ? '' : String(v);
+    }).join('\x1F');
+    const subset = buckets.get(k) || [];
+    for (const vc of valueConfigs) {
+      const field = pivotFieldId(combo, vc, pivotCols);
+      // Empty intersections render as blanks (Excel/Sheets pivot convention),
+      // not as 0 from sum-of-empty. Keeps the table visually quiet.
+      out[field] = subset.length ? aggregateValue(vc.aggFunc, subset, vc.col) : null;
+    }
+  }
+  return out;
+}
+
+// Build the pivot model: synthetic pivot columns + a flattened display list of
+// group rows enriched with __pivotValues. A synthetic "(All)" row at the top
+// holds totals across every leaf. Children honour `isExpanded(groupId, level)`.
+// Without rowGroupCols, the only row is "(All)".
+export function buildPivotModel({ rows, rowGroupCols = [], pivotCols, valueConfigs, isExpanded = () => true }) {
+  const combos = collectPivotKeys(rows, pivotCols);
+  const columns = buildPivotColumns(combos, valueConfigs, pivotCols);
+
+  const allRow = {
+    __sgGroup: true,
+    __pivotAll: true,
+    level: -1,
+    field: null,
+    value: '(All)',
+    groupId: '__pivotAll',
+    count: rows.length,
+    aggregates: {},
+    leaves: rows,
+    __pivotValues: computePivotValues(rows, combos, valueConfigs, pivotCols),
+  };
+
+  if (!rowGroupCols.length) {
+    return { columns, displayList: [allRow], tree: [], combos };
+  }
+
+  const build = (leaves, level, parentId) => {
+    const col = rowGroupCols[level];
+    const buckets = new Map();
+    for (const row of leaves) {
+      const value = getValue(row, col);
+      const k = value == null ? '' : String(value);
+      if (!buckets.has(k)) buckets.set(k, { value, rows: [] });
+      buckets.get(k).rows.push(row);
+    }
+    return Array.from(buckets.values())
+      .sort((a, b) => defaultComparator(a.value, b.value, col.type))
+      .map(({ value, rows: groupLeaves }) => {
+        const keyStr = value == null ? '' : String(value);
+        const groupId = parentId ? `${parentId}|${col.field}=${keyStr}` : `${col.field}=${keyStr}`;
+        return {
+          __sgGroup: true,
+          level,
+          field: col.field,
+          value,
+          groupId,
+          count: groupLeaves.length,
+          aggregates: {},
+          leaves: groupLeaves,
+          __pivotValues: computePivotValues(groupLeaves, combos, valueConfigs, pivotCols),
+          children: level + 1 < rowGroupCols.length ? build(groupLeaves, level + 1, groupId) : null,
+        };
+      });
+  };
+
+  const tree = build(rows, 0, '');
+  const out = [allRow];
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      out.push(node);
+      if (!isExpanded(node.groupId, node.level)) continue;
+      if (node.children) walk(node.children);
+      // Leaves are intentionally not emitted — pivot mode aggregates them away.
+    }
+  };
+  walk(tree);
+  return { columns, displayList: out, tree, combos };
+}
+
 /* -------- Top-level pipeline -------- */
 
 export function buildDisplayList(state) {
@@ -288,10 +478,46 @@ export function buildDisplayList(state) {
   rows = applyQuickFilter(rows, state.quickFilter, visibleCols);
   rows = applySort(rows, state.sortModel, columnsByField);
 
+  const groupFields = (state.rowGroupCols || []).filter((f) => columnsByField[f]);
+
+  // Pivot mode: reshape into a wide layout, with rowGroupCols on the vertical
+  // axis and unique pivot combos on the horizontal. Requires at least one
+  // pivot col and at least one value column (aggModel entry); otherwise we
+  // silently fall through to plain grouping below.
+  const pivotFields = state.pivotMode
+    ? (state.pivotCols || []).filter((f) => columnsByField[f]) : [];
+  const valueConfigs = state.pivotMode
+    ? Object.entries(state.aggModel || {})
+        .filter(([f]) => columnsByField[f])
+        .map(([f, aggFunc]) => ({ col: columnsByField[f], aggFunc }))
+    : [];
+  if (state.pivotMode && pivotFields.length && valueConfigs.length) {
+    const rowGroupColDefs = groupFields.map((f) => columnsByField[f]);
+    const pivotColDefs = pivotFields.map((f) => columnsByField[f]);
+    const { columns: pivotResultColumns, displayList, tree, combos } = buildPivotModel({
+      rows,
+      rowGroupCols: rowGroupColDefs,
+      pivotCols: pivotColDefs,
+      valueConfigs,
+      isExpanded: state.isGroupExpanded,
+    });
+    const paged = applyPagination(displayList, state.pagination);
+    return {
+      pivot: true,
+      pivotResultColumns,
+      combos,
+      grouped: true,
+      tree,
+      leafCount: rows.length,
+      grandTotals: computeAggregates(rows, state.aggModel, columnsByField),
+      filteredSorted: displayList,
+      ...paged,
+    };
+  }
+
   // Row grouping: replace the flat leaf list with a flattened tree of group
   // rows + the leaf rows of expanded groups. Aggregates are computed over each
   // group's leaves; pagination/windowing then run on the flattened list.
-  const groupFields = (state.rowGroupCols || []).filter((f) => columnsByField[f]);
   if (groupFields.length) {
     const groupCols = groupFields.map((f) => columnsByField[f]);
     const { displayList, tree } = groupRows(

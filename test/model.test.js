@@ -12,6 +12,9 @@ import {
   computeAggregates,
   aggregateRange,
   groupRows,
+  collectPivotKeys,
+  buildPivotColumns,
+  buildPivotModel,
 } from '../src/lib/model.js';
 
 /* ----------------------------------------------------------------------------
@@ -556,5 +559,174 @@ describe('aggregateRange', () => {
     expect(out.sum).toBe(7);
     expect(out.min).toBe(7);
     expect(out.max).toBe(7);
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * Pivot: collectPivotKeys / buildPivotColumns / buildPivotModel
+ * ------------------------------------------------------------------------- */
+
+const pivotRows = [
+  { id: 1, country: 'USA',    sport: 'Swimming',   gold: 8 },
+  { id: 2, country: 'USA',    sport: 'Athletics',  gold: 2 },
+  { id: 3, country: 'USA',    sport: 'Swimming',   gold: 5 },
+  { id: 4, country: 'Canada', sport: 'Swimming',   gold: 1 },
+  { id: 5, country: 'Canada', sport: 'Athletics',  gold: 0 },
+  { id: 6, country: 'Brazil', sport: 'Athletics',  gold: 3 },
+];
+const pivotCols = {
+  country: { field: 'country' },
+  sport:   { field: 'sport' },
+  gold:    { field: 'gold', type: 'number' },
+};
+
+describe('collectPivotKeys', () => {
+  it('returns sorted unique combos for a single pivot field', () => {
+    const combos = collectPivotKeys(pivotRows, [pivotCols.sport]);
+    expect(combos).toEqual([{ sport: 'Athletics' }, { sport: 'Swimming' }]);
+  });
+
+  it('returns sorted unique combos across multiple pivot fields', () => {
+    const combos = collectPivotKeys(pivotRows, [pivotCols.country, pivotCols.sport]);
+    // 6 rows, 5 distinct (country,sport) combos; sorted by country then sport.
+    expect(combos).toEqual([
+      { country: 'Brazil', sport: 'Athletics' },
+      { country: 'Canada', sport: 'Athletics' },
+      { country: 'Canada', sport: 'Swimming' },
+      { country: 'USA',    sport: 'Athletics' },
+      { country: 'USA',    sport: 'Swimming' },
+    ]);
+  });
+
+  it('returns [] when given no rows or no pivot cols', () => {
+    expect(collectPivotKeys([], [pivotCols.sport])).toEqual([]);
+    expect(collectPivotKeys(pivotRows, [])).toEqual([]);
+  });
+
+  it('treats null/undefined pivot values as a single "(Blank)" bucket', () => {
+    const rows = [{ id: 1, sport: 'Swimming' }, { id: 2, sport: null }, { id: 3 }];
+    const combos = collectPivotKeys(rows, [pivotCols.sport]);
+    expect(combos).toHaveLength(2);          // null + undefined collapse into the same bucket
+    expect(combos.some((c) => c.sport === 'Swimming')).toBe(true);
+    expect(combos.some((c) => c.sport == null)).toBe(true);
+  });
+});
+
+describe('buildPivotColumns', () => {
+  const combos = [{ sport: 'Athletics' }, { sport: 'Swimming' }];
+
+  it('emits one synthetic col per (combo × valueConfig) with stable, unique fields', () => {
+    const out = buildPivotColumns(combos, [{ col: pivotCols.gold, aggFunc: 'sum' }], [pivotCols.sport]);
+    expect(out).toHaveLength(2);
+    expect(out[0].headerName).toBe('Athletics');
+    expect(out[1].headerName).toBe('Swimming');
+    // Distinct fields, both starting with the __p| prefix.
+    expect(new Set(out.map((c) => c.field)).size).toBe(2);
+    expect(out.every((c) => c.field.startsWith('__p|'))).toBe(true);
+  });
+
+  it('uses combo-only headers for a single value config, qualified headers for multiple', () => {
+    const single = buildPivotColumns(combos, [{ col: pivotCols.gold, aggFunc: 'sum' }], [pivotCols.sport]);
+    const multi  = buildPivotColumns(combos, [
+      { col: pivotCols.gold, aggFunc: 'sum' },
+      { col: pivotCols.gold, aggFunc: 'avg' },
+    ], [pivotCols.sport]);
+    expect(single[0].headerName).toBe('Athletics');
+    expect(multi[0].headerName).toBe('Athletics · sum(gold)');
+    expect(multi[1].headerName).toBe('Athletics · avg(gold)');
+  });
+
+  it('valueGetter reads through row.__pivotValues for its field', () => {
+    const [first] = buildPivotColumns(combos, [{ col: pivotCols.gold, aggFunc: 'sum' }], [pivotCols.sport]);
+    const row = { __pivotValues: { [first.field]: 42 } };
+    expect(first.valueGetter(row)).toBe(42);
+    expect(first.valueGetter({})).toBeNull();
+  });
+
+  it('returns [] when there are no combos or no value configs', () => {
+    expect(buildPivotColumns([], [{ col: pivotCols.gold, aggFunc: 'sum' }], [pivotCols.sport])).toEqual([]);
+    expect(buildPivotColumns(combos, [], [pivotCols.sport])).toEqual([]);
+  });
+});
+
+describe('buildPivotModel', () => {
+  const valueConfigs = [{ col: pivotCols.gold, aggFunc: 'sum' }];
+
+  it('returns a single "(All)" row when no rowGroupCols are provided', () => {
+    const out = buildPivotModel({ rows: pivotRows, rowGroupCols: [], pivotCols: [pivotCols.sport], valueConfigs });
+    expect(out.displayList).toHaveLength(1);
+    expect(out.displayList[0].__pivotAll).toBe(true);
+    expect(out.displayList[0].value).toBe('(All)');
+    expect(out.displayList[0].count).toBe(pivotRows.length);
+    // Totals: Athletics = 2+0+3 = 5; Swimming = 8+5+1 = 14.
+    const [ath, swm] = out.columns;
+    expect(out.displayList[0].__pivotValues[ath.field]).toBe(5);
+    expect(out.displayList[0].__pivotValues[swm.field]).toBe(14);
+  });
+
+  it('emits "(All)" + group rows in sorted order, never any leaves', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    const shape = out.displayList.map((r) => r.value);
+    expect(shape).toEqual(['(All)', 'Brazil', 'Canada', 'USA']);
+    // Every row in pivot mode is a group row.
+    expect(out.displayList.every((r) => r.__sgGroup)).toBe(true);
+  });
+
+  it('computes per-group pivot aggregates over the matching leaves', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    const [ath, swm] = out.columns;
+    const usa = out.displayList.find((r) => r.value === 'USA');
+    const canada = out.displayList.find((r) => r.value === 'Canada');
+    const brazil = out.displayList.find((r) => r.value === 'Brazil');
+    expect(usa.__pivotValues[ath.field]).toBe(2);     // id 2
+    expect(usa.__pivotValues[swm.field]).toBe(13);    // id 1 (8) + id 3 (5)
+    expect(canada.__pivotValues[ath.field]).toBe(0);  // id 5
+    expect(canada.__pivotValues[swm.field]).toBe(1);  // id 4
+    expect(brazil.__pivotValues[ath.field]).toBe(3);  // id 6
+    expect(brazil.__pivotValues[swm.field]).toBeNull(); // no Brazilian swimming rows
+  });
+
+  it('hides children when isExpanded returns false', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country, pivotCols.sport],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      isExpanded: () => false,                        // collapse every group
+    });
+    // (All) at level -1 + 3 country groups at level 0; no sport sub-groups (level 1).
+    expect(out.displayList).toHaveLength(4);
+    expect(out.displayList.every((r) => r.level <= 0)).toBe(true);
+  });
+
+  it('falls through buildDisplayList when pivotCols is missing — no pivot output', () => {
+    const out = buildDisplayList({
+      columnDefs: [{ field: 'country' }, { field: 'sport' }, { field: 'gold', type: 'number' }],
+      rowData: pivotRows, filterModel: {}, quickFilter: '', sortModel: [],
+      pagination: { enabled: false },
+      pivotMode: true, pivotCols: [], aggModel: { gold: 'sum' },
+      rowGroupCols: ['country'],
+    });
+    expect(out.pivot).toBeUndefined();
+    expect(out.grouped).toBe(true);     // degrades to plain grouping
+  });
+
+  it('integrates with buildDisplayList for the end-to-end pivot path', () => {
+    const out = buildDisplayList({
+      columnDefs: [{ field: 'country' }, { field: 'sport' }, { field: 'gold', type: 'number' }],
+      rowData: pivotRows, filterModel: {}, quickFilter: '', sortModel: [],
+      pagination: { enabled: false },
+      pivotMode: true, pivotCols: ['sport'], aggModel: { gold: 'sum' },
+      rowGroupCols: ['country'],
+    });
+    expect(out.pivot).toBe(true);
+    expect(out.pivotResultColumns).toHaveLength(2);    // Athletics + Swimming
+    // (All), Brazil, Canada, USA — 4 group rows, no leaves
+    expect(out.pageRows).toHaveLength(4);
+    expect(out.pageRows.every((r) => r.__sgGroup)).toBe(true);
   });
 });
