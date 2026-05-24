@@ -74,7 +74,9 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-header-height-value` · `data-grid-virtual-value` · `data-grid-virtual-threshold-value` ·
 `data-grid-height-value` · `data-grid-get-row-id-value` · `data-grid-dom-layout-value` (`autoHeight`) ·
 `data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels) · `data-grid-group-display-type-value` (`'singleColumn'` default · `'inline'`) · `data-grid-group-reorder-columns-value` (inline mode only, default `true`) ·
-`data-grid-status-bar-value` (default `false`) · `data-grid-status-bar-aggs-value` (JSON array, default `["count","sum","avg","min","max"]`).
+`data-grid-status-bar-value` (default `false`) · `data-grid-status-bar-aggs-value` (JSON array, default `["count","sum","avg","min","max"]`) ·
+`data-grid-pivot-mode-value` (default `false`) · `data-grid-pivot-cols-value` (JSON array of fields whose unique values become columns) ·
+`data-grid-side-panel-value` (default `false` — render the right-side drag-driven groups/pivots/values panel).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -103,6 +105,9 @@ api.exportDataAsCsv({ onlySelected:false, fileName:"data.csv" })
 api.setRowGroupColumns(["country","sport"])  // group rows (multi-col = nested); [] ungroups
 api.setColumnAggFunc("gold","sum"); api.expandAll(); api.collapseAll()
 api.getRangeAggregates()                       // {count,sum,avg,min,max} for the active cell range, or null
+api.setPivotMode(true); api.setPivotColumns(["sport"])          // reshape into a pivot table
+api.setValueColumns([{ field:"gold", aggFunc:"sum" }])          // cell aggregations (also drives group totals)
+api.getPivotColumns(); api.getValueColumns(); api.isPivotMode() // read pivot/value state
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -117,7 +122,9 @@ the dataset (numbers stay numbers). To update one field, spread the row:
 `grid:cellSelectionChanged` · `grid:rangeAggsChanged` (`{aggs}` — fires when the
 status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:paginationChanged` · `grid:columnMoved`/`Pinned`/`Resized`/`Visible` ·
-`grid:columnRowGroupChanged` · `grid:groupToggled`.
+`grid:columnRowGroupChanged` · `grid:groupToggled` ·
+`grid:pivotModeChanged` (`{pivot}`) · `grid:columnPivotChanged` (`{pivotCols}`) ·
+`grid:columnValueChanged` (`{valueCols}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -244,6 +251,47 @@ selection; the numeric aggs skip non-numerics (booleans, dates, text). Multi-
 range selections (`Cmd/Ctrl+click` to add ranges) are unioned. Read the same
 numbers with `gridApi.getRangeAggregates()` (returns `null` when no range), or
 listen for `grid:rangeAggsChanged` to render your own UI.
+
+## Pivot mode & side panel
+
+`pivot-mode` reshapes the data: `row-group-cols` form the vertical axis,
+`pivot-cols` (unique values become columns) the horizontal, and `agg-funcs`
+entries are the value aggregations. A synthetic **(All)** totals row sits
+at the top; leaf rows are aggregated away. Empty intersections render blank
+(not `0`). With one value field, headers show the pivot combo (`"Swimming"`);
+with multiple, they include the agg + field (`"Swimming · sum(gold)"`).
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-row-group-cols-value='["country"]'
+     data-grid-pivot-cols-value='["sport"]'
+     data-grid-agg-funcs-value='{"gold":"sum"}'
+     data-grid-pivot-mode-value="true"
+     data-grid-side-panel-value="true">
+```
+
+```js
+api.setPivotMode(true)
+api.setRowGroupColumns(["country"])
+api.setPivotColumns(["sport"])
+api.setValueColumns([{ field:"gold", aggFunc:"sum" }])
+api.setColumnAggFunc("gold", "avg")     // change agg func at runtime
+```
+
+`side-panel` mounts an `<aside data-controller="side-panel">` inside `.sg-grid`
+that drives groups / pivot columns / value aggregations + column visibility
+via drag-and-drop. Sections: **Pivot mode** (toggle) · **Columns** (every real
+column with visibility checkbox + group/pivot/sum tags) · **Row Groups** ·
+**Values** (each chip has a click-to-cycle agg badge: sum → avg → count → min
+→ max) · **Column Labels** (pivot mode only). A field lives in at most one of
+{rowGroup, pivot, value} — dropping into a section removes it from the others.
+Click the tab icon on the panel's right edge to collapse to just the tab strip.
+
+Events: `grid:pivotModeChanged` · `grid:columnPivotChanged` (`{pivotCols}`) ·
+`grid:columnValueChanged` (`{valueCols}`). Sorting on the synthetic pivot
+columns is disabled in this release; filters still apply to the underlying
+leaf rows before the pivot.
 
 ## Gotchas
 

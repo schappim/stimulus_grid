@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -145,6 +145,8 @@ column on the left. Collapsed here to country subtotals:
 | `server-side` / `row-count` | server-side row model: `rowData` is one page; `row-count` is the server total (drives pagination) |
 | `row-group-cols` / `agg-funcs` / `group-default-expanded` / `group-reorder-columns` | row grouping: fields to group by (JSON array), per-column aggregation `{field: fn}` (JSON), default expand depth (`-1` all · `0` none · `N` levels), and whether to float grouped columns to the front while grouping (default `true`) |
 | `status-bar` / `status-bar-aggs` | enable the bottom status bar (default `false`) and pick which range aggregates to show (default `["count","sum","avg","min","max"]`) |
+| `pivot-mode` / `pivot-cols` | reshape into a pivot table (default `false`); `pivot-cols` is a JSON array of fields whose unique values become columns. Requires at least one `agg-funcs` entry to populate cells |
+| `side-panel` | render a right-side tool panel for drag-driven row groups / pivots / value aggregations + column visibility (default `false`) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -168,6 +170,8 @@ Available after the `grid:ready` event. Highlights:
 - **Editing:** `startEditingCell({rowId, colId})`, `stopEditing(cancel?)`
 - **Export:** `getDataAsCsv(opts)`, `exportDataAsCsv(opts)`
 - **Row grouping:** `setRowGroupColumns([...])`, `addRowGroupColumn`, `removeRowGroupColumn`, `getRowGroupColumns`, `setColumnAggFunc(field, fn)` (`sum`/`avg`/`min`/`max`/`count`/`first`/`last`), `expandAll`, `collapseAll`
+- **Pivot:** `setPivotMode(on)`, `isPivotMode()`, `setPivotColumns([...])`, `addPivotColumn`, `removePivotColumn`, `getPivotColumns`
+- **Value columns** (aggregations — shared with grouping): `setValueColumns([{field,aggFunc}])`, `addValueColumn(field, aggFunc?)`, `removeValueColumn`, `getValueColumns`
 
 ## Events (dispatched on the grid element)
 
@@ -176,7 +180,9 @@ Available after the `grid:ready` event. Highlights:
 `grid:selectionChanged` · `grid:cellSelectionChanged` · `grid:rangeAggsChanged`
 (`{aggs}`) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:paginationChanged` · `grid:columnMoved/Pinned/Resized/Visible` ·
-`grid:columnRowGroupChanged` · `grid:groupToggled`.
+`grid:columnRowGroupChanged` · `grid:groupToggled` ·
+`grid:columnPivotChanged` (`{pivotCols}`) · `grid:pivotModeChanged` (`{pivot}`) ·
+`grid:columnValueChanged` (`{valueCols}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -297,6 +303,79 @@ included. Read the same numbers programmatically with `gridApi.getRangeAggregate
 (returns `null` when there's no range), or subscribe to `grid:rangeAggsChanged`
 to render your own UI. See **[demo 12](demo/12-status-bar.html)** for a working
 example.
+
+## Pivot mode & side panel
+
+Reshape the data into a pivot table: row-group fields form the vertical axis,
+the unique values of `pivot-cols` become columns, and the value fields (the
+ones with an `agg-funcs` entry) aggregate into each cell. A synthetic **(All)**
+totals row sits at the top; group rows underneath hold per-group aggregates;
+leaf rows are aggregated away. The **side panel** on the right is a drag-driven
+tool drawer that drives groups / pivot columns / value aggregations + column
+visibility — the same controls as Excel pivot tables or AG-Grid's tool panel,
+all going through the public `gridApi`.
+
+![stimulus_grid in pivot mode — sport on the vertical axis, country on the horizontal, summed gold/silver/bronze in every cell; the side panel on the right shows the Columns list with PIVOT/GROUP/SUM tags, the Row Groups drop zone with "Sport", the Values zone with three SUM chips (Gold/Silver/Bronze), and the Column Labels zone with "Country"](docs/images/grid-pivot.png)
+
+Enable both on the grid element:
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-row-group-cols-value='["country"]'
+     data-grid-pivot-cols-value='["sport"]'
+     data-grid-agg-funcs-value='{"gold":"sum"}'
+     data-grid-pivot-mode-value="true"
+     data-grid-side-panel-value="true">
+  <!-- …columns… -->
+</div>
+```
+
+| Attribute | Value |
+|---|---|
+| `pivot-mode` | `true` to pivot, `false` to render normally (default `false`). Toggle at runtime with `gridApi.setPivotMode(on)` |
+| `pivot-cols` | JSON array of fields whose unique values become columns (`["sport"]` → one column per sport). Multiple fields produce one column per combination, sorted by each field in order |
+| `side-panel` | `true` to render the right-side drag-driven tool panel (default `false`) |
+
+…or drive it at runtime:
+
+```js
+const api = el.gridApi
+api.setPivotMode(true)
+api.setRowGroupColumns(["country"])           // rows
+api.setPivotColumns(["sport"])                // columns
+api.setValueColumns([                         // cells (sum of gold per cell)
+  { field: "gold", aggFunc: "sum" },
+])
+api.addPivotColumn("medal")                   // adds a second pivot dimension
+api.setColumnAggFunc("gold", "avg")           // changes the agg func for one value col
+```
+
+**How it renders.** With one value field, headers show the pivot combo only
+(`"Swimming"`); with multiple, they include the agg + field
+(`"Swimming · sum(gold)"`). Empty intersections render blank (not `0`),
+matching Excel/Sheets conventions. Sorting on the synthetic pivot columns is
+disabled in this release; filters still apply to the underlying leaf rows
+before the pivot, so `country = "USA"` narrows the pivot to USA-only sports.
+
+**The side panel.** Mounts as an `<aside data-controller="side-panel">` inside
+`.sg-grid`. Sections (top → bottom):
+
+- **Pivot mode** — checkbox at the top
+- **Columns** — every real column with a visibility checkbox + small tags
+  (`group` / `pivot` / `sum`) showing where it currently appears
+- **Row Groups** — drop zone for fields used as `row-group-cols`
+- **Values** — drop zone for fields with aggregations. Each chip has a click-to-cycle
+  agg badge (`sum → avg → count → min → max`) and an × to remove
+- **Column Labels** — drop zone for `pivot-cols` (visible only in pivot mode)
+
+Fields drag freely between sections; dropping a chip into one section removes it
+from the others (a field lives in at most one of {rowGroup, pivot, value}).
+Click the tab icon on the panel's right edge to collapse to just the tab strip.
+
+**Events:** `grid:pivotModeChanged` (`{pivot}`), `grid:columnPivotChanged`
+(`{pivotCols}`) and `grid:columnValueChanged` (`{valueCols}`) fire on the matching
+state changes. See **[demo 13](demo/13-pivot-side-panel.html)** for the full UX.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 
