@@ -10,6 +10,7 @@ import {
   computeWindow,
   aggregateValue,
   computeAggregates,
+  aggregateRange,
   groupRows,
 } from '../src/lib/model.js';
 
@@ -506,5 +507,54 @@ describe('buildDisplayList (grouped)', () => {
     expect(out.leafCount).toBe(3); // Bob (gold 0) filtered out
     expect(out.pageRows.some((r) => r.__sgGroup && r.value === 'Canada')).toBe(false);
     expect(out.pageRows.some((r) => r.__sgGroup && r.value === 'USA')).toBe(true);
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * aggregateRange — used by the status bar to summarise the cell selection
+ * ------------------------------------------------------------------------- */
+
+describe('aggregateRange', () => {
+  it('returns all-null aggs and count=0 for an empty input', () => {
+    expect(aggregateRange([])).toEqual({ count: 0, sum: null, avg: null, min: null, max: null });
+  });
+
+  it('counts and sums plain numbers', () => {
+    expect(aggregateRange([1, 2, 3, 4])).toEqual({
+      count: 4, sum: 10, avg: 2.5, min: 1, max: 4,
+    });
+  });
+
+  it('parses numeric strings into the numeric aggs', () => {
+    expect(aggregateRange(['1', ' 2 ', '3.5'])).toEqual({
+      count: 3, sum: 6.5, avg: 6.5 / 3, min: 1, max: 3.5,
+    });
+  });
+
+  it('skips empty values (null, undefined, "") from count and numeric aggs', () => {
+    expect(aggregateRange([null, undefined, '', 0, 5])).toEqual({
+      count: 2, sum: 5, avg: 2.5, min: 0, max: 5,
+    });
+  });
+
+  it('counts non-numeric values but excludes them from numeric aggs', () => {
+    expect(aggregateRange(['hello', true, false, 10, 20])).toEqual({
+      count: 5, sum: 30, avg: 15, min: 10, max: 20,
+    });
+  });
+
+  it('returns null numeric aggs when no numerics are present', () => {
+    expect(aggregateRange(['a', 'b', true])).toEqual({
+      count: 3, sum: null, avg: null, min: null, max: null,
+    });
+  });
+
+  it('excludes NaN, Infinity, -Infinity, and Date instances from numeric aggs', () => {
+    const d = new Date(2024, 0, 1);
+    const out = aggregateRange([NaN, Infinity, -Infinity, d, 7]);
+    expect(out.count).toBe(5);
+    expect(out.sum).toBe(7);
+    expect(out.min).toBe(7);
+    expect(out.max).toBe(7);
   });
 });

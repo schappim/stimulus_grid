@@ -180,6 +180,43 @@ export function computeAggregates(leaves, aggModel, columnsByField) {
   return out;
 }
 
+// Roll up a flat list of cell values (e.g. the user's cell-range selection) into
+// {count,sum,avg,min,max}. `count` is non-empty cells; numeric aggs are computed
+// over the numeric subset (numbers + numeric strings) and are null when no
+// numerics are present. Booleans, dates and other non-numerics count toward
+// `count` but not toward the numeric aggregates — matching the status-bar
+// behaviour users expect from Sheets/Excel.
+export function aggregateRange(values) {
+  let count = 0;
+  let numericCount = 0;
+  let sum = 0;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of values) {
+    if (v == null || v === '') continue;
+    count += 1;
+    let n = null;
+    if (typeof v === 'number' && Number.isFinite(v)) n = v;
+    else if (typeof v === 'string' && v.trim() !== '') {
+      const parsed = Number(v);
+      if (Number.isFinite(parsed)) n = parsed;
+    }
+    if (n != null) {
+      numericCount += 1;
+      sum += n;
+      if (n < min) min = n;
+      if (n > max) max = n;
+    }
+  }
+  return {
+    count,
+    sum: numericCount ? sum : null,
+    avg: numericCount ? sum / numericCount : null,
+    min: numericCount ? min : null,
+    max: numericCount ? max : null,
+  };
+}
+
 // Group leaf rows by `groupCols` (column objects, in hierarchy order) into a
 // tree, then flatten to a display list of group rows + the leaf rows of any
 // expanded group. `isExpanded(groupId, level)` decides expansion (default: all

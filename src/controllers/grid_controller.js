@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort } from '../lib/model.js';
+import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort, aggregateRange } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
 
@@ -37,6 +37,8 @@ export default class GridController extends Controller {
     groupDefaultExpanded:{ type: Number, default: -1 },      // -1 all expanded · 0 none · N first-N levels
     groupReorderColumns: { type: Boolean, default: true },   // (inline mode) float grouped columns to the front while grouping
     groupDisplayType:    { type: String,  default: 'singleColumn' }, // 'singleColumn' (auto Group col on left) | 'inline' (label in grouped col)
+    statusBar:           { type: Boolean, default: false },                            // bottom footer: row counts + range aggregates
+    statusBarAggs:       { type: Array,   default: ['count', 'sum', 'avg', 'min', 'max'] }, // which aggs to show for a cell range (subset, in order)
   };
 
   initialize() {
@@ -179,6 +181,21 @@ export default class GridController extends Controller {
 
     // Pagination footer is rendered later; consumers may also bring their own.
     this._footer = null;
+
+    // Optional status bar — Sheets-style footer with row counts and aggregates
+    // over the active cell range. Lives at the bottom of the grid flex column,
+    // so external pagination (a sibling of .sg-grid) still appears below it.
+    if (this.statusBarValue) {
+      this._statusBar = el('div', { class: 'sg-status-bar', role: 'status' });
+      this._statusBar.append(
+        el('div', { class: 'sg-status-section sg-status-left' }),
+        el('div', { class: 'sg-status-section sg-status-right' }),
+      );
+      this.element.appendChild(this._statusBar);
+      this._lastRangeAggs = null;
+    } else {
+      this._statusBar = null;
+    }
   }
 
   async _initialLoad() {
@@ -707,6 +724,7 @@ export default class GridController extends Controller {
     if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group')) this._renderHeader();
     this._renderBody();
     this._renderPagination();
+    this._renderStatusBar();
   }
 
   _renderHeader() {
@@ -1209,6 +1227,103 @@ export default class GridController extends Controller {
     // (The pagination_controller listens for grid:paginationChanged.)
   }
 
+  // ----- Status bar (rows · selection · range aggregates) -----
+
+  _renderStatusBar() {
+    if (!this._statusBar) return;
+    const left = this._statusBar.querySelector('.sg-status-left');
+    const right = this._statusBar.querySelector('.sg-status-right');
+
+    // Left section — Rows + Selected. Show "filtered from N" only when filtered.
+    left.replaceChildren();
+    const totalAll = this.state.serverSide
+      ? this.state.serverRowCount
+      : this.state.rowData.length;
+    const totalShown = this._displayList.grouped
+      ? (this._displayList.leafCount ?? this.filteredCount())
+      : this.filteredCount();
+    left.appendChild(this._statusPanel('Rows', this._fmtInt(totalShown),
+      totalShown !== totalAll ? `of ${this._fmtInt(totalAll)}` : null));
+    const selCount = this.state.selection.size;
+    if (selCount > 0) {
+      left.appendChild(this._statusPanel('Selected', this._fmtInt(selCount)));
+    }
+
+    // Right section — range aggregates. Hidden when no range or empty range.
+    right.replaceChildren();
+    const aggs = this.getRangeAggregates();
+    if (aggs && aggs.count > 0) {
+      const which = (this.statusBarAggsValue || []).filter((k) => k in aggs);
+      for (const key of which) {
+        const v = aggs[key];
+        if (v == null && key !== 'count') continue;
+        right.appendChild(this._statusPanel(this._aggLabel(key), this._fmtAgg(key, v)));
+      }
+    }
+
+    // Fire grid:rangeAggsChanged on a *value* change so subscribers can render
+    // their own UI without re-deriving from cellSelectionChanged + data events.
+    const stamp = aggs ? `${aggs.count}|${aggs.sum}|${aggs.avg}|${aggs.min}|${aggs.max}` : '';
+    if (stamp !== this._lastRangeAggs) {
+      this._lastRangeAggs = stamp;
+      emit(this.element, 'grid:rangeAggsChanged', { aggs });
+    }
+  }
+
+  _statusPanel(label, value, aside = null) {
+    const panel = el('div', { class: 'sg-status-panel' });
+    panel.append(
+      el('span', { class: 'sg-status-label' }, `${label}:`),
+      el('span', { class: 'sg-status-value' }, value),
+    );
+    if (aside) panel.appendChild(el('span', { class: 'sg-status-aside' }, aside));
+    return panel;
+  }
+
+  _fmtInt(n) { return Number(n).toLocaleString(); }
+
+  _aggLabel(key) {
+    return { count: 'Count', sum: 'Sum', avg: 'Avg', min: 'Min', max: 'Max' }[key] || key;
+  }
+
+  _fmtAgg(key, v) {
+    if (v == null) return '—';
+    if (key === 'count') return this._fmtInt(v);
+    if (typeof v === 'number') {
+      // Integer-valued numbers print without decimals; everything else gets two.
+      if (Number.isInteger(v)) return this._fmtInt(v);
+      const rounded = Math.round(v * 100) / 100;
+      return rounded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return String(v);
+  }
+
+  // Flat list of RAW cell values across every active range — fed to
+  // aggregateRange to compute the status-bar numbers. Skips group rows and
+  // the structural columns (gutter / checkbox / auto-group).
+  _cellRangeRawValues() {
+    const out = [];
+    for (const rg of this.state.cellSel.ranges) {
+      const rect = this._rangeRect(rg);
+      if (!rect) continue;
+      for (let r = rect.r0; r <= rect.r1; r++) {
+        const row = rect.rows[r];
+        if (!row || row.__sgGroup) continue;
+        for (let c = rect.c0; c <= rect.c1; c++) {
+          const col = rect.cols[c];
+          if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol) continue;
+          out.push(getValue(row, col));
+        }
+      }
+    }
+    return out;
+  }
+
+  getRangeAggregates() {
+    if (!this.state.cellSel.ranges.length) return null;
+    return aggregateRange(this._cellRangeRawValues());
+  }
+
   // ----- Event delegation (clicks on rendered tbody) -----
 
   // Stimulus actions on tbody — wired in _buildChrome by adding data-action.
@@ -1483,6 +1598,9 @@ export default class GridController extends Controller {
       if (keys.range && keys.range.has(key)) td.setAttribute('data-cell-range', 'true');
       else td.removeAttribute('data-cell-range');
     });
+    // Cell-selection changes don't go through scheduleRender (the DOM updates
+    // are in-place above), so keep the status bar in sync from here.
+    this._renderStatusBar();
   }
 
   // Copy the active cell range to the clipboard as TSV (rows \n, cols \t).
