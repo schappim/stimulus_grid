@@ -36,6 +36,12 @@
   # Drag selected rows by the gutter to reorder them (ghost preview).
   row_drag     = local_assigns.fetch(:row_drag, false)
 
+  # Spreadsheet-style bottom footer: row counts + live aggregates over the
+  # selected cell range. Pass `status_bar: true` to enable; pass an array of
+  # aggregates to subset/reorder (default: ["count","sum","avg","min","max"]).
+  status_bar      = local_assigns.fetch(:status_bar, false)
+  status_bar_aggs = local_assigns.fetch(:status_bar_aggs, nil)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -53,6 +59,8 @@
      data-grid-server-side-value="<%= server_side %>"
      data-grid-row-count-value="<%= total_rows %>"
      data-grid-row-drag-value="<%= row_drag %>"
+     data-grid-status-bar-value="<%= status_bar %>"
+     <% if status_bar_aggs %>data-grid-status-bar-aggs-value="<%= status_bar_aggs.to_json %>"<% end %>
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"
