@@ -11,6 +11,9 @@
     pagination:   true|false (default true)
     page_size:    default 25
     row_selection: nil | "single" | "multiple"
+    pivot_mode:    true|false (default false) — reshape data into a pivot table
+    pivot_cols:    array of fields whose unique values become columns
+    side_panel:    true|false (default false) — drag-driven groups/pivots/values panel
 %>
 <%
   resource     = grid.class.resource_name
@@ -42,6 +45,17 @@
   status_bar      = local_assigns.fetch(:status_bar, false)
   status_bar_aggs = local_assigns.fetch(:status_bar_aggs, nil)
 
+  # Pivot mode reshapes the data: rows by `row_group_cols`, columns by the
+  # unique values of `pivot_cols`, cells aggregating the configured value
+  # columns (declared via `agg_funcs` — same shape as for plain grouping).
+  pivot_mode = local_assigns.fetch(:pivot_mode, false)
+  pivot_cols = local_assigns.fetch(:pivot_cols, nil)
+
+  # Right-side tool panel for drag-driven row groups / pivots / values +
+  # column visibility. Renders an <aside data-controller="side-panel"> inside
+  # the grid; the JS controller wires up DnD against the public gridApi.
+  side_panel = local_assigns.fetch(:side_panel, false)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -61,6 +75,9 @@
      data-grid-row-drag-value="<%= row_drag %>"
      data-grid-status-bar-value="<%= status_bar %>"
      <% if status_bar_aggs %>data-grid-status-bar-aggs-value="<%= status_bar_aggs.to_json %>"<% end %>
+     data-grid-pivot-mode-value="<%= pivot_mode %>"
+     <% if pivot_cols %>data-grid-pivot-cols-value="<%= pivot_cols.to_json %>"<% end %>
+     data-grid-side-panel-value="<%= side_panel %>"
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"
