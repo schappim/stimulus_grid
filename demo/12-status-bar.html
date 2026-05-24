@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>12 — Status bar | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 12px; background: #f9fafb; border-left: 3px solid #2563eb; border-radius: 2px; color: #374151; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>12 — Status bar</h1>
+  <p class="lede">
+    Enabled with <code>data-grid-status-bar-value="true"</code>. The footer shows
+    the row count (with filtered/total split when filtered) and the selection
+    count, and — whenever you select a cell range — sum / avg / count / min /
+    max of the numeric values in that range, like a spreadsheet.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json"
+       data-grid-status-bar-value="true"
+       data-grid-row-selection-value="multiple"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="25">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-row-number-value="true"
+              data-header-cell-pinned-value="left"></th>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="180">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="150">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="160">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Try it: drag across a few <strong>Gold</strong>/<strong>Silver</strong>/<strong>Bronze</strong> cells,
+    or hold ⌘/Ctrl and drag a second range — the right side of the status bar updates live.
+    Filter the Country column to see "Rows: X of Y" on the left.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>StimulusGrid.start();</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -144,6 +144,7 @@ column on the left. Collapsed here to country subtotals:
 | `dom-layout` | `""` \| `"autoHeight"` |
 | `server-side` / `row-count` | server-side row model: `rowData` is one page; `row-count` is the server total (drives pagination) |
 | `row-group-cols` / `agg-funcs` / `group-default-expanded` / `group-reorder-columns` | row grouping: fields to group by (JSON array), per-column aggregation `{field: fn}` (JSON), default expand depth (`-1` all · `0` none · `N` levels), and whether to float grouped columns to the front while grouping (default `true`) |
+| `status-bar` / `status-bar-aggs` | enable the bottom status bar (default `false`) and pick which range aggregates to show (default `["count","sum","avg","min","max"]`) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -158,7 +159,7 @@ column on the left. Collapsed here to country subtotals:
 Available after the `grid:ready` event. Highlights:
 
 - **Data:** `setRowData(rows)`, `getRowData()`, `applyTransaction({add,update,remove})`, `setRowCount(total)` / `getRowCount()` (server-side)
-- **Cell selection:** `getCellSelection()` (active + range), `getCellRangeValues()` — click for an active cell, drag/shift+click for a range, `Cmd/Ctrl+C` copies it as TSV
+- **Cell selection:** `getCellSelection()` (active + range), `getCellRangeValues()`, `getRangeAggregates()` (`{count,sum,avg,min,max}` for the current range, or `null`) — click for an active cell, drag/shift+click for a range, `Cmd/Ctrl+C` copies it as TSV
 - **Columns:** `setColumnDefs`, `getColumnDefs`, `setColumnVisible`, `setColumnPinned`, `setColumnWidth`, `moveColumn`, `autoSizeColumn`, `autoSizeAllColumns`, `sizeColumnsToFit`
 - **Sort:** `setSortModel`, `getSortModel`
 - **Filter:** `setFilterModel`, `getFilterModel`, `setColumnFilter`, `setQuickFilter`, `getQuickFilter`
@@ -172,7 +173,8 @@ Available after the `grid:ready` event. Highlights:
 
 `grid:ready` · `grid:rowDataChanged` · `grid:cellClicked` · `grid:rowClicked` ·
 `grid:cellValueChanged` (`{rowId, colId, oldValue, newValue}`) ·
-`grid:selectionChanged` · `grid:filterChanged` · `grid:sortChanged` ·
+`grid:selectionChanged` · `grid:cellSelectionChanged` · `grid:rangeAggsChanged`
+(`{aggs}`) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:paginationChanged` · `grid:columnMoved/Pinned/Resized/Visible` ·
 `grid:columnRowGroupChanged` · `grid:groupToggled`.
 
@@ -262,6 +264,39 @@ Group rows are display-only — they aren't selectable or editable, and cell
 selection, CSV export and `getSelectedRows()` operate on leaf rows. Since grouping
 is client-side, under the server-side row model it groups the rows currently
 loaded. See **[demo 11](demo/11-row-grouping.html)** for a full example.
+
+## Status bar
+
+A spreadsheet-style footer that shows the row count (with the filtered/total
+split when a filter is active), the selection count, and — whenever you select
+a cell range — live aggregates over that range: count, sum, avg, min, max.
+The same building blocks as group aggregations, scoped to the user's selection.
+
+![stimulus_grid status bar — "Rows: 35 of 100" on the left (Country filtered to "United") and "Count: 18  Sum: 32  Avg: 1.78  Min: 0  Max: 8" on the right, computed live from a dragged Gold/Silver/Bronze selection](docs/images/grid-status-bar.png)
+
+Enable it on the grid element:
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-status-bar-value="true"
+     data-grid-status-bar-aggs-value='["count","sum","avg","min","max"]'>
+  <!-- …columns… -->
+</div>
+```
+
+| Attribute | Value |
+|---|---|
+| `status-bar` | `true` to render the footer (default `false`) |
+| `status-bar-aggs` | JSON array picking which range aggregates to show, in order. Subset of `count`, `sum`, `avg`, `min`, `max` (default: all five) |
+
+Numeric aggregates skip non-numeric cells (booleans, dates, text); `count` is
+the number of non-empty cells in the selection. With multi-range selection
+(`Cmd/Ctrl+click` to add ranges), the union is summarised. Group rows are not
+included. Read the same numbers programmatically with `gridApi.getRangeAggregates()`
+(returns `null` when there's no range), or subscribe to `grid:rangeAggsChanged`
+to render your own UI. See **[demo 12](demo/12-status-bar.html)** for a working
+example.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 
@@ -373,10 +408,10 @@ runnable app is in [`gem/demo`](gem/demo); full docs in
 
 ## Demos
 
-`npm install && npx vite`, then open `http://localhost:5173/demo/` — 11 demos
+`npm install && npx vite`, then open `http://localhost:5173/demo/` — 12 demos
 covering basics, JSON data, filtering, selection, pagination, editing, custom
-renderers, 10k-row virtual scroll, everything-together, live filtering, and
-row grouping with aggregation.
+renderers, 10k-row virtual scroll, everything-together, live filtering, row
+grouping with aggregation, and the status bar.
 
 ## Build
 

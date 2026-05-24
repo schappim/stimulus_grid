@@ -119,9 +119,12 @@ the console, jobs, or other controllers. No manual broadcast calls.
                      row_selection: "multiple", page_size: 25 } %>
 ```
 
-Optional locals: `id:`, `css_class:`, `pagination:` (default true). The partial
-renders the table, columns, rows, pagination nav, and the `turbo_stream_from`
-subscription. Wrap or style `.sgr-panel` to give it a height.
+Optional locals: `id:`, `css_class:`, `pagination:` (default true),
+`status_bar:` (default false — spreadsheet-style footer showing row counts and
+live aggregates over the selected cell range), `status_bar_aggs:` (array
+subset/reorder of `count`, `sum`, `avg`, `min`, `max`). The partial renders the
+table, columns, rows, pagination nav, and the `turbo_stream_from` subscription.
+Wrap or style `.sgr-panel` to give it a height.
 
 ## What you get out of the box
 

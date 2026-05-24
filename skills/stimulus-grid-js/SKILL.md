@@ -73,7 +73,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-pagination-value` · `data-grid-page-size-value` · `data-grid-row-height-value` ·
 `data-grid-header-height-value` · `data-grid-virtual-value` · `data-grid-virtual-threshold-value` ·
 `data-grid-height-value` · `data-grid-get-row-id-value` · `data-grid-dom-layout-value` (`autoHeight`) ·
-`data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels) · `data-grid-group-display-type-value` (`'singleColumn'` default · `'inline'`) · `data-grid-group-reorder-columns-value` (inline mode only, default `true`).
+`data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels) · `data-grid-group-display-type-value` (`'singleColumn'` default · `'inline'`) · `data-grid-group-reorder-columns-value` (inline mode only, default `true`) ·
+`data-grid-status-bar-value` (default `false`) · `data-grid-status-bar-aggs-value` (JSON array, default `["count","sum","avg","min","max"]`).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -101,6 +102,7 @@ api.startEditingCell({ rowId:1, colId:"name" }); api.stopEditing()
 api.exportDataAsCsv({ onlySelected:false, fileName:"data.csv" })
 api.setRowGroupColumns(["country","sport"])  // group rows (multi-col = nested); [] ungroups
 api.setColumnAggFunc("gold","sum"); api.expandAll(); api.collapseAll()
+api.getRangeAggregates()                       // {count,sum,avg,min,max} for the active cell range, or null
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -112,8 +114,10 @@ the dataset (numbers stay numbers). To update one field, spread the row:
 `grid:ready` (`detail.api`) · `grid:rowDataChanged` · `grid:cellClicked`
 (`{rowId,colId,value}`) · `grid:rowClicked` · `grid:cellValueChanged`
 (`{rowId,colId,oldValue,newValue}`) · `grid:selectionChanged` ·
-`grid:filterChanged` · `grid:sortChanged` · `grid:paginationChanged` ·
-`grid:columnMoved`/`Pinned`/`Resized`/`Visible` · `grid:columnRowGroupChanged` · `grid:groupToggled`.
+`grid:cellSelectionChanged` · `grid:rangeAggsChanged` (`{aggs}` — fires when the
+status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
+`grid:paginationChanged` · `grid:columnMoved`/`Pinned`/`Resized`/`Visible` ·
+`grid:columnRowGroupChanged` · `grid:groupToggled`.
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -218,6 +222,28 @@ columns. Numeric aggregates skip non-numbers. Set
 column's own cell instead (keeping it visible). Grouping is client-side and
 composes after sort. Group rows aren't selectable or editable; cell selection,
 CSV export and `getSelectedRows()` operate on leaf rows only.
+
+## Status bar
+
+A spreadsheet-style footer at the bottom of the grid. Off by default; turn it
+on with `data-grid-status-bar-value="true"`. Shows the row count (with the
+`X of Y` split when a filter is active), the selection count (when any rows
+are selected), and live aggregates over the active cell range — same building
+blocks as group aggregations, but scoped to the user's selection:
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-status-bar-value="true"
+     data-grid-status-bar-aggs-value='["count","sum","avg","min","max"]'>
+```
+
+`status-bar-aggs` defaults to all five (`count`, `sum`, `avg`, `min`, `max`)
+and can be subset/reordered. `count` is the number of non-empty cells in the
+selection; the numeric aggs skip non-numerics (booleans, dates, text). Multi-
+range selections (`Cmd/Ctrl+click` to add ranges) are unioned. Read the same
+numbers with `gridApi.getRangeAggregates()` (returns `null` when no range), or
+listen for `grid:rangeAggsChanged` to render your own UI.
 
 ## Gotchas
 
