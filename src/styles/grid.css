@@ -4720,6 +4720,25 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-materials-pick-name { color: #1f2937; }
 .sg-grid .sg-renderer-materials-pick-stock { font-size: 10px; }
 
+/* Toolbox talk — last date + "(12d ago)" caption + traffic-light. */
+.sg-grid .sg-renderer-toolbox-talk {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+.sg-grid .sg-renderer-toolbox-talk.is-current { background: #dcfce7; color: #14532d; }
+.sg-grid .sg-renderer-toolbox-talk.is-overdue { background: #fed7aa; color: #7c2d12; }
+.sg-grid .sg-renderer-toolbox-talk.is-late    { background: #fecaca; color: #7f1d1d; }
+.sg-grid .sg-renderer-toolbox-talk.is-missing { background: #fecaca; color: #7f1d1d; font-style: italic; }
+.sg-grid .sg-renderer-toolbox-talk-last { font-weight: 600; }
+.sg-grid .sg-renderer-toolbox-talk-ago  { opacity: 0.75; }
+.sg-grid .sg-renderer-toolbox-talk-topic { font-style: italic; opacity: 0.85; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

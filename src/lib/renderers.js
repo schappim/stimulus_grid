@@ -9227,6 +9227,38 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- toolbox-talk -------------------------------------------
+ *
+ * Last toolbox-talk attendance record. "Last: 14 May (12d ago)" with
+ * traffic-light colour by overdue threshold (most builders want weekly,
+ * default `dueDays: 7`).
+ *
+ *   value: ISO date string | { lastDate, topic? } */
+export function toolboxTalk({ dueDays = 7 } = {}) {
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return ({ value }) => {
+    if (isBlank(value)) return h('span', { class: 'sg-renderer-toolbox-talk is-missing' },
+      document.createTextNode('no record'));
+    const v = typeof value === 'object' ? value : { lastDate: value };
+    const d = v.lastDate ? new Date(v.lastDate) : null;
+    if (!d || Number.isNaN(d.valueOf())) return '';
+    const days = Math.max(0, -daysUntil(d));         // days since
+    const cls = days > dueDays * 2 ? 'is-late'
+              : days > dueDays      ? 'is-overdue'
+              : 'is-current';
+    const lastLabel = `${d.getDate()} ${MON[d.getMonth()]}`;
+    const agoLabel = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`;
+    const wrap = h('span', { class: `sg-renderer-toolbox-talk ${cls}` });
+    wrap.append(h('span', { class: 'sg-renderer-toolbox-talk-last' },
+      document.createTextNode(`Last: ${lastLabel}`)));
+    wrap.append(h('span', { class: 'sg-renderer-toolbox-talk-ago' },
+      document.createTextNode(`(${agoLabel})`)));
+    if (v.topic) wrap.append(h('span', { class: 'sg-renderer-toolbox-talk-topic' },
+      document.createTextNode(String(v.topic))));
+    return wrap;
+  };
+}
+
 /* ---------- materials-pick ----------------------------------------
  *
  * Materials pick-list line. Value:
@@ -10212,6 +10244,7 @@ registerRenderer('retention',         retention());
 registerRenderer('materials-pick',    materialsPick());
 registerRenderer('swms-status',       swmsStatus());
 registerRenderer('jsa-status',        jsaStatus());
+registerRenderer('toolbox-talk',      toolboxTalk());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10797,6 +10830,7 @@ wireBuiltin('retention',      clip.json);
 wireBuiltin('materials-pick', clip.json);
 wireBuiltin('swms-status',    clip.text);
 wireBuiltin('jsa-status',     clip.text);
+wireBuiltin('toolbox-talk',   clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10834,5 +10868,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
-  swmsStatus, jsaStatus,
+  swmsStatus, jsaStatus, toolboxTalk,
 };

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>179 — Toolbox talk | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>179 — Toolbox talk (attendance freshness)</h1>
+  <p class="lede">
+    Last toolbox-talk attended. Pill colours: green &lt; due window,
+    orange &gt; due window, red &gt; 2× due window, italic red "no
+    record" when missing. Default <code>dueDays = 7</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="crew"
+              data-header-cell-width-value="180">Crew</th>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="160">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="talk"
+              data-header-cell-cell-renderer-value="toolbox-talk"
+              data-header-cell-width-value="300">Toolbox talk</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ago = (d) => { const x = new Date(); x.setDate(x.getDate() - d); return x.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, crew: 'Crew A',  site: 'Bondi tower',  talk: { lastDate: ago(1),  topic: 'Working at heights' } },
+      { id: 2, crew: 'Crew B',  site: 'Vega fitout',  talk: { lastDate: ago(5),  topic: 'EWP refresher' } },
+      { id: 3, crew: 'Crew C',  site: 'Coogee Hold.', talk: { lastDate: ago(9),  topic: 'Hand tools & PPE' } },
+      { id: 4, crew: 'Crew D',  site: 'Manly reno',   talk: { lastDate: ago(17), topic: 'Manual handling' } },
+      { id: 5, crew: 'Crew E',  site: 'Glebe build',  talk: null },
+      { id: 6, crew: 'Crew F',  site: 'Newtown bk',   talk: { lastDate: ago(0),  topic: 'Trench hazards' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
