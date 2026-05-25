@@ -3247,6 +3247,78 @@ function ratingNps() {
   };
 }
 
+/* ---------- bullet (range bar) --------------------------------------
+ *
+ * Stephen Few's bullet chart — qualitative bands behind a value bar, a
+ * vertical tick for the target. Lighter / heavier / heaviest grey bands
+ * (or your own palette) show the "poor / satisfactory / good" range; a
+ * thin black bar shows the value; a vertical tick marks the target.
+ *
+ *   registerRenderer('q3', bullet({
+ *     min: 0, max: 100, target: 80, ranges: [50, 70],
+ *   }))
+ *
+ * Accepts either a plain number, or `{ value, target, ranges }` for
+ * per-row overrides — handy when each row has its own target. */
+const BULLET_DEFAULT_COLORS = ['#e5e7eb', '#d1d5db', '#9ca3af'];
+
+export function bullet({
+  min = 0,
+  max = 100,
+  target = null,
+  ranges = null,                  // [a] | [a, b] | [a, b, c]
+  rangeColors = BULLET_DEFAULT_COLORS,
+  barColor = '#111827',
+  targetColor = '#111827',
+  width = 120,
+  height = 16,
+} = {}) {
+  return ({ value }) => {
+    let v, t, rgs;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      v   = Number(value.value);
+      t   = value.target != null ? Number(value.target) : target;
+      rgs = value.ranges || ranges;
+    } else {
+      v   = Number(value);
+      t   = target;
+      rgs = ranges;
+    }
+    if (!Number.isFinite(v)) return '';
+
+    const range = max - min || 1;
+    const clamp = (n) => Math.max(min, Math.min(max, n));
+    const at = (n) => ((clamp(n) - min) / range) * width;
+
+    // Default thresholds at 60% / 80% — the canonical bullet chart bands.
+    const stops = rgs && rgs.length ? rgs.map(Number) : [min + range * 0.6, min + range * 0.8];
+    const fullStops = [min, ...stops, max];
+
+    let inner = '';
+    for (let i = 0; i < fullStops.length - 1; i++) {
+      const x = at(fullStops[i]);
+      const w = at(fullStops[i + 1]) - x;
+      const fill = rangeColors[i] || rangeColors[rangeColors.length - 1];
+      inner += `<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${height}" fill="${fill}"/>`;
+    }
+    // Value bar — middle half of the row height, leaving the bands as a
+    // backdrop top and bottom (Few's signature aesthetic).
+    const barH = height * 0.42;
+    const barY = (height - barH) / 2;
+    inner += `<rect x="0" y="${barY.toFixed(2)}" width="${at(v).toFixed(2)}" height="${barH.toFixed(2)}" fill="${barColor}"/>`;
+    if (t != null && Number.isFinite(t)) {
+      const tx = at(t);
+      const tickH = height * 0.85;
+      const tickY = (height - tickH) / 2;
+      inner += `<rect x="${(tx - 1).toFixed(2)}" y="${tickY.toFixed(2)}" width="2" height="${tickH.toFixed(2)}" fill="${targetColor}"/>`;
+    }
+    return `<svg class="sg-renderer-bullet" viewBox="0 0 ${width} ${height}"`
+         + ` width="${width}" height="${height}" preserveAspectRatio="none" aria-hidden="true">`
+         + inner
+         + `</svg>`;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3294,6 +3366,7 @@ registerRenderer('geo',            geo());
 registerRenderer('qr',             qr());
 registerRenderer('code',           code());
 registerRenderer('rating',         rating());
+registerRenderer('bullet',         bullet());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3305,5 +3378,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, rating, audioAttachment,
+  diff, geo, qr, code, rating, bullet, audioAttachment,
 };

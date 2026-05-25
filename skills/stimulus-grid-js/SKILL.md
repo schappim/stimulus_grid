@@ -232,6 +232,7 @@ ship pre-registered:
 | `qr` | Inline SVG QR code from the cell value. Pure-JS encoder (Reed-Solomon over GF(2⁸), versions 1-10, ECC=M ≈ 15% recovery, byte mode). 213-byte cap; over-capacity values fall back to "QR · too long". `moduleSize` controls pixel density, `margin` the quiet zone, `showText: true` prints the encoded value beside the matrix |
 | `code` | Dark monospace block for code-like cell values (CLI commands, snippets, SQL). Different shape from `copyable` (styled-label-with-chip) and `markdown` (`` `code` `` inline only). Pass `language: 'sh' | 'sql' | 'js' | …` for a small uppercase label in the top-right; `copy: false` to hide the copy button |
 | `rating` | Generic sibling of `star-rating` with a swappable glyph. `icon: 'heart'` (default) / `'star'` (delegates to the same engine, swapped tint), `'thumb'` (binary up / down / neutral, value sign drives it), `'smiley'` (5 faces on a 1-N scale), `'nps'` (0-10 chip banded into Detractor / Passive / Promoter colours). `max`, `precision`, and an override `color` mirror `star-rating` |
+| `bullet` | Stephen Few's bullet chart — qualitative grey bands + black value bar + vertical target tick, all in an inline SVG. `min` / `max` / `target` / `ranges` set the scale and bands; per-row overrides via object cell value `{ value, target, ranges }`. Default bands at 60% and 80% if `ranges` is omitted |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

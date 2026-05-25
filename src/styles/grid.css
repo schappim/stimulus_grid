@@ -2514,3 +2514,12 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-rating-nps.is-detractor { background: #ef4444; }   /* red-500 */
 .sg-grid .sg-renderer-rating-nps.is-passive   { background: #f59e0b; }   /* amber-500 */
 .sg-grid .sg-renderer-rating-nps.is-promoter  { background: #10b981; }   /* emerald-500 */
+
+/* Bullet renderer — inline SVG bar with qualitative bands + value bar
+   + target tick. Width and height come from the SVG's inline attributes
+   so this just baselines the alignment in cell. */
+.sg-grid .sg-renderer-bullet {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 2px;
+}

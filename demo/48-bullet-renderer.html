@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>48 — Bullet renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>48 — Bullet renderer</h1>
+  <p class="lede">
+    Stephen Few's bullet chart — qualitative bands behind a value bar
+    and a vertical target tick. Use it when "current vs goal" is the
+    column's job and a bare progress bar wouldn't capture the bands.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="rep"
+              data-header-cell-width-value="180"
+              data-header-cell-sortable-value="true">Rep</th>
+          <th data-controller="header-cell" data-header-cell-field-value="q1"
+              data-header-cell-cell-renderer-value="quota-bullet"
+              data-header-cell-width-value="180">Q1 quota</th>
+          <th data-controller="header-cell" data-header-cell-field-value="q2"
+              data-header-cell-cell-renderer-value="quota-bullet"
+              data-header-cell-width-value="180">Q2 quota</th>
+          <th data-controller="header-cell" data-header-cell-field-value="q3_per_row"
+              data-header-cell-cell-renderer-value="bullet"
+              data-header-cell-width-value="200">Q3 (per-row target)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="q3_per_row"
+              data-header-cell-cell-renderer-value="cents"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Q3 (raw)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Per-row overrides:</strong> when each row carries its own
+    target / bands, pass an object cell value:
+    <code>{ value, target, ranges }</code>. The Q3 column does this — the
+    <em>Q3 (raw)</em> column shows the value half of the same object so
+    you can sanity-check the bar position.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // Quota bullet — fixed 0-130% scale, ranges at 80 / 100, target = 100%.
+    registerRenderer('quota-bullet', renderers.bullet({
+      min: 0, max: 130, target: 100, ranges: [80, 100],
+      width: 160,
+    }));
+    // Cents formatter — strips the object shape and shows just `value`.
+    registerRenderer('cents', ({ value }) => {
+      if (value == null) return '';
+      const v = typeof value === 'object' ? value.value : value;
+      return `${Math.round(Number(v))}%`;
+    });
+
+    const ROWS = [
+      { id: 1, rep: 'Astrid Hale',  q1: 112, q2: 124, q3_per_row: { value: 95,  target: 100, ranges: [70, 90] } },
+      { id: 2, rep: 'Marcus Chen',  q1: 84,  q2: 92,  q3_per_row: { value: 110, target: 100, ranges: [70, 90] } },
+      { id: 3, rep: 'Priya Patel',  q1: 130, q2: 128, q3_per_row: { value: 80,  target: 120, ranges: [60, 100] } },
+      { id: 4, rep: 'Jamal Owens',  q1: 47,  q2: 62,  q3_per_row: { value: 35,  target: 60,  ranges: [40, 50] } },
+      { id: 5, rep: 'Lena Brooks',  q1: 98,  q2: 105, q3_per_row: { value: 70,  target: 80,  ranges: [50, 70] } },
+      { id: 6, rep: 'Tomás Vega',   q1: 119, q2: 121, q3_per_row: { value: 130, target: 110, ranges: [80, 100] } },
+      { id: 7, rep: 'Mei Tanaka',   q1: 31,  q2: 48,  q3_per_row: { value: 22,  target: 40,  ranges: [20, 30] } },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
