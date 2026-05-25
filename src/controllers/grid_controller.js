@@ -13,6 +13,14 @@ const DEFAULT_PAGE_SIZE = 100;
 const CHEVRON_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>';
 const FILTER_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
 
+// Built-in cellRenderer names whose body cells are right-aligned (via the
+// .sg-renderer-number CSS class they add to <td>). Used by _columnAlignment
+// so the matching header text aligns with its body cells without the column
+// needing to also declare `type: 'number'`.
+const NUMERIC_RENDERERS = new Set([
+  'number', 'currency', 'percent', 'compactNumber', 'fileSize', 'duration',
+]);
+
 // Input types whose value comes from a native browser picker (color picker,
 // calendar, time popover, …). When we mount an editor of one of these types,
 // we auto-trigger showPicker() so a dblclick on the cell opens the picker
@@ -183,6 +191,8 @@ export default class GridController extends Controller {
     this._teardownPersistence();
     this._rowDrag?.ghost?.remove();
     this._rowDrag?.indicator?.remove();
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
   }
 
   // ----- Initial data + setup -----
@@ -338,6 +348,17 @@ export default class GridController extends Controller {
     // that's been marked sortable (today: pivot cols). User-defined <th>s
     // continue to sort via their own HeaderCellController#sort.
     this._thead?.addEventListener('click', this._onSynthHeaderClick);
+
+    // Re-run colgroup sizing when the viewport changes size so the last-col
+    // stretch (see _renderColgroup) tracks container resizes — otherwise a
+    // table whose total column width is less than the panel only fills the
+    // container on first render.
+    if (typeof ResizeObserver !== 'undefined' && this._viewport) {
+      this._resizeObserver = new ResizeObserver(() => {
+        if (this._table?.isConnected) this._renderColgroup(this._visibleCols());
+      });
+      this._resizeObserver.observe(this._viewport);
+    }
   }
 
   async _initialLoad() {
@@ -1005,12 +1026,29 @@ export default class GridController extends Controller {
     // already overflow:auto). If any column lacks an explicit width the
     // browser still needs the slack to absorb auto-sized cells, so we
     // fall back to width:100% in that case.
+    //
+    // Special case: when every column has an explicit width AND the sum is
+    // narrower than the viewport, stretch ONLY the last column to absorb the
+    // leftover space so the table fills its container edge-to-edge without
+    // disturbing the declared widths of earlier columns. The col element
+    // gets the inflated width; the stored col.width (state) is left alone so
+    // subsequent renders (and persisted layouts) still reflect the user's
+    // declared sizes.
     const anyAuto = visible.some((c) => !c.width);
     if (anyAuto) {
       this._table.style.width = '100%';
     } else {
       const sum = visible.reduce((acc, c) => acc + (Number(c.width) || 0), 0);
-      this._table.style.width = sum + 'px';
+      const viewportWidth = this._viewport?.clientWidth || 0;
+      if (viewportWidth && sum < viewportWidth && visible.length > 0) {
+        const lastColNode = colgroup.lastElementChild;
+        const lastDeclared = Number(visible[visible.length - 1].width) || 0;
+        const sumOthers = sum - lastDeclared;
+        lastColNode.style.width = (viewportWidth - sumOthers) + 'px';
+        this._table.style.width = viewportWidth + 'px';
+      } else {
+        this._table.style.width = sum + 'px';
+      }
     }
   }
 
@@ -1197,11 +1235,29 @@ export default class GridController extends Controller {
       // currency/number/percent renderers and from the `type: 'number'`
       // formatter path).
       'data-type': col.type && col.type !== 'text' ? col.type : null,
+      // Derived alignment so the header text mirrors whatever its body cells
+      // do, even when alignment comes from a renderer rather than col.type.
+      // See _columnAlignment for the resolution rules.
+      'data-align': this._columnAlignment(col),
     });
     if (col.width) th.style.width = col.width + 'px';
     th.style.left = col.pinned === 'left' ? pin.left[col.field] + 'px' : '';
     th.style.right = col.pinned === 'right' ? pin.right[col.field] + 'px' : '';
     this._ensureHeaderChrome(th, col, sortEntry);
+  }
+
+  // Resolve a column's intended text alignment so the header can mirror its
+  // body cells. Explicit col.align (or col.headerAlign) wins; otherwise the
+  // value-type or a known right-aligning renderer drives the default. Returns
+  // 'right' | 'center' | 'left' | null. Returning null leaves the th alone
+  // (the default text/start alignment from base CSS still applies).
+  _columnAlignment(col) {
+    if (col.headerAlign) return col.headerAlign;
+    if (col.align) return col.align;
+    if (col.type === 'number') return 'right';
+    const r = col.cellRenderer;
+    if (typeof r === 'string' && NUMERIC_RENDERERS.has(r)) return 'right';
+    return null;
   }
 
   _ensureHeaderChrome(th, col, sortEntry) {
