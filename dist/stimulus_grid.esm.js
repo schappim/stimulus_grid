@@ -4783,15 +4783,15 @@ function Gr() {
       class: `sg-renderer-expandtoggle${n ? " is-open" : ""}`,
       "aria-label": n ? "Collapse row" : "Expand row",
       "aria-expanded": n ? "true" : "false"
-    }, Yt);
-    return s.addEventListener("click", (i) => {
+    });
+    return s.innerHTML = Yt, s.addEventListener("mousedown", (i) => i.stopPropagation()), s.addEventListener("click", (i) => {
       i.stopPropagation();
-      const o = !n;
-      e && (e._sg_expanded = o), s.classList.toggle("is-open", o), s.setAttribute("aria-expanded", o ? "true" : "false"), s.setAttribute("aria-label", o ? "Collapse row" : "Expand row");
-      const a = r?.closest('[data-controller~="grid"]');
-      a && a.dispatchEvent(new CustomEvent("grid:rowToggleExpand", {
+      const a = !!!(e && e._sg_expanded);
+      e && (e._sg_expanded = a), s.classList.toggle("is-open", a), s.setAttribute("aria-expanded", a ? "true" : "false"), s.setAttribute("aria-label", a ? "Collapse row" : "Expand row");
+      const l = (r || s).closest('[data-controller~="grid"]');
+      l && l.dispatchEvent(new CustomEvent("grid:rowToggleExpand", {
         bubbles: !0,
-        detail: { rowId: e?.id ?? e?._sg_id, row: e, expanded: o }
+        detail: { rowId: e?.id ?? e?._sg_id, row: e, expanded: a }
       }));
     }), s;
   };

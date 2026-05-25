@@ -6106,15 +6106,18 @@ export function expandToggle() {
       class: `sg-renderer-expandtoggle${expanded ? ' is-open' : ''}`,
       'aria-label': expanded ? 'Collapse row' : 'Expand row',
       'aria-expanded': expanded ? 'true' : 'false',
-    }, SG_CHEVRON_SVG);
+    });
+    btn.innerHTML = SG_CHEVRON_SVG;
+    btn.addEventListener('mousedown', (e) => e.stopPropagation());
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const next = !expanded;
+      const cur = !!(row && row._sg_expanded);
+      const next = !cur;
       if (row) row._sg_expanded = next;
       btn.classList.toggle('is-open', next);
       btn.setAttribute('aria-expanded', next ? 'true' : 'false');
       btn.setAttribute('aria-label', next ? 'Collapse row' : 'Expand row');
-      const grid = td?.closest('[data-controller~="grid"]');
+      const grid = (td || btn).closest('[data-controller~="grid"]');
       if (grid) grid.dispatchEvent(new CustomEvent('grid:rowToggleExpand', {
         bubbles: true,
         detail: { rowId: row?.id ?? row?._sg_id, row, expanded: next },
