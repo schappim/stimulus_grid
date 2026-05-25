@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>143 — Trade licence renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>143 — Trade licence (AU contractor licence)</h1>
+  <p class="lede">
+    Australian contractor licence card. Each state has its own scheme —
+    NSW Fair Trading, QBCC, VBA, SA CBS, Service Tasmania — and a
+    different number format. This renderer accepts the common-denominator
+    object shape and surfaces a state badge, monospaced licence number,
+    optional trade class, and a traffic-light expiry pill (green /
+    yellow / orange / red).
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="180">Tradie</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trade"
+              data-header-cell-width-value="120">Trade</th>
+          <th data-controller="header-cell" data-header-cell-field-value="licence"
+              data-header-cell-cell-renderer-value="trade-licence"
+              data-header-cell-width-value="340">Contractor licence</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Value shape:</strong> <code>{ number, state, class, expires }</code>.
+    Strings (just the licence number) also render. The expiry pill goes
+    green &gt; 90 days out, yellow inside 90, orange inside 30, red once
+    past — and the title attribute shows exact days remaining.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // Mix of states + expiry distances to show every colour band.
+    const today = new Date();
+    const inDays = (n) => {
+      const d = new Date(today); d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale',  trade: 'Electrician',
+        licence: { state: 'NSW', number: '234567C', class: 'Electrical', expires: inDays(420) } },
+      { id: 2, name: 'Marcus Chen',  trade: 'Plumber',
+        licence: { state: 'VIC', number: '12345',  class: 'Plumbing',   expires: inDays(58) } },
+      { id: 3, name: 'Priya Patel',  trade: 'Builder',
+        licence: { state: 'QLD', number: '1234567', class: 'Open Builder', expires: inDays(14) } },
+      { id: 4, name: 'Jamal Owens',  trade: 'Carpenter',
+        licence: { state: 'SA',  number: 'BLD 199821', class: 'Building Work', expires: inDays(-12) } },
+      { id: 5, name: 'Lena Brooks',  trade: 'Tiler',
+        licence: { state: 'WA',  number: 'PB 99021', class: 'Painting/Tiling' } },
+      { id: 6, name: 'Tomás Vega',   trade: 'HVAC',
+        licence: 'TAS L 4421' },
+      { id: 7, name: '(no licence)', trade: 'Apprentice',
+        licence: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

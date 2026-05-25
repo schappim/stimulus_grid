@@ -8750,6 +8750,125 @@ export function slider({
   };
 }
 
+/* ---------- AU FSM / tradie compliance & dispatch ------------------
+ *
+ * Renderers for field-service-management and Australian-trades-specific
+ * data shapes — compliance / licence cards with expiry banding, dispatch
+ * workflow pills, vehicle rego plates, etc. Most share two helpers:
+ *
+ *   stateBadge(state)        — coloured AU state tag (NSW/VIC/…)
+ *   expiryBadge(when, opts)  — "exp 12/2026" pill with traffic-light
+ *                              colour based on days remaining
+ *
+ * Cell values are typically objects (`{ number, state, expires, class }`)
+ * but each factory falls back gracefully when given a plain string. */
+
+// Calmer palette for state badges adjacent to a licence number.
+const AU_STATE_BADGE = {
+  NSW: { bg: '#1e3a8a', fg: '#ffffff' },
+  VIC: { bg: '#1e3a8a', fg: '#ffffff' },
+  QLD: { bg: '#7c2d12', fg: '#ffffff' },
+  SA:  { bg: '#7f1d1d', fg: '#ffffff' },
+  WA:  { bg: '#ca8a04', fg: '#ffffff' },
+  TAS: { bg: '#14532d', fg: '#ffffff' },
+  NT:  { bg: '#9a3412', fg: '#ffffff' },
+  ACT: { bg: '#374151', fg: '#facc15' },
+};
+
+// Approximate "look" of each state's current general-issue rego plate.
+const AU_REGO_PLATE = {
+  NSW: { bg: '#fde047', fg: '#0f172a', border: '#0f172a' },
+  VIC: { bg: '#ffffff', fg: '#1d4ed8', border: '#1d4ed8' },
+  QLD: { bg: '#ffffff', fg: '#7f1d1d', border: '#7f1d1d' },
+  SA:  { bg: '#facc15', fg: '#0f172a', border: '#0f172a' },
+  WA:  { bg: '#fbbf24', fg: '#0f172a', border: '#0f172a' },
+  TAS: { bg: '#ffffff', fg: '#166534', border: '#166534' },
+  NT:  { bg: '#ffffff', fg: '#9a3412', border: '#9a3412' },
+  ACT: { bg: '#1f2937', fg: '#facc15', border: '#facc15' },
+};
+
+function stateBadge(state, palette = AU_STATE_BADGE) {
+  const k = String(state || '').toUpperCase();
+  if (!k) return null;
+  const c = palette[k] || { bg: '#6b7280', fg: '#ffffff' };
+  return h('span', {
+    class: 'sg-renderer-state-badge',
+    style: `background:${c.bg};color:${c.fg};`,
+    title: k,
+  }, document.createTextNode(k));
+}
+
+function daysUntil(when) {
+  if (!when) return null;
+  const d = when instanceof Date ? when : new Date(when);
+  if (Number.isNaN(d.valueOf())) return null;
+  // Day-to-day comparison — a same-day expiry counts as 0, not -1.
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const now = new Date();
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((a - b) / 86400000);
+}
+
+function expiryClass(days) {
+  if (days == null) return null;
+  if (days < 0)   return 'is-expired';
+  if (days < 30)  return 'is-soon';
+  if (days < 90)  return 'is-warning';
+  return 'is-current';
+}
+
+function expiryBadge(when, { label = 'exp' } = {}) {
+  if (!when) return null;
+  const days = daysUntil(when);
+  if (days == null) return null;
+  const klass = expiryClass(days);
+  const d = when instanceof Date ? when : new Date(when);
+  const fmt = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  const text = days < 0 ? `expired ${fmt}` : `${label} ${fmt}`;
+  const titleText = days < 0
+    ? `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`
+    : days === 0 ? 'Expires today'
+    : `Expires in ${days} day${days === 1 ? '' : 's'}`;
+  return h('span', {
+    class: `sg-renderer-expiry ${klass}`,
+    title: titleText,
+  }, document.createTextNode(text));
+}
+
+/* ---------- trade-licence ------------------------------------------
+ *
+ * Australian contractor licence. Each state has its own scheme (NSW LIC,
+ * QBCC, VBA, SA CBS, Service Tasmania) and number format — this renderer
+ * accepts the common-denominator shape and surfaces expiry colour-coded:
+ *
+ *   value: {
+ *     number: 'EC234567C',           // licence number
+ *     state:  'NSW',                  // jurisdiction (NSW/VIC/QLD/…)
+ *     class:  'Electrical',           // trade class (optional)
+ *     expires: '2026-12-31',          // ISO date (optional)
+ *   }
+ *
+ * A plain string is rendered as the licence number alone (no state or
+ * expiry colouring). */
+export function tradeLicence({} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') {
+      return h('span', { class: 'sg-renderer-compliance' },
+        h('span', { class: 'sg-renderer-mono' }, document.createTextNode(value)));
+    }
+    const wrap = h('span', { class: 'sg-renderer-compliance' });
+    if (value.state)  wrap.append(stateBadge(value.state));
+    if (value.number) wrap.append(h('span', { class: 'sg-renderer-mono' },
+      document.createTextNode(String(value.number))));
+    if (value.class)  wrap.append(h('span', { class: 'sg-renderer-compliance-class' },
+      document.createTextNode(String(value.class))));
+    const exp = expiryBadge(value.expires);
+    if (exp) wrap.append(exp);
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -8895,6 +9014,7 @@ registerRenderer('percentile',        percentile());
 registerRenderer('battery',           battery());
 registerRenderer('signal-bars',       signalBars());
 registerRenderer('volume',            volumeIndicator());
+registerRenderer('trade-licence',     tradeLicence());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9444,6 +9564,7 @@ wireBuiltin('action-button',  clip.text);
 wireBuiltin('menu',           clip.text);
 wireBuiltin('split-button',   clip.text);
 wireBuiltin('row-actions',    clip.text);
+wireBuiltin('trade-licence',  clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9474,4 +9595,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
+  tradeLicence,
 };
