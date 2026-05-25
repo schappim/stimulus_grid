@@ -912,7 +912,14 @@ export default class GridController extends Controller {
   // ----- Data mutations -----
 
   setRowData(rows) {
-    this.state.rowData = Array.isArray(rows) ? rows : [];
+    const list = Array.isArray(rows) ? rows : [];
+    const idField = this.getRowIdValue;
+    list.forEach((r, i) => {
+      if (r && (r[idField] === undefined || r[idField] === null || r[idField] === '')) {
+        r[idField] = i + 1;
+      }
+    });
+    this.state.rowData = list;
     this.state.selection.clear();
     // Server-side: rowData is just the current page; grid-sync owns the page
     // index, so don't reset it here (that would fight server pagination).
@@ -1630,6 +1637,7 @@ export default class GridController extends Controller {
         colspan: spanCount > 1 ? String(spanCount) : null,
       });
       if (spanCount > 1) td.classList.add('sg-merged-cell');
+      if (col.type === 'number') td.classList.add('sg-renderer-number');
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
       if (col._isRowNumber) {
@@ -1705,7 +1713,7 @@ export default class GridController extends Controller {
           }
         });
       } else {
-        this._renderCellContent(td, row, col);
+        this._renderCellContent(td, row, col, rowNum);
       }
       // Tree-data decoration: indent + (optional) expand chevron on the
       // configured tree column. Done AFTER _renderCellContent so the chevron
@@ -1742,7 +1750,7 @@ export default class GridController extends Controller {
     }
   }
 
-  _renderCellContent(td, row, col) {
+  _renderCellContent(td, row, col, rowNum = null) {
     if (col.cellRenderer) {
       // Resolve order: <template id="..."> wins; otherwise look up a registered
       // functional renderer. Falls through to plain text formatting when
@@ -1772,7 +1780,7 @@ export default class GridController extends Controller {
         const formatted = formatValue(row, col);
         // `api` is passed so renderers can reach back into grid state
         // (e.g. `highlight` reads getQuickFilter() to know what to mark).
-        const result = fn({ value, row, col, td, formatted, api: this.element.gridApi });
+        const result = fn({ value, row, col, td, formatted, rowNum, api: this.element.gridApi });
         if (result == null) return;                           // renderer mutated td directly
         if (typeof result === 'string') { td.innerHTML = result; return; }
         if (result instanceof Node) { td.appendChild(result); return; }

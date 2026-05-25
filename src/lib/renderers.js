@@ -6080,18 +6080,9 @@ export function dragHandle({ label = 'Drag to reorder' } = {}) {
  */
 export function rowNumber({ startAt = 1, padTo = 0 } = {}) {
   return (ctx) => {
-    const { td, row } = ctx;
-    let n = (row && typeof row._sg_idx === 'number') ? row._sg_idx + 1 : null;
-    if (n == null && td) {
-      const tr = td.closest('tr');
-      const body = tr?.parentElement;
-      if (tr && body) {
-        const rows = Array.from(body.querySelectorAll('tr'));
-        const idx = rows.indexOf(tr);
-        if (idx >= 0) n = idx + 1;
-      }
-    }
-    if (n == null) n = startAt;
+    const { td, rowNum } = ctx;
+    const base = typeof rowNum === 'number' ? rowNum : startAt;
+    const n = base + (startAt - 1);
     if (td) td.classList.add('sg-renderer-rownumber-cell');
     const txt = padTo > 0 ? String(n).padStart(padTo, '0') : String(n);
     return h('span', { class: 'sg-renderer-rownumber' }, document.createTextNode(txt));
@@ -7480,41 +7471,55 @@ export function gauge({
 } = {}) {
   return ({ value, td }) => {
     if (td) td.classList.add('sg-renderer-gauge-cell');
-    const cfg = ctx => ctx; // unused; kept for parity
     if (isBlank(value)) return '';
     let v = Number(value);
     if (!Number.isFinite(v)) return String(value);
     v = Math.max(min, Math.min(max, v));
     const frac = (v - min) / Math.max(1e-9, (max - min));
+    const pad = thickness / 2 + 1;
     const cx = width / 2;
-    const cy = height;
-    const r = Math.min(cx - thickness / 2, cy - thickness / 2);
-    const startA = Math.PI;
-    const endA   = startA + Math.PI * frac;
-    const sx = cx + r * Math.cos(startA);
-    const sy = cy + r * Math.sin(startA);
-    const ex = cx + r * Math.cos(endA);
-    const ey = cy + r * Math.sin(endA);
-    const large = frac > 0.5 ? 1 : 0;
-    const bgArc = `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${cx + r},${cy}`;
-    const fgArc = `M ${sx},${sy} A ${r},${r} 0 ${large} 1 ${ex},${ey}`;
+    const cy = height - pad;
+    const r = Math.min(cx - pad, cy - pad);
+    // Arc from left endpoint (angle π) sweeping clockwise (visually) along
+    // the TOP semicircle. Split at the apex (cx, cy-r) so the chord is
+    // never a diameter — that degenerate case makes SVG flip the arc's
+    // visual hemisphere when the partial sweep is short.
+    const buildArc = (f) => {
+      if (f <= 0) return '';
+      const lx = cx - r, ly = cy;             // left endpoint
+      const ax = cx,     ay = cy - r;         // apex (top centre)
+      if (f >= 1) {
+        const rx = cx + r;
+        return `M ${lx},${ly} A ${r},${r} 0 0 1 ${ax},${ay} A ${r},${r} 0 0 1 ${rx},${ly}`;
+      }
+      const ang = Math.PI + Math.PI * f;
+      const ex = cx + r * Math.cos(ang);
+      const ey = cy + r * Math.sin(ang);
+      if (f <= 0.5) return `M ${lx},${ly} A ${r},${r} 0 0 1 ${ex},${ey}`;
+      return `M ${lx},${ly} A ${r},${r} 0 0 1 ${ax},${ay} A ${r},${r} 0 0 1 ${ex},${ey}`;
+    };
+    const bgArc = buildArc(1);
+    const fgArc = buildArc(frac);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', `0 0 ${width} ${height + 2}`);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     svg.setAttribute('width', width);
-    svg.setAttribute('height', height + 2);
+    svg.setAttribute('height', height);
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     bg.setAttribute('d', bgArc);
     bg.setAttribute('stroke', trackColor);
     bg.setAttribute('stroke-width', thickness);
     bg.setAttribute('fill', 'none');
     bg.setAttribute('stroke-linecap', 'round');
-    const fg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    fg.setAttribute('d', fgArc);
-    fg.setAttribute('stroke', color);
-    fg.setAttribute('stroke-width', thickness);
-    fg.setAttribute('fill', 'none');
-    fg.setAttribute('stroke-linecap', 'round');
-    svg.append(bg, fg);
+    svg.append(bg);
+    if (fgArc) {
+      const fg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      fg.setAttribute('d', fgArc);
+      fg.setAttribute('stroke', color);
+      fg.setAttribute('stroke-width', thickness);
+      fg.setAttribute('fill', 'none');
+      fg.setAttribute('stroke-linecap', 'round');
+      svg.append(fg);
+    }
     const wrap = h('span', { class: 'sg-renderer-gauge' });
     wrap.append(svg);
     if (showValue) {

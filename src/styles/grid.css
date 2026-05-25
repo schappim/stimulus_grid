@@ -3801,12 +3801,16 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-address-sep { color: #9ca3af; }
 
 /* ----- barcode ----------------------------------------------------- */
+.sg-grid td.sg-renderer-barcode-cell { text-align: center; }
 .sg-grid .sg-renderer-barcode {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: 3px 6px;
   color: #111;
+  background: #fff;
+  border-radius: 2px;
 }
 .sg-grid .sg-renderer-barcode svg { display: block; }
 .sg-grid .sg-renderer-barcode-text {
