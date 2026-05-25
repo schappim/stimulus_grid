@@ -9197,6 +9197,21 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- invoice-status ----------------------------------------
+ *
+ * Invoice lifecycle pill. Canonical states:
+ *   draft → sent → viewed → paid
+ * plus exception states: overdue / disputed / void / written-off. */
+export function invoiceStatus() {
+  return statusPill({
+    draft: 'gray', sent: 'blue', viewed: 'indigo', paid: 'green',
+    overdue: 'red', disputed: 'orange', void: 'gray', 'written-off': 'gray',
+  }, {
+    draft: 'circle', sent: 'cart', viewed: 'check', paid: 'check-circle',
+    overdue: 'alert', disputed: 'alert', void: 'x-circle', 'written-off': 'x-circle',
+  });
+}
+
 /* ---------- payment-terms -----------------------------------------
  *
  * Invoice payment terms pill — Net 7 / Net 14 / Net 30 / EOM / COD /
@@ -9978,6 +9993,7 @@ registerRenderer('signature',         signature());
 registerRenderer('job-photo',         jobPhoto());
 registerRenderer('callout-fee',       calloutFee());
 registerRenderer('payment-terms',     paymentTerms());
+registerRenderer('invoice-status',    invoiceStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10558,6 +10574,7 @@ wireBuiltin('signature',      clip.json);
 wireBuiltin('job-photo',      clip.json);
 wireBuiltin('callout-fee',    clip.json);
 wireBuiltin('payment-terms',  clip.json);
+wireBuiltin('invoice-status', clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10593,5 +10610,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation, defect, signature, jobPhoto, calloutFee, paymentTerms,
+  variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
 };
