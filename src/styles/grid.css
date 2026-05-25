@@ -2372,3 +2372,27 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 11px;
   white-space: nowrap;
 }
+
+/* QR renderer — inline SVG matrix. The SVG has fixed pixel dimensions
+   set inline by the encoder; we just give the wrapper a sensible
+   vertical alignment so it sits on the row baseline when the cell also
+   holds text. */
+.sg-grid .sg-renderer-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+.sg-grid .sg-renderer-qr svg {
+  display: block;
+  border-radius: 2px;
+}
+.sg-grid .sg-renderer-qr-text {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--sg-fg-muted, #6b7280);
+}
+.sg-grid .sg-renderer-qr-overflow {
+  color: var(--sg-fg-muted, #9ca3af);
+  font-size: 11px;
+  font-style: italic;
+}

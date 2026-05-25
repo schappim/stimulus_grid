@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>45 — QR code renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>45 — QR code renderer</h1>
+  <p class="lede">
+    Inline SVG QR code from the cell value. Pure-JS encoder (Reed-Solomon
+    over GF(2⁸), versions 1-10, ECC level Medium) — no library, no
+    bundle bloat, no network call. Hand a phone camera at the cell and
+    you should be able to scan it.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="110"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="label"
+              data-header-cell-width-value="220"
+              data-header-cell-sortable-value="true">Label</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="qr"
+              data-header-cell-width-value="120">QR</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="qr-with-text"
+              data-header-cell-width-value="300">QR + value</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="qr-large">Large preview</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Capacity:</strong> 213 UTF-8 bytes in the largest supported
+    version (v10, ECC=M). Anything longer falls back to a small italic
+    placeholder rather than emitting a broken matrix. Common cell
+    payloads — URLs, invoice IDs, SKUs, Wi-Fi credentials — fit
+    comfortably in v1–v5.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('qr-with-text', renderers.qr({ moduleSize: 2, margin: 1, showText: true }));
+    registerRenderer('qr-large',     renderers.qr({ moduleSize: 5, margin: 3 }));
+
+    const ROWS = [
+      { id: 1, label: 'Pay invoice INV-8721',
+        code: 'https://pay.example.com/i/INV-8721?amount=2480' },
+      { id: 2, label: 'SKU lookup',
+        code: 'SKU-WIDGET-RED-XL-2026' },
+      { id: 3, label: 'Wi-Fi credentials',
+        code: 'WIFI:T:WPA;S:Chickcom_Guest;P:hello-2026;;' },
+      { id: 4, label: 'Calendar event',
+        code: 'BEGIN:VEVENT\nSUMMARY:Standup\nDTSTART:20260525T093000Z\nDTEND:20260525T094500Z\nEND:VEVENT' },
+      { id: 5, label: 'Phone (tel:)',
+        code: 'tel:+61298765432' },
+      { id: 6, label: 'Plain text — short',
+        code: 'OK' },
+      { id: 7, label: 'Overflow (too long)',
+        code: 'x'.repeat(300) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
