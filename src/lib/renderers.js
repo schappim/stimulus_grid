@@ -7287,23 +7287,19 @@ export function countdown({
     const target = toDate(value);
     if (!target) return String(value);
     const span = h('span', { class: 'sg-renderer-countdown', title: target.toLocaleString() });
-    function tick() {
+    const tick = () => {
       const ms = target.getTime() - Date.now();
       span.textContent = ms <= 0 ? expiredText : fmtCountdown(ms);
       span.classList.toggle('is-expired', ms <= 0);
-    }
+    };
     tick();
-    const id = setInterval(tick, interval);
-    // Stop ticking when the cell leaves the DOM. Browsers don't auto-GC
-    // intervals; without this every row scrolled out of a virtualised
-    // viewport would keep ticking forever.
-    const stop = () => clearInterval(id);
-    if (typeof MutationObserver === 'function' && td) {
-      const obs = new MutationObserver(() => {
-        if (!document.body.contains(span)) { stop(); obs.disconnect(); }
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-    }
+    // Self-stopping interval: once the span has been mounted, each tick
+    // verifies it's still attached. Avoids leaking timers for cells whose
+    // td was replaced by a re-render or scrolled out of a virtual window.
+    const id = setInterval(() => {
+      if (span.isConnected) tick();
+      else clearInterval(id);
+    }, interval);
     return span;
   };
 }
@@ -7404,11 +7400,11 @@ export function timezone({
     const tz = String(value);
     const off = tzOffsetFor(tz);
     const city = withCity ? tz.split('/').pop().replace(/_/g, ' ') : tz;
-    return h('span', { class: 'sg-renderer-tz', title: tz },
-      h('span', { class: 'sg-renderer-tz-city' }, document.createTextNode(city)),
-      ' ',
-      h('span', { class: 'sg-renderer-tz-offset' }, document.createTextNode(off ? `(${off})` : '')),
-    );
+    const wrap = h('span', { class: 'sg-renderer-tz', title: tz });
+    wrap.append(h('span', { class: 'sg-renderer-tz-city' }, document.createTextNode(city)));
+    wrap.append(' ');
+    wrap.append(h('span', { class: 'sg-renderer-tz-offset' }, document.createTextNode(off ? `(${off})` : '')));
+    return wrap;
   };
 }
 
@@ -7624,6 +7620,7 @@ export function miniLineChart({
   height = 24,
   palette = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444'],
   smooth = false,
+  fill = true,
 } = {}) {
   return ({ value, td }) => {
     if (td) td.classList.add('sg-renderer-miniline-cell');
@@ -7650,8 +7647,10 @@ export function miniLineChart({
       });
       body += `<polyline fill="none" stroke="${s.color}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/>`;
     }
-    const wrap = h('span', { class: 'sg-renderer-miniline' });
-    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    const wrap = h('span', { class: `sg-renderer-miniline${fill ? ' is-fill' : ''}` });
+    const svgW = fill ? '100%' : String(width);
+    const svgH = String(height);
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" width="${svgW}" height="${svgH}">${body}</svg>`;
     return wrap;
   };
 }
