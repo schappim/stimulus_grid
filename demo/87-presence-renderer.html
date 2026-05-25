@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>87 — Presence renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>87 — Presence renderer</h1>
+  <p class="lede">
+    Coloured dot for online / away / busy / dnd / offline / invisible
+    states. Accepts strings, booleans, or an object
+    <code>{ status, label }</code> for custom hover tooltips.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="user"
+              data-header-cell-width-value="200">User</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="presence"
+              data-header-cell-width-value="60">●</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status_named"
+              data-header-cell-cell-renderer-value="presence-labeled"
+              data-header-cell-width-value="160">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last_seen"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="160">Last seen</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('presence-labeled', renderers.presence({ showLabel: true, size: 10 }));
+
+    const now = Date.now();
+    const data = [
+      { id: 1, user: 'Astrid Hale',  status: 'online',  status_named: 'online',  last_seen: new Date(now - 5 * 1000) },
+      { id: 2, user: 'Marcus Chen',  status: 'away',    status_named: 'away',    last_seen: new Date(now - 15 * 60 * 1000) },
+      { id: 3, user: 'Priya Patel',  status: 'dnd',     status_named: { status: 'dnd', label: 'Focus mode — back at 3pm' }, last_seen: new Date(now - 30 * 60 * 1000) },
+      { id: 4, user: 'Jamal Owens',  status: 'offline', status_named: 'offline', last_seen: new Date(now - 3 * 86400 * 1000) },
+      { id: 5, user: 'Lena Brooks',  status: 'busy',    status_named: 'busy',    last_seen: new Date(now - 8 * 60 * 1000) },
+      { id: 6, user: 'Tomás Vega',   status: 'invisible', status_named: 'invisible', last_seen: new Date(now - 2 * 3600 * 1000) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

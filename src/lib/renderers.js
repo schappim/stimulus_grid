@@ -6133,6 +6133,176 @@ export function expandToggle() {
   };
 }
 
+/* ---------- avatar-stack (overlapping avatars + overflow counter) ---
+ *
+ * Linear / Jira / GitHub-style overlapping avatar pile with a `+N`
+ * counter when the list exceeds `max`. Each entry can be a string (used
+ * as both initials seed + tooltip) or an object `{ name, avatar, url,
+ * color }`.
+ *
+ *   registerRenderer('contributors', renderers.avatarStack({ max: 4 }));
+ *
+ * Initials fall back to the first letter of each space-separated name
+ * part (up to 2 letters). A deterministic palette tints initials avatars
+ * so the same name always gets the same colour. */
+const AVATAR_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#22c55e',
+                        '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6',
+                        '#ec4899', '#14b8a6'];
+
+function hashName(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = ((h << 5) - h) + name.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function initialsFromName(name) {
+  return String(name || '').split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((w) => (w[0] || '').toUpperCase()).join('') || '?';
+}
+
+function buildAvatarChip(person, size = 24) {
+  const wrap = h('span', {
+    class: 'sg-renderer-avatar-stack-chip',
+    style: `width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.42)}px;`,
+    title: person.name || person.label || '',
+  });
+  if (person.avatar) {
+    wrap.append(h('img', { src: person.avatar, alt: '', loading: 'lazy', decoding: 'async' }));
+  } else {
+    const seed = person.name || person.label || '?';
+    const color = person.color || AVATAR_PALETTE[hashName(seed) % AVATAR_PALETTE.length];
+    wrap.style.background = color;
+    wrap.append(h('span', { class: 'sg-renderer-avatar-stack-initials' },
+      document.createTextNode(initialsFromName(seed))));
+  }
+  return wrap;
+}
+
+export function avatarStack({
+  max = 4,
+  size = 24,
+  showOverflow = true,
+} = {}) {
+  return (ctx) => {
+    const { value } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const mx = cfg.max ?? max;
+    const sz = cfg.size ?? size;
+    const sh = cfg.showOverflow ?? showOverflow;
+    if (isBlank(value)) return '';
+    const list = (Array.isArray(value) ? value : String(value).split(','))
+      .map((p) => typeof p === 'string' ? { name: p.trim() } : p)
+      .filter((p) => p && (p.name || p.avatar));
+    if (!list.length) return '';
+    const visible = list.slice(0, mx);
+    const overflow = list.length - visible.length;
+    const wrap = h('span', { class: 'sg-renderer-avatar-stack' });
+    for (const p of visible) wrap.append(buildAvatarChip(p, sz));
+    if (sh && overflow > 0) {
+      wrap.append(h('span', {
+        class: 'sg-renderer-avatar-stack-chip is-overflow',
+        style: `width: ${sz}px; height: ${sz}px; font-size: ${Math.round(sz * 0.36)}px;`,
+        title: list.slice(mx).map((p) => p.name).filter(Boolean).join(', '),
+      }, document.createTextNode(`+${overflow}`)));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- presence (online / away / offline dot) ------------------
+ *
+ * Coloured circular dot for live presence state. Accepts:
+ *   - 'online' | 'away' | 'offline' | 'dnd' | 'busy' | 'invisible'
+ *   - boolean (true = online, false = offline)
+ *   - object { status: '...', label?: '...' }
+ *
+ *   registerRenderer('presence', renderers.presence({ showLabel: true })); */
+const PRESENCE_STATES = {
+  online:    { color: '#22c55e', label: 'Online' },
+  away:      { color: '#f59e0b', label: 'Away' },
+  busy:      { color: '#ef4444', label: 'Busy' },
+  dnd:       { color: '#ef4444', label: 'Do not disturb' },
+  offline:   { color: '#9ca3af', label: 'Offline' },
+  invisible: { color: 'transparent', label: 'Invisible' },
+};
+
+export function presence({
+  showLabel = false,
+  size = 8,
+} = {}) {
+  return (ctx) => {
+    const { value } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const sl = cfg.showLabel ?? showLabel;
+    const sz = cfg.size ?? size;
+    if (value == null || value === '') return '';
+    let state = null;
+    if (value === true)        state = 'online';
+    else if (value === false)  state = 'offline';
+    else if (typeof value === 'object') state = value.status || value.state;
+    else state = String(value).toLowerCase();
+    const def = PRESENCE_STATES[state] || PRESENCE_STATES.offline;
+    const label = (typeof value === 'object' ? (value.label || def.label) : def.label);
+    const wrap = h('span', { class: 'sg-renderer-presence', title: label });
+    wrap.append(h('span', {
+      class: `sg-renderer-presence-dot is-${state}`,
+      style: `width: ${sz}px; height: ${sz}px; background: ${def.color}; ${def.color === 'transparent' ? 'border: 1px solid #9ca3af;' : ''}`,
+      'aria-hidden': 'true',
+    }));
+    if (sl) {
+      wrap.append(h('span', { class: 'sg-renderer-presence-label' },
+        document.createTextNode(label)));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- assignee (avatar + name + status combined) -------------
+ *
+ * Single-cell combined "who's on this" primitive. Avatar (with initials
+ * fallback) + name + presence dot. Accepts:
+ *   { name, avatar?, url?, presence? }
+ *   "Just a Name"  (initials-only avatar, no presence)
+ *
+ *   registerRenderer('assignee', renderers.assignee({ showPresence: true })); */
+export function assignee({
+  showPresence = true,
+  showAvatar = true,
+  size = 20,
+} = {}) {
+  return (ctx) => {
+    const { value } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const sp = cfg.showPresence ?? showPresence;
+    const sa = cfg.showAvatar ?? showAvatar;
+    const sz = cfg.size ?? size;
+    if (isBlank(value)) return h('span', { class: 'sg-renderer-assignee-empty' },
+      document.createTextNode('Unassigned'));
+    const person = typeof value === 'string' ? { name: value } : value;
+    const name = person.name || person.label || '';
+    if (!name && !person.avatar) return '';
+    const wrap = h('span', { class: 'sg-renderer-assignee' });
+    if (sa) wrap.append(buildAvatarChip(person, sz));
+    const text = h('span', { class: 'sg-renderer-assignee-name' },
+      document.createTextNode(name));
+    if (sp && person.presence) {
+      const state = String(person.presence).toLowerCase();
+      const def = PRESENCE_STATES[state] || PRESENCE_STATES.offline;
+      text.prepend(h('span', {
+        class: `sg-renderer-presence-dot is-${state}`,
+        style: `width: 7px; height: 7px; background: ${def.color}; margin-right: 6px; ${def.color === 'transparent' ? 'border: 1px solid #9ca3af;' : ''}`,
+        'aria-hidden': 'true',
+        title: def.label,
+      }));
+    }
+    wrap.append(text);
+    return wrap;
+  };
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -6349,6 +6519,9 @@ registerRenderer('row-actions',       rowActions());
 registerRenderer('drag-handle',       dragHandle());
 registerRenderer('row-number',        rowNumber());
 registerRenderer('expand-toggle',     expandToggle());
+registerRenderer('avatar-stack',      avatarStack());
+registerRenderer('presence',          presence());
+registerRenderer('assignee',          assignee());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -6916,4 +7089,5 @@ export const renderers = {
   colorPicker, textarea,
   actionButton, menu, splitButton, rowActions,
   dragHandle, rowNumber, expandToggle,
+  avatarStack, presence, assignee,
 };

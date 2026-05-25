@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>88 — Assignee renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>88 — Assignee renderer</h1>
+  <p class="lede">
+    Single-cell "who's on this" primitive — avatar (with initials
+    fallback) + name + optional presence dot. Accepts strings ("Just a
+    Name") or objects <code>{ name, avatar, presence }</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ticket"
+              data-header-cell-width-value="120">Ticket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="280">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="assignee"
+              data-header-cell-cell-renderer-value="assignee"
+              data-header-cell-width-value="200">Assignee</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reporter"
+              data-header-cell-cell-renderer-value="assignee-no-presence"
+              data-header-cell-width-value="200">Reporter</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Reporter column uses <code>showPresence: false</code> so the dot is
+    hidden even when the value has a <code>presence</code> field.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('assignee-no-presence', renderers.assignee({ showPresence: false }));
+
+    const data = [
+      { id: 1, ticket: 'ENG-101', title: 'OAuth callback drops session on Safari',          assignee: { name: 'Astrid Hale', presence: 'online' },  reporter: { name: 'Marcus Chen', presence: 'away' } },
+      { id: 2, ticket: 'ENG-102', title: 'Reconcile Stripe invoices nightly',               assignee: { name: 'Marcus Chen', presence: 'away' },     reporter: 'Priya Patel' },
+      { id: 3, ticket: 'ENG-103', title: 'Crash on launch when locale=ja_JP',               assignee: { name: 'Jamal Owens', presence: 'dnd' },      reporter: { name: 'Lena Brooks', presence: 'online' } },
+      { id: 4, ticket: 'ENG-104', title: 'Audit log export — CSV column order',             assignee: null,                                          reporter: 'Tomás Vega' },
+      { id: 5, ticket: 'ENG-105', title: 'Empty-state illustration for new dashboards',     assignee: { name: 'Lena Brooks', presence: 'online' },   reporter: { name: 'Ines Wu', presence: 'offline' } },
+      { id: 6, ticket: 'ENG-106', title: 'Webhook signature verification documentation',    assignee: 'Priya Patel',                                  reporter: 'Caleb Nash' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

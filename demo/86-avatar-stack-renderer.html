@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>86 — Avatar stack renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>86 — Avatar stack renderer</h1>
+  <p class="lede">
+    Linear / Jira / GitHub-style overlapping avatars with a <code>+N</code>
+    overflow counter. Entries can be plain strings (initials-only) or
+    objects <code>{ name, avatar, color }</code>. Initials get a stable
+    palette tint hashed from the name.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ticket"
+              data-header-cell-width-value="120">Ticket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="320">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="contributors"
+              data-header-cell-cell-renderer-value="avatar-stack"
+              data-header-cell-width-value="160">Contributors</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reviewers"
+              data-header-cell-cell-renderer-value="avatars-3"
+              data-header-cell-width-value="160">Reviewers (max 3)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Hover the <code>+N</code> chip — its <code>title</code> lists the
+    truncated names. Initials avatars are tinted deterministically so
+    the same person gets the same colour everywhere.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('avatars-3', renderers.avatarStack({ max: 3, size: 22 }));
+
+    const data = [
+      { id: 1, ticket: 'ENG-101', title: 'OAuth callback drops session on Safari',          contributors: ['Astrid Hale', 'Marcus Chen', 'Priya Patel'],                reviewers: ['Lena Brooks'] },
+      { id: 2, ticket: 'ENG-102', title: 'Reconcile Stripe invoices nightly',               contributors: ['Marcus Chen'],                                              reviewers: ['Astrid Hale', 'Priya Patel'] },
+      { id: 3, ticket: 'ENG-103', title: 'Crash on launch when locale=ja_JP',               contributors: ['Jamal Owens', 'Lena Brooks', 'Tomás Vega', 'Ines Wu', 'Caleb Nash'], reviewers: ['Astrid Hale', 'Marcus Chen', 'Priya Patel', 'Petra Hjort'] },
+      { id: 4, ticket: 'ENG-104', title: 'Audit log export — CSV column order',             contributors: ['Priya Patel', 'Jamal Owens'],                              reviewers: [] },
+      { id: 5, ticket: 'ENG-105', title: 'Empty-state illustration for new dashboards',     contributors: ['Lena Brooks', 'Petra Hjort'],                              reviewers: ['Tomás Vega', 'Ines Wu', 'Caleb Nash', 'Hassan Reza'] },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
