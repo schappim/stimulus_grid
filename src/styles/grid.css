@@ -4783,6 +4783,16 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   gap: 6px;
 }
 
+/* Trade type — emoji icon + label. */
+.sg-grid .sg-renderer-trade-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-trade-type-icon { font-size: 14px; line-height: 1; }
+.sg-grid .sg-renderer-trade-type-label { color: #1f2937; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

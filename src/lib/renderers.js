@@ -9227,6 +9227,34 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- AU FSM people / trades renderers ----------------------
+ *
+ * The cell shapes that hang off "who's working" — trade icons, skill
+ * endorsements, subcontractor compliance roll-ups, crew composites. */
+
+// Trade-type pill with category icon. The 12 common AU site trades are
+// pre-mapped; anything else falls through as a plain text pill.
+const TRADE_ICONS = {
+  electrician: '⚡', plumber: '🔧', carpenter: '🪚', tiler: '🧱',
+  painter: '🎨', roofer: '🏠', glazier: '🪟', hvac: '❄️',
+  landscaper: '🌳', concreter: '🧊', bricklayer: '🧱', plasterer: '🪣',
+  labourer: '🦺', mechanic: '🔩', welder: '🔥', steel: '⚙️',
+  scaffolder: '🪜', earthworks: '🚜', solar: '☀️',
+};
+export function tradeType({ icons = TRADE_ICONS } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const k = String(value).toLowerCase().trim();
+    const ic = icons[k] || icons[k.split(/\s+/)[0]] || null;
+    const wrap = h('span', { class: 'sg-renderer-trade-type' });
+    if (ic) wrap.append(h('span', { class: 'sg-renderer-trade-type-icon' },
+      document.createTextNode(ic)));
+    wrap.append(h('span', { class: 'sg-renderer-trade-type-label' },
+      document.createTextNode(titleCaseStr(value))));
+    return wrap;
+  };
+}
+
 /* ---------- site-induction ----------------------------------------
  *
  * Site induction record for a person × site pair. Two-stage pill:
@@ -10389,6 +10417,7 @@ registerRenderer('ppe-checklist',     ppeChecklist());
 registerRenderer('incident-severity', incidentSeverity());
 registerRenderer('hazard-rating',     hazardRating());
 registerRenderer('site-induction',    siteInduction());
+registerRenderer('trade-type',        tradeType());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10979,6 +11008,7 @@ wireBuiltin('ppe-checklist',  clip.stringList);
 wireBuiltin('incident-severity', clip.text);
 wireBuiltin('hazard-rating',  clip.json);
 wireBuiltin('site-induction', clip.json);
+wireBuiltin('trade-type',     clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11018,4 +11048,5 @@ export const renderers = {
   retention, materialsPick,
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
+  tradeType,
 };

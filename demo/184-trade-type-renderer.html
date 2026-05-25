@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>184 — Trade type | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>184 — Trade type (icon + label)</h1>
+  <p class="lede">
+    The 18 common AU site trades each get an icon (Electrician ⚡ /
+    Plumber 🔧 / Carpenter 🪚 / Tiler 🧱 / Painter 🎨 / Roofer 🏠 / Glazier
+    🪟 / HVAC ❄️ / Landscaper 🌳 / Concreter 🧊 / Bricklayer 🧱 / Plasterer
+    🪣 / Labourer 🦺 / Mechanic 🔩 / Welder 🔥 / Scaffolder 🪜 / Earthworks
+    🚜 / Solar ☀️). Anything else falls through as a plain text pill.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="180">Tradie</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trade"
+              data-header-cell-cell-renderer-value="trade-type"
+              data-header-cell-width-value="160">Trade</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hourly"
+              data-header-cell-cell-renderer-value="currency"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="140">Hourly</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    StimulusGrid.registerRenderer('currency', StimulusGrid.renderers.currency({ currency: 'AUD', locale: 'en-AU' }));
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale',  trade: 'Electrician', hourly: 95 },
+      { id: 2, name: 'Marcus Chen',  trade: 'Plumber',     hourly: 110 },
+      { id: 3, name: 'Priya Patel',  trade: 'Carpenter',   hourly: 88 },
+      { id: 4, name: 'Jamal Owens',  trade: 'Tiler',       hourly: 78 },
+      { id: 5, name: 'Lena Brooks',  trade: 'Painter',     hourly: 72 },
+      { id: 6, name: 'Tomás Vega',   trade: 'Roofer',      hourly: 92 },
+      { id: 7, name: 'Sergio Vega',  trade: 'Glazier',     hourly: 95 },
+      { id: 8, name: 'Carlos Ng',    trade: 'HVAC',        hourly: 120 },
+      { id: 9, name: 'Eli Patel',    trade: 'Solar',       hourly: 105 },
+      { id:10, name: 'Mia Singh',    trade: 'Landscaper',  hourly: 75 },
+      { id:11, name: 'Yusuf Owens',  trade: 'Concreter',   hourly: 85 },
+      { id:12, name: 'Olivia Brooks',trade: 'Bricklayer',  hourly: 90 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
