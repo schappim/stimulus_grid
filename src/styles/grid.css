@@ -3442,3 +3442,47 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   border-color: #93c5fd;
   box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
 }
+
+/* ----- textarea editor --------------------------------------------- */
+.sg-renderer-textarea-popover {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.sg-renderer-textarea-input {
+  display: block;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: #1f2937;
+  resize: both;
+  outline: none;
+  box-sizing: border-box;
+  min-width: 240px;
+  min-height: 60px;
+}
+.sg-renderer-textarea-input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+}
+.sg-renderer-textarea-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f3f4f6;
+}
+.sg-renderer-textarea-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-right: auto;
+}

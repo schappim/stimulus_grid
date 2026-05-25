@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>78 — Textarea editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>78 — Textarea editor</h1>
+  <p class="lede">
+    Multi-line text editor sibling to <code>multi-line</code>. Display
+    clamps at N lines; double-click opens a resizable textarea popover.
+    <strong>⌘/Ctrl + Enter</strong> commits, Escape cancels.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="160">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="notes"
+              data-header-cell-cell-renderer-value="ta-3"
+              data-header-cell-width-value="280">Notes (3-line clamp)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="address"
+              data-header-cell-cell-renderer-value="ta-2"
+              data-header-cell-width-value="240">Address (2-line clamp)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="changelog"
+              data-header-cell-cell-renderer-value="ta-5-wide"
+              data-header-cell-width-value="280">Changelog (5-line, wide)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    The textarea is resizable — drag the bottom-right corner to grow it
+    for long entries.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('ta-3',       renderers.textarea({ lines: 3, rows: 5, cols: 48 }));
+    registerRenderer('ta-2',       renderers.textarea({ lines: 2, rows: 4, cols: 40 }));
+    registerRenderer('ta-5-wide',  renderers.textarea({ lines: 5, rows: 10, cols: 64 }));
+
+    const data = [
+      { id: 1, customer: 'Astrid Hale', notes: 'Spoke about renewal — 3yr term proposed.\nReady to send paperwork.\nPushed by CFO on the discount.', address: '12 Smith St\nBondi 2026', changelog: '2026-05-12: pricing changed\n2026-05-19: phone updated\n2026-05-20: address moved\n2026-05-22: extra contact added' },
+      { id: 2, customer: 'Marcus Chen', notes: 'High-touch — wants weekly check-ins.', address: 'PO Box 4451\nMelbourne 3000', changelog: '' },
+      { id: 3, customer: 'Priya Patel', notes: '', address: 'Level 14\n9 Castlereagh St\nSydney 2000', changelog: '2026-04-30: rolled to new plan' },
+      { id: 4, customer: 'Jamal Owens', notes: 'Asked us to mute their slack channel updates.', address: '441 Latrobe Ave\nBrisbane 4000', changelog: '2026-05-19: requested slack mute' },
+      { id: 5, customer: 'Lena Brooks', notes: 'Decision-maker on PTO until 2026-06-15. Pause outreach.', address: '14/207 Cathedral St\nWoolloomooloo 2011', changelog: '2026-05-04: pause outreach\n2026-05-09: rep changed' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>

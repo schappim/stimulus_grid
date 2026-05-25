@@ -5630,6 +5630,142 @@ function closeColorPickerEditor() {
   refocusGrid(anchor);
 }
 
+/* ---------- textarea (multi-line popover editor) -------------------
+ *
+ * Companion to `multi-line`. Display behaves like the multi-line
+ * renderer (clamped at N lines). Double-click opens a popover with a
+ * resizable textarea; Cmd/Ctrl+Enter or "Save" commits, Escape cancels.
+ *
+ *   registerRenderer('notes', renderers.textarea({
+ *     lines: 3,
+ *     rows: 6,
+ *   })); */
+export function textarea({
+  lines = 3,
+  rows = 6,
+  cols = 48,
+  separator = '\n',
+  editable = true,
+  empty = '',
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const ll = cfg.lines ?? lines;
+    const rr = cfg.rows ?? rows;
+    const cc = cfg.cols ?? cols;
+    const sep = cfg.separator ?? separator;
+    const ed = cfg.editable ?? editable;
+
+    if (td) {
+      td.classList.add('sg-renderer-multiline');
+      td._sgTextareaRows = rr;
+      td._sgTextareaCols = cc;
+      td._sgTextareaSep = sep;
+    }
+
+    if (ed && td && !td._sgTextareaBound) {
+      td._sgTextareaBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgTextareaHandled) return;
+        e._sgTextareaHandled = true;
+        e.stopPropagation();
+        openTextareaEditor(td, ctx);
+      });
+    }
+
+    if (isBlank(value)) return empty;
+    const text = String(value);
+    if (ll != null && ll > 0) {
+      const block = h('div', {
+        class: 'sg-renderer-multiline-clamp',
+        style: `--sg-multiline-lines: ${ll};`,
+        title: text,
+      });
+      block.textContent = text;
+      return block;
+    }
+    return text;
+  };
+}
+
+let activeTextareaEditor = null;
+
+function openTextareaEditor(anchor, ctx) {
+  closeTextareaEditor();
+  const rows = anchor._sgTextareaRows || 6;
+  const cols = anchor._sgTextareaCols || 48;
+  const { row, col } = ctx;
+  const start = row && col?.field != null ? row[col.field] : '';
+
+  const pop = h('div', { class: 'sg-renderer-textarea-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const ta = h('textarea', { class: 'sg-renderer-textarea-input', rows, cols });
+  ta.value = start == null ? '' : String(start);
+
+  function commit() {
+    const { api } = ctx;
+    const next = ta.value;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeTextareaEditor();
+  }
+
+  const footer = h('div', { class: 'sg-renderer-textarea-footer' });
+  const hint   = h('span', { class: 'sg-renderer-textarea-hint' },
+    document.createTextNode('⌘/Ctrl + Enter to save · Esc to cancel'));
+  const cancel = h('button', { type: 'button', class: 'sg-renderer-timepicker-cancel' },
+    document.createTextNode('Cancel'));
+  const save   = h('button', { type: 'button', class: 'sg-renderer-timepicker-ok' },
+    document.createTextNode('Save'));
+  cancel.addEventListener('click', () => closeTextareaEditor());
+  save.addEventListener('click', commit);
+  footer.append(hint, cancel, save);
+
+  pop.append(ta, footer);
+
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      commit();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeTextareaEditor();
+    }
+  });
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeTextareaEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeTextareaEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+  activeTextareaEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeTextareaEditor() {
+  if (!activeTextareaEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeTextareaEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeTextareaEditor = null;
+  refocusGrid(anchor);
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -5838,6 +5974,7 @@ registerRenderer('date-picker',       datePicker());
 registerRenderer('time-picker',       timePicker());
 registerRenderer('date-range',        dateRange());
 registerRenderer('color-picker',      colorPicker());
+registerRenderer('textarea',          textarea());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -5853,5 +5990,5 @@ export const renderers = {
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
   select, multiselect, combobox, slider, datePicker, timePicker, dateRange,
-  colorPicker,
+  colorPicker, textarea,
 };
