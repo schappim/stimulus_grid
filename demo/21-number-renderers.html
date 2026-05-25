@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>21 — Number renderers | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>21 — Number renderers</h1>
+  <p class="lede">
+    Three formatters that round out the existing <code>currency</code> +
+    <code>percent</code>: <code>number</code> for separated decimals,
+    <code>compact-number</code> for "1.2K / 3.4M / 1.2B", and
+    <code>file-size</code> for bytes → KiB / MiB / GiB (binary by default;
+    pass <code>{ binary: false }</code> for the decimal disk-marketing
+    flavour). All three right-align with tabular numerals so columns of
+    numbers line up at the decimal.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="account"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="160">Account</th>
+          <th data-controller="header-cell" data-header-cell-field-value="balance"
+              data-header-cell-cell-renderer-value="number"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Balance</th>
+          <th data-controller="header-cell" data-header-cell-field-value="balance_compact"
+              data-header-cell-cell-renderer-value="compact-number"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Compact</th>
+          <th data-controller="header-cell" data-header-cell-field-value="storage_bytes"
+              data-header-cell-cell-renderer-value="file-size"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Storage used</th>
+          <th data-controller="header-cell" data-header-cell-field-value="storage_decimal"
+              data-header-cell-cell-renderer-value="file-size-decimal"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Storage (SI)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="api_calls"
+              data-header-cell-cell-renderer-value="compact-number-long"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">API calls / mo (long)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="precision"
+              data-header-cell-cell-renderer-value="number-3dp"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">3 dp</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Custom variants:</strong> the three pre-registered renderers
+    use sensible defaults. Register your own with any <code>Intl.NumberFormat</code>
+    option — the "SI" storage column above is
+    <code>fileSize({ binary: false })</code>, the "API calls / mo (long)"
+    column is <code>compactNumber({ compactDisplay: 'long' })</code>, and
+    the 3 dp column is <code>number({ decimals: 3 })</code>. Locales work
+    too: <code>number({ locale: 'de-DE' })</code> →
+    <code>1.234.567,89</code>.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('file-size-decimal',    renderers.fileSize({ binary: false }));
+    registerRenderer('compact-number-long',  renderers.compactNumber({ compactDisplay: 'long' }));
+    registerRenderer('number-3dp',           renderers.number({ decimals: 3 }));
+
+    const KB = 1024, MB = KB * 1024, GB = MB * 1024, TB = GB * 1024;
+    const ROWS = [
+      { id: 1, account: 'Free tier',       balance: 0,         balance_compact: 0,
+        storage_bytes: 380,            storage_decimal: 380,            api_calls: 412,         precision: 3.14159 },
+      { id: 2, account: 'Starter',         balance: 1294.50,   balance_compact: 1294,
+        storage_bytes: 47 * MB,        storage_decimal: 47 * MB,        api_calls: 12_400,      precision: 0.0001 },
+      { id: 3, account: 'Pro',             balance: 18420.99,  balance_compact: 18420,
+        storage_bytes: 2.4 * GB,       storage_decimal: 2.4 * GB,       api_calls: 384_000,     precision: 9.999 },
+      { id: 4, account: 'Pro · annual',    balance: 218400,    balance_compact: 218400,
+        storage_bytes: 41.7 * GB,      storage_decimal: 41.7 * GB,      api_calls: 2_104_000,   precision: 1 },
+      { id: 5, account: 'Enterprise',      balance: 1_842_000, balance_compact: 1_842_000,
+        storage_bytes: 1.8 * TB,       storage_decimal: 1.8 * TB,       api_calls: 18_400_000,  precision: 0 },
+      { id: 6, account: 'Enterprise · GA', balance: 18_420_000, balance_compact: 18_420_000,
+        storage_bytes: 14 * TB,        storage_decimal: 14 * TB,        api_calls: 240_000_000, precision: 42 },
+      { id: 7, account: 'Refunded',        balance: -184.50,   balance_compact: -184,
+        storage_bytes: 0,              storage_decimal: 0,              api_calls: 0,           precision: -0.5 },
+      { id: 8, account: 'Pending close',   balance: null,      balance_compact: null,
+        storage_bytes: null,           storage_decimal: null,           api_calls: null,        precision: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

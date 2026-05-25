@@ -240,6 +240,69 @@ export function duration({ unit = 'ms', style = 'compact' } = {}) {
   };
 }
 
+/* ---------- number / compact-number / file-size --------------------- */
+
+// Plain number — comma-grouped, configurable decimals. Sibling to
+// currency/percent — same right-aligned tabular-nums treatment so columns
+// of numbers line up at the decimal.
+export function number({ locale = undefined, decimals, ...opts } = {}) {
+  const fmtOpts = { ...opts };
+  if (decimals != null) {
+    fmtOpts.minimumFractionDigits = decimals;
+    fmtOpts.maximumFractionDigits = decimals;
+  }
+  const fmt = new Intl.NumberFormat(locale, fmtOpts);
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return fmt.format(n);
+  };
+}
+
+// Compact: 1,234,567 → "1.2M". `compactDisplay: 'short'` is the default
+// (1.2K / 3.4M / 1.2B); pass 'long' for "1.2 million" via Intl.
+export function compactNumber({ locale = undefined, compactDisplay = 'short', maximumFractionDigits = 1 } = {}) {
+  const fmt = new Intl.NumberFormat(locale, {
+    notation: 'compact', compactDisplay, maximumFractionDigits,
+  });
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return fmt.format(n);
+  };
+}
+
+// File size — bytes → KB / MB / GB / TB / PB. Uses 1024 ('binary', default,
+// matches macOS / Windows on-disk display) or 1000 ('decimal', matches
+// disk-manufacturer marketing). `decimals` default 1; set to 0 for
+// "234 KB" instead of "234.0 KB".
+export function fileSize({ binary = true, decimals = 1, locale = undefined } = {}) {
+  const base = binary ? 1024 : 1000;
+  const units = binary
+    ? ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+    : ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const fmt = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+  });
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    let n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    const sign = n < 0 ? '-' : '';
+    n = Math.abs(n);
+    let idx = 0;
+    while (n >= base && idx < units.length - 1) { n /= base; idx += 1; }
+    // Bytes never want decimals — "143 B" reads cleaner than "143.0 B".
+    const formatted = idx === 0 ? String(Math.round(n)) : fmt.format(n);
+    return `${sign}${formatted} ${units[idx]}`;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -514,9 +577,13 @@ registerRenderer('date',          date());
 registerRenderer('datetime',      datetime());
 registerRenderer('relative-time', relativeTime());
 registerRenderer('duration',      duration());
+registerRenderer('number',         number());
+registerRenderer('compact-number', compactNumber());
+registerRenderer('file-size',      fileSize());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
   countryFlag, abn, avatar, statusPill,
   date, datetime, relativeTime, duration,
+  number, compactNumber, fileSize,
 };

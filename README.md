@@ -257,6 +257,9 @@ without conflict.
 | `datetime` | dates with time | Date + time via `Intl.DateTimeFormat`; configurable locale / `dateStyle` / `timeStyle` |
 | `relative-time` | timestamps | "3 days ago" / "in 2 hours" via `Intl.RelativeTimeFormat`; absolute timestamp on hover |
 | `duration` | elapsed time | `2h 14m` (compact), `02:14:32` (clock), or `2 hours 14 minutes` (words) from ms / sec / min |
+| `number` | plain numbers | `Intl.NumberFormat`-formatted (comma-grouped); right-aligned, tabular-nums |
+| `compact-number` | big numbers | `1.2K` / `3.4M` / `1.2B` (or `1.2 million` with `compactDisplay: 'long'`) |
+| `file-size` | byte counts | Bytes → `KiB` / `MiB` / `GiB` (binary by default); pass `{ binary: false }` for `KB` / `MB` / `GB` |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
