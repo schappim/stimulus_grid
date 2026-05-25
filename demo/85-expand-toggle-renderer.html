@@ -28,7 +28,9 @@
     nested-row expand, "show more" cells, or tree-data toggles.
   </p>
 
-  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true"
+       data-grid-master-detail-value="true"
+       data-grid-detail-template-value="topic-detail">
     <table>
       <thead>
         <tr>
@@ -36,7 +38,9 @@
               data-header-cell-cell-renderer-value="expand-toggle"
               data-header-cell-width-value="40"></th>
           <th data-controller="header-cell" data-header-cell-field-value="title"
-              data-header-cell-width-value="300">Topic</th>
+              data-header-cell-width-value="320">Topic</th>
+          <th data-controller="header-cell" data-header-cell-field-value="owner"
+              data-header-cell-width-value="160">Owner</th>
           <th data-controller="header-cell" data-header-cell-field-value="comments"
               data-header-cell-type-value="number"
               data-header-cell-width-value="120">Comments</th>
@@ -46,26 +50,105 @@
     </table>
   </div>
 
-  <div id="log">Click a chevron to fire grid:rowToggleExpand.</div>
+  <!-- Detail template — cloned + data-detail-bind=field populated by the grid
+       for every expanded row. The chevron renderer dispatches
+       grid:rowToggleExpand which we forward into expandDetailRow below. -->
+  <template id="topic-detail">
+    <div class="detail">
+      <h3 data-detail-bind="title"></h3>
+      <p class="meta">Owned by <strong data-detail-bind="owner"></strong> · <span data-detail-bind="comments"></span> comments</p>
+      <p class="body" data-detail-bind="body"></p>
+      <div class="detail-actions">
+        <button class="primary" data-act="comment">Post comment</button>
+        <button data-act="assign">Reassign…</button>
+        <button data-act="resolve">Mark resolved</button>
+      </div>
+    </div>
+  </template>
+
+  <div id="log">Click a chevron to expand the row, post a comment, or mark it resolved.</div>
+
+  <style>
+    .detail { padding: 14px 20px; background: #fafafa; border-left: 3px solid #2563eb; }
+    .detail h3 { margin: 0 0 4px; font-size: 14px; }
+    .detail .meta { margin: 0 0 8px; color: #6b7280; font-size: 12px; }
+    .detail .body { margin: 0; font-size: 13px; color: #374151; line-height: 1.5; }
+    .detail-actions { margin-top: 10px; display: flex; gap: 6px; }
+    .detail-actions button {
+      appearance: none; border: 1px solid #d1d5db; background: #fff;
+      padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
+    }
+    .detail-actions button:hover { background: #f3f4f6; }
+    .detail-actions button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .detail-actions button.primary:hover { background: #1d4ed8; }
+    .resolved td { text-decoration: line-through; opacity: 0.55; }
+  </style>
 
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
 
     const data = [
-      { id: 1, title: 'Postgres connection limit during launch', comments: 12 },
-      { id: 2, title: 'SSL renewal failed silently last night',  comments: 4  },
-      { id: 3, title: 'Mobile app crash on TestFlight build 224', comments: 28 },
-      { id: 4, title: 'Slack integration token rotation',         comments: 7  },
-      { id: 5, title: 'Vendor SOC2 audit findings to action',     comments: 16 },
+      { id: 1, title: 'Postgres connection limit during launch', owner: 'Astrid Hale',  comments: 12,
+        body: 'Pool size capped at 200. Plan: bump to 500 + add pgbouncer in transaction mode. Pre-launch dry-run scheduled for Thu.' },
+      { id: 2, title: 'SSL renewal failed silently last night',  owner: 'Marcus Chen',   comments: 4,
+        body: 'cron user could not write to /etc/letsencrypt/live. Renewed manually; long-term fix is moving the renew job into systemd-timer with the right service unit.' },
+      { id: 3, title: 'Mobile app crash on TestFlight build 224', owner: 'Priya Patel',  comments: 28,
+        body: 'Crash trace points at the new tab-bar haptics on iPad 14.4. Wrapped in availability check; build 225 ready for re-test.' },
+      { id: 4, title: 'Slack integration token rotation',         owner: 'Jamal Owens',   comments: 7,
+        body: 'Bot tokens rotated; refresh-tokens live now. Old tokens revoke at the end of the week. Update the runbook + Vault entry.' },
+      { id: 5, title: 'Vendor SOC2 audit findings to action',     owner: 'Lena Brooks',   comments: 16,
+        body: 'Three medium-risk findings: log retention, key-rotation cadence, on-call escalation policy. Owners assigned in the audit doc.' },
     ];
 
     const grid = document.querySelector('.panel');
+    const log = document.getElementById('log');
+    const setLog = (msg) => { log.textContent = msg; };
+
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
 
-    const log = document.getElementById('log');
+    // Chevron click → row's _sg_expanded flips → grid:rowToggleExpand fires.
+    // Forward it into the grid's own master/detail expand/collapse so a
+    // detail panel drops in under the master row.
     grid.addEventListener('grid:rowToggleExpand', (e) => {
-      log.textContent = `▶ row ${e.detail.rowId} is now ${e.detail.expanded ? 'EXPANDED' : 'collapsed'} ("${e.detail.row.title}")`;
+      const { rowId, expanded, row } = e.detail;
+      if (expanded) grid.gridApi.expandDetailRow(rowId);
+      else          grid.gridApi.collapseDetailRow(rowId);
+      setLog(`▶ "${row.title}" — ${expanded ? 'expanded detail' : 'collapsed detail'}`);
+    });
+
+    // Wire the action buttons inside each mounted detail row. The grid
+    // emits grid:detailRowMounted after the template is cloned + bound,
+    // and gives us the rendered DOM to attach handlers to.
+    grid.addEventListener('grid:detailRowMounted', (e) => {
+      const { detailEl, masterRow } = e.detail;
+      detailEl.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-act]');
+        if (!btn) return;
+        const act = btn.dataset.act;
+        if (act === 'comment') {
+          masterRow.comments = (masterRow.comments || 0) + 1;
+          grid.gridApi.applyTransaction({ update: [masterRow] });
+          // Re-render the detail so the comment count updates inline.
+          grid.gridApi.collapseDetailRow(masterRow.id);
+          grid.gridApi.expandDetailRow(masterRow.id);
+          setLog(`💬 commented on "${masterRow.title}" — now ${masterRow.comments} comments`);
+        } else if (act === 'assign') {
+          const next = prompt('Reassign to:', masterRow.owner);
+          if (next && next !== masterRow.owner) {
+            masterRow.owner = next;
+            grid.gridApi.applyTransaction({ update: [masterRow] });
+            grid.gridApi.collapseDetailRow(masterRow.id);
+            grid.gridApi.expandDetailRow(masterRow.id);
+            setLog(`👤 reassigned "${masterRow.title}" → ${next}`);
+          }
+        } else if (act === 'resolve') {
+          masterRow._resolved = !masterRow._resolved;
+          const tr = grid.querySelector(`tr[data-row-id="${masterRow.id}"]`);
+          tr?.classList.toggle('resolved', !!masterRow._resolved);
+          setLog(`${masterRow._resolved ? '✅' : '↩️'} "${masterRow.title}" ${masterRow._resolved ? 'resolved' : 'reopened'}`);
+        }
+      });
     });
   </script>
 </body>
