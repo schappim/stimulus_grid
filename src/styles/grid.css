@@ -4749,6 +4749,31 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-ppe-item { cursor: help; }
 
+/* Hazard rating — 5×5 matrix band pill. */
+.sg-grid .sg-renderer-hazard-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-hazard-rating-score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sg-grid .sg-renderer-hazard-rating-band {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.sg-grid .sg-renderer-hazard-rating.is-low      { background: #dcfce7; color: #14532d; }
+.sg-grid .sg-renderer-hazard-rating.is-moderate { background: #fef3c7; color: #713f12; }
+.sg-grid .sg-renderer-hazard-rating.is-high     { background: #fed7aa; color: #7c2d12; }
+.sg-grid .sg-renderer-hazard-rating.is-extreme  { background: #7f1d1d; color: #ffffff; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

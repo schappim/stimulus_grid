@@ -9227,6 +9227,50 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- hazard-rating ------------------------------------------
+ *
+ * Risk-matrix score from a 5×5 likelihood × consequence grid (the de-facto
+ * AS/NZS ISO 31000-aligned matrix every site uses). Renders the raw
+ * score with the matrix's band colour:
+ *
+ *    1- 3  green   low
+ *    4- 8  yellow  moderate
+ *    9-14  orange  high
+ *   15-25  red     extreme
+ *
+ *   value: number (1-25)
+ *        | { likelihood, consequence }
+ *        | { score, band? } */
+export function hazardRating() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let score = null, L = null, C = null;
+    if (typeof value === 'number') score = value;
+    else if (typeof value === 'object') {
+      if (value.likelihood != null && value.consequence != null) {
+        L = +value.likelihood; C = +value.consequence;
+        score = L * C;
+      } else if (value.score != null) score = +value.score;
+    }
+    if (!Number.isFinite(score)) return '';
+    score = Math.max(1, Math.min(25, score));
+    const band = score <= 3 ? 'low'
+               : score <= 8 ? 'moderate'
+               : score <= 14 ? 'high'
+               : 'extreme';
+    const wrap = h('span', {
+      class: `sg-renderer-hazard-rating is-${band}`,
+      title: L && C ? `Likelihood ${L} × Consequence ${C} = ${score} (${band})`
+                    : `Risk score ${score} (${band})`,
+    });
+    wrap.append(h('span', { class: 'sg-renderer-hazard-rating-score' },
+      document.createTextNode(String(score))));
+    wrap.append(h('span', { class: 'sg-renderer-hazard-rating-band' },
+      document.createTextNode(titleCaseStr(band))));
+    return wrap;
+  };
+}
+
 /* ---------- incident-severity --------------------------------------
  *
  * Incident classification pill. Values track Safe Work Australia's
@@ -10307,6 +10351,7 @@ registerRenderer('jsa-status',        jsaStatus());
 registerRenderer('toolbox-talk',      toolboxTalk());
 registerRenderer('ppe-checklist',     ppeChecklist());
 registerRenderer('incident-severity', incidentSeverity());
+registerRenderer('hazard-rating',     hazardRating());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10895,6 +10940,7 @@ wireBuiltin('jsa-status',     clip.text);
 wireBuiltin('toolbox-talk',   clip.json);
 wireBuiltin('ppe-checklist',  clip.stringList);
 wireBuiltin('incident-severity', clip.text);
+wireBuiltin('hazard-rating',  clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10932,5 +10978,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
-  swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity,
+  swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
 };
