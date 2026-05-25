@@ -2865,3 +2865,10 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* When the comment-count icon is an SVG, size it to match emoji glyphs
+   so the badge keeps the same vertical rhythm regardless of the source. */
+.sg-grid .sg-cc-icon svg {
+  width: 13px; height: 13px;
+  display: block;
+}

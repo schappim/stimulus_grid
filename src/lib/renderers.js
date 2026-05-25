@@ -4031,8 +4031,16 @@ export function commentCount({ icon = '💬' } = {}) {
         class: 'sg-cc-badge',
         title: `${count} comment${Number(count) === 1 ? '' : 's'}`,
       });
-      badge.append(h('span', { class: 'sg-cc-icon', 'aria-hidden': 'true' },
-        document.createTextNode(icon)));
+      // `icon` accepts an emoji / single character as text OR a raw
+      // SVG string (anything starting with "<svg"). The SVG path goes
+      // through innerHTML so its namespace + attributes are honoured.
+      const iconEl = h('span', { class: 'sg-cc-icon', 'aria-hidden': 'true' });
+      if (typeof icon === 'string' && icon.trimStart().startsWith('<svg')) {
+        iconEl.innerHTML = icon;
+      } else {
+        iconEl.append(document.createTextNode(String(icon)));
+      }
+      badge.append(iconEl);
       badge.append(h('span', { class: 'sg-cc-num' }, document.createTextNode(String(count))));
       wrap.append(badge);
     }
