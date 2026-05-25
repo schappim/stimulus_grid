@@ -3370,6 +3370,81 @@ export function donut({
   };
 }
 
+/* ---------- histogram (distribution bars) ---------------------------
+ *
+ * Sibling of `sparkline({ type: 'bar' })` for *distribution* columns
+ * — the bars are framed as bin counts rather than a time series, so
+ * each bar carries a `<title>` tooltip ("Bin 3: 12") that surfaces on
+ * hover. Pass `highlightMax: true` to fade non-maximum bars so the
+ * mode stands out at a glance, and `binLabels` for axis ticks below
+ * each bar.
+ *
+ *   registerRenderer('latency', histogram({
+ *     binLabels: ['<50', '50-100', '100-200', '200-500', '500+'],
+ *     color: 'orange', highlightMax: true,
+ *   }))
+ *
+ * Accepts the same array-of-numbers cell value shape as sparkline.
+ * Pass `{ counts, labels }` as the cell value for per-row labels. */
+export function histogram({
+  width = 120,
+  height = 32,
+  color = 'blue',
+  highlightMax = false,
+  gap = 1,
+  binLabels = null,
+  showCount = false,
+} = {}) {
+  const fill = SPARK_COLORS[color] || color;
+  return ({ value }) => {
+    if (value == null || value === '') return '';
+    let data = value, labels = binLabels;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      data = value.counts;
+      labels = value.labels || binLabels;
+    }
+    if (!Array.isArray(data)) return '';
+    const numbers = data.map(Number).filter(Number.isFinite);
+    if (numbers.length === 0) return '';
+    const max = Math.max(...numbers, 1);
+    const total = numbers.reduce((a, b) => a + b, 0);
+
+    const labelH = labels && labels.length ? 10 : 0;
+    const padX = 1, padY = 1;
+    const w = width - padX * 2;
+    const ph = height - padY * 2 - labelH;
+    const barW = Math.max(1, (w - (numbers.length - 1) * gap) / numbers.length);
+
+    let bars = '';
+    for (let i = 0; i < numbers.length; i++) {
+      const v = numbers[i];
+      const bh = (v / max) * ph;
+      const x = padX + i * (barW + gap);
+      const y = padY + ph - bh;
+      const opacity = highlightMax ? (v === max ? 1 : 0.45) : 0.85;
+      const titleText = labels && labels[i] != null ? `${labels[i]}: ${v}` : `Bin ${i + 1}: ${v}`;
+      bars += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${bh.toFixed(2)}"`
+            + ` fill="${fill}" fill-opacity="${opacity}"><title>${mdEscapeHTML(titleText)}</title></rect>`;
+    }
+    let ticks = '';
+    if (labels && labels.length) {
+      for (let i = 0; i < numbers.length && i < labels.length; i++) {
+        const x = padX + i * (barW + gap) + barW / 2;
+        ticks += `<text x="${x.toFixed(2)}" y="${(height - 1).toFixed(2)}" text-anchor="middle"`
+              +  ` font-size="7" fill="currentColor" opacity="0.65">${mdEscapeHTML(labels[i])}</text>`;
+      }
+    }
+    const svg = `<svg class="sg-renderer-histogram" viewBox="0 0 ${width} ${height}"`
+              + ` width="${width}" height="${height}" preserveAspectRatio="none" aria-hidden="true">`
+              + bars + ticks + `</svg>`;
+    if (showCount) {
+      return `<span class="sg-renderer-histogram-wrap">${svg}`
+           + `<span class="sg-renderer-histogram-total">n=${total}</span></span>`;
+    }
+    return svg;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3419,6 +3494,7 @@ registerRenderer('code',           code());
 registerRenderer('rating',         rating());
 registerRenderer('bullet',         bullet());
 registerRenderer('donut',          donut());
+registerRenderer('histogram',      histogram());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3430,5 +3506,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, rating, bullet, donut, audioAttachment,
+  diff, geo, qr, code, rating, bullet, donut, histogram, audioAttachment,
 };

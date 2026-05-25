@@ -234,6 +234,7 @@ ship pre-registered:
 | `rating` | Generic sibling of `star-rating` with a swappable glyph. `icon: 'heart'` (default) / `'star'` (delegates to the same engine, swapped tint), `'thumb'` (binary up / down / neutral, value sign drives it), `'smiley'` (5 faces on a 1-N scale), `'nps'` (0-10 chip banded into Detractor / Passive / Promoter colours). `max`, `precision`, and an override `color` mirror `star-rating` |
 | `bullet` | Stephen Few's bullet chart — qualitative grey bands + black value bar + vertical target tick, all in an inline SVG. `min` / `max` / `target` / `ranges` set the scale and bands; per-row overrides via object cell value `{ value, target, ranges }`. Default bands at 60% and 80% if `ranges` is omitted |
 | `donut` | Single-percentage circular sibling to `progress-bar`. Stroke-dasharray ring from 12 o'clock clockwise. Same palette tokens as `sparkline` (`blue` / `green` / `red` / `orange` / `purple` / `pink` / `gray` or raw CSS colour). `inline: true` for side-by-side label, default is label inside the ring |
+| `histogram` | Distribution bars from an array of counts. Sibling to `sparkline({ type: 'bar' })` framed for distributions — each bar carries a `<title>` tooltip ("Bin 3: 12"), `highlightMax: true` fades non-max bars, `binLabels` paints tiny axis ticks. Per-row labels via `{ counts, labels }` cell value |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

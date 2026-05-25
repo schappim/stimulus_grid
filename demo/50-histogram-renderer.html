@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>50 — Histogram renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>50 — Histogram renderer</h1>
+  <p class="lede">
+    Distribution sibling to <code>sparkline({ type: 'bar' })</code> —
+    bars sit on a baseline with a <code>&lt;title&gt;</code> tooltip per
+    bar, so hovering a bar surfaces its bin label and count.
+    <code>highlightMax: true</code> fades the non-max bars so the mode
+    stands out instantly.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true" data-grid-row-height-value="48">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="endpoint"
+              data-header-cell-width-value="240"
+              data-header-cell-sortable-value="true">Endpoint</th>
+          <th data-controller="header-cell" data-header-cell-field-value="latency"
+              data-header-cell-cell-renderer-value="hist-latency"
+              data-header-cell-width-value="220">p50 latency (bins)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="hist-status"
+              data-header-cell-width-value="200">Status codes</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reqs"
+              data-header-cell-cell-renderer-value="hist-vol"
+              data-header-cell-width-value="180">Volume / day (last 7)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Two value shapes:</strong> a plain array of numbers
+    (<code>[3, 12, 7, 4, 1]</code>) for a fixed registration, or
+    <code>{ counts: [...], labels: [...] }</code> when each row needs its
+    own labels. Labels render as tiny axis ticks under each bar.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('hist-latency', renderers.histogram({
+      width: 200, height: 36, color: 'orange', highlightMax: true,
+      binLabels: ['<50', '50-100', '100-200', '200-500', '500+'],
+    }));
+    registerRenderer('hist-status', renderers.histogram({
+      width: 180, height: 36, color: 'blue', showCount: true,
+      binLabels: ['2xx', '3xx', '4xx', '5xx'],
+    }));
+    registerRenderer('hist-vol', renderers.histogram({
+      width: 160, height: 36, color: 'green', highlightMax: true,
+      binLabels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+    }));
+
+    const ROWS = [
+      { id: 1, endpoint: 'GET /api/v1/orders',
+        latency: [421, 1208, 624, 142, 38],
+        status:  [4820, 12, 88, 4],
+        reqs:    [1450, 1620, 1580, 1710, 1490, 380, 290] },
+      { id: 2, endpoint: 'POST /api/v1/orders',
+        latency: [12, 84, 312, 821, 18],
+        status:  [978, 0, 23, 71],
+        reqs:    [320, 412, 388, 451, 380, 90, 60] },
+      { id: 3, endpoint: 'GET /api/v1/customers',
+        latency: [2840, 1820, 712, 188, 22],
+        status:  [5512, 8, 17, 1],
+        reqs:    [2210, 2180, 2480, 2120, 2280, 590, 420] },
+      { id: 4, endpoint: 'POST /api/v1/webhooks/replay',
+        latency: [2, 14, 88, 412, 280],
+        status:  [620, 4, 9, 188],
+        reqs:    [88, 110, 95, 120, 102, 30, 18] },
+      { id: 5, endpoint: 'PATCH /api/v1/orders/:id',
+        latency: [320, 1480, 980, 240, 12],
+        status:  [3080, 1, 24, 3],
+        reqs:    [940, 1010, 980, 1180, 1020, 220, 190] },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -41,7 +41,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 - [x] **47 — `rating` (configurable icon)** Hearts / thumbs / smiley / NPS bands. Same engine as `star-rating` but with a swappable glyph + colour band map.
 - [x] **48 — `bullet`** Bullet-chart range bar — value on a min-max axis with optional target band marker.
 - [x] **49 — `donut`** Single-percentage donut chart (sibling to `progress-bar`).
-- [ ] **50 — `histogram`** Frequency bars from an array (sibling to `sparkline`).
+- [x] **50 — `histogram`** Frequency bars from an array (sibling to `sparkline`).
 - [ ] **51 — `rag`** Pure red / amber / green dot — no label. Risk-dashboard primitive.
 - [ ] **52 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
 - [ ] **53 — `mention`** Parses `@user` and `#tag` inside long text into styled chips.

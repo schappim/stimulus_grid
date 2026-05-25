@@ -2539,3 +2539,19 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 12px;
   color: var(--sg-fg, #1f2937);
 }
+
+/* Histogram — distribution bars w/ per-bar <title> tooltips. */
+.sg-grid .sg-renderer-histogram {
+  display: inline-block;
+  vertical-align: middle;
+}
+.sg-grid .sg-renderer-histogram-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-grid .sg-renderer-histogram-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--sg-fg-muted, #6b7280);
+  font-size: 11px;
+}
