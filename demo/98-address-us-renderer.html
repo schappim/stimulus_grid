@@ -22,7 +22,7 @@
     <table>
       <thead><tr>
         <th data-controller="header-cell" data-header-cell-field-value="name" data-header-cell-width-value="160">Name</th>
-        <th data-controller="header-cell" data-header-cell-field-value="address" data-header-cell-cell-renderer-value="address-us" data-header-cell-width-value="440">Address</th>
+        <th data-controller="header-cell" data-header-cell-field-value="address" data-header-cell-cell-renderer-value="addr-us-edit" data-header-cell-width-value="440">Address</th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -31,6 +31,8 @@
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('addr-us-edit', renderers.addressUs({ editable: true }));
     const data = [
       { name: 'Astrid Hale',   address: { street: '1600 Pennsylvania Ave NW',  city: 'Washington', state: 'DC', zip: '20500' } },
       { name: 'Marcus Chen',   address: { street: '350 Fifth Avenue', street2: 'Suite 4200', city: 'New York', state: 'NY', zip: '10118' } },

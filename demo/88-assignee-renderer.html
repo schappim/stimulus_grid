@@ -34,7 +34,7 @@
           <th data-controller="header-cell" data-header-cell-field-value="title"
               data-header-cell-width-value="280">Title</th>
           <th data-controller="header-cell" data-header-cell-field-value="assignee"
-              data-header-cell-cell-renderer-value="assignee"
+              data-header-cell-cell-renderer-value="assignee-edit"
               data-header-cell-width-value="200">Assignee</th>
           <th data-controller="header-cell" data-header-cell-field-value="reporter"
               data-header-cell-cell-renderer-value="assignee-no-presence"
@@ -54,6 +54,17 @@
   <script>
     StimulusGrid.start();
     const { registerRenderer, renderers } = StimulusGrid;
+    const PEOPLE = [
+      { name: 'Astrid Hale',   presence: 'online' },
+      { name: 'Marcus Chen',   presence: 'away'   },
+      { name: 'Priya Patel',   presence: 'online' },
+      { name: 'Jamal Owens',   presence: 'dnd'    },
+      { name: 'Lena Brooks',   presence: 'online' },
+      { name: 'Tomás Vega',    presence: 'offline' },
+      { name: 'Ines Wu',       presence: 'offline' },
+      { name: 'Caleb Nash',    presence: 'away'   },
+    ];
+    registerRenderer('assignee-edit', renderers.assignee({ editable: true, options: PEOPLE }));
     registerRenderer('assignee-no-presence', renderers.assignee({ showPresence: false }));
 
     const data = [

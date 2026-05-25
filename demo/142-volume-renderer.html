@@ -14,7 +14,7 @@
   <script>
     StimulusGrid.start();
     const { registerRenderer, renderers } = StimulusGrid;
-    registerRenderer('vol-with-pct', renderers.volumeIndicator({ showValue: true }));
+    registerRenderer('vol-with-pct', renderers.volumeIndicator({ showValue: true, editable: true }));
     const data = [
       { room: 'Living room',  volume: 0   },
       { room: 'Kitchen',      volume: 22  },

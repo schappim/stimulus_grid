@@ -6384,10 +6384,24 @@ export function html({} = {}) {
  * (that pushes past the "no heavy deps" line) — but we do clamp to a
  * fixed height with overflow ellipsis so a 50-line config doesn't
  * blow out the row. */
-export function yaml({ maxLines = 4 } = {}) {
-  return ({ value, td }) => {
+export function yaml({ maxLines = 4, editable = false, rows = 12, cols = 60 } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-yaml-cell');
+      if (editable && !td._sgYamlBound) {
+        td._sgYamlBound = true;
+        td._sgTextareaRows = rows;
+        td._sgTextareaCols = cols;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgTextareaHandled) return;
+          e._sgTextareaHandled = true;
+          e.stopPropagation();
+          openTextareaEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
-    if (td) td.classList.add('sg-renderer-yaml-cell');
     const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
     const block = h('pre', {
       class: 'sg-renderer-yaml',
@@ -6655,9 +6669,22 @@ const VOL_MUTE = '<line x1="13" y1="4" x2="17" y2="9" stroke="currentColor" stro
 
 export function volumeIndicator({
   showValue = false,
+  editable = false,
 } = {}) {
-  return ({ value, td }) => {
-    if (td) td.classList.add('sg-renderer-volume-cell');
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-volume-cell');
+      if (editable && !td._sgVolumeBound) {
+        td._sgVolumeBound = true;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgVolumeHandled) return;
+          e._sgVolumeHandled = true;
+          e.stopPropagation();
+          openVolumeEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
     let n = Number(value);
     if (!Number.isFinite(n)) return String(value);
@@ -6675,6 +6702,66 @@ export function volumeIndicator({
       document.createTextNode(`${Math.round(n)}%`)));
     return wrap;
   };
+}
+
+let activeVolumeEditor = null;
+function closeVolumeEditor() {
+  if (!activeVolumeEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeVolumeEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeVolumeEditor = null;
+  refocusGrid(anchor);
+}
+
+function openVolumeEditor(anchor, ctx) {
+  closeVolumeEditor();
+  const { row, col } = ctx;
+  const start = Math.max(0, Math.min(100, Number(row && col?.field != null ? row[col.field] : 0) || 0));
+
+  const pop = h('div', { class: 'sg-renderer-volume-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const slider = h('input', { type: 'range', min: '0', max: '100', step: '1', value: String(start),
+    class: 'sg-renderer-volume-slider' });
+  const label = h('span', { class: 'sg-renderer-volume-popover-value' },
+    document.createTextNode(`${start}%`));
+  slider.addEventListener('input', () => { label.textContent = `${slider.value}%`; });
+
+  function commit() {
+    const { api } = ctx;
+    const next = Number(slider.value);
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeVolumeEditor();
+  }
+
+  pop.append(slider, label);
+
+  slider.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.stopPropagation(); closeVolumeEditor(); }
+  });
+  slider.addEventListener('change', commit);
+
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeVolumeEditor(); } }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeVolumeEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  setTimeout(() => slider.focus(), 0);
+  activeVolumeEditor = { pop, onKey, onDocClick, anchor };
 }
 
 /* ---------- file (single file + mime-type icon) --------------------
@@ -7754,6 +7841,118 @@ export function postalCode({
  * only, with the conventional two-line "Street / City, ST ZIP" layout.
  * Value can be a string (rendered verbatim) or an object with
  * `street`, `street2`, `city`, `state`, `zip`. */
+let activeAddressUsEditor = null;
+
+function closeAddressUsEditor() {
+  if (!activeAddressUsEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeAddressUsEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeAddressUsEditor = null;
+  refocusGrid(anchor);
+}
+
+function openAddressUsEditor(anchor, ctx) {
+  closeAddressUsEditor();
+  const { row, col } = ctx;
+  const start = row && col?.field != null ? row[col.field] : null;
+  let seed = { street: '', street2: '', city: '', state: '', zip: '' };
+  if (start && typeof start === 'object') {
+    seed = {
+      street:  start.street  || start.address1 || '',
+      street2: start.street2 || start.address2 || '',
+      city:    start.city    || '',
+      state:   (start.state  || '').toUpperCase(),
+      zip:     start.zip     || start.postcode || start.postal_code || '',
+    };
+  } else if (typeof start === 'string' && start.trim()) {
+    seed.street = start.trim();
+  }
+
+  const pop = h('div', { class: 'sg-renderer-address-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const mkField = (label, key, opts = {}) => {
+    const wrap = h('label', { class: 'sg-renderer-address-field' });
+    wrap.append(h('span', { class: 'sg-renderer-address-label' }, document.createTextNode(label)));
+    const input = h('input', { type: 'text', class: 'sg-renderer-address-input', ...opts });
+    input.value = seed[key] || '';
+    input.dataset.key = key;
+    wrap.append(input);
+    return { wrap, input };
+  };
+
+  const street  = mkField('Street',   'street');
+  const street2 = mkField('Apt/Ste',  'street2');
+  const city    = mkField('City',     'city');
+  const state   = mkField('State',    'state', { maxlength: 2 });
+  const zip     = mkField('ZIP',      'zip',   { maxlength: 10 });
+
+  const row1 = h('div', { class: 'sg-renderer-address-row' });
+  row1.append(street.wrap);
+  const row2 = h('div', { class: 'sg-renderer-address-row' });
+  row2.append(street2.wrap);
+  const row3 = h('div', { class: 'sg-renderer-address-row sg-renderer-address-row-3' });
+  row3.append(city.wrap, state.wrap, zip.wrap);
+
+  function commit() {
+    const { api } = ctx;
+    const next = {
+      street:  street.input.value.trim(),
+      street2: street2.input.value.trim(),
+      city:    city.input.value.trim(),
+      state:   state.input.value.trim().toUpperCase(),
+      zip:     zip.input.value.trim(),
+    };
+    if (!next.street2) delete next.street2;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeAddressUsEditor();
+  }
+
+  const footer = h('div', { class: 'sg-renderer-textarea-footer' });
+  const hint   = h('span', { class: 'sg-renderer-textarea-hint' },
+    document.createTextNode('Enter to save · Esc to cancel'));
+  const cancel = h('button', { type: 'button', class: 'sg-renderer-timepicker-cancel' },
+    document.createTextNode('Cancel'));
+  const save   = h('button', { type: 'button', class: 'sg-renderer-timepicker-ok' },
+    document.createTextNode('Save'));
+  cancel.addEventListener('click', () => closeAddressUsEditor());
+  save.addEventListener('click', commit);
+  footer.append(hint, cancel, save);
+
+  pop.append(row1, row2, row3, footer);
+
+  pop.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      commit();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeAddressUsEditor();
+    }
+  });
+
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeAddressUsEditor(); } }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeAddressUsEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  setTimeout(() => street.input.focus(), 0);
+  activeAddressUsEditor = { pop, onKey, onDocClick, anchor };
+}
+
 function normaliseAddressUs(value) {
   if (value == null || value === '') return null;
   if (typeof value === 'string') return { _raw: value.trim() };
@@ -7767,9 +7966,23 @@ function normaliseAddressUs(value) {
   };
 }
 
-export function addressUs({ empty = '' } = {}) {
-  return ({ value, td }) => {
-    if (td) td.classList.add('sg-renderer-address-cell');
+export function addressUs({ empty = '', editable = false } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-address-cell');
+      if (editable && !td._sgAddrBound) {
+        td._sgAddrBound = true;
+        td._sgTextareaRows = 6;
+        td._sgTextareaCols = 36;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgTextareaHandled) return;
+          e._sgTextareaHandled = true;
+          e.stopPropagation();
+          openAddressUsEditor(td, ctx);
+        });
+      }
+    }
     const a = normaliseAddressUs(value);
     if (!a) return empty;
     if (a._raw) {
@@ -8171,13 +8384,30 @@ export function assignee({
   showPresence = true,
   showAvatar = true,
   size = 20,
+  editable = false,
+  options = null,
+  clearable = true,
 } = {}) {
   return (ctx) => {
-    const { value } = ctx;
+    const { value, td } = ctx;
     const cfg = ctx?.col?.cellRendererConfig || {};
     const sp = cfg.showPresence ?? showPresence;
     const sa = cfg.showAvatar ?? showAvatar;
     const sz = cfg.size ?? size;
+    const ed = cfg.editable ?? editable;
+    const opts = cfg.options ?? options;
+    const clr = cfg.clearable ?? clearable;
+    if (td && ed && !td._sgAssigneeBound) {
+      td._sgAssigneeBound = true;
+      td._sgAssigneeOpts = opts || [];
+      td._sgAssigneeClearable = clr;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgAssigneeHandled) return;
+        e._sgAssigneeHandled = true;
+        e.stopPropagation();
+        openAssigneeEditor(td, ctx);
+      });
+    }
     if (isBlank(value)) return h('span', { class: 'sg-renderer-assignee-empty' },
       document.createTextNode('Unassigned'));
     const person = typeof value === 'string' ? { name: value } : value;
@@ -8200,6 +8430,81 @@ export function assignee({
     wrap.append(text);
     return wrap;
   };
+}
+
+let activeAssigneeEditor = null;
+
+function closeAssigneeEditor() {
+  if (!activeAssigneeEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeAssigneeEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeAssigneeEditor = null;
+  refocusGrid(anchor);
+}
+
+function openAssigneeEditor(anchor, ctx) {
+  closeAssigneeEditor();
+  const opts = anchor._sgAssigneeOpts || [];
+  const clearable = anchor._sgAssigneeClearable;
+  const { row, col } = ctx;
+  const current = row && col?.field != null ? row[col.field] : null;
+  const currentName = (typeof current === 'string' ? current : current?.name) || '';
+
+  const pop = h('div', { class: 'sg-renderer-assignee-popover', role: 'listbox' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit(next) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeAssigneeEditor();
+  }
+
+  if (clearable) {
+    const none = h('button', { type: 'button', class: 'sg-renderer-assignee-option sg-renderer-assignee-option-none', role: 'option' },
+      document.createTextNode('Unassigned'));
+    none.addEventListener('click', () => commit(null));
+    pop.append(none);
+  }
+
+  if (!opts.length) {
+    const empty = h('div', { class: 'sg-renderer-assignee-option-empty' },
+      document.createTextNode('No people configured'));
+    pop.append(empty);
+  }
+
+  for (const person of opts) {
+    const p = typeof person === 'string' ? { name: person } : person;
+    const btn = h('button', {
+      type: 'button',
+      class: `sg-renderer-assignee-option${p.name === currentName ? ' is-selected' : ''}`,
+      role: 'option',
+    });
+    btn.append(buildAvatarChip(p, 20));
+    btn.append(h('span', { class: 'sg-renderer-assignee-option-name' },
+      document.createTextNode(p.name || p.label || '')));
+    btn.addEventListener('click', () => commit(p));
+    pop.append(btn);
+  }
+
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeAssigneeEditor(); } }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeAssigneeEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeAssigneeEditor = { pop, onKey, onDocClick, anchor };
 }
 
 /* ---------- slider (inline range input) ----------------------------

@@ -7,12 +7,14 @@
   <div class="panel" data-controller="grid">
     <table><thead><tr>
       <th data-controller="header-cell" data-header-cell-field-value="service" data-header-cell-width-value="160">Service</th>
-      <th data-controller="header-cell" data-header-cell-field-value="config" data-header-cell-cell-renderer-value="yaml" data-header-cell-width-value="380">Config</th>
+      <th data-controller="header-cell" data-header-cell-field-value="config" data-header-cell-cell-renderer-value="yaml-edit" data-header-cell-width-value="380">Config</th>
     </tr></thead><tbody></tbody></table>
   </div>
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('yaml-edit', renderers.yaml({ maxLines: 4, editable: true }));
     const data = [
       { service: 'api-gateway', config: 'replicas: 3\nresources:\n  cpu: 500m\n  memory: 1Gi\nautoscale:\n  min: 2\n  max: 8' },
       { service: 'auth',         config: 'replicas: 2\ntimeout_ms: 30000' },
