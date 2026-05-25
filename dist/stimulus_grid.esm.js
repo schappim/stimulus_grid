@@ -1,7 +1,7 @@
-var On = Object.defineProperty;
-var zn = (n, r, e) => r in n ? On(n, r, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[r] = e;
-var N = (n, r, e) => zn(n, typeof r != "symbol" ? r + "" : r, e);
-import { Controller as q, Application as jn } from "@hotwired/stimulus";
+var Un = Object.defineProperty;
+var Wn = (n, r, e) => r in n ? Un(n, r, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[r] = e;
+var N = (n, r, e) => Wn(n, typeof r != "symbol" ? r + "" : r, e);
+import { Controller as K, Application as Xn } from "@hotwired/stimulus";
 function I(n, r) {
   return typeof r.valueGetter == "function" ? r.valueGetter(n) : n?.[r.field];
 }
@@ -9,7 +9,7 @@ function G(n, r) {
   const e = I(n, r);
   return typeof r.valueFormatter == "function" ? r.valueFormatter(e, n) : e == null ? "" : r.type === "date" && e instanceof Date ? e.toLocaleDateString() : r.type === "boolean" ? e ? "✓" : "" : String(e);
 }
-const st = {
+const at = {
   contains: (n, r) => String(n ?? "").toLowerCase().includes(String(r ?? "").toLowerCase()),
   notContains: (n, r) => !String(n ?? "").toLowerCase().includes(String(r ?? "").toLowerCase()),
   equals: (n, r) => String(n ?? "").toLowerCase() === String(r ?? "").toLowerCase(),
@@ -18,7 +18,7 @@ const st = {
   endsWith: (n, r) => String(n ?? "").toLowerCase().endsWith(String(r ?? "").toLowerCase()),
   blank: (n) => n == null || n === "",
   notBlank: (n) => n != null && n !== ""
-}, qn = {
+}, Yn = {
   equals: (n, r) => Number(n) === Number(r),
   notEqual: (n, r) => Number(n) !== Number(r),
   lessThan: (n, r) => Number(n) < Number(r),
@@ -35,7 +35,7 @@ function B(n) {
   const r = new Date(n);
   return Number.isNaN(r.valueOf()) ? null : r;
 }
-const Kn = {
+const Qn = {
   equals: (n, r) => B(n)?.toDateString() === B(r)?.toDateString(),
   notEqual: (n, r) => B(n)?.toDateString() !== B(r)?.toDateString(),
   lessThan: (n, r) => (B(n)?.valueOf() ?? -1 / 0) < (B(r)?.valueOf() ?? 1 / 0),
@@ -46,26 +46,26 @@ const Kn = {
   },
   blank: (n) => n == null || n === "",
   notBlank: (n) => n != null && n !== ""
-}, Un = {
+}, Zn = {
   equals: (n, r) => r === "true" ? !!n : r === "false" ? !n : !0
-}, Wn = {
+}, Jn = {
   in: (n, r) => Array.isArray(r) && r.includes(String(n ?? ""))
-}, Xn = { text: st, number: qn, date: Kn, boolean: Un, set: Wn };
-function rt(n, r, e) {
+}, es = { text: at, number: Yn, date: Qn, boolean: Zn, set: Jn };
+function lt(n, r, e) {
   if (!e) return !0;
-  const t = e.filterType || r.filter || "text", i = (Xn[t] || st)[e.type];
+  const t = e.filterType || r.filter || "text", i = (es[t] || at)[e.type];
   if (!i) return !0;
   const o = I(n, r);
   return i(o, e.value, e.value2);
 }
-function it(n, r, e) {
+function dt(n, r, e) {
   const t = Object.entries(r || {}).filter(([, s]) => s != null);
   return t.length === 0 ? n : n.filter((s) => s && s.__sgSeparator ? !0 : t.every(([i, o]) => {
     const a = e[i];
-    return a ? rt(s, a, o) : !0;
+    return a ? lt(s, a, o) : !0;
   }));
 }
-function ot(n, r, e) {
+function ct(n, r, e) {
   if (!r) return n;
   const t = String(r).toLowerCase();
   return n.filter((s) => {
@@ -88,14 +88,14 @@ function j(n, r, e) {
   }
   return e === "boolean" ? n === r ? 0 : n ? 1 : -1 : String(n).localeCompare(String(r), void 0, { numeric: !0, sensitivity: "base" });
 }
-function Yn(n, r, e) {
+function ts(n, r, e) {
   if (!r || r.length === 0) return n;
   const t = (l, d) => {
     for (const { colId: c, sort: u } of r) {
       const p = e[c];
       if (!p) continue;
-      const f = I(l, p), g = I(d, p), _ = typeof p.comparator == "function" ? p.comparator(f, g, l, d) : j(f, g, p.type);
-      if (_ !== 0) return u === "desc" ? -_ : _;
+      const h = I(l, p), g = I(d, p), b = typeof p.comparator == "function" ? p.comparator(h, g, l, d) : j(h, g, p.type);
+      if (b !== 0) return u === "desc" ? -b : b;
     }
     return 0;
   };
@@ -113,12 +113,12 @@ function Yn(n, r, e) {
     l && l.__sgSeparator ? (a(), i.push(l)) : o.push(l);
   return a(), i;
 }
-function ie(n, r) {
+function oe(n, r) {
   if (!r || !r.enabled) return { rows: n, total: n.length, pageRows: n };
   const e = n.length, t = Math.max(1, Math.ceil(e / r.pageSize)), s = Math.min(r.page, t - 1), i = s * r.pageSize, o = n.slice(i, i + r.pageSize);
   return { rows: n, total: e, totalPages: t, page: s, pageRows: o };
 }
-function at(n, r, e) {
+function ut(n, r, e) {
   if (n === "count") return r.length;
   const t = r.map((i) => I(i, e));
   if (n === "first") return t.length ? t[0] : null;
@@ -137,15 +137,15 @@ function at(n, r, e) {
       return null;
   }
 }
-function ce(n, r, e) {
+function ue(n, r, e) {
   const t = {};
   for (const [s, i] of Object.entries(r || {})) {
     const o = e[s];
-    o && (t[s] = at(i, n, o));
+    o && (t[s] = ut(i, n, o));
   }
   return t;
 }
-function Qn(n) {
+function ns(n) {
   let r = 0, e = 0, t = 0, s = 1 / 0, i = -1 / 0;
   for (const o of n) {
     if (o == null || o === "") continue;
@@ -166,25 +166,25 @@ function Qn(n) {
     max: e ? i : null
   };
 }
-function Zn(n, r, e, t, s = () => !0) {
+function ss(n, r, e, t, s = () => !0) {
   const i = (d, c, u) => {
-    const p = r[c], f = /* @__PURE__ */ new Map();
+    const p = r[c], h = /* @__PURE__ */ new Map();
     for (const g of d) {
-      const _ = I(g, p), y = _ == null ? "" : String(_);
-      f.has(y) || f.set(y, { value: _, rows: [] }), f.get(y).rows.push(g);
+      const b = I(g, p), y = b == null ? "" : String(b);
+      h.has(y) || h.set(y, { value: b, rows: [] }), h.get(y).rows.push(g);
     }
-    return Array.from(f.values()).sort((g, _) => j(g.value, _.value, p.type)).map(({ value: g, rows: _ }) => {
-      const y = g == null ? "" : String(g), L = u ? `${u}|${p.field}=${y}` : `${p.field}=${y}`;
+    return Array.from(h.values()).sort((g, b) => j(g.value, b.value, p.type)).map(({ value: g, rows: b }) => {
+      const y = g == null ? "" : String(g), S = u ? `${u}|${p.field}=${y}` : `${p.field}=${y}`;
       return {
         __sgGroup: !0,
         level: c,
         field: p.field,
         value: g,
-        groupId: L,
-        count: _.length,
-        aggregates: ce(_, t, e),
-        leaves: _,
-        children: c + 1 < r.length ? i(_, c + 1, L) : null
+        groupId: S,
+        count: b.length,
+        aggregates: ue(b, t, e),
+        leaves: b,
+        children: c + 1 < r.length ? i(b, c + 1, S) : null
       };
     });
   }, o = i(n, 0, ""), a = [], l = (d) => {
@@ -195,23 +195,23 @@ function Zn(n, r, e, t, s = () => !0) {
   };
   return l(o), { displayList: a, tree: o };
 }
-function lt(n, r, e) {
+function pt(n, r, e) {
   return `__p|${e.map((s) => {
     const i = n[s.field];
     return `${s.field}=${i == null ? "" : String(i)}`;
   }).join("|")}|${r.col.field}:${r.aggFunc}`;
 }
-function dt(n, r) {
+function ft(n, r) {
   return r.map((e) => {
     const t = I(n, e);
     return t == null ? "" : String(t);
   }).join("");
 }
-function Jn(n, r) {
+function rs(n, r) {
   if (!r?.length) return [];
   const e = /* @__PURE__ */ new Map();
   for (const t of n) {
-    const s = dt(t, r);
+    const s = ft(t, r);
     if (!e.has(s)) {
       const i = {};
       r.forEach((o) => {
@@ -228,12 +228,12 @@ function Jn(n, r) {
     return 0;
   });
 }
-function es(n, r, e) {
+function is(n, r, e) {
   if (!n.length || !r.length) return [];
   const t = [], s = r.length === 1;
   for (const i of n)
     for (const o of r) {
-      const a = lt(i, o, e), l = e.map((c) => i[c.field] == null ? "(Blank)" : String(i[c.field])).join(" · "), d = s ? l : `${l} · ${o.aggFunc}(${o.col.field})`;
+      const a = pt(i, o, e), l = e.map((c) => i[c.field] == null ? "(Blank)" : String(i[c.field])).join(" · "), d = s ? l : `${l} · ${o.aggFunc}(${o.col.field})`;
       t.push({
         field: a,
         headerName: d,
@@ -251,15 +251,15 @@ function es(n, r, e) {
     }
   return t;
 }
-function ts(n) {
+function os(n) {
   return typeof n == "string" && n.startsWith("__p|");
 }
-function ns(n, r) {
+function as(n, r) {
   const e = Array.isArray(n) ? n.filter((t) => t && t.colId && t.sort) : [];
   return (t, s) => {
     for (const i of e) {
       const o = i.sort === "desc" ? -1 : 1;
-      if (ts(i.colId)) {
+      if (os(i.colId)) {
         const a = t.__pivotValues ? t.__pivotValues[i.colId] : null, l = s.__pivotValues ? s.__pivotValues[i.colId] : null, d = j(a, l, "number");
         if (d !== 0) return o * d;
         continue;
@@ -273,10 +273,10 @@ function ns(n, r) {
     return j(t.value, s.value, r?.type);
   };
 }
-function Ge(n, r, e, t) {
+function Ke(n, r, e, t) {
   const s = {}, i = /* @__PURE__ */ new Map();
   for (const o of n) {
-    const a = dt(o, t);
+    const a = ft(o, t);
     i.has(a) || i.set(a, []), i.get(a).push(o);
   }
   for (const o of r) {
@@ -285,14 +285,14 @@ function Ge(n, r, e, t) {
       return c == null ? "" : String(c);
     }).join(""), l = i.get(a) || [];
     for (const d of e) {
-      const c = lt(o, d, t);
-      s[c] = l.length ? at(d.aggFunc, l, d.col) : null;
+      const c = pt(o, d, t);
+      s[c] = l.length ? ut(d.aggFunc, l, d.col) : null;
     }
   }
   return s;
 }
-function ss({ rows: n, rowGroupCols: r = [], pivotCols: e, valueConfigs: t, isExpanded: s = () => !0, sortModel: i = [] }) {
-  const o = Jn(n, e), a = es(o, t, e), l = {
+function ls({ rows: n, rowGroupCols: r = [], pivotCols: e, valueConfigs: t, isExpanded: s = () => !0, sortModel: i = [] }) {
+  const o = rs(n, e), a = is(o, t, e), l = {
     __sgGroup: !0,
     __pivotAll: !0,
     level: -1,
@@ -302,41 +302,41 @@ function ss({ rows: n, rowGroupCols: r = [], pivotCols: e, valueConfigs: t, isEx
     count: n.length,
     aggregates: {},
     leaves: n,
-    __pivotValues: Ge(n, o, t, e)
+    __pivotValues: Ke(n, o, t, e)
   };
   if (!r.length)
     return { columns: a, displayList: [l], tree: [], combos: o };
-  const d = (f, g, _) => {
-    const y = r[g], L = /* @__PURE__ */ new Map();
-    for (const v of f) {
-      const S = I(v, y), A = S == null ? "" : String(S);
-      L.has(A) || L.set(A, { value: S, rows: [] }), L.get(A).rows.push(v);
+  const d = (h, g, b) => {
+    const y = r[g], S = /* @__PURE__ */ new Map();
+    for (const w of h) {
+      const L = I(w, y), A = L == null ? "" : String(L);
+      S.has(A) || S.set(A, { value: L, rows: [] }), S.get(A).rows.push(w);
     }
-    const b = Array.from(L.values()).map(({ value: v, rows: S }) => {
-      const A = v == null ? "" : String(v), D = _ ? `${_}|${y.field}=${A}` : `${y.field}=${A}`;
+    const _ = Array.from(S.values()).map(({ value: w, rows: L }) => {
+      const A = w == null ? "" : String(w), k = b ? `${b}|${y.field}=${A}` : `${y.field}=${A}`;
       return {
         __sgGroup: !0,
         level: g,
         field: y.field,
-        value: v,
-        groupId: D,
-        count: S.length,
+        value: w,
+        groupId: k,
+        count: L.length,
         aggregates: {},
-        leaves: S,
-        __pivotValues: Ge(S, o, t, e),
-        children: g + 1 < r.length ? d(S, g + 1, D) : null
+        leaves: L,
+        __pivotValues: Ke(L, o, t, e),
+        children: g + 1 < r.length ? d(L, g + 1, k) : null
       };
-    }), w = ns(i, y);
-    return b.sort(w);
-  }, c = d(n, 0, ""), u = [l], p = (f) => {
-    for (const g of f)
+    }), v = as(i, y);
+    return _.sort(v);
+  }, c = d(n, 0, ""), u = [l], p = (h) => {
+    for (const g of h)
       u.push(g), s(g.groupId, g.level) && g.children && p(g.children);
   };
   return p(c), { columns: a, displayList: u, tree: c, combos: o };
 }
-function rs(n, { pivotCols: r = [], valueConfigs: e = [], columnGroups: t = null } = {}) {
+function ds(n, { pivotCols: r = [], valueConfigs: e = [], columnGroups: t = null } = {}) {
   if (n._isPivot && r.length && n.pivotKeys)
-    return is(n, r, e);
+    return cs(n, r, e);
   if (t && Array.isArray(t) && t.length && !n._isGroupCol && !n._isCheckbox && !n._isRowNumber) {
     for (const s of t)
       if (s?.children && s.children.includes(n.field))
@@ -347,7 +347,7 @@ function rs(n, { pivotCols: r = [], valueConfigs: e = [], columnGroups: t = null
   }
   return [{ kind: "leaf", col: n }];
 }
-function is(n, r, e) {
+function cs(n, r, e) {
   const t = (e?.length || 0) > 1, s = [];
   for (let i = 0; i < r.length; i++) {
     const o = r[i].field, a = n.pivotKeys[o];
@@ -361,9 +361,9 @@ function is(n, r, e) {
   }
   return s.push({ kind: "leaf", col: n, label: `${n.aggFunc}(${n.valueField})` }), s;
 }
-function os(n, r = {}) {
+function us(n, r = {}) {
   if (!n.length) return { rows: [[]], depth: 1 };
-  const e = n.map((i) => rs(i, r).slice()), t = Math.max(1, ...e.map((i) => i.length)), s = [];
+  const e = n.map((i) => ds(i, r).slice()), t = Math.max(1, ...e.map((i) => i.length)), s = [];
   for (let i = 0; i < t; i++) {
     const o = [];
     let a = 0;
@@ -385,9 +385,9 @@ function os(n, r = {}) {
         const u = e[c];
         if (i >= u.length || !u[i] || u[i].kind !== "group" || u[i].id !== d.id) break;
         let p = !0;
-        for (let f = 0; f < i; f++) {
-          const g = l[f]?.id ?? null, _ = u[f]?.id ?? null;
-          if (g !== _) {
+        for (let h = 0; h < i; h++) {
+          const g = l[h]?.id ?? null, b = u[h]?.id ?? null;
+          if (g !== b) {
             p = !1;
             break;
           }
@@ -401,7 +401,7 @@ function os(n, r = {}) {
   }
   return { rows: s, depth: t };
 }
-function as({
+function ps({
   rows: n,
   parentField: r = "parent_id",
   getRowId: e = (o) => o?.id,
@@ -412,59 +412,59 @@ function as({
   if (!Array.isArray(n) || n.length === 0)
     return { displayList: [], treeMeta: /* @__PURE__ */ new Map() };
   const o = (y) => {
-    const L = e(y);
-    return L == null ? null : String(L);
+    const S = e(y);
+    return S == null ? null : String(S);
   }, a = /* @__PURE__ */ new Map();
   for (const y of n) {
-    const L = o(y);
-    L != null && a.set(L, y);
+    const S = o(y);
+    S != null && a.set(S, y);
   }
   const l = /* @__PURE__ */ new Map(), d = [];
   for (const y of n) {
-    const L = o(y), b = y?.[r], w = b == null ? null : String(b);
-    w == null || w === L || !a.has(w) ? d.push(y) : (l.has(w) || l.set(w, []), l.get(w).push(y));
+    const S = o(y), _ = y?.[r], v = _ == null ? null : String(_);
+    v == null || v === S || !a.has(v) ? d.push(y) : (l.has(v) || l.set(v, []), l.get(v).push(y));
   }
-  const c = t ? new Map(n.map((y) => [o(y), !!t(y)])) : null, u = /* @__PURE__ */ new Map(), p = (y, L) => {
-    const b = o(y);
-    if (b == null) return !1;
-    if (u.has(b)) return u.get(b);
-    if (L.has(b)) return !1;
-    L.add(b);
-    let w = !!c.get(b);
-    const v = l.get(b) || [];
-    for (const S of v) w = p(S, L) || w;
-    return L.delete(b), u.set(b, w), w;
+  const c = t ? new Map(n.map((y) => [o(y), !!t(y)])) : null, u = /* @__PURE__ */ new Map(), p = (y, S) => {
+    const _ = o(y);
+    if (_ == null) return !1;
+    if (u.has(_)) return u.get(_);
+    if (S.has(_)) return !1;
+    S.add(_);
+    let v = !!c.get(_);
+    const w = l.get(_) || [];
+    for (const L of w) v = p(L, S) || v;
+    return S.delete(_), u.set(_, v), v;
   };
   if (c)
     for (const y of d) p(y, /* @__PURE__ */ new Set());
-  const f = [], g = /* @__PURE__ */ new Map(), _ = (y, L, b, w) => {
-    const v = c ? y.filter((S) => w || u.get(o(S))) : y.slice();
-    s && v.sort(s);
-    for (const S of v) {
-      const A = o(S);
-      if (A == null || b.has(A)) continue;
-      const D = l.get(A) || [], C = w || (c ? !!c.get(A) : !1), R = c ? D.filter((F) => C || u.get(o(F))) : D, T = R.length > 0, $ = T && (c ? !0 : !!i(A, L));
-      g.set(A, { level: L, hasChildren: T, expanded: $ }), f.push(S), $ && (b.add(A), _(R, L + 1, b, C), b.delete(A));
+  const h = [], g = /* @__PURE__ */ new Map(), b = (y, S, _, v) => {
+    const w = c ? y.filter((L) => v || u.get(o(L))) : y.slice();
+    s && w.sort(s);
+    for (const L of w) {
+      const A = o(L);
+      if (A == null || _.has(A)) continue;
+      const k = l.get(A) || [], C = v || (c ? !!c.get(A) : !1), T = c ? k.filter((F) => C || u.get(o(F))) : k, R = T.length > 0, $ = R && (c ? !0 : !!i(A, S));
+      g.set(A, { level: S, hasChildren: R, expanded: $ }), h.push(L), $ && (_.add(A), b(T, S + 1, _, C), _.delete(A));
     }
   };
-  return _(d, 0, /* @__PURE__ */ new Set(), !1), { displayList: f, treeMeta: g };
+  return b(d, 0, /* @__PURE__ */ new Set(), !1), { displayList: h, treeMeta: g };
 }
-function ls(n) {
+function fs(n) {
   if (n.serverSide) {
-    const c = n.rowData, u = n.pagination?.pageSize || c.length || 1, p = n.serverRowCount ?? c.length, f = Math.max(1, Math.ceil(p / u)), g = Math.min(n.pagination?.page || 0, f - 1);
-    return { filteredSorted: c, rows: c, total: p, totalPages: f, page: g, pageRows: c };
+    const c = n.rowData, u = n.pagination?.pageSize || c.length || 1, p = n.serverRowCount ?? c.length, h = Math.max(1, Math.ceil(p / u)), g = Math.min(n.pagination?.page || 0, h - 1);
+    return { filteredSorted: c, rows: c, total: p, totalPages: h, page: g, pageRows: c };
   }
   const r = Object.fromEntries(n.columnDefs.map((c) => [c.field, c])), e = n.columnDefs.filter((c) => !c.hidden && !c._isCheckbox), t = (n.rowGroupCols || []).filter((c) => r[c]);
   if (n.treeData && !n.pivotMode && t.length === 0) {
-    const c = n.treeParentField || "parent_id", u = Object.entries(n.filterModel || {}).filter(([, S]) => S != null), p = n.quickFilter ? String(n.quickFilter).toLowerCase() : "", g = u.length > 0 || p !== "" ? (S) => {
-      for (const [A, D] of u) {
+    const c = n.treeParentField || "parent_id", u = Object.entries(n.filterModel || {}).filter(([, L]) => L != null), p = n.quickFilter ? String(n.quickFilter).toLowerCase() : "", g = u.length > 0 || p !== "" ? (L) => {
+      for (const [A, k] of u) {
         const C = r[A];
-        if (C && !rt(S, C, D)) return !1;
+        if (C && !lt(L, C, k)) return !1;
       }
       if (p) {
         let A = !1;
-        for (const D of e) {
-          const C = G(S, D);
+        for (const k of e) {
+          const C = G(L, k);
           if (C && String(C).toLowerCase().includes(p)) {
             A = !0;
             break;
@@ -473,80 +473,80 @@ function ls(n) {
         if (!A) return !1;
       }
       return !0;
-    } : null, _ = Array.isArray(n.sortModel) ? n.sortModel : [], y = _.length ? (S, A) => {
-      for (const { colId: D, sort: C } of _) {
-        const R = r[D];
-        if (!R) continue;
-        const T = I(S, R), $ = I(A, R), F = typeof R.comparator == "function" ? R.comparator(T, $, S, A) : j(T, $, R.type);
+    } : null, b = Array.isArray(n.sortModel) ? n.sortModel : [], y = b.length ? (L, A) => {
+      for (const { colId: k, sort: C } of b) {
+        const T = r[k];
+        if (!T) continue;
+        const R = I(L, T), $ = I(A, T), F = typeof T.comparator == "function" ? T.comparator(R, $, L, A) : j(R, $, T.type);
         if (F !== 0) return C === "desc" ? -F : F;
       }
       return 0;
-    } : null, L = n.getRowId || ((S) => S?.id), { displayList: b, treeMeta: w } = as({
+    } : null, S = n.getRowId || ((L) => L?.id), { displayList: _, treeMeta: v } = ps({
       rows: n.rowData,
       parentField: c,
-      getRowId: L,
+      getRowId: S,
       passesFilter: g,
       siblingComparator: y,
       isExpanded: n.isTreeRowExpanded || (() => !0)
-    }), v = ie(b, n.pagination);
+    }), w = oe(_, n.pagination);
     return {
       tree: !0,
       treeData: !0,
-      treeMeta: w,
+      treeMeta: v,
       treeParentField: c,
-      filteredSorted: b,
-      ...v
+      filteredSorted: _,
+      ...w
     };
   }
   let s = n.rowData;
-  s = it(s, n.filterModel, r), s = ot(s, n.quickFilter, e), s = Yn(s, n.sortModel, r);
+  s = dt(s, n.filterModel, r), s = ct(s, n.quickFilter, e), s = ts(s, n.sortModel, r);
   const i = t, o = n.pivotMode ? (n.pivotCols || []).filter((c) => r[c]) : [], a = n.pivotMode ? Object.entries(n.aggModel || {}).filter(([c]) => r[c]).map(([c, u]) => ({ col: r[c], aggFunc: u })) : [];
   if (n.pivotMode && o.length && a.length) {
-    const c = i.map((L) => r[L]), u = o.map((L) => r[L]), { columns: p, displayList: f, tree: g, combos: _ } = ss({
+    const c = i.map((S) => r[S]), u = o.map((S) => r[S]), { columns: p, displayList: h, tree: g, combos: b } = ls({
       rows: s,
       rowGroupCols: c,
       pivotCols: u,
       valueConfigs: a,
       isExpanded: n.isGroupExpanded,
       sortModel: n.sortModel
-    }), y = ie(f, n.pagination);
+    }), y = oe(h, n.pagination);
     return {
       pivot: !0,
       pivotResultColumns: p,
-      combos: _,
+      combos: b,
       grouped: !0,
       tree: g,
       leafCount: s.length,
-      grandTotals: ce(s, n.aggModel, r),
-      filteredSorted: f,
+      grandTotals: ue(s, n.aggModel, r),
+      filteredSorted: h,
       ...y
     };
   }
   if (i.length) {
-    const c = i.map((g) => r[g]), { displayList: u, tree: p } = Zn(
+    const c = i.map((g) => r[g]), { displayList: u, tree: p } = ss(
       s,
       c,
       r,
       n.aggModel,
       n.isGroupExpanded
-    ), f = ie(u, n.pagination);
+    ), h = oe(u, n.pagination);
     return {
       grouped: !0,
       tree: p,
       leafCount: s.length,
-      grandTotals: ce(s, n.aggModel, r),
+      grandTotals: ue(s, n.aggModel, r),
       filteredSorted: u,
-      ...f
+      ...h
     };
   }
-  const l = ie(s, n.pagination), d = n.aggModel && Object.keys(n.aggModel).length ? ce(s, n.aggModel, r) : null;
+  const l = oe(s, n.pagination), d = n.aggModel && Object.keys(n.aggModel).length ? ue(s, n.aggModel, r) : null;
   return { filteredSorted: s, grandTotals: d, ...l };
 }
-function ds(n, r, e, t, s = 6) {
+function hs(n, r, e, t, s = 6) {
   const i = Math.ceil(r / e), o = Math.max(0, Math.floor(n / e) - s), a = Math.min(t, o + i + s * 2);
   return { first: o, last: a };
 }
-function cs(n) {
+function gs(n) {
   return {
     // ---- Data ----
     setRowData(r) {
@@ -876,18 +876,18 @@ function m(n, r = {}, e = []) {
     s == null || s === !1 || t.appendChild(typeof s == "string" ? document.createTextNode(s) : s);
   return t;
 }
-function Oe(n, r) {
+function qe(n, r) {
   for (const [e, t] of Object.entries(r))
     t == null || t === !1 ? n.removeAttribute(e) : t === !0 ? n.setAttribute(e, "") : n.setAttribute(e, String(t));
 }
-function ze(n) {
+function Ue(n) {
   const r = document.getElementById(n);
   return !r || r.tagName !== "TEMPLATE" ? null : r.content.firstElementChild.cloneNode(!0);
 }
-function M(n, r, e) {
+function E(n, r, e) {
   n.dispatchEvent(new CustomEvent(r, { detail: e, bubbles: !0 }));
 }
-function us(n, r, e) {
+function ms(n, r, e) {
   let t = n.parentElement;
   for (; t; ) {
     if ((t.getAttribute("data-controller") || "").split(/\s+/).includes(r)) {
@@ -898,7 +898,7 @@ function us(n, r, e) {
   }
   return null;
 }
-const je = [
+const We = [
   [16, 10, 1],
   // v1   ≤ 14 bytes after the 4-bit mode + 8-bit length header
   [28, 16, 1],
@@ -919,7 +919,7 @@ const je = [
   // v9   ≤ 180
   [216, 26, 5]
   // v10  ≤ 213
-], ps = [
+], bs = [
   21522,
   20773,
   24188,
@@ -928,38 +928,38 @@ const je = [
   16590,
   20375,
   19104
-], ue = new Uint8Array(512), Ee = new Uint8Array(256);
+], pe = new Uint8Array(512), De = new Uint8Array(256);
 (function() {
   let r = 1;
   for (let e = 0; e < 255; e++)
-    ue[e] = r, Ee[r] = e, r <<= 1, r & 256 && (r ^= 285);
-  for (let e = 255; e < 512; e++) ue[e] = ue[e - 255];
+    pe[e] = r, De[r] = e, r <<= 1, r & 256 && (r ^= 285);
+  for (let e = 255; e < 512; e++) pe[e] = pe[e - 255];
 })();
-function Re(n, r) {
-  return n === 0 || r === 0 ? 0 : ue[Ee[n] + Ee[r]];
+function Ne(n, r) {
+  return n === 0 || r === 0 ? 0 : pe[De[n] + De[r]];
 }
-function hs(n) {
+function _s(n) {
   const r = new Uint8Array(n);
   r[n - 1] = 1;
   let e = 1;
   for (let t = 0; t < n; t++) {
     for (let s = 0; s < n; s++)
-      r[s] = Re(r[s], e), s + 1 < n && (r[s] ^= r[s + 1]);
-    e = Re(e, 2);
+      r[s] = Ne(r[s], e), s + 1 < n && (r[s] ^= r[s + 1]);
+    e = Ne(e, 2);
   }
   return r;
 }
-function fs(n, r) {
+function ys(n, r) {
   const e = new Uint8Array(r.length);
   for (const t of n) {
     const s = t ^ e[0];
     e.copyWithin(0, 1), e[e.length - 1] = 0;
     for (let i = 0; i < r.length; i++)
-      e[i] ^= Re(r[i], s);
+      e[i] ^= Ne(r[i], s);
   }
   return e;
 }
-class gs {
+class vs {
   constructor() {
     this.bits = [];
   }
@@ -977,19 +977,19 @@ class gs {
     return r;
   }
 }
-function ms(n) {
+function ws(n) {
   const r = new TextEncoder().encode(String(n));
   let e = 0;
   for (let C = 1; C <= 10; C++) {
-    const T = 4 + (C < 10 ? 8 : 16) + r.length * 8, $ = je[C - 1][0] * 8;
-    if (T <= $) {
+    const R = 4 + (C < 10 ? 8 : 16) + r.length * 8, $ = We[C - 1][0] * 8;
+    if (R <= $) {
       e = C;
       break;
     }
   }
   if (e === 0)
     throw new Error(`qr: data too long for v10 ECC=M (${r.length} bytes; max 213)`);
-  const [t, s, i] = je[e - 1], o = new gs();
+  const [t, s, i] = We[e - 1], o = new vs();
   o.append(4, 4), o.append(r.length, e < 10 ? 8 : 16);
   for (const C of r) o.append(C, 8);
   const a = t * 8;
@@ -998,32 +998,32 @@ function ms(n) {
   d.set(l);
   const c = [236, 17];
   for (let C = l.length; C < t; C++) d[C] = c[(C - l.length) % 2];
-  const u = Math.floor(t / i), p = t - u * i, f = [], g = hs(s);
-  let _ = 0;
+  const u = Math.floor(t / i), p = t - u * i, h = [], g = _s(s);
+  let b = 0;
   for (let C = 0; C < i; C++) {
-    const R = C < i - p ? u : u + 1, T = d.slice(_, _ + R);
-    _ += R, f.push({ data: T, ecc: fs(T, g) });
+    const T = C < i - p ? u : u + 1, R = d.slice(b, b + T);
+    b += T, h.push({ data: R, ecc: ys(R, g) });
   }
-  const y = [], L = u + 1;
-  for (let C = 0; C < L; C++)
-    for (const R of f) C < R.data.length && y.push(R.data[C]);
+  const y = [], S = u + 1;
+  for (let C = 0; C < S; C++)
+    for (const T of h) C < T.data.length && y.push(T.data[C]);
   for (let C = 0; C < s; C++)
-    for (const R of f) y.push(R.ecc[C]);
-  const b = 17 + e * 4, w = new Uint8Array(b * b), v = new Uint8Array(b * b);
-  _s(w, v, b), bs(w, v, b), ws(w, v, b, e), e >= 7 && vs(w, v, b, e), Cs(w, v, b, y);
-  let S = 0, A = 1 / 0;
-  const D = new Uint8Array(w);
+    for (const T of h) y.push(T.ecc[C]);
+  const _ = 17 + e * 4, v = new Uint8Array(_ * _), w = new Uint8Array(_ * _);
+  Cs(v, w, _), xs(v, w, _), Ls(v, w, _, e), e >= 7 && As(v, w, _, e), Es(v, w, _, y);
+  let L = 0, A = 1 / 0;
+  const k = new Uint8Array(v);
   for (let C = 0; C < 8; C++) {
-    D.set(w), Ke(D, v, b, C), qe(D, b, C);
-    const R = xs(D, b);
-    R < A && (A = R, S = C);
+    k.set(v), Ye(k, w, _, C), Xe(k, _, C);
+    const T = Ms(k, _);
+    T < A && (A = T, L = C);
   }
-  return Ke(w, v, b, S), qe(w, b, S), { size: b, matrix: w };
+  return Ye(v, w, _, L), Xe(v, _, L), { size: _, matrix: v };
 }
 function V(n, r, e, t, s) {
   n[t * r + e] = s ? 1 : 0;
 }
-function _s(n, r, e) {
+function Cs(n, r, e) {
   const t = [[0, 0], [e - 7, 0], [0, e - 7]];
   for (const [s, i] of t)
     for (let o = -1; o <= 7; o++)
@@ -1040,11 +1040,11 @@ function _s(n, r, e) {
     r[(e - 1 - s) * e + 8] = 1, r[8 * e + (e - 1 - s)] = 1;
   V(n, e, 8, e - 8, 1), r[(e - 8) * e + 8] = 1;
 }
-function bs(n, r, e) {
+function xs(n, r, e) {
   for (let t = 8; t < e - 8; t++)
     V(n, e, t, 6, t % 2 === 0), V(n, e, 6, t, t % 2 === 0), r[6 * e + t] = 1, r[t * e + 6] = 1;
 }
-const ys = [
+const Ss = [
   null,
   [],
   [6, 18],
@@ -1057,8 +1057,8 @@ const ys = [
   [6, 26, 46],
   [6, 28, 50]
 ];
-function ws(n, r, e, t) {
-  const s = ys[t];
+function Ls(n, r, e, t) {
+  const s = Ss[t];
   if (s) {
     for (const i of s)
       for (const o of s)
@@ -1070,7 +1070,7 @@ function ws(n, r, e, t) {
             }
   }
 }
-function vs(n, r, e, t) {
+function As(n, r, e, t) {
   let s = t, i = s;
   for (let a = 0; a < 12; a++)
     i = i << 1 ^ (i >>> 11) * 7973;
@@ -1080,15 +1080,15 @@ function vs(n, r, e, t) {
     V(n, e, d, c, l), r[c * e + d] = 1, V(n, e, c, d, l), r[d * e + c] = 1;
   }
 }
-function qe(n, r, e) {
-  const t = ps[e];
+function Xe(n, r, e) {
+  const t = bs[e];
   for (let s = 0; s < 15; s++) {
     const i = (t >>> s & 1) === 1;
     s < 6 ? V(n, r, 8, s, i) : s < 8 ? V(n, r, 8, s + 1, i) : s < 9 ? V(n, r, 7, 8, i) : V(n, r, 14 - s, 8, i), s < 8 ? V(n, r, r - 1 - s, 8, i) : V(n, r, 8, r - 15 + s, i);
   }
   V(n, r, 8, r - 8, 1);
 }
-function Cs(n, r, e, t) {
+function Es(n, r, e, t) {
   let s = 0, i = -1;
   for (let o = e - 1; o > 0; o -= 2) {
     o === 6 && o--;
@@ -1104,7 +1104,7 @@ function Cs(n, r, e, t) {
     i = -i;
   }
 }
-function Ke(n, r, e, t) {
+function Ye(n, r, e, t) {
   for (let s = 0; s < e; s++)
     for (let i = 0; i < e; i++) {
       if (r[s * e + i]) continue;
@@ -1138,7 +1138,7 @@ function Ke(n, r, e, t) {
       o && (n[s * e + i] ^= 1);
     }
 }
-function xs(n, r) {
+function Ms(n, r) {
   let e = 0;
   for (let t = 0; t < r; t++) {
     let s = 1, i = -1;
@@ -1161,7 +1161,7 @@ function xs(n, r) {
     }
   return e;
 }
-function Ss({ size: n, matrix: r }, e = {}) {
+function Ts({ size: n, matrix: r }, e = {}) {
   const {
     moduleSize: t = 4,
     margin: s = 2,
@@ -1177,39 +1177,39 @@ function Ss({ size: n, matrix: r }, e = {}) {
       }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${a} ${a}" width="${a}" height="${a}" shape-rendering="crispEdges" aria-hidden="true"><rect width="${a}" height="${a}" fill="${i}"/><path d="${l}" fill="${o}"/></svg>`;
 }
-const Ls = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.1 297.4z"/></svg>', De = /* @__PURE__ */ new Map();
+const Rs = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.1 297.4z"/></svg>', Ie = /* @__PURE__ */ new Map();
 function x(n, r) {
   if (typeof n != "string" || !n) throw new Error("registerRenderer: name must be a non-empty string");
   if (typeof r != "function") throw new Error("registerRenderer: fn must be a function");
-  De.set(n, r);
+  Ie.set(n, r);
 }
-function ct(n) {
-  return De.get(n) || null;
+function ht(n) {
+  return Ie.get(n) || null;
 }
-function As() {
-  return Array.from(De.keys());
+function ks() {
+  return Array.from(Ie.keys());
 }
-function h(n, r = {}, e = null) {
+function f(n, r = {}, e = null) {
   const t = document.createElement(n);
   for (const [s, i] of Object.entries(r))
     i == null || i === !1 || (s === "class" ? t.className = i : t.setAttribute(s, i === !0 ? "" : String(i)));
   return e == null || (Array.isArray(e) ? e.forEach((s) => t.append(s)) : typeof e == "string" ? t.innerHTML = e : t.append(e)), t;
 }
-const E = (n) => n == null || n === "", Ms = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function ut() {
+const M = (n) => n == null || n === "", Ds = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function gt() {
   return ({ value: n }) => {
-    if (E(n)) return "";
+    if (M(n)) return "";
     const r = String(n);
-    return Ms.test(r) ? h("a", {
+    return Ds.test(r) ? f("a", {
       class: "sg-renderer-link",
       href: `mailto:${r}`,
       title: "Send email"
-    }, document.createTextNode(r)) : h("span", { class: "sg-renderer-invalid", title: "Invalid email" }, document.createTextNode(r));
+    }, document.createTextNode(r)) : f("span", { class: "sg-renderer-invalid", title: "Invalid email" }, document.createTextNode(r));
   };
 }
-function pt({ newTab: n = !0 } = {}) {
+function mt({ newTab: n = !0 } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
+    if (M(r)) return "";
     const e = String(r);
     let t;
     try {
@@ -1217,7 +1217,7 @@ function pt({ newTab: n = !0 } = {}) {
     } catch {
       return document.createTextNode(e);
     }
-    return h("a", {
+    return f("a", {
       class: "sg-renderer-link",
       href: e,
       target: n ? "_blank" : null,
@@ -1226,52 +1226,52 @@ function pt({ newTab: n = !0 } = {}) {
     }, document.createTextNode(t.hostname + (t.pathname !== "/" ? t.pathname : "")));
   };
 }
-function ht({ defaultRegion: n = "AU" } = {}) {
+function bt({ defaultRegion: n = "AU" } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
+    if (M(r)) return "";
     const e = String(r).trim(), t = e.replace(/\D/g, "");
     if (!t) return document.createTextNode(e);
     let s = e;
-    return n === "AU" && (/^04\d{8}$/.test(t) ? s = `${t.slice(0, 4)} ${t.slice(4, 7)} ${t.slice(7)}` : /^0[2378]\d{8}$/.test(t) ? s = `(${t.slice(0, 2)}) ${t.slice(2, 6)} ${t.slice(6)}` : /^1[38]00\d{6}$/.test(t) ? s = `${t.slice(0, 4)} ${t.slice(4, 7)} ${t.slice(7)}` : t.length === 8 && (s = `${t.slice(0, 4)} ${t.slice(4)}`)), h("a", { class: "sg-renderer-link", href: `tel:${t}` }, document.createTextNode(s));
+    return n === "AU" && (/^04\d{8}$/.test(t) ? s = `${t.slice(0, 4)} ${t.slice(4, 7)} ${t.slice(7)}` : /^0[2378]\d{8}$/.test(t) ? s = `(${t.slice(0, 2)}) ${t.slice(2, 6)} ${t.slice(6)}` : /^1[38]00\d{6}$/.test(t) ? s = `${t.slice(0, 4)} ${t.slice(4, 7)} ${t.slice(7)}` : t.length === 8 && (s = `${t.slice(0, 4)} ${t.slice(4)}`)), f("a", { class: "sg-renderer-link", href: `tel:${t}` }, document.createTextNode(s));
   };
 }
-function ft({ currency: n = "USD", locale: r = "en-US", decimals: e } = {}) {
+function _t({ currency: n = "USD", locale: r = "en-US", decimals: e } = {}) {
   return ({ value: t, td: s }) => {
-    if (s && s.classList.add("sg-renderer-number"), E(t)) return "";
+    if (s && s.classList.add("sg-renderer-number"), M(t)) return "";
     const i = Number(t);
     if (!Number.isFinite(i)) return String(t);
     const o = { style: "currency", currency: n };
     return e != null && (o.minimumFractionDigits = e, o.maximumFractionDigits = e), i.toLocaleString(r, o);
   };
 }
-function gt({ decimals: n = 0, scale: r = "as-is" } = {}) {
+function yt({ decimals: n = 0, scale: r = "as-is" } = {}) {
   return ({ value: e, td: t }) => {
-    if (t && t.classList.add("sg-renderer-number"), E(e)) return "";
+    if (t && t.classList.add("sg-renderer-number"), M(e)) return "";
     let s = Number(e);
     return Number.isFinite(s) ? (r === "fraction" && (s *= 100), `${s.toFixed(n)}%`) : String(e);
   };
 }
-function ke(n) {
+function Ve(n) {
   if (n == null || n === "") return null;
   if (n instanceof Date) return Number.isNaN(n.valueOf()) ? null : n;
   const r = new Date(n);
   return Number.isNaN(r.valueOf()) ? null : r;
 }
-function mt({ locale: n = void 0, dateStyle: r = "medium", ...e } = {}) {
+function vt({ locale: n = void 0, dateStyle: r = "medium", ...e } = {}) {
   const t = new Intl.DateTimeFormat(n, { dateStyle: r, ...e });
   return ({ value: s }) => {
-    const i = ke(s);
+    const i = Ve(s);
     return i ? t.format(i) : "";
   };
 }
-function _t({ locale: n = void 0, dateStyle: r = "medium", timeStyle: e = "short", ...t } = {}) {
+function wt({ locale: n = void 0, dateStyle: r = "medium", timeStyle: e = "short", ...t } = {}) {
   const s = new Intl.DateTimeFormat(n, { dateStyle: r, timeStyle: e, ...t });
   return ({ value: i }) => {
-    const o = ke(i);
+    const o = Ve(i);
     return o ? s.format(o) : "";
   };
 }
-const xe = [
+const Ae = [
   { unit: "second", ms: 1e3, cutoff: 60 * 1e3 },
   { unit: "minute", ms: 60 * 1e3, cutoff: 3600 * 1e3 },
   { unit: "hour", ms: 3600 * 1e3, cutoff: 1440 * 60 * 1e3 },
@@ -1280,25 +1280,25 @@ const xe = [
   { unit: "month", ms: 720 * 60 * 60 * 1e3, cutoff: 365 * 24 * 60 * 60 * 1e3 },
   { unit: "year", ms: 365 * 24 * 60 * 60 * 1e3, cutoff: 1 / 0 }
 ];
-function bt({ locale: n = void 0, numeric: r = "auto", style: e = "long" } = {}) {
+function Ct({ locale: n = void 0, numeric: r = "auto", style: e = "long" } = {}) {
   const t = new Intl.RelativeTimeFormat(n, { numeric: r, style: e });
   return ({ value: s }) => {
-    const i = ke(s);
+    const i = Ve(s);
     if (!i) return "";
-    const o = i.getTime() - Date.now(), a = Math.abs(o), l = xe.find((u) => a < u.cutoff) || xe[xe.length - 1], d = Math.round(o / l.ms), c = h("span", { class: "sg-renderer-relative-time", title: i.toLocaleString() });
+    const o = i.getTime() - Date.now(), a = Math.abs(o), l = Ae.find((u) => a < u.cutoff) || Ae[Ae.length - 1], d = Math.round(o / l.ms), c = f("span", { class: "sg-renderer-relative-time", title: i.toLocaleString() });
     return c.textContent = t.format(d, l.unit), c;
   };
 }
-const Es = { ms: 1, sec: 1e3, second: 1e3, min: 6e4, minute: 6e4, hr: 36e5, hour: 36e5 };
-function yt({ unit: n = "ms", style: r = "compact" } = {}) {
-  const e = Es[n] ?? 1;
+const Ns = { ms: 1, sec: 1e3, second: 1e3, min: 6e4, minute: 6e4, hr: 36e5, hour: 36e5 };
+function xt({ unit: n = "ms", style: r = "compact" } = {}) {
+  const e = Ns[n] ?? 1;
   return ({ value: t, td: s }) => {
-    if (s && s.classList.add("sg-renderer-number"), E(t)) return "";
+    if (s && s.classList.add("sg-renderer-number"), M(t)) return "";
     const i = Number(t) * e;
     if (!Number.isFinite(i)) return String(t);
     const o = i < 0 ? "-" : "", a = Math.abs(i), l = Math.floor(a / 36e5), d = Math.floor(a % 36e5 / 6e4), c = Math.floor(a % 6e4 / 1e3);
     if (r === "clock") {
-      const p = (f) => String(f).padStart(2, "0");
+      const p = (h) => String(h).padStart(2, "0");
       return o + (l > 0 ? `${p(l)}:${p(d)}:${p(c)}` : `${p(d)}:${p(c)}`);
     }
     if (r === "words") {
@@ -1309,35 +1309,35 @@ function yt({ unit: n = "ms", style: r = "compact" } = {}) {
     return l && u.push(`${l}h`), d && u.push(`${d}m`), !l && c && u.push(`${c}s`), o + (u.join(" ") || "0s");
   };
 }
-function wt({ locale: n = void 0, decimals: r, ...e } = {}) {
+function St({ locale: n = void 0, decimals: r, ...e } = {}) {
   const t = { ...e };
   r != null && (t.minimumFractionDigits = r, t.maximumFractionDigits = r);
   const s = new Intl.NumberFormat(n, t);
   return ({ value: i, td: o }) => {
-    if (o && o.classList.add("sg-renderer-number"), E(i)) return "";
+    if (o && o.classList.add("sg-renderer-number"), M(i)) return "";
     const a = Number(i);
     return Number.isFinite(a) ? s.format(a) : String(i);
   };
 }
-function vt({ locale: n = void 0, compactDisplay: r = "short", maximumFractionDigits: e = 1 } = {}) {
+function Lt({ locale: n = void 0, compactDisplay: r = "short", maximumFractionDigits: e = 1 } = {}) {
   const t = new Intl.NumberFormat(n, {
     notation: "compact",
     compactDisplay: r,
     maximumFractionDigits: e
   });
   return ({ value: s, td: i }) => {
-    if (i && i.classList.add("sg-renderer-number"), E(s)) return "";
+    if (i && i.classList.add("sg-renderer-number"), M(s)) return "";
     const o = Number(s);
     return Number.isFinite(o) ? t.format(o) : String(s);
   };
 }
-function Ct({ binary: n = !0, decimals: r = 1, locale: e = void 0 } = {}) {
+function At({ binary: n = !0, decimals: r = 1, locale: e = void 0 } = {}) {
   const t = n ? 1024 : 1e3, s = n ? ["B", "KiB", "MiB", "GiB", "TiB", "PiB"] : ["B", "KB", "MB", "GB", "TB", "PB"], i = new Intl.NumberFormat(e, {
     minimumFractionDigits: r,
     maximumFractionDigits: r
   });
   return ({ value: o, td: a }) => {
-    if (a && a.classList.add("sg-renderer-number"), E(o)) return "";
+    if (a && a.classList.add("sg-renderer-number"), M(o)) return "";
     let l = Number(o);
     if (!Number.isFinite(l)) return String(o);
     const d = l < 0 ? "-" : "";
@@ -1349,31 +1349,31 @@ function Ct({ binary: n = !0, decimals: r = 1, locale: e = void 0 } = {}) {
     return `${d}${u} ${s[c]}`;
   };
 }
-const Rs = /* @__PURE__ */ new Set(["1", "true", "t", "yes", "y", "on"]);
-function Ne(n) {
-  return n === !0 || n === 1 ? !0 : n == null || n === "" || n === !1 || n === 0 ? !1 : Rs.has(String(n).toLowerCase());
+const $s = /* @__PURE__ */ new Set(["1", "true", "t", "yes", "y", "on"]);
+function Fe(n) {
+  return n === !0 || n === 1 ? !0 : n == null || n === "" || n === !1 || n === 0 ? !1 : $s.has(String(n).toLowerCase());
 }
-const Ts = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335.1 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>', Ds = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
-function xt({
-  truthy: n = Ne,
+const Is = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335.1 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>', Vs = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
+function Et({
+  truthy: n = Fe,
   nullLabel: r = "—",
   falseStyle: e = "icon"
   // 'icon' | 'hidden'
 } = {}) {
   return ({ value: t }) => {
     if (t == null || t === "")
-      return h("span", { class: "sg-renderer-bool-null" }, document.createTextNode(r));
+      return f("span", { class: "sg-renderer-bool-null" }, document.createTextNode(r));
     if (n(t)) {
-      const i = h("span", { class: "sg-renderer-bool is-true", "aria-label": "true" });
-      return i.innerHTML = Ts, i;
+      const i = f("span", { class: "sg-renderer-bool is-true", "aria-label": "true" });
+      return i.innerHTML = Is, i;
     }
     if (e === "hidden") return "";
-    const s = h("span", { class: "sg-renderer-bool is-false", "aria-label": "false" });
-    return s.innerHTML = Ds, s;
+    const s = f("span", { class: "sg-renderer-bool is-false", "aria-label": "false" });
+    return s.innerHTML = Vs, s;
   };
 }
-const ks = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2 160 448c0 17.7 14.3 32 32 32s32-14.3 32-32l0-306.7L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"/></svg>', Ns = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M169.4 470.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 370.7 224 64c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 306.7L54.6 265.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>', $s = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M64 256a32 32 0 1 0 0-64H384V160c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l96 96c12.5 12.5 12.5 32.8 0 45.3l-96 96c-9.2 9.2-22.9 11.9-34.9 6.9S384 364.9 384 352V320H64z"/></svg>';
-function St({
+const Fs = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2 160 448c0 17.7 14.3 32 32 32s32-14.3 32-32l0-306.7L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"/></svg>', Ps = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M169.4 470.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 370.7 224 64c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 306.7L54.6 265.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>', Bs = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M64 256a32 32 0 1 0 0-64H384V160c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l96 96c12.5 12.5 12.5 32.8 0 45.3l-96 96c-9.2 9.2-22.9 11.9-34.9 6.9S384 364.9 384 352V320H64z"/></svg>';
+function Mt({
   style: n = "percent",
   // 'percent' | 'number' | 'currency'
   decimals: r = 1,
@@ -1394,48 +1394,48 @@ function St({
     maximumFractionDigits: r,
     signDisplay: i ? "always" : "auto"
   }), ({ value: a, td: l }) => {
-    if (l && l.classList.add("sg-renderer-number"), E(a)) return "";
+    if (l && l.classList.add("sg-renderer-number"), M(a)) return "";
     const d = Number(a);
     if (!Number.isFinite(d)) return String(a);
-    let c = "is-flat", u = $s;
+    let c = "is-flat", u = Bs;
     const p = !s;
-    d > 0 ? (c = p ? "is-up" : "is-down", u = ks) : d < 0 && (c = p ? "is-down" : "is-up", u = Ns);
-    const f = h("span", { class: `sg-renderer-delta ${c}` }), g = h("span", { class: "sg-renderer-delta-icon", "aria-hidden": "true" });
+    d > 0 ? (c = p ? "is-up" : "is-down", u = Fs) : d < 0 && (c = p ? "is-down" : "is-up", u = Ps);
+    const h = f("span", { class: `sg-renderer-delta ${c}` }), g = f("span", { class: "sg-renderer-delta-icon", "aria-hidden": "true" });
     g.innerHTML = u;
-    const _ = n === "percent" ? `${o.format(d)}%` : o.format(d);
-    return f.append(g), f.append(h("span", { class: "sg-renderer-delta-value" }, document.createTextNode(_))), f;
+    const b = n === "percent" ? `${o.format(d)}%` : o.format(d);
+    return h.append(g), h.append(f("span", { class: "sg-renderer-delta-value" }, document.createTextNode(b))), h;
   };
 }
-function Lt({ chars: n = null } = {}) {
+function Tt({ chars: n = null } = {}) {
   return ({ value: r, td: e }) => {
-    if (E(r)) return "";
+    if (M(r)) return "";
     const t = String(r);
     let s = t, i = !1;
     return n && t.length > n && (s = t.slice(0, n) + "…", i = !0), e && (e.classList.add("sg-renderer-truncate"), e.setAttribute("title", t)), i ? s : t;
   };
 }
-const _e = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1L400 115.9V320c0 8.8-7.2 16-16 16zM192 384H384c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9L366.1 14.1c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64V320c0 35.3 28.7 64 64 64zM64 128c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H256c35.3 0 64-28.7 64-64V416H272v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16H96V128H64z"/></svg>', At = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>';
-function Mt({ position: n = "after" } = {}) {
+const ye = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1L400 115.9V320c0 8.8-7.2 16-16 16zM192 384H384c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9L366.1 14.1c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64V320c0 35.3 28.7 64 64 64zM64 128c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H256c35.3 0 64-28.7 64-64V416H272v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16H96V128H64z"/></svg>', Rt = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>';
+function kt({ position: n = "after" } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
-    const e = String(r), t = h("span", { class: "sg-renderer-copyable" }), s = h("span", { class: "sg-renderer-copyable-value" }, document.createTextNode(e)), i = h("button", {
+    if (M(r)) return "";
+    const e = String(r), t = f("span", { class: "sg-renderer-copyable" }), s = f("span", { class: "sg-renderer-copyable-value" }, document.createTextNode(e)), i = f("button", {
       type: "button",
       class: "sg-renderer-copyable-btn",
       title: "Copy",
       "aria-label": `Copy ${e}`
     });
-    return i.innerHTML = _e, i.addEventListener("click", async (o) => {
+    return i.innerHTML = ye, i.addEventListener("click", async (o) => {
       o.stopPropagation(), o.preventDefault();
       try {
-        navigator.clipboard?.writeText ? await navigator.clipboard.writeText(e) : Et(e), i.innerHTML = At, i.classList.add("is-copied"), setTimeout(() => {
-          i.innerHTML = _e, i.classList.remove("is-copied");
+        navigator.clipboard?.writeText ? await navigator.clipboard.writeText(e) : Dt(e), i.innerHTML = Rt, i.classList.add("is-copied"), setTimeout(() => {
+          i.innerHTML = ye, i.classList.remove("is-copied");
         }, 1200);
       } catch {
       }
     }), n === "before" ? t.append(i, s) : t.append(s, i), t;
   };
 }
-function Et(n) {
+function Dt(n) {
   const r = document.createElement("textarea");
   r.value = n, r.style.position = "fixed", r.style.left = "-9999px", document.body.appendChild(r), r.select();
   try {
@@ -1444,7 +1444,7 @@ function Et(n) {
   }
   document.body.removeChild(r);
 }
-function Rt({
+function Nt({
   size: n = 36,
   rounded: r = "sm",
   // 'sm' = 4px, 'lg' = 8px, 'full' = circle, 'none'
@@ -1453,8 +1453,8 @@ function Rt({
 } = {}) {
   const s = r === "full" ? "999px" : r === "lg" ? "8px" : r === "none" ? "0" : "4px";
   return ({ value: i, row: o }) => {
-    if (E(i)) return "";
-    const a = String(i), l = o?.[e] ?? "", d = h("img", {
+    if (M(i)) return "";
+    const a = String(i), l = o?.[e] ?? "", d = f("img", {
       src: a,
       alt: l,
       class: "sg-renderer-image",
@@ -1465,19 +1465,19 @@ function Rt({
       decoding: "async"
     });
     return t && (d.style.cursor = "zoom-in", d.addEventListener("click", (c) => {
-      c.stopPropagation(), Is(a, l);
+      c.stopPropagation(), Hs(a, l);
     })), d;
   };
 }
-function Is(n, r) {
-  const e = h("div", { class: "sg-image-zoom" }), t = () => {
+function Hs(n, r) {
+  const e = f("div", { class: "sg-image-zoom" }), t = () => {
     e.remove(), document.removeEventListener("keydown", s);
   }, s = (i) => {
     i.key === "Escape" && t();
   };
-  e.addEventListener("click", t), document.addEventListener("keydown", s), e.append(h("img", { src: n, alt: r || "", class: "sg-image-zoom-img" })), document.body.appendChild(e);
+  e.addEventListener("click", t), document.addEventListener("keydown", s), e.append(f("img", { src: n, alt: r || "", class: "sg-image-zoom-img" })), document.body.appendChild(e);
 }
-function Tt({
+function $t({
   showLabel: n = !0,
   label: r = "value",
   // 'value' | 'name' | (value, row) => string
@@ -1486,20 +1486,20 @@ function Tt({
   size: t = 14
 } = {}) {
   return ({ value: s, row: i }) => {
-    if (E(s)) return "";
-    const o = String(s).trim(), a = h("span", { class: "sg-renderer-swatch" }), l = h("span", {
+    if (M(s)) return "";
+    const o = String(s).trim(), a = f("span", { class: "sg-renderer-swatch" }), l = f("span", {
       class: `sg-renderer-swatch-chip is-${e}`,
       style: `width: ${t}px; height: ${t}px; background: ${o};`,
       "aria-hidden": "true"
     });
     if (a.append(l), n) {
       const d = typeof r == "function" ? r(s, i) : r === "name" ? i?.name ?? o : o;
-      a.append(h("span", { class: "sg-renderer-swatch-label" }, document.createTextNode(d)));
+      a.append(f("span", { class: "sg-renderer-swatch-label" }, document.createTextNode(d)));
     }
     return a;
   };
 }
-const $e = {
+const Pe = {
   blue: "#3b82f6",
   green: "#10b981",
   red: "#ef4444",
@@ -1508,7 +1508,7 @@ const $e = {
   pink: "#ec4899",
   gray: "#6b7280"
 };
-function Dt({
+function It({
   type: n = "line",
   // 'line' | 'area' | 'bar'
   width: r = 80,
@@ -1520,51 +1520,51 @@ function Dt({
   showLast: i = !0
   // small dot on the last point (line / area only)
 } = {}) {
-  const o = $e[t] || t;
+  const o = Pe[t] || t;
   return ({ value: a }) => {
     if (!Array.isArray(a) || a.length === 0) return "";
-    const l = a.map(Number).filter((w) => Number.isFinite(w));
+    const l = a.map(Number).filter((v) => Number.isFinite(v));
     if (l.length === 0) return "";
-    const d = s ?? Math.min(...l), u = Math.max(...l, s ?? -1 / 0) - d || 1, p = 1.5, f = 2.5, g = r - p * 2, _ = e - f * 2, y = (w) => p + (l.length === 1 ? g / 2 : w / (l.length - 1) * g), L = (w) => f + _ - (w - d) / u * _;
-    let b = "";
+    const d = s ?? Math.min(...l), u = Math.max(...l, s ?? -1 / 0) - d || 1, p = 1.5, h = 2.5, g = r - p * 2, b = e - h * 2, y = (v) => p + (l.length === 1 ? g / 2 : v / (l.length - 1) * g), S = (v) => h + b - (v - d) / u * b;
+    let _ = "";
     if (n === "bar") {
-      const v = Math.max(1, (g - (l.length - 1) * 1) / l.length);
-      for (let S = 0; S < l.length; S++) {
-        const A = l[S], D = p + S * (v + 1), C = L(A), R = f + _ - C;
-        b += `<rect x="${D.toFixed(2)}" y="${C.toFixed(2)}" width="${v.toFixed(2)}" height="${R.toFixed(2)}" fill="${o}"/>`;
+      const w = Math.max(1, (g - (l.length - 1) * 1) / l.length);
+      for (let L = 0; L < l.length; L++) {
+        const A = l[L], k = p + L * (w + 1), C = S(A), T = h + b - C;
+        _ += `<rect x="${k.toFixed(2)}" y="${C.toFixed(2)}" width="${w.toFixed(2)}" height="${T.toFixed(2)}" fill="${o}"/>`;
       }
     } else {
-      let w = "";
-      for (let v = 0; v < l.length; v++)
-        w += `${v === 0 ? "M" : "L"} ${y(v).toFixed(2)} ${L(l[v]).toFixed(2)} `;
+      let v = "";
+      for (let w = 0; w < l.length; w++)
+        v += `${w === 0 ? "M" : "L"} ${y(w).toFixed(2)} ${S(l[w]).toFixed(2)} `;
       if (n === "area") {
-        const v = w + ` L ${y(l.length - 1).toFixed(2)} ${(f + _).toFixed(2)} L ${y(0).toFixed(2)} ${(f + _).toFixed(2)} Z`;
-        b += `<path d="${v}" fill="${o}" fill-opacity="0.18" stroke="none"/>`;
+        const w = v + ` L ${y(l.length - 1).toFixed(2)} ${(h + b).toFixed(2)} L ${y(0).toFixed(2)} ${(h + b).toFixed(2)} Z`;
+        _ += `<path d="${w}" fill="${o}" fill-opacity="0.18" stroke="none"/>`;
       }
-      if (b += `<path d="${w.trim()}" fill="none" stroke="${o}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`, i) {
-        const v = y(l.length - 1), S = L(l[l.length - 1]);
-        b += `<circle cx="${v.toFixed(2)}" cy="${S.toFixed(2)}" r="1.8" fill="${o}"/>`;
+      if (_ += `<path d="${v.trim()}" fill="none" stroke="${o}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`, i) {
+        const w = y(l.length - 1), L = S(l[l.length - 1]);
+        _ += `<circle cx="${w.toFixed(2)}" cy="${L.toFixed(2)}" r="1.8" fill="${o}"/>`;
       }
     }
-    return `<svg class="sg-renderer-sparkline is-${n}" viewBox="0 0 ${r} ${e}" width="${r}" height="${e}" preserveAspectRatio="none" aria-hidden="true">` + b + "</svg>";
+    return `<svg class="sg-renderer-sparkline is-${n}" viewBox="0 0 ${r} ${e}" width="${r}" height="${e}" preserveAspectRatio="none" aria-hidden="true">` + _ + "</svg>";
   };
 }
-function kt(n) {
+function Vt(n) {
   if (typeof n != "string") return null;
   let r = n.trim().replace(/^#/, "");
   return r.length === 3 && (r = r.split("").map((e) => e + e).join("")), /^[0-9a-f]{6}$/i.test(r) ? [parseInt(r.slice(0, 2), 16), parseInt(r.slice(2, 4), 16), parseInt(r.slice(4, 6), 16)] : null;
 }
-function Vs(n, r, e) {
+function Gs(n, r, e) {
   const t = (s) => Math.max(0, Math.min(255, Math.round(s))).toString(16).padStart(2, "0");
   return `#${t(n)}${t(r)}${t(e)}`;
 }
-function Fs(n, r, e) {
+function Os(n, r, e) {
   return [n[0] + (r[0] - n[0]) * e, n[1] + (r[1] - n[1]) * e, n[2] + (r[2] - n[2]) * e];
 }
-function Nt([n, r, e]) {
+function Ft([n, r, e]) {
   return 0.299 * n + 0.587 * r + 0.114 * e >= 145;
 }
-function $t({
+function Pt({
   min: n = 0,
   max: r = 100,
   colors: e = ["#dcfce7", "#fef3c7", "#fecaca"],
@@ -1573,24 +1573,24 @@ function $t({
   format: i = null
   // (value) => string for custom labels
 } = {}) {
-  const o = e.map(kt).filter(Boolean);
+  const o = e.map(Vt).filter(Boolean);
   if (o.length < 2) throw new Error("heatmap: need at least two valid hex colours");
   return ({ value: a, td: l }) => {
-    if (l && l.classList.add("sg-renderer-heatmap"), E(a)) return "";
+    if (l && l.classList.add("sg-renderer-heatmap"), M(a)) return "";
     let d = Number(a);
     if (!Number.isFinite(d)) return String(a);
     let c = r - n === 0 ? 0.5 : (d - n) / (r - n);
     c = Math.max(0, Math.min(1, c)), t && (c = 1 - c);
-    const u = c * (o.length - 1), p = Math.min(o.length - 2, Math.floor(u)), f = u - p, g = Fs(o[p], o[p + 1], f);
-    return l && (l.style.backgroundColor = Vs(...g), l.style.color = Nt(g) ? "#111827" : "#ffffff"), s ? typeof i == "function" ? i(a) : String(a) : "";
+    const u = c * (o.length - 1), p = Math.min(o.length - 2, Math.floor(u)), h = u - p, g = Os(o[p], o[p + 1], h);
+    return l && (l.style.backgroundColor = Gs(...g), l.style.color = Ft(g) ? "#111827" : "#ffffff"), s ? typeof i == "function" ? i(a) : String(a) : "";
   };
 }
-const Ps = {
+const zs = {
   // Credit card: 16 digits grouped 4-4-4-4, last 4 visible. Handles 13-19
   // digit lengths gracefully (Amex 15, others 16). Non-digits are stripped.
-  "cc-last4": (n, r) => Ue(n.replace(/\D/g, ""), 4, 4, r, " "),
+  "cc-last4": (n, r) => Qe(n.replace(/\D/g, ""), 4, 4, r, " "),
   // BIN + last4: show the first 6 + last 4, mask the middle (PCI-friendly).
-  "cc-bin-last4": (n, r) => Ue(n.replace(/\D/g, ""), 4, 4, r, " ", 6),
+  "cc-bin-last4": (n, r) => Qe(n.replace(/\D/g, ""), 4, 4, r, " ", 6),
   // Phone: show the last 4 digits, mask the rest as a single bullet
   // block ("•••••• 1234"). Sidesteps the country-specific 3-3-4 / 4-3-3
   // grouping ambiguity — register your own variant if you need a
@@ -1605,21 +1605,21 @@ const Ps = {
     return e ? e[1][0] + r.repeat(Math.max(1, e[1].length - 1)) + e[2] : n;
   },
   // SSN / ABN-style: show last 4.
-  last4: (n, r) => Bs(n, 4, r)
+  last4: (n, r) => js(n, 4, r)
 };
-function Bs(n, r, e) {
+function js(n, r, e) {
   const t = String(n);
   return t.length <= r ? t : e.repeat(t.length - r) + t.slice(-r);
 }
-function Ue(n, r, e, t, s, i = 0) {
+function Qe(n, r, e, t, s, i = 0) {
   if (!n) return "";
   const o = n.length, a = n.split("").map((d, c) => c < i || c >= o - e ? d : t).join(""), l = [];
   for (let d = a.length; d > 0; d -= r)
     l.unshift(a.slice(Math.max(0, d - r), d));
   return l.join(s);
 }
-const Hs = /* @__PURE__ */ new Set(["cc-last4", "cc-bin-last4", "phone-last4", "last4"]);
-function It({
+const Ks = /* @__PURE__ */ new Set(["cc-last4", "cc-bin-last4", "phone-last4", "last4"]);
+function Bt({
   format: n = null,
   showFirst: r = 0,
   showLast: e = 4,
@@ -1627,27 +1627,27 @@ function It({
   align: s = null
   // 'left' | 'right' | null (auto)
 } = {}) {
-  const i = n ? Ps[n] : null, o = n ? Hs.has(n) : !1, a = s === "right" || s !== "left" && o;
+  const i = n ? zs[n] : null, o = n ? Ks.has(n) : !1, a = s === "right" || s !== "left" && o;
   return ({ value: l, td: d }) => {
-    if (d && a && d.classList.add("sg-renderer-mask-numeric"), E(l)) return "";
+    if (d && a && d.classList.add("sg-renderer-mask-numeric"), M(l)) return "";
     const c = String(l);
     if (i) return i(c, t);
-    const u = c.slice(0, r), p = e > 0 ? c.slice(-e) : "", f = Math.max(0, c.length - r - e);
-    return u + t.repeat(f) + p;
+    const u = c.slice(0, r), p = e > 0 ? c.slice(-e) : "", h = Math.max(0, c.length - r - e);
+    return u + t.repeat(h) + p;
   };
 }
-function Vt({
+function Ht({
   query: n = null,
   caseSensitive: r = !1,
   className: e = "sg-renderer-mark"
 } = {}) {
   return ({ value: t, api: s }) => {
-    if (E(t)) return "";
+    if (M(t)) return "";
     const i = String(t), o = n != null ? String(n) : s?.getQuickFilter?.() || "";
-    return o ? Gs(i, o, r, e) : document.createTextNode(i);
+    return o ? qs(i, o, r, e) : document.createTextNode(i);
   };
 }
-function Gs(n, r, e, t) {
+function qs(n, r, e, t) {
   const s = e ? n : n.toLowerCase(), i = e ? r : r.toLowerCase(), o = document.createElement("span");
   let a = 0;
   for (; a < n.length; ) {
@@ -1662,10 +1662,10 @@ function Gs(n, r, e, t) {
   }
   return o;
 }
-function Ft({ lines: n = null, separator: r = `
+function Gt({ lines: n = null, separator: r = `
 ` } = {}) {
   return ({ value: e, td: t }) => {
-    if (E(e)) return "";
+    if (M(e)) return "";
     const s = String(e), i = r === `
 ` ? s : s.split(r).join(`
 `);
@@ -1692,14 +1692,14 @@ function te(n) {
   while (r >= 1024 && t < e.length - 1);
   return `${r.toFixed(r < 10 ? 1 : 0)} ${e[t]}`;
 }
-const Os = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"]);
+const Us = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"]);
 function z(n) {
   if (!n) return !1;
   if (typeof n.content_type == "string" && n.content_type.startsWith("image/")) return !0;
   const r = String(n.filename || "").split(".").pop()?.toLowerCase();
-  return r ? Os.has(r) : !1;
+  return r ? Us.has(r) : !1;
 }
-const be = {
+const ve = {
   pdf: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM88 304h32c30.9 0 56 25.1 56 56s-25.1 56-56 56h-16v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V320c0-8.8 7.2-16 16-16zm32 80c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v48h16zm72-64c0-8.8 7.2-16 16-16h24c26.5 0 48 21.5 48 48v48c0 26.5-21.5 48-48 48H208c-8.8 0-16-7.2-16-16V320zm32 16v80h8c8.8 0 16-7.2 16-16v-48c0-8.8-7.2-16-16-16h-8z"/></svg>',
   doc: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM104 280c0-13.3 10.7-24 24-24h128c13.3 0 24 10.7 24 24s-10.7 24-24 24H128c-13.3 0-24-10.7-24-24zm0 80c0-13.3 10.7-24 24-24h128c13.3 0 24 10.7 24 24s-10.7 24-24 24H128c-13.3 0-24-10.7-24-24z"/></svg>',
   sheet: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zm192 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16v128c0 8.8-7.2 16-16 16H112c-8.8 0-16-7.2-16-16V272c0-8.8 7.2-16 16-16zm16 32v32h48V288H128zm80 0v32h48V288H208zm-80 64v32h48V352H128zm80 0v32h48V352H208z"/></svg>',
@@ -1708,12 +1708,12 @@ const be = {
   video: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM64 288c0-17.7 14.3-32 32-32H224c17.7 0 32 14.3 32 32V416c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V288zm259.7-11.3c5.2 2.7 8.3 8 8.3 13.8v123c0 5.8-3.2 11.2-8.3 13.8s-11.3 2.3-16.1-.9L256 392.7V312l51.5-32.6c4.9-3.1 11-3.4 16.1-.8z"/></svg>',
   code: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM200.4 281.7c5.8 6.7 5.2 16.8-1.5 22.6L165.5 333l33.4 28.7c6.7 5.8 7.4 15.9 1.6 22.6s-15.9 7.4-22.6 1.6l-48-41.2c-3.5-3-5.5-7.4-5.5-12s2-9 5.5-12l48-41.2c6.7-5.8 16.8-5.2 22.6 1.5zM226 281.7c5.8-6.7 15.9-7.4 22.6-1.5l48 41.2c3.5 3 5.5 7.4 5.5 12s-2 9-5.5 12l-48 41.2c-6.7 5.8-16.8 5.2-22.6-1.6s-5.2-16.8 1.5-22.6L260.5 333 227.5 304.4c-6.7-5.8-7.4-15.9-1.5-22.6z"/></svg>',
   file: '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0z"/></svg>'
-}, Pt = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>', Ie = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>', zs = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>', js = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 105.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg>', qs = /* @__PURE__ */ new Set(["mp3", "wav", "flac", "m4a", "ogg", "aac", "opus"]), Ks = /* @__PURE__ */ new Set(["mp4", "mov", "webm", "mkv", "avi", "m4v"]);
-function Bt(n) {
+}, Ot = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>', Be = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>', Ws = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>', Xs = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 105.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg>', Ys = /* @__PURE__ */ new Set(["mp3", "wav", "flac", "m4a", "ogg", "aac", "opus"]), Qs = /* @__PURE__ */ new Set(["mp4", "mov", "webm", "mkv", "avi", "m4v"]);
+function zt(n) {
   const r = String(n?.content_type || "").toLowerCase(), e = String(n?.filename || "").split(".").pop()?.toLowerCase() || "";
-  return r.includes("pdf") || e === "pdf" ? "pdf" : r.startsWith("audio/") || qs.has(e) ? "audio" : r.startsWith("video/") || Ks.has(e) ? "video" : r.includes("zip") || ["zip", "tar", "gz", "7z", "rar"].includes(e) ? "zip" : r.includes("sheet") || r.includes("excel") || r.includes("csv") || ["xls", "xlsx", "csv", "numbers"].includes(e) ? "sheet" : r.includes("word") || r.includes("document") || ["doc", "docx", "txt", "md", "rtf"].includes(e) ? "doc" : ["js", "ts", "rb", "py", "go", "rs", "java", "json", "xml", "html", "css", "sh", "sql"].includes(e) ? "code" : "file";
+  return r.includes("pdf") || e === "pdf" ? "pdf" : r.startsWith("audio/") || Ys.has(e) ? "audio" : r.startsWith("video/") || Qs.has(e) ? "video" : r.includes("zip") || ["zip", "tar", "gz", "7z", "rar"].includes(e) ? "zip" : r.includes("sheet") || r.includes("excel") || r.includes("csv") || ["xls", "xlsx", "csv", "numbers"].includes(e) ? "sheet" : r.includes("word") || r.includes("document") || ["doc", "docx", "txt", "md", "rtf"].includes(e) ? "doc" : ["js", "ts", "rb", "py", "go", "rs", "java", "json", "xml", "html", "css", "sh", "sql"].includes(e) ? "code" : "file";
 }
-function ve(n) {
+function xe(n) {
   if (n == null || n === "") return [];
   let r = n;
   if (typeof r == "string")
@@ -1733,7 +1733,7 @@ function ve(n) {
     signed_id: e.signed_id || e.signedId || null
   }));
 }
-function Ht({
+function jt({
   thumbSize: n = 28,
   maxThumbs: r = 4,
   empty: e = "",
@@ -1745,39 +1745,39 @@ function Ht({
   onRemove: l = null
 } = {}) {
   return (d) => {
-    const { value: c, td: u, row: p, col: f } = d, g = ve(c);
+    const { value: c, td: u, row: p, col: h } = d, g = xe(c);
     if (u && (u.classList.add("sg-renderer-attachments-cell"), u.dataset.attachmentCount = String(g.length), u._sgAttachments = g), g.length === 0 && !t)
       return e ? document.createTextNode(e) : "";
-    const _ = h("div", { class: "sg-renderer-attachments", role: "group" }), y = g.slice(0, r), L = Math.max(0, g.length - y.length);
-    if (y.forEach((b) => _.append(Us(b, n, g, o))), L > 0) {
-      const b = h(
+    const b = f("div", { class: "sg-renderer-attachments", role: "group" }), y = g.slice(0, r), S = Math.max(0, g.length - y.length);
+    if (y.forEach((_) => b.append(Zs(_, n, g, o))), S > 0) {
+      const _ = f(
         "span",
-        { class: "sg-attach-more", title: `${L} more` },
-        document.createTextNode(`+${L}`)
+        { class: "sg-attach-more", title: `${S} more` },
+        document.createTextNode(`+${S}`)
       );
-      b.addEventListener("click", (w) => {
-        w.stopPropagation(), Gt(g, g[y.length]);
-      }), _.append(b);
+      _.addEventListener("click", (v) => {
+        v.stopPropagation(), Kt(g, g[y.length]);
+      }), b.append(_);
     }
     if (t) {
-      const b = h("button", {
+      const _ = f("button", {
         type: "button",
         class: "sg-attach-add",
         title: "Add files",
         "aria-label": "Add attachments",
         "data-sg-attach": "add"
       });
-      b.innerHTML = Pt, b.addEventListener("click", (w) => {
-        w.stopPropagation(), We(u, d, { thumbSize: n, accept: s, multiple: i, onUpload: a, onRemove: l });
-      }), _.append(b), Ws(u, d, { onUpload: a }), u.addEventListener("dblclick", (w) => {
-        w._sgAttachmentHandled || (w._sgAttachmentHandled = !0, w.stopPropagation(), We(u, d, { thumbSize: n, accept: s, multiple: i, onUpload: a, onRemove: l }));
+      _.innerHTML = Ot, _.addEventListener("click", (v) => {
+        v.stopPropagation(), Ze(u, d, { thumbSize: n, accept: s, multiple: i, onUpload: a, onRemove: l });
+      }), b.append(_), Js(u, d, { onUpload: a }), u.addEventListener("dblclick", (v) => {
+        v._sgAttachmentHandled || (v._sgAttachmentHandled = !0, v.stopPropagation(), Ze(u, d, { thumbSize: n, accept: s, multiple: i, onUpload: a, onRemove: l }));
       }, { once: !1 });
     }
-    return _;
+    return b;
   };
 }
-function Us(n, r, e, t) {
-  const s = h("button", {
+function Zs(n, r, e, t) {
+  const s = f("button", {
     type: "button",
     class: "sg-attach-thumb",
     title: `${n.filename}${n.byte_size != null ? " · " + te(n.byte_size) : ""}`,
@@ -1787,7 +1787,7 @@ function Us(n, r, e, t) {
     style: `width: ${r}px; height: ${r}px;`
   });
   if (z(n) && n.thumb_url)
-    s.append(h("img", {
+    s.append(f("img", {
       src: n.thumb_url,
       alt: n.filename,
       loading: "lazy",
@@ -1796,13 +1796,13 @@ function Us(n, r, e, t) {
       height: String(r)
     }));
   else {
-    const i = Bt(n), o = h("span", { class: `sg-attach-icon is-${i}`, "aria-hidden": "true" });
-    o.innerHTML = be[i] || be.file, s.append(o);
+    const i = zt(n), o = f("span", { class: `sg-attach-icon is-${i}`, "aria-hidden": "true" });
+    o.innerHTML = ve[i] || ve.file, s.append(o);
   }
   return s.addEventListener("click", (i) => {
     if (i.stopPropagation(), z(n)) {
       const o = e.filter(z);
-      Gt(o.length ? o : [n], n);
+      Kt(o.length ? o : [n], n);
     } else if (t) {
       const o = document.createElement("a");
       o.href = n.url, o.download = n.filename, document.body.appendChild(o), o.click(), o.remove();
@@ -1811,45 +1811,45 @@ function Us(n, r, e, t) {
   }), s;
 }
 let Z = null;
-function Gt(n, r) {
-  Se();
+function Kt(n, r) {
+  Ee();
   const e = n.filter(z);
   if (e.length === 0) return;
-  let t = Math.max(0, e.findIndex((f) => f.id === r?.id));
+  let t = Math.max(0, e.findIndex((h) => h.id === r?.id));
   t < 0 && (t = 0);
-  const s = h("div", { class: "sg-image-zoom sg-attach-lightbox", role: "dialog", "aria-modal": "true" }), i = h("div", { class: "sg-attach-lightbox-stage" }), o = h("img", { class: "sg-image-zoom-img", alt: "" }), a = h("div", { class: "sg-attach-lightbox-caption" }), l = h("button", {
+  const s = f("div", { class: "sg-image-zoom sg-attach-lightbox", role: "dialog", "aria-modal": "true" }), i = f("div", { class: "sg-attach-lightbox-stage" }), o = f("img", { class: "sg-image-zoom-img", alt: "" }), a = f("div", { class: "sg-attach-lightbox-caption" }), l = f("button", {
     type: "button",
     class: "sg-attach-lightbox-nav is-prev",
     "aria-label": "Previous attachment"
-  }), d = h("button", {
+  }), d = f("button", {
     type: "button",
     class: "sg-attach-lightbox-nav is-next",
     "aria-label": "Next attachment"
   });
-  l.innerHTML = zs, d.innerHTML = js;
+  l.innerHTML = Ws, d.innerHTML = Xs;
   function c() {
-    const f = e[t];
-    o.src = f.preview_url || f.url, o.alt = f.filename, a.textContent = `${f.filename}${f.byte_size != null ? " · " + te(f.byte_size) : ""} (${t + 1}/${e.length})`, l.style.visibility = e.length > 1 ? "visible" : "hidden", d.style.visibility = e.length > 1 ? "visible" : "hidden";
+    const h = e[t];
+    o.src = h.preview_url || h.url, o.alt = h.filename, a.textContent = `${h.filename}${h.byte_size != null ? " · " + te(h.byte_size) : ""} (${t + 1}/${e.length})`, l.style.visibility = e.length > 1 ? "visible" : "hidden", d.style.visibility = e.length > 1 ? "visible" : "hidden";
   }
-  function u(f) {
-    t = (t + f + e.length) % e.length, c();
+  function u(h) {
+    t = (t + h + e.length) % e.length, c();
   }
-  function p(f) {
-    f.key === "Escape" ? Se() : f.key === "ArrowLeft" ? u(-1) : f.key === "ArrowRight" && u(1);
+  function p(h) {
+    h.key === "Escape" ? Ee() : h.key === "ArrowLeft" ? u(-1) : h.key === "ArrowRight" && u(1);
   }
-  s.addEventListener("click", (f) => {
-    (f.target === s || f.target === i) && Se();
-  }), l.addEventListener("click", (f) => {
-    f.stopPropagation(), u(-1);
-  }), d.addEventListener("click", (f) => {
-    f.stopPropagation(), u(1);
+  s.addEventListener("click", (h) => {
+    (h.target === s || h.target === i) && Ee();
+  }), l.addEventListener("click", (h) => {
+    h.stopPropagation(), u(-1);
+  }), d.addEventListener("click", (h) => {
+    h.stopPropagation(), u(1);
   }), document.addEventListener("keydown", p), i.append(l, o, d), s.append(i, a), document.body.appendChild(s), Z = { overlay: s, onKey: p }, c();
 }
-function Se() {
+function Ee() {
   Z && (document.removeEventListener("keydown", Z.onKey), Z.overlay.remove(), Z = null);
 }
-let pe = null;
-function Ws(n, r, { onUpload: e }) {
+let fe = null;
+function Js(n, r, { onUpload: e }) {
   n._sgAttachDropBound || (n._sgAttachDropBound = !0, n.addEventListener("dragover", (t) => {
     t.dataTransfer?.types?.includes("Files") && (t.preventDefault(), n.classList.add("is-drop-target"));
   }), n.addEventListener("dragleave", () => n.classList.remove("is-drop-target")), n.addEventListener("drop", async (t) => {
@@ -1859,89 +1859,89 @@ function Ws(n, r, { onUpload: e }) {
     await he(n, r, s, e);
   }));
 }
-function We(n, r, e) {
-  oe();
-  const { thumbSize: t, accept: s, multiple: i, onUpload: o, onRemove: a } = e, l = n._sgAttachments || ve(r.value), d = h("div", { class: "sg-attach-editor", role: "dialog", "aria-modal": "false" });
-  d.addEventListener("mousedown", (b) => b.stopPropagation());
-  const c = h("div", { class: "sg-attach-editor-header" }, [
-    h(
+function Ze(n, r, e) {
+  ae();
+  const { thumbSize: t, accept: s, multiple: i, onUpload: o, onRemove: a } = e, l = n._sgAttachments || xe(r.value), d = f("div", { class: "sg-attach-editor", role: "dialog", "aria-modal": "false" });
+  d.addEventListener("mousedown", (_) => _.stopPropagation());
+  const c = f("div", { class: "sg-attach-editor-header" }, [
+    f(
       "span",
       { class: "sg-attach-editor-title" },
       document.createTextNode(l.length === 1 ? "1 attachment" : `${l.length} attachments`)
     ),
     (() => {
-      const b = h("button", {
+      const _ = f("button", {
         type: "button",
         class: "sg-attach-editor-close",
         "aria-label": "Close"
       });
-      return b.innerHTML = Ie, b.addEventListener("click", oe), b;
+      return _.innerHTML = Be, _.addEventListener("click", ae), _;
     })()
-  ]), u = h("div", { class: "sg-attach-editor-grid" });
+  ]), u = f("div", { class: "sg-attach-editor-grid" });
   function p() {
-    const b = n._sgAttachments || [];
-    u.replaceChildren(), b.forEach((w) => u.append(Xs(w, n, r, a, t))), c.firstChild.textContent = b.length === 1 ? "1 attachment" : `${b.length} attachments`;
+    const _ = n._sgAttachments || [];
+    u.replaceChildren(), _.forEach((v) => u.append(er(v, n, r, a, t))), c.firstChild.textContent = _.length === 1 ? "1 attachment" : `${_.length} attachments`;
   }
   p(), n._sgAttachRepaint = p;
-  const f = h("label", { class: "sg-attach-dropzone", tabindex: "0" });
-  f.innerHTML = `
-    <span class="sg-attach-dropzone-icon" aria-hidden="true">${Pt}</span>
+  const h = f("label", { class: "sg-attach-dropzone", tabindex: "0" });
+  h.innerHTML = `
+    <span class="sg-attach-dropzone-icon" aria-hidden="true">${Ot}</span>
     <span class="sg-attach-dropzone-text">Drop files, paste, or <strong>browse</strong></span>
   `;
-  const g = h("input", { type: "file", multiple: i ? "" : null, accept: s || null });
-  g.style.display = "none", f.append(g), g.addEventListener("change", async () => {
+  const g = f("input", { type: "file", multiple: i ? "" : null, accept: s || null });
+  g.style.display = "none", h.append(g), g.addEventListener("change", async () => {
     g.files?.length && (await he(n, r, Array.from(g.files), o), g.value = "", p());
-  }), f.addEventListener("dragover", (b) => {
-    b.dataTransfer?.types?.includes("Files") && (b.preventDefault(), f.classList.add("is-drop-target"));
-  }), f.addEventListener("dragleave", () => f.classList.remove("is-drop-target")), f.addEventListener("drop", async (b) => {
-    b.dataTransfer?.files?.length && (b.preventDefault(), f.classList.remove("is-drop-target"), await he(n, r, Array.from(b.dataTransfer.files), o), p());
+  }), h.addEventListener("dragover", (_) => {
+    _.dataTransfer?.types?.includes("Files") && (_.preventDefault(), h.classList.add("is-drop-target"));
+  }), h.addEventListener("dragleave", () => h.classList.remove("is-drop-target")), h.addEventListener("drop", async (_) => {
+    _.dataTransfer?.files?.length && (_.preventDefault(), h.classList.remove("is-drop-target"), await he(n, r, Array.from(_.dataTransfer.files), o), p());
   });
-  function _(b) {
-    const w = Array.from(b.clipboardData?.files || []);
-    w.length !== 0 && (b.preventDefault(), he(n, r, w, o).then(p));
+  function b(_) {
+    const v = Array.from(_.clipboardData?.files || []);
+    v.length !== 0 && (_.preventDefault(), he(n, r, v, o).then(p));
   }
-  d.addEventListener("paste", _);
-  function y(b) {
-    b.key === "Escape" && oe();
+  d.addEventListener("paste", b);
+  function y(_) {
+    _.key === "Escape" && ae();
   }
-  function L(b) {
-    !d.contains(b.target) && !n.contains(b.target) && oe();
+  function S(_) {
+    !d.contains(_.target) && !n.contains(_.target) && ae();
   }
-  document.addEventListener("keydown", y), setTimeout(() => document.addEventListener("mousedown", L), 0), d.append(c, u, f), document.body.appendChild(d), Ce(d, n), f.focus(), pe = { pop: d, onKey: y, onDocClick: L, anchor: n };
+  document.addEventListener("keydown", y), setTimeout(() => document.addEventListener("mousedown", S), 0), d.append(c, u, h), document.body.appendChild(d), ne(d, n), h.focus(), fe = { pop: d, onKey: y, onDocClick: S, anchor: n };
 }
-function oe() {
-  if (!pe) return;
-  const { pop: n, onKey: r, onDocClick: e, anchor: t } = pe;
-  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), t && delete t._sgAttachRepaint, pe = null;
+function ae() {
+  if (!fe) return;
+  const { pop: n, onKey: r, onDocClick: e, anchor: t } = fe;
+  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), t && delete t._sgAttachRepaint, fe = null;
 }
-function Xs(n, r, e, t, s) {
-  const i = h("div", { class: "sg-attach-editor-tile", "data-attachment-id": n.id }), o = h("div", {
+function er(n, r, e, t, s) {
+  const i = f("div", { class: "sg-attach-editor-tile", "data-attachment-id": n.id }), o = f("div", {
     class: "sg-attach-editor-preview",
     style: `width: ${s * 2}px; height: ${s * 2}px;`
   });
   if (z(n) && n.thumb_url)
-    o.append(h("img", {
+    o.append(f("img", {
       src: n.thumb_url,
       alt: n.filename,
       width: String(s * 2),
       height: String(s * 2)
     }));
   else {
-    const d = Bt(n), c = h("span", { class: `sg-attach-icon is-${d}`, "aria-hidden": "true" });
-    c.innerHTML = be[d] || be.file, o.append(c);
+    const d = zt(n), c = f("span", { class: `sg-attach-icon is-${d}`, "aria-hidden": "true" });
+    c.innerHTML = ve[d] || ve.file, o.append(c);
   }
-  const a = h("div", { class: "sg-attach-editor-meta" }, [
-    h(
+  const a = f("div", { class: "sg-attach-editor-meta" }, [
+    f(
       "div",
       { class: "sg-attach-editor-name", title: n.filename },
       document.createTextNode(n.filename)
     ),
-    h(
+    f(
       "div",
       { class: "sg-attach-editor-size" },
       document.createTextNode(n.byte_size != null ? te(n.byte_size) : "")
     )
-  ]), l = h("button", {
+  ]), l = f("button", {
     type: "button",
     class: "sg-attach-editor-remove",
     title: "Remove",
@@ -1949,11 +1949,11 @@ function Xs(n, r, e, t, s) {
     "data-sg-attach": "remove",
     "data-attachment-id": n.id
   });
-  return l.innerHTML = Ie, l.addEventListener("click", async (d) => {
-    d.stopPropagation(), await Ys(r, e, n, t);
+  return l.innerHTML = Be, l.addEventListener("click", async (d) => {
+    d.stopPropagation(), await tr(r, e, n, t);
   }), i.append(o, a, l), i;
 }
-function Ce(n, r) {
+function ne(n, r) {
   const e = r.getBoundingClientRect();
   n.style.position = "fixed", n.style.left = `${Math.max(8, Math.min(window.innerWidth - 360, e.left))}px`, window.innerHeight - e.bottom > 280 ? n.style.top = `${e.bottom + 4}px` : n.style.top = `${Math.max(8, e.top - n.offsetHeight - 4)}px`;
 }
@@ -1964,25 +1964,25 @@ async function he(n, r, e, t) {
       let s;
       if (typeof t == "function") {
         const i = await t(e, r);
-        s = Array.isArray(i) ? i : (n._sgAttachments || []).concat(Xe(e));
+        s = Array.isArray(i) ? i : (n._sgAttachments || []).concat(Je(e));
       } else
-        s = (n._sgAttachments || []).concat(Xe(e));
-      Ot(n, r, ve(s));
+        s = (n._sgAttachments || []).concat(Je(e));
+      qt(n, r, xe(s));
     } finally {
       n.classList.remove("is-uploading");
     }
   }
 }
-async function Ys(n, r, e, t) {
+async function tr(n, r, e, t) {
   let s;
   if (typeof t == "function") {
     const i = await t(e, r);
     s = Array.isArray(i) ? i : (n._sgAttachments || []).filter((o) => o.id !== e.id);
   } else
     s = (n._sgAttachments || []).filter((i) => i.id !== e.id);
-  Ot(n, r, ve(s));
+  qt(n, r, xe(s));
 }
-function Xe(n) {
+function Je(n) {
   return n.map((r, e) => ({
     id: `local_${Date.now()}_${e}`,
     filename: r.name,
@@ -1993,11 +1993,11 @@ function Xe(n) {
     thumb_url: r.type?.startsWith("image/") ? URL.createObjectURL(r) : null
   }));
 }
-function Ot(n, r, e) {
+function qt(n, r, e) {
   const { row: t, col: s, api: i } = r;
   t && s?.field != null && (t[s.field] = e), n._sgAttachments = e, i?.applyTransaction ? i.applyTransaction({ update: [t] }) : i?.refreshCells && i.refreshCells({ rowIds: [t?.id ?? t?._sg_id] }), n._sgAttachRepaint && n._sgAttachRepaint();
 }
-const Qs = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"], zt = {
+const nr = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"], Ut = {
   NSW: "New South Wales",
   VIC: "Victoria",
   QLD: "Queensland",
@@ -2007,7 +2007,7 @@ const Qs = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"], zt = {
   ACT: "Australian Capital Territory",
   NT: "Northern Territory"
 };
-function Zs(n) {
+function sr(n) {
   if (n == null || n === "") return null;
   if (typeof n == "string") return { _raw: n };
   if (typeof n != "object") return null;
@@ -2022,63 +2022,63 @@ function Zs(n) {
     country: n.country ? String(n.country) : ""
   };
 }
-function Js(n) {
+function rr(n) {
   if (!n || n._raw) return n?._raw || "";
   const r = [n.address1, n.address2, n.address3].filter(Boolean), e = [n.suburb, n.state, n.postcode].filter(Boolean).join(" ");
   return e && r.push(e), n.country && n.country.toLowerCase() !== "australia" && r.push(n.country), r.join(`
 `);
 }
-function jt({ editable: n = !0, empty: r = "" } = {}) {
+function Wt({ editable: n = !0, empty: r = "" } = {}) {
   return (e) => {
-    const { value: t, td: s } = e, i = Zs(t);
+    const { value: t, td: s } = e, i = sr(t);
     if (s && (s.classList.add("sg-renderer-address-au-cell"), s._sgAddress = i), !i) return r ? document.createTextNode(r) : "";
     n && s && !s._sgAddressEditBound && (s._sgAddressEditBound = !0, s.addEventListener("dblclick", (d) => {
-      d._sgAddressHandled || (d._sgAddressHandled = !0, d.stopPropagation(), er(s, e));
+      d._sgAddressHandled || (d._sgAddressHandled = !0, d.stopPropagation(), ir(s, e));
     }));
-    const o = h("div", {
+    const o = f("div", {
       class: "sg-renderer-address-au",
-      title: Js(i)
+      title: rr(i)
     });
     if (i._raw)
       return o.append(document.createTextNode(i._raw)), o;
     const a = [i.address1, i.address2].filter(Boolean).join(", "), l = i.suburb || i.state || i.postcode;
-    return a && o.append(h("span", { class: "sg-address-au-street" }, document.createTextNode(a))), a && l && o.append(h("span", { class: "sg-address-au-sep" }, document.createTextNode(", "))), i.suburb && o.append(document.createTextNode(i.suburb)), i.state && (i.suburb && o.append(document.createTextNode(" ")), o.append(h("span", {
+    return a && o.append(f("span", { class: "sg-address-au-street" }, document.createTextNode(a))), a && l && o.append(f("span", { class: "sg-address-au-sep" }, document.createTextNode(", "))), i.suburb && o.append(document.createTextNode(i.suburb)), i.state && (i.suburb && o.append(document.createTextNode(" ")), o.append(f("span", {
       class: `sg-address-au-state is-${i.state.toLowerCase()}`,
-      title: zt[i.state] || i.state
-    }, document.createTextNode(i.state)))), i.postcode && ((i.suburb || i.state) && o.append(document.createTextNode(" ")), o.append(h(
+      title: Ut[i.state] || i.state
+    }, document.createTextNode(i.state)))), i.postcode && ((i.suburb || i.state) && o.append(document.createTextNode(" ")), o.append(f(
       "span",
       { class: "sg-address-au-postcode" },
       document.createTextNode(i.postcode)
-    ))), i.country && i.country.toLowerCase() !== "australia" && (o.append(document.createTextNode(" ")), o.append(h(
+    ))), i.country && i.country.toLowerCase() !== "australia" && (o.append(document.createTextNode(" ")), o.append(f(
       "span",
       { class: "sg-address-au-country" },
       document.createTextNode(i.country)
     ))), o;
   };
 }
-let fe = null;
-function er(n, r) {
+let ge = null;
+function ir(n, r) {
   Q();
   const e = n._sgAddress && !n._sgAddress._raw ? { ...n._sgAddress } : { address1: "", address2: "", address3: "", suburb: "", state: "", postcode: "", country: "Australia" };
   e.country || (e.country = "Australia");
-  const t = h("div", { class: "sg-address-au-editor", role: "dialog", "aria-modal": "false" });
-  t.addEventListener("mousedown", (T) => T.stopPropagation());
-  const s = h("div", { class: "sg-address-au-editor-header" });
+  const t = f("div", { class: "sg-address-au-editor", role: "dialog", "aria-modal": "false" });
+  t.addEventListener("mousedown", (R) => R.stopPropagation());
+  const s = f("div", { class: "sg-address-au-editor-header" });
   s.append(
-    h("span", { class: "sg-address-au-editor-title" }, document.createTextNode("Edit address"))
+    f("span", { class: "sg-address-au-editor-title" }, document.createTextNode("Edit address"))
   );
-  const i = h("form", { class: "sg-address-au-editor-form", novalidate: "novalidate" });
-  function o({ label: T, name: $, type: F = "text", value: K = "", maxlength: U, inputmode: ne, placeholder: se, autocomplete: re }) {
-    const W = h("label", { class: "sg-address-au-editor-field", "data-field": $ });
-    W.append(h("span", { class: "sg-address-au-editor-label" }, document.createTextNode(T)));
-    const Y = h("input", {
+  const i = f("form", { class: "sg-address-au-editor-form", novalidate: "novalidate" });
+  function o({ label: R, name: $, type: F = "text", value: q = "", maxlength: U, inputmode: se, placeholder: re, autocomplete: ie }) {
+    const W = f("label", { class: "sg-address-au-editor-field", "data-field": $ });
+    W.append(f("span", { class: "sg-address-au-editor-label" }, document.createTextNode(R)));
+    const Y = f("input", {
       type: F,
       name: $,
-      value: K || "",
+      value: q || "",
       maxlength: U || null,
-      inputmode: ne || null,
-      placeholder: se || null,
-      autocomplete: re || null,
+      inputmode: se || null,
+      placeholder: re || null,
+      autocomplete: ie || null,
       class: "sg-address-au-editor-input"
     });
     return W.append(Y), { wrap: W, input: Y };
@@ -2095,7 +2095,7 @@ function er(n, r) {
     value: e.address2,
     placeholder: "Unit / suite (optional)",
     autocomplete: "address-line2"
-  }), d = h("div", { class: "sg-address-au-editor-line3-wrap" }), c = o({
+  }), d = f("div", { class: "sg-address-au-editor-line3-wrap" }), c = o({
     label: "Address line 3",
     name: "address3",
     value: e.address3,
@@ -2103,40 +2103,40 @@ function er(n, r) {
     autocomplete: "address-line3"
   });
   d.append(c.wrap);
-  const u = h("button", {
+  const u = f("button", {
     type: "button",
     class: "sg-address-au-editor-add-line"
   }, document.createTextNode("+ Add another line"));
   function p() {
-    const T = !!(l.input.value.trim() || c.input.value.trim());
-    d.hidden = !T, u.hidden = T;
+    const R = !!(l.input.value.trim() || c.input.value.trim());
+    d.hidden = !R, u.hidden = R;
   }
   l.input.addEventListener("input", p), u.addEventListener("click", () => {
     d.hidden = !1, u.hidden = !0, c.input.focus();
   });
-  const f = o({
+  const h = o({
     label: "Suburb",
     name: "suburb",
     value: e.suburb,
     placeholder: "Bondi",
     autocomplete: "address-level2"
-  }), g = h("label", { class: "sg-address-au-editor-field", "data-field": "state" });
-  g.append(h("span", { class: "sg-address-au-editor-label" }, document.createTextNode("State")));
-  const _ = h("select", {
+  }), g = f("label", { class: "sg-address-au-editor-field", "data-field": "state" });
+  g.append(f("span", { class: "sg-address-au-editor-label" }, document.createTextNode("State")));
+  const b = f("select", {
     name: "state",
     class: "sg-address-au-editor-input sg-address-au-editor-state",
     autocomplete: "address-level1"
   });
-  _.append(h("option", { value: "" }, document.createTextNode("—")));
-  for (const T of Qs) {
-    const $ = h(
+  b.append(f("option", { value: "" }, document.createTextNode("—")));
+  for (const R of nr) {
+    const $ = f(
       "option",
-      { value: T, selected: e.state === T ? "" : null },
-      document.createTextNode(`${T} — ${zt[T]}`)
+      { value: R, selected: e.state === R ? "" : null },
+      document.createTextNode(`${R} — ${Ut[R]}`)
     );
-    _.append($);
+    b.append($);
   }
-  g.append(_);
+  g.append(b);
   const y = o({
     label: "Postcode",
     name: "postcode",
@@ -2150,55 +2150,55 @@ function er(n, r) {
   y.input.classList.add("sg-address-au-editor-postcode"), y.input.addEventListener("input", () => {
     y.input.value = y.input.value.replace(/\D/g, "").slice(0, 4);
   });
-  const L = o({
+  const S = o({
     label: "Country",
     name: "country",
     value: e.country,
     autocomplete: "country-name"
-  }), b = h("div", { class: "sg-address-au-editor-grid" });
-  b.append(a.wrap), b.append(l.wrap, u), b.append(d), b.append(f.wrap, g, y.wrap), b.append(L.wrap);
-  const w = h("div", { class: "sg-address-au-editor-footer" }), v = h(
+  }), _ = f("div", { class: "sg-address-au-editor-grid" });
+  _.append(a.wrap), _.append(l.wrap, u), _.append(d), _.append(h.wrap, g, y.wrap), _.append(S.wrap);
+  const v = f("div", { class: "sg-address-au-editor-footer" }), w = f(
     "button",
     { type: "button", class: "sg-address-au-editor-cancel" },
     document.createTextNode("Cancel")
-  ), S = h(
+  ), L = f(
     "button",
     { type: "submit", class: "sg-address-au-editor-save" },
     document.createTextNode("Save")
   );
-  w.append(v, S), i.append(b, w), t.append(s, i);
+  v.append(w, L), i.append(_, v), t.append(s, i);
   function A() {
     return {
       address1: a.input.value.trim(),
       address2: l.input.value.trim(),
       address3: d.hidden ? "" : c.input.value.trim(),
-      suburb: f.input.value.trim(),
-      state: _.value,
+      suburb: h.input.value.trim(),
+      state: b.value,
       postcode: y.input.value.trim(),
-      country: L.input.value.trim() || "Australia"
+      country: S.input.value.trim() || "Australia"
     };
   }
-  function D() {
-    const T = A(), $ = !T.address1 && !T.suburb && !T.state && !T.postcode;
-    tr(n, r, $ ? null : T), Q();
+  function k() {
+    const R = A(), $ = !R.address1 && !R.suburb && !R.state && !R.postcode;
+    or(n, r, $ ? null : R), Q();
   }
-  i.addEventListener("submit", (T) => {
-    T.preventDefault(), D();
-  }), v.addEventListener("click", () => Q());
-  function C(T) {
-    T.key === "Escape" && (T.stopPropagation(), Q());
+  i.addEventListener("submit", (R) => {
+    R.preventDefault(), k();
+  }), w.addEventListener("click", () => Q());
+  function C(R) {
+    R.key === "Escape" && (R.stopPropagation(), Q());
   }
-  function R(T) {
-    !t.contains(T.target) && !n.contains(T.target) && Q();
+  function T(R) {
+    !t.contains(R.target) && !n.contains(R.target) && Q();
   }
-  document.addEventListener("keydown", C), setTimeout(() => document.addEventListener("mousedown", R), 0), document.body.appendChild(t), Ce(t, n), p(), a.input.focus(), a.input.select(), fe = { pop: t, onKey: C, onDocClick: R };
+  document.addEventListener("keydown", C), setTimeout(() => document.addEventListener("mousedown", T), 0), document.body.appendChild(t), ne(t, n), p(), a.input.focus(), a.input.select(), ge = { pop: t, onKey: C, onDocClick: T };
 }
 function Q() {
-  if (!fe) return;
-  const { pop: n, onKey: r, onDocClick: e } = fe;
-  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), fe = null;
+  if (!ge) return;
+  const { pop: n, onKey: r, onDocClick: e } = ge;
+  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), ge = null;
 }
-function tr(n, r, e) {
+function or(n, r, e) {
   const { row: t, col: s, api: i } = r, o = t && s?.field != null ? t[s.field] : null;
   t && s?.field != null && (t[s.field] = e), n._sgAddress = e, i?.applyTransaction ? i.applyTransaction({ update: [t] }) : i?.refreshCells && i.refreshCells({ rowIds: [t?.id ?? t?._sg_id] });
   const a = n.closest('[data-controller~="grid"]');
@@ -2207,70 +2207,70 @@ function tr(n, r, e) {
     detail: { rowId: t?.id ?? t?._sg_id, colId: s?.field, oldValue: o, newValue: e }
   }));
 }
-function qt({ color: n = "green", showValue: r = !1 } = {}) {
+function Xt({ color: n = "green", showValue: r = !1 } = {}) {
   return ({ value: e }) => {
     let t = Number(e);
     Number.isFinite(t) || (t = 0), t = Math.max(0, Math.min(100, t));
-    const s = h("div", { class: "sg-renderer-progress" }, [
-      h("div", { class: `sg-renderer-progress-fill sg-fill-${n}`, style: `width: ${t}%;` })
+    const s = f("div", { class: "sg-renderer-progress" }, [
+      f("div", { class: `sg-renderer-progress-fill sg-fill-${n}`, style: `width: ${t}%;` })
     ]);
-    return r ? h("div", { class: "sg-renderer-progress-wrap" }, [
+    return r ? f("div", { class: "sg-renderer-progress-wrap" }, [
       s,
-      h("span", { class: "sg-renderer-progress-label" }, document.createTextNode(`${Math.round(t)}%`))
+      f("span", { class: "sg-renderer-progress-label" }, document.createTextNode(`${Math.round(t)}%`))
     ]) : s;
   };
 }
 const J = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>';
-function Kt({ max: n = 5, precision: r = 0.5 } = {}) {
+function Yt({ max: n = 5, precision: r = 0.5 } = {}) {
   const e = r > 0 ? 1 / r : 2;
   return ({ value: t }) => {
     let s = parseFloat(t);
     Number.isFinite(s) || (s = 0), s = Math.max(0, Math.min(n, s)), s = Math.round(s * e) / e;
-    const i = h("div", {
+    const i = f("div", {
       class: "sg-renderer-stars",
       role: "img",
       "aria-label": `${s} out of ${n} stars`
     });
     for (let o = 1; o <= n; o++)
       if (s >= o)
-        i.append(h("span", { class: "sg-renderer-star is-full", "aria-hidden": "true" }, J));
+        i.append(f("span", { class: "sg-renderer-star is-full", "aria-hidden": "true" }, J));
       else if (s > o - 1) {
         const a = Math.round((s - (o - 1)) * 100);
-        i.append(h(
+        i.append(f(
           "span",
           { class: "sg-renderer-star is-partial", "aria-hidden": "true" },
           `${J}<span class="sg-star-clip" style="width: ${a}%;">${J}</span>`
         ));
       } else
-        i.append(h("span", { class: "sg-renderer-star is-empty", "aria-hidden": "true" }, J));
+        i.append(f("span", { class: "sg-renderer-star is-empty", "aria-hidden": "true" }, J));
     return i;
   };
 }
-function Ut({ separator: n = "," } = {}) {
+function Qt({ separator: n = "," } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
-    const e = Array.isArray(r) ? r : String(r).split(n), t = h("div", { class: "sg-renderer-tags" });
+    if (M(r)) return "";
+    const e = Array.isArray(r) ? r : String(r).split(n), t = f("div", { class: "sg-renderer-tags" });
     for (const s of e) {
       const i = String(s).trim();
-      i && t.append(h("span", { class: "sg-renderer-tag" }, document.createTextNode(i)));
+      i && t.append(f("span", { class: "sg-renderer-tag" }, document.createTextNode(i)));
     }
     return t;
   };
 }
-function Wt({ showCode: n = !0, fallback: r = null } = {}) {
+function Zt({ showCode: n = !0, fallback: r = null } = {}) {
   return ({ value: e }) => {
-    if (E(e)) return "";
+    if (M(e)) return "";
     const t = String(e).trim().toUpperCase();
     if (t.length !== 2 || !/^[A-Z]{2}$/.test(t))
       return r ?? document.createTextNode(String(e));
     const s = String.fromCodePoint(
       127462 + t.charCodeAt(0) - 65,
       127462 + t.charCodeAt(1) - 65
-    ), i = h("span", { class: "sg-renderer-country" });
-    return i.append(h("span", { class: "sg-renderer-flag", "aria-hidden": "true" }, document.createTextNode(s))), n && i.append(h("span", { class: "sg-renderer-country-code" }, document.createTextNode(t))), i;
+    ), i = f("span", { class: "sg-renderer-country" });
+    return i.append(f("span", { class: "sg-renderer-flag", "aria-hidden": "true" }, document.createTextNode(s))), n && i.append(f("span", { class: "sg-renderer-country-code" }, document.createTextNode(t))), i;
   };
 }
-function nr(n) {
+function ar(n) {
   const r = String(n).replace(/\s+/g, "");
   if (r.length !== 11 || !/^\d{11}$/.test(r)) return !1;
   const e = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19], t = parseInt(r[0], 10) - 1 + r.slice(1);
@@ -2278,26 +2278,26 @@ function nr(n) {
   for (let i = 0; i < 11; i++) s += parseInt(t[i], 10) * e[i];
   return s % 89 === 0;
 }
-function sr(n) {
+function lr(n) {
   const r = String(n).replace(/\D/g, "");
   return r.length !== 11 ? String(n) : `${r.slice(0, 2)} ${r.slice(2, 5)} ${r.slice(5, 8)} ${r.slice(8)}`;
 }
-function Xt() {
+function Jt() {
   return ({ value: n }) => {
-    if (E(n)) return "";
-    if (!nr(n))
-      return h("span", { class: "sg-renderer-invalid", title: "Invalid ABN" }, document.createTextNode(String(n)));
+    if (M(n)) return "";
+    if (!ar(n))
+      return f("span", { class: "sg-renderer-invalid", title: "Invalid ABN" }, document.createTextNode(String(n)));
     const r = String(n).replace(/\s+/g, "");
-    return h("a", {
+    return f("a", {
       class: "sg-renderer-link sg-renderer-mono",
       href: `https://abr.business.gov.au/ABN/View?id=${r}`,
       target: "_blank",
       rel: "noopener noreferrer",
       title: "Look up on ABR"
-    }, document.createTextNode(sr(n)));
+    }, document.createTextNode(lr(n)));
   };
 }
-function Yt({
+function en({
   lookup: n = null,
   nameField: r = null,
   avatarField: e = null,
@@ -2305,15 +2305,15 @@ function Yt({
   size: s = 22
 } = {}) {
   return ({ value: i, row: o }) => {
-    if (E(i)) return "";
+    if (M(i)) return "";
     let a = null;
     if (typeof n == "function" && (a = n(i, o) || null), !a && r && (a = { name: o?.[r], avatarUrl: e ? o?.[e] : null }), !a && typeof window < "u" && window[t]) {
       const c = window[t];
       c instanceof Map ? a = c.get(i) || c.get(String(i)) || null : Array.isArray(c) && (a = c.find((u) => `${u.id}` == `${i}`) || null);
     }
-    const l = a?.name ?? String(i), d = h("span", { class: "sg-renderer-avatar" });
+    const l = a?.name ?? String(i), d = f("span", { class: "sg-renderer-avatar" });
     if (a?.avatarUrl)
-      d.append(h("img", {
+      d.append(f("img", {
         class: "sg-renderer-avatar-img",
         src: a.avatarUrl,
         width: String(s),
@@ -2322,15 +2322,15 @@ function Yt({
       }));
     else {
       const c = String(l).split(/\s+/).filter(Boolean).slice(0, 2).map((u) => u[0]?.toUpperCase() || "").join("");
-      d.append(h("span", {
+      d.append(f("span", {
         class: "sg-renderer-avatar-initials",
         style: `width: ${s}px; height: ${s}px;`
       }, document.createTextNode(c)));
     }
-    return d.append(h("span", { class: "sg-renderer-avatar-name" }, document.createTextNode(l))), d;
+    return d.append(f("span", { class: "sg-renderer-avatar-name" }, document.createTextNode(l))), d;
   };
 }
-const rr = {
+const dr = {
   check: '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>',
   "check-circle": '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335.1 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
   "x-circle": '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>',
@@ -2342,35 +2342,35 @@ const rr = {
   alert: '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 32C141.1 32 48 125.1 48 240V384c0 17.7 14.3 32 32 32H432c17.7 0 32-14.3 32-32V240C464 125.1 370.9 32 256 32zM232 152c0-13.3 10.7-24 24-24s24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152zM256 304a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg>',
   cart: '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></svg>'
 };
-function ir(n) {
+function cr(n) {
   return String(n).toLowerCase().split(/[\s_-]+/).map((r) => r && r[0].toUpperCase() + r.slice(1)).join(" ");
 }
-function or(n = {}, r = null, e = {}) {
+function ur(n = {}, r = null, e = {}) {
   const { titleCase: t = !0, defaultColor: s = "gray" } = e, i = {};
   for (const [a, l] of Object.entries(n)) i[String(a).toLowerCase()] = l;
   const o = {};
   if (r) for (const [a, l] of Object.entries(r)) o[String(a).toLowerCase()] = l;
   return ({ value: a }) => {
-    if (E(a)) return "";
-    const l = String(a).toLowerCase(), d = i[l] || s, c = t ? ir(a) : String(a), u = h("span", { class: `sg-pill sg-pill-${d}` });
+    if (M(a)) return "";
+    const l = String(a).toLowerCase(), d = i[l] || s, c = t ? cr(a) : String(a), u = f("span", { class: `sg-pill sg-pill-${d}` });
     if (r) {
-      const p = o[l], f = p ? rr[p] || p : null;
-      if (f) {
-        const g = h("span", { class: "sg-pill-icon", "aria-hidden": "true" });
-        g.innerHTML = f, u.append(g);
+      const p = o[l], h = p ? dr[p] || p : null;
+      if (h) {
+        const g = f("span", { class: "sg-pill-icon", "aria-hidden": "true" });
+        g.innerHTML = h, u.append(g);
       }
     }
-    return u.append(h("span", { class: "sg-pill-label" }, document.createTextNode(c))), u;
+    return u.append(f("span", { class: "sg-pill-label" }, document.createTextNode(c))), u;
   };
 }
-function Qt({
-  truthy: n = Ne,
+function tn({
+  truthy: n = Fe,
   disabled: r = !1
 } = {}) {
   return (e) => {
     const { value: t, row: s, col: i, api: o, td: a } = e;
     a && a.classList.add("sg-renderer-checkbox-cell");
-    const l = h("span", { class: "sg-renderer-checkbox" }), d = h("input", {
+    const l = f("span", { class: "sg-renderer-checkbox" }), d = f("input", {
       type: "checkbox",
       class: "sg-renderer-checkbox-input",
       disabled: r ? "" : null,
@@ -2383,16 +2383,16 @@ function Qt({
       }
       const u = d.checked, p = s && i?.field != null ? s[i.field] : null;
       s && i?.field != null && (s[i.field] = u), o?.applyTransaction && o.applyTransaction({ update: [s] });
-      const f = a?.closest('[data-controller~="grid"]');
-      f && f.dispatchEvent(new CustomEvent("grid:cellValueChanged", {
+      const h = a?.closest('[data-controller~="grid"]');
+      h && h.dispatchEvent(new CustomEvent("grid:cellValueChanged", {
         bubbles: !0,
         detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: p, newValue: u }
       }));
     }), l.append(d), l;
   };
 }
-const ar = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c7.6-4.2 16.8-4.1 24.3 .5l144 88c7.1 4.4 11.5 12.1 11.5 20.5s-4.4 16.1-11.5 20.5l-144 88c-7.4 4.5-16.7 4.7-24.3 .5s-12.3-12.2-12.3-20.9V168c0-8.7 4.7-16.7 12.3-20.9z"/></svg>', Le = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>', lr = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112V400c0 26.5 21.5 48 48 48H80c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H48zm192 0c-26.5 0-48 21.5-48 48V400c0 26.5 21.5 48 48 48h32c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H240z"/></svg>', dr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M125.7 160H176c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32s32 14.3 32 32v51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/></svg>', cr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M386.3 160H336c-17.7 0-32 14.3-32 32s14.3 32 32 32H464c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z"/></svg>', ur = Ie;
-function Zt(n) {
+const pr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c7.6-4.2 16.8-4.1 24.3 .5l144 88c7.1 4.4 11.5 12.1 11.5 20.5s-4.4 16.1-11.5 20.5l-144 88c-7.4 4.5-16.7 4.7-24.3 .5s-12.3-12.2-12.3-20.9V168c0-8.7 4.7-16.7 12.3-20.9z"/></svg>', Me = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>', fr = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112V400c0 26.5 21.5 48 48 48H80c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H48zm192 0c-26.5 0-48 21.5-48 48V400c0 26.5 21.5 48 48 48h32c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H240z"/></svg>', hr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M125.7 160H176c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32s32 14.3 32 32v51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/></svg>', gr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M386.3 160H336c-17.7 0-32 14.3-32 32s14.3 32 32 32H464c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z"/></svg>', mr = Be;
+function nn(n) {
   if (n == null || n === "") return null;
   if (typeof n == "string") {
     const e = n.trim();
@@ -2415,7 +2415,7 @@ function ee(n) {
   const r = Math.floor(n), e = Math.floor(r / 3600), t = Math.floor(r % 3600 / 60), s = r % 60, i = (o) => String(o).padStart(2, "0");
   return e > 0 ? `${e}:${i(t)}:${i(s)}` : `${t}:${i(s)}`;
 }
-function Jt({
+function sn({
   showFilename: n = !0,
   iconOnly: r = !1,
   empty: e = "",
@@ -2423,29 +2423,29 @@ function Jt({
   skipSeconds: s = 10
 } = {}) {
   return (i) => {
-    const { value: o, td: a } = i, l = Zt(o);
+    const { value: o, td: a } = i, l = nn(o);
     if (a && (a.classList.add("sg-renderer-audio-cell"), a._sgAudio = l, a._sgAudioOpts = { preferHowler: t, skipSeconds: s }), !l) return e ? document.createTextNode(e) : "";
     a && !a._sgAudioDblBound && (a._sgAudioDblBound = !0, a.addEventListener("dblclick", (u) => {
-      u._sgAudioHandled || (u._sgAudioHandled = !0, u.stopPropagation(), u.preventDefault(), Ye(a, i));
+      u._sgAudioHandled || (u._sgAudioHandled = !0, u.stopPropagation(), u.preventDefault(), et(a, i));
     }));
-    const d = h("div", { class: "sg-renderer-audio" }), c = h("button", {
+    const d = f("div", { class: "sg-renderer-audio" }), c = f("button", {
       type: "button",
       class: "sg-audio-icon",
       title: `${l.filename}${l.byte_size != null ? " · " + te(l.byte_size) : ""} — double-click to play`,
       "aria-label": `Play ${l.filename}`,
       "data-sg-audio": "open"
     });
-    if (c.innerHTML = ar, c.addEventListener("click", (u) => {
-      u.stopPropagation(), Ye(a, i);
+    if (c.innerHTML = pr, c.addEventListener("click", (u) => {
+      u.stopPropagation(), et(a, i);
     }), c.addEventListener("dblclick", (u) => {
       u._sgAudioHandled = !0, u.stopPropagation();
     }), d.append(c), n && !r) {
-      const u = h(
+      const u = f(
         "span",
         { class: "sg-audio-name" },
         document.createTextNode(l.filename)
       );
-      d.append(u), l.duration != null && d.append(h(
+      d.append(u), l.duration != null && d.append(f(
         "span",
         { class: "sg-audio-duration" },
         document.createTextNode(ee(l.duration))
@@ -2454,10 +2454,10 @@ function Jt({
     return d;
   };
 }
-function pr(n, { preferHowler: r } = {}) {
-  return r && typeof window < "u" && window.Howl ? new fr(n) : new hr(n);
+function br(n, { preferHowler: r } = {}) {
+  return r && typeof window < "u" && window.Howl ? new yr(n) : new _r(n);
 }
-class hr {
+class _r {
   constructor(r) {
     this.audio = new Audio(), this.audio.preload = "metadata", this.audio.src = r, this._evMap = { load: "loadedmetadata", end: "ended", play: "play", pause: "pause", error: "error" }, this._handlers = /* @__PURE__ */ new Map();
   }
@@ -2497,7 +2497,7 @@ class hr {
     return "native";
   }
 }
-class fr {
+class yr {
   constructor(r) {
     this.howl = new window.Howl({ src: [r], html5: !0, preload: !0 });
   }
@@ -2536,26 +2536,26 @@ class fr {
     return "howler";
   }
 }
-let ge = null;
-function Ye(n, r) {
-  ae();
-  const e = n._sgAudio || Zt(r.value);
+let me = null;
+function et(n, r) {
+  le();
+  const e = n._sgAudio || nn(r.value);
   if (!e) return;
-  const t = n._sgAudioOpts || { preferHowler: !0, skipSeconds: 10 }, s = pr(e.url, t), i = h("div", { class: "sg-audio-player", role: "dialog", "aria-label": "Audio player" });
-  i.addEventListener("mousedown", (k) => k.stopPropagation());
-  const o = h("div", { class: "sg-audio-player-header" }), a = h(
+  const t = n._sgAudioOpts || { preferHowler: !0, skipSeconds: 10 }, s = br(e.url, t), i = f("div", { class: "sg-audio-player", role: "dialog", "aria-label": "Audio player" });
+  i.addEventListener("mousedown", (D) => D.stopPropagation());
+  const o = f("div", { class: "sg-audio-player-header" }), a = f(
     "div",
     { class: "sg-audio-player-name", title: e.filename },
     document.createTextNode(e.filename)
-  ), l = h("div", { class: "sg-audio-player-meta" }), d = [];
+  ), l = f("div", { class: "sg-audio-player-meta" }), d = [];
   e.byte_size != null && d.push(te(e.byte_size)), s.backendName() === "howler" && d.push("howler.js"), l.textContent = d.join(" · ");
-  const c = h("button", {
+  const c = f("button", {
     type: "button",
     class: "sg-audio-player-close",
     "aria-label": "Close player"
   });
-  c.innerHTML = ur, c.addEventListener("click", ae), o.append(a, l, c);
-  const u = h("div", {
+  c.innerHTML = mr, c.addEventListener("click", le), o.append(a, l, c);
+  const u = f("div", {
     class: "sg-audio-track",
     role: "slider",
     "aria-label": "Seek",
@@ -2563,136 +2563,136 @@ function Ye(n, r) {
     "aria-valuemin": "0",
     "aria-valuemax": "0",
     "aria-valuenow": "0"
-  }), p = h("div", { class: "sg-audio-track-fill" }), f = h("div", { class: "sg-audio-track-thumb" });
-  u.append(p, f);
-  const g = h("div", { class: "sg-audio-times" }), _ = h("span", { class: "sg-audio-time-current" }, document.createTextNode("0:00")), y = h(
+  }), p = f("div", { class: "sg-audio-track-fill" }), h = f("div", { class: "sg-audio-track-thumb" });
+  u.append(p, h);
+  const g = f("div", { class: "sg-audio-times" }), b = f("span", { class: "sg-audio-time-current" }, document.createTextNode("0:00")), y = f(
     "span",
     { class: "sg-audio-time-total" },
     document.createTextNode(e.duration ? ee(e.duration) : "--:--")
   );
-  g.append(_, y);
-  const L = h("div", { class: "sg-audio-transport" }), b = h("button", {
+  g.append(b, y);
+  const S = f("div", { class: "sg-audio-transport" }), _ = f("button", {
     type: "button",
     class: "sg-audio-btn sg-audio-skip",
     title: `Back ${t.skipSeconds}s`,
     "aria-label": `Back ${t.skipSeconds} seconds`
   });
-  b.innerHTML = dr;
-  const w = h("button", {
+  _.innerHTML = hr;
+  const v = f("button", {
     type: "button",
     class: "sg-audio-btn sg-audio-play",
     title: "Play / pause (Space)",
     "aria-label": "Play",
     "data-state": "paused"
   });
-  w.innerHTML = Le;
-  const v = h("button", {
+  v.innerHTML = Me;
+  const w = f("button", {
     type: "button",
     class: "sg-audio-btn sg-audio-skip",
     title: `Forward ${t.skipSeconds}s`,
     "aria-label": `Forward ${t.skipSeconds} seconds`
   });
-  v.innerHTML = cr, L.append(b, w, v), i.append(o, u, g, L);
-  let S = e.duration ?? 0, A = !1, D = null;
-  function C(k) {
-    const P = Math.max(0, Math.min(100, k));
-    p.style.width = P + "%", f.style.left = P + "%";
-  }
-  function R() {
-    const k = s.seek(), O = s.duration() || 0 || S || 0;
-    if (O > 0 && O !== S && (S = O, y.textContent = ee(S), u.setAttribute("aria-valuemax", String(Math.floor(S)))), !A) {
-      const H = S > 0 ? k / S * 100 : 0;
-      C(H), _.textContent = ee(k), u.setAttribute("aria-valuenow", String(Math.floor(k)));
-    }
+  w.innerHTML = gr, S.append(_, v, w), i.append(o, u, g, S);
+  let L = e.duration ?? 0, A = !1, k = null;
+  function C(D) {
+    const P = Math.max(0, Math.min(100, D));
+    p.style.width = P + "%", h.style.left = P + "%";
   }
   function T() {
-    R(), s.isPlaying() ? D = requestAnimationFrame(T) : D = null;
+    const D = s.seek(), O = s.duration() || 0 || L || 0;
+    if (O > 0 && O !== L && (L = O, y.textContent = ee(L), u.setAttribute("aria-valuemax", String(Math.floor(L)))), !A) {
+      const H = L > 0 ? D / L * 100 : 0;
+      C(H), b.textContent = ee(D), u.setAttribute("aria-valuenow", String(Math.floor(D)));
+    }
+  }
+  function R() {
+    T(), s.isPlaying() ? k = requestAnimationFrame(R) : k = null;
   }
   function $() {
-    D == null && (D = requestAnimationFrame(T));
+    k == null && (k = requestAnimationFrame(R));
   }
   function F() {
-    D != null && cancelAnimationFrame(D), D = null;
+    k != null && cancelAnimationFrame(k), k = null;
   }
-  const K = () => {
-    S = s.duration(), R();
+  const q = () => {
+    L = s.duration(), T();
   }, U = () => {
-    w.dataset.state = "playing", w.innerHTML = lr, w.setAttribute("aria-label", "Pause"), $();
-  }, ne = () => {
-    w.dataset.state = "paused", w.innerHTML = Le, w.setAttribute("aria-label", "Play"), F(), R();
+    v.dataset.state = "playing", v.innerHTML = fr, v.setAttribute("aria-label", "Pause"), $();
   }, se = () => {
-    w.dataset.state = "paused", w.innerHTML = Le, w.setAttribute("aria-label", "Play"), F(), s.seek(0), R();
+    v.dataset.state = "paused", v.innerHTML = Me, v.setAttribute("aria-label", "Play"), F(), T();
+  }, re = () => {
+    v.dataset.state = "paused", v.innerHTML = Me, v.setAttribute("aria-label", "Play"), F(), s.seek(0), T();
   };
-  s.on("load", K), s.on("play", U), s.on("pause", ne), s.on("end", se), w.addEventListener("click", (k) => {
-    k.stopPropagation(), s.isPlaying() ? s.pause() : s.play();
-  }), b.addEventListener("click", (k) => {
-    k.stopPropagation(), s.seek(Math.max(0, s.seek() - t.skipSeconds)), R();
-  }), v.addEventListener("click", (k) => {
-    k.stopPropagation();
+  s.on("load", q), s.on("play", U), s.on("pause", se), s.on("end", re), v.addEventListener("click", (D) => {
+    D.stopPropagation(), s.isPlaying() ? s.pause() : s.play();
+  }), _.addEventListener("click", (D) => {
+    D.stopPropagation(), s.seek(Math.max(0, s.seek() - t.skipSeconds)), T();
+  }), w.addEventListener("click", (D) => {
+    D.stopPropagation();
     const P = s.duration();
-    s.seek(Math.min(P || 1 / 0, s.seek() + t.skipSeconds)), R();
+    s.seek(Math.min(P || 1 / 0, s.seek() + t.skipSeconds)), T();
   });
-  function re(k) {
-    const P = u.getBoundingClientRect(), O = (k.clientX ?? 0) - P.left, H = Math.max(0, Math.min(1, O / P.width)), Be = s.duration() || S;
-    if (!Be) return;
-    const He = H * Be;
-    s.seek(He), C(H * 100), _.textContent = ee(He);
+  function ie(D) {
+    const P = u.getBoundingClientRect(), O = (D.clientX ?? 0) - P.left, H = Math.max(0, Math.min(1, O / P.width)), ze = s.duration() || L;
+    if (!ze) return;
+    const je = H * ze;
+    s.seek(je), C(H * 100), b.textContent = ee(je);
   }
-  u.addEventListener("pointerdown", (k) => {
-    k.preventDefault(), A = !0, u.setPointerCapture?.(k.pointerId), u.classList.add("is-dragging"), re(k);
-  }), u.addEventListener("pointermove", (k) => {
-    A && re(k);
+  u.addEventListener("pointerdown", (D) => {
+    D.preventDefault(), A = !0, u.setPointerCapture?.(D.pointerId), u.classList.add("is-dragging"), ie(D);
+  }), u.addEventListener("pointermove", (D) => {
+    A && ie(D);
   });
-  const W = (k) => {
+  const W = (D) => {
     if (A) {
       A = !1, u.classList.remove("is-dragging");
       try {
-        u.releasePointerCapture?.(k.pointerId);
+        u.releasePointerCapture?.(D.pointerId);
       } catch {
       }
     }
   };
-  u.addEventListener("pointerup", W), u.addEventListener("pointercancel", W), u.addEventListener("keydown", (k) => {
-    const P = s.duration() || S;
+  u.addEventListener("pointerup", W), u.addEventListener("pointercancel", W), u.addEventListener("keydown", (D) => {
+    const P = s.duration() || L;
     if (!P) return;
-    const O = k.shiftKey ? 30 : 5;
+    const O = D.shiftKey ? 30 : 5;
     let H = null;
-    k.key === "ArrowLeft" ? H = Math.max(0, s.seek() - O) : k.key === "ArrowRight" ? H = Math.min(P, s.seek() + O) : k.key === "Home" ? H = 0 : k.key === "End" && (H = P), H != null && (k.preventDefault(), s.seek(H), R());
+    D.key === "ArrowLeft" ? H = Math.max(0, s.seek() - O) : D.key === "ArrowRight" ? H = Math.min(P, s.seek() + O) : D.key === "Home" ? H = 0 : D.key === "End" && (H = P), H != null && (D.preventDefault(), s.seek(H), T());
   });
-  function Y(k) {
-    k.key === "Escape" ? (k.preventDefault(), ae()) : (k.key === " " || k.code === "Space") && i.contains(document.activeElement) && (k.preventDefault(), s.isPlaying() ? s.pause() : s.play());
+  function Y(D) {
+    D.key === "Escape" ? (D.preventDefault(), le()) : (D.key === " " || D.code === "Space") && i.contains(document.activeElement) && (D.preventDefault(), s.isPlaying() ? s.pause() : s.play());
   }
-  function Pe(k) {
-    !i.contains(k.target) && !n.contains(k.target) && ae();
+  function Oe(D) {
+    !i.contains(D.target) && !n.contains(D.target) && le();
   }
-  document.addEventListener("keydown", Y), setTimeout(() => document.addEventListener("mousedown", Pe), 0), document.body.appendChild(i), Ce(i, n), R(), w.focus(), ge = {
+  document.addEventListener("keydown", Y), setTimeout(() => document.addEventListener("mousedown", Oe), 0), document.body.appendChild(i), ne(i, n), T(), v.focus(), me = {
     pop: i,
     backend: s,
     onKey: Y,
-    onDocClick: Pe,
+    onDocClick: Oe,
     cleanup: () => {
       F();
       try {
-        s.off("load", K), s.off("play", U), s.off("pause", ne), s.off("end", se);
+        s.off("load", q), s.off("play", U), s.off("pause", se), s.off("end", re);
       } catch {
       }
       s.destroy();
     }
   };
 }
-function ae() {
-  if (!ge) return;
-  const { pop: n, onKey: r, onDocClick: e, cleanup: t } = ge;
-  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), t(), n.remove(), ge = null;
+function le() {
+  if (!me) return;
+  const { pop: n, onKey: r, onDocClick: e, cleanup: t } = me;
+  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), t(), n.remove(), me = null;
 }
-function en({
-  truthy: n = Ne,
+function rn({
+  truthy: n = Fe,
   disabled: r = !1
 } = {}) {
   return (e) => {
     const { value: t, row: s, col: i, api: o, td: a } = e;
     a && a.classList.add("sg-renderer-switch-cell");
-    const l = t == null || t === "", d = !l && n(t), c = h("button", {
+    const l = t == null || t === "", d = !l && n(t), c = f("button", {
       type: "button",
       class: `sg-renderer-switch${d ? " is-on" : ""}${l ? " is-null" : ""}`,
       role: "switch",
@@ -2700,56 +2700,56 @@ function en({
       "aria-label": i?.field || "toggle",
       disabled: r ? "" : null
     });
-    return c.append(h("span", { class: "sg-renderer-switch-thumb", "aria-hidden": "true" })), c.addEventListener("click", (u) => {
+    return c.append(f("span", { class: "sg-renderer-switch-thumb", "aria-hidden": "true" })), c.addEventListener("click", (u) => {
       if (u.stopPropagation(), r) return;
-      const p = l ? !0 : !d, f = s && i?.field != null ? s[i.field] : null;
+      const p = l ? !0 : !d, h = s && i?.field != null ? s[i.field] : null;
       s && i?.field != null && (s[i.field] = p), o?.applyTransaction && o.applyTransaction({ update: [s] });
       const g = a?.closest('[data-controller~="grid"]');
       g && g.dispatchEvent(new CustomEvent("grid:cellValueChanged", {
         bubbles: !0,
-        detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: f, newValue: p }
+        detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: h, newValue: p }
       }));
     }), c;
   };
 }
-const gr = /^(https?:\/\/|mailto:)/i;
-function ye(n) {
+const vr = /^(https?:\/\/|mailto:)/i;
+function we(n) {
   return String(n).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function Te(n) {
+function $e(n) {
   let r = n;
-  return r = r.replace(/`([^`\n]+)`/g, (e, t) => `<code>${t}</code>`), r = r.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (e, t, s) => gr.test(s) ? `<a href="${s}" target="_blank" rel="noopener noreferrer">${t}</a>` : e), r = r.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>"), r = r.replace(/__([^_\n]+)__/g, "<strong>$1</strong>"), r = r.replace(/(^|[\s(])\*([^*\n]+?)\*(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>"), r = r.replace(/(^|[\s(])_([^_\n]+?)_(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>"), r = r.replace(/~~([^~\n]+)~~/g, "<del>$1</del>"), r;
+  return r = r.replace(/`([^`\n]+)`/g, (e, t) => `<code>${t}</code>`), r = r.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (e, t, s) => vr.test(s) ? `<a href="${s}" target="_blank" rel="noopener noreferrer">${t}</a>` : e), r = r.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>"), r = r.replace(/__([^_\n]+)__/g, "<strong>$1</strong>"), r = r.replace(/(^|[\s(])\*([^*\n]+?)\*(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>"), r = r.replace(/(^|[\s(])_([^_\n]+?)_(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>"), r = r.replace(/~~([^~\n]+)~~/g, "<del>$1</del>"), r;
 }
-function mr(n) {
+function wr(n) {
   const r = n.split(`
 `), e = [];
   let t = null, s = [];
   const i = () => {
-    t && (e.push(`<${t}>${s.map((o) => `<li>${Te(o)}</li>`).join("")}</${t}>`), t = null, s = []);
+    t && (e.push(`<${t}>${s.map((o) => `<li>${$e(o)}</li>`).join("")}</${t}>`), t = null, s = []);
   };
   for (const o of r) {
     const a = /^\s*[-*]\s+(.+)$/.exec(o), l = /^\s*\d+\.\s+(.+)$/.exec(o);
-    a ? (t && t !== "ul" && i(), t = "ul", s.push(a[1])) : l ? (t && t !== "ol" && i(), t = "ol", s.push(l[1])) : (i(), o.trim() === "" ? e.push("") : e.push(Te(o)));
+    a ? (t && t !== "ul" && i(), t = "ul", s.push(a[1])) : l ? (t && t !== "ol" && i(), t = "ol", s.push(l[1])) : (i(), o.trim() === "" ? e.push("") : e.push($e(o)));
   }
   return i(), e.join("<br>").replace(/(<br>){2,}/g, "<br><br>");
 }
-function tn({ inline: n = !1 } = {}) {
+function on({ inline: n = !1 } = {}) {
   return ({ value: r, td: e }) => {
-    if (E(r)) return "";
-    const t = ye(r), s = n ? Te(t) : mr(t);
+    if (M(r)) return "";
+    const t = we(r), s = n ? $e(t) : wr(t);
     if (e) {
       e.classList.add("sg-renderer-markdown-cell");
       const o = e.parentElement;
       o && o.tagName === "TR" && o.classList.add("sg-has-multiline");
     }
-    const i = h("div", { class: `sg-renderer-markdown${n ? " is-inline" : ""}` });
+    const i = f("div", { class: `sg-renderer-markdown${n ? " is-inline" : ""}` });
     return i.innerHTML = s, i;
   };
 }
-function _r(n) {
-  return ye(n).replace(/(&quot;(?:[^&\\]|\\.)*?&quot;)\s*:/g, '<span class="sg-json-key">$1</span>:').replace(/:\s*(&quot;(?:[^&\\]|\\.)*?&quot;)/g, ': <span class="sg-json-string">$1</span>').replace(/(?<=[\s:,\[])(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)(?=[\s,\]\}\n])/g, '<span class="sg-json-number">$1</span>').replace(/(?<=[\s:,\[])(true|false)(?=[\s,\]\}\n])/g, '<span class="sg-json-bool">$1</span>').replace(/(?<=[\s:,\[])(null)(?=[\s,\]\}\n])/g, '<span class="sg-json-null">$1</span>');
+function Cr(n) {
+  return we(n).replace(/(&quot;(?:[^&\\]|\\.)*?&quot;)\s*:/g, '<span class="sg-json-key">$1</span>:').replace(/:\s*(&quot;(?:[^&\\]|\\.)*?&quot;)/g, ': <span class="sg-json-string">$1</span>').replace(/(?<=[\s:,\[])(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)(?=[\s,\]\}\n])/g, '<span class="sg-json-number">$1</span>').replace(/(?<=[\s:,\[])(true|false)(?=[\s,\]\}\n])/g, '<span class="sg-json-bool">$1</span>').replace(/(?<=[\s:,\[])(null)(?=[\s,\]\}\n])/g, '<span class="sg-json-null">$1</span>');
 }
-function br(n, r) {
+function xr(n, r) {
   const e = Array.isArray(n), t = e ? n : Object.entries(n), s = t.slice(0, r), i = t.length - s.length, o = (d) => {
     if (d == null) return "null";
     const c = typeof d;
@@ -2757,7 +2757,7 @@ function br(n, r) {
   }, a = e ? s.map(o).join(", ") : s.map(([d, c]) => `${d}: ${o(c)}`).join(", "), l = i > 0 ? `, +${i}` : "";
   return e ? `[${a}${l}]` : `{ ${a}${l} }`;
 }
-function nn({ maxKeys: n = 3, indent: r = 2 } = {}) {
+function an({ maxKeys: n = 3, indent: r = 2 } = {}) {
   return ({ value: e, td: t }) => {
     if (e == null || e === "") return "";
     let s = e;
@@ -2768,23 +2768,23 @@ function nn({ maxKeys: n = 3, indent: r = 2 } = {}) {
         return String(e);
       }
     if (s == null)
-      return h("span", { class: "sg-renderer-json-scalar sg-json-null" }, document.createTextNode("null"));
+      return f("span", { class: "sg-renderer-json-scalar sg-json-null" }, document.createTextNode("null"));
     if (typeof s != "object") {
       const d = typeof s, c = d === "string" ? "sg-json-string" : d === "number" ? "sg-json-number" : "sg-json-bool", u = d === "string" ? `"${s}"` : String(s);
-      return h("span", { class: `sg-renderer-json-scalar ${c}` }, document.createTextNode(u));
+      return f("span", { class: `sg-renderer-json-scalar ${c}` }, document.createTextNode(u));
     }
     const i = document.createElement("details");
     i.className = "sg-renderer-json";
     const o = document.createElement("summary");
     o.className = "sg-renderer-json-summary";
-    const a = h("span", { class: "sg-renderer-json-chevron", "aria-hidden": "true" });
-    a.innerHTML = Ls, o.append(a), o.append(h(
+    const a = f("span", { class: "sg-renderer-json-chevron", "aria-hidden": "true" });
+    a.innerHTML = Rs, o.append(a), o.append(f(
       "span",
       { class: "sg-renderer-json-summary-text" },
-      document.createTextNode(br(s, n))
+      document.createTextNode(xr(s, n))
     ));
     const l = document.createElement("pre");
-    if (l.className = "sg-renderer-json-pre", l.innerHTML = _r(JSON.stringify(s, null, r)), i.append(o, l), o.addEventListener("click", (d) => d.stopPropagation()), t) {
+    if (l.className = "sg-renderer-json-pre", l.innerHTML = Cr(JSON.stringify(s, null, r)), i.append(o, l), o.addEventListener("click", (d) => d.stopPropagation()), t) {
       t.classList.add("sg-renderer-json-cell");
       const d = t.parentElement;
       d && d.tagName === "TR" && d.classList.add("sg-has-multiline");
@@ -2792,7 +2792,7 @@ function nn({ maxKeys: n = 3, indent: r = 2 } = {}) {
     return i;
   };
 }
-function sn({
+function ln({
   lookup: n = null,
   windowKey: r = "__sgLinks",
   showThumb: e = !0,
@@ -2801,25 +2801,25 @@ function sn({
   fallback: i = (o) => String(o)
 } = {}) {
   return ({ value: o, row: a }) => {
-    if (E(o)) return "";
-    const l = s ? Array.isArray(o) ? o : String(o).split(",").map((c) => c.trim()).filter(Boolean) : [o], d = h("span", { class: "sg-renderer-linked-records" });
+    if (M(o)) return "";
+    const l = s ? Array.isArray(o) ? o : String(o).split(",").map((c) => c.trim()).filter(Boolean) : [o], d = f("span", { class: "sg-renderer-linked-records" });
     for (const c of l) {
-      const u = yr(c, a, n, r);
-      d.append(wr(c, a, u, { showThumb: e, href: t, fallback: i }));
+      const u = Sr(c, a, n, r);
+      d.append(Lr(c, a, u, { showThumb: e, href: t, fallback: i }));
     }
     return d;
   };
 }
-function yr(n, r, e, t) {
+function Sr(n, r, e, t) {
   if (typeof e == "function") return e(n, r) || null;
   if (typeof window > "u") return null;
   const s = window[t];
   return s ? s instanceof Map ? s.get(n) || s.get(String(n)) || null : typeof s == "object" ? s[n] ?? s[String(n)] ?? null : null : null;
 }
-function wr(n, r, e, { showThumb: t, href: s, fallback: i }) {
+function Lr(n, r, e, { showThumb: t, href: s, fallback: i }) {
   const o = e?.name ?? i(n), a = typeof s == "function" ? s(n, r, e) : e?.href || null, l = document.createElement(a ? "a" : "span");
   if (l.className = "sg-renderer-linked-record", a && (l.href = a, l.target = "_blank", l.rel = "noopener noreferrer", l.addEventListener("click", (d) => d.stopPropagation())), e?.color && l.style.setProperty("--lr-tint", e.color), t && e?.thumb)
-    l.append(h("img", {
+    l.append(f("img", {
       src: e.thumb,
       alt: "",
       class: "sg-renderer-linked-record-thumb",
@@ -2828,18 +2828,18 @@ function wr(n, r, e, { showThumb: t, href: s, fallback: i }) {
     }));
   else if (t && o) {
     const d = String(o).split(/\s+/).filter(Boolean).slice(0, 2).map((c) => c[0]?.toUpperCase() || "").join("");
-    d && l.append(h("span", {
+    d && l.append(f("span", {
       class: "sg-renderer-linked-record-initials",
       "aria-hidden": "true"
     }, document.createTextNode(d)));
   }
-  return l.append(h(
+  return l.append(f(
     "span",
     { class: "sg-renderer-linked-record-name" },
     document.createTextNode(o)
   )), l;
 }
-function rn({
+function dn({
   separator: n = ",",
   colorMap: r = {},
   defaultColor: e = "gray"
@@ -2847,26 +2847,26 @@ function rn({
   const t = {};
   for (const [s, i] of Object.entries(r)) t[String(s).toLowerCase()] = i;
   return ({ value: s }) => {
-    if (E(s)) return "";
-    const i = Array.isArray(s) ? s : String(s).split(n), o = h("div", { class: "sg-renderer-coloured-tags" });
+    if (M(s)) return "";
+    const i = Array.isArray(s) ? s : String(s).split(n), o = f("div", { class: "sg-renderer-coloured-tags" });
     for (const a of i) {
       const l = String(a).trim();
       if (!l) continue;
-      const d = t[l.toLowerCase()] || e, c = h(
+      const d = t[l.toLowerCase()] || e, c = f(
         "span",
         { class: "sg-renderer-coloured-tag" },
         document.createTextNode(l)
       );
-      /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/.test(d) ? c.classList.add(`sg-pill-${d}`) : (c.style.background = d, c.style.color = on(d)), o.append(c);
+      /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/.test(d) ? c.classList.add(`sg-pill-${d}`) : (c.style.background = d, c.style.color = cn(d)), o.append(c);
     }
     return o;
   };
 }
-function on(n) {
-  const r = kt(n);
-  return r ? Nt(r) ? "#1f2937" : "#ffffff" : "inherit";
+function cn(n) {
+  const r = Vt(n);
+  return r ? Ft(r) ? "#1f2937" : "#ffffff" : "inherit";
 }
-function vr(n) {
+function Ar(n) {
   if (n == null || n === "") return null;
   if (n instanceof Date)
     return Number.isNaN(n.valueOf()) ? null : { h: n.getHours(), m: n.getMinutes(), s: n.getSeconds() };
@@ -2880,14 +2880,14 @@ function vr(n) {
   const t = new Date(r);
   return Number.isNaN(t.valueOf()) ? null : { h: t.getHours(), m: t.getMinutes(), s: t.getSeconds() };
 }
-function an({
+function un({
   style: n = "24h",
   // '24h' | '12h'
   seconds: r = !1,
   locale: e = void 0
 } = {}) {
   return ({ value: t }) => {
-    const s = vr(t);
+    const s = Ar(t);
     if (!s) return "";
     if (n === "12h") {
       const a = /* @__PURE__ */ new Date(0);
@@ -2902,7 +2902,7 @@ function an({
     return `${i(s.h)}:${i(s.m)}${o}`;
   };
 }
-function Cr(n) {
+function Er(n) {
   if (Array.isArray(n)) return { from: n[0], to: n[1] };
   if (n && typeof n == "object")
     return {
@@ -2912,37 +2912,37 @@ function Cr(n) {
   const r = String(n), e = /^(.*?)\s*(?:→|->|=>|—>)\s*(.+)$/.exec(r);
   return e ? { from: e[1].trim(), to: e[2].trim() } : { from: null, to: r };
 }
-function ln({
+function pn({
   style: n = "inline",
   // 'inline' | 'stacked'
   arrow: r = "→",
   showArrow: e = !0
 } = {}) {
   return ({ value: t }) => {
-    if (E(t)) return "";
-    const { from: s, to: i } = Cr(t), o = (l) => l == null || l === "";
+    if (M(t)) return "";
+    const { from: s, to: i } = Er(t), o = (l) => l == null || l === "";
     if (o(s) && o(i)) return "";
     if (o(s))
-      return h(
+      return f(
         "span",
         { class: "sg-renderer-diff is-added" },
-        h("span", { class: "sg-diff-to" }, document.createTextNode(String(i)))
+        f("span", { class: "sg-diff-to" }, document.createTextNode(String(i)))
       );
     if (o(i))
-      return h(
+      return f(
         "span",
         { class: "sg-renderer-diff is-removed" },
-        h("span", { class: "sg-diff-from" }, document.createTextNode(String(s)))
+        f("span", { class: "sg-diff-from" }, document.createTextNode(String(s)))
       );
-    const a = h("span", { class: `sg-renderer-diff is-${n}` });
-    return a.append(h("span", { class: "sg-diff-from" }, document.createTextNode(String(s)))), e && a.append(h(
+    const a = f("span", { class: `sg-renderer-diff is-${n}` });
+    return a.append(f("span", { class: "sg-diff-from" }, document.createTextNode(String(s)))), e && a.append(f(
       "span",
       { class: "sg-diff-arrow", "aria-hidden": "true" },
       document.createTextNode(r)
-    )), a.append(h("span", { class: "sg-diff-to" }, document.createTextNode(String(i)))), a;
+    )), a.append(f("span", { class: "sg-diff-to" }, document.createTextNode(String(i)))), a;
   };
 }
-function xr(n) {
+function Mr(n) {
   if (n == null || n === "") return null;
   if (Array.isArray(n)) {
     const s = Number(n[0]), i = Number(n[1]);
@@ -2957,11 +2957,11 @@ function xr(n) {
   const e = Number(r[0].trim()), t = Number(r[1].trim());
   return Number.isFinite(e) && Number.isFinite(t) ? { lat: e, lng: t } : null;
 }
-function Qe(n, r) {
+function tt(n, r) {
   const e = n >= 0 ? 1 : -1, t = Math.abs(n), s = Math.floor(t), i = (t - s) * 60, o = Math.floor(i), a = (i - o) * 60, l = r ? e > 0 ? "N" : "S" : e > 0 ? "E" : "W";
   return `${s}°${String(o).padStart(2, "0")}'${a.toFixed(1)}"${l}`;
 }
-function dn({
+function fn({
   decimals: n = 4,
   style: r = "decimal",
   // 'decimal' | 'dms'
@@ -2972,12 +2972,12 @@ function dn({
   staticSize: i = 72
 } = {}) {
   return ({ value: o }) => {
-    const a = xr(o);
+    const a = Mr(o);
     if (!a) return "";
-    const l = h("span", { class: "sg-renderer-geo" });
+    const l = f("span", { class: "sg-renderer-geo" });
     if (typeof s == "function") {
       const u = s(a.lat, a.lng);
-      u && l.append(h("img", {
+      u && l.append(f("img", {
         src: u,
         alt: "",
         class: "sg-renderer-geo-thumb",
@@ -2987,11 +2987,11 @@ function dn({
         decoding: "async"
       }));
     }
-    const d = r === "dms" ? `${Qe(a.lat, !0)} ${Qe(a.lng, !1)}` : `${a.lat.toFixed(n)}, ${a.lng.toFixed(n)}`;
-    l.append(h("span", { class: "sg-renderer-geo-coords" }, document.createTextNode(d)));
+    const d = r === "dms" ? `${tt(a.lat, !0)} ${tt(a.lng, !1)}` : `${a.lat.toFixed(n)}, ${a.lng.toFixed(n)}`;
+    l.append(f("span", { class: "sg-renderer-geo-coords" }, document.createTextNode(d)));
     const c = e(a.lat, a.lng);
     if (c) {
-      const u = h("a", {
+      const u = f("a", {
         class: "sg-renderer-geo-link sg-renderer-link",
         href: c,
         target: "_blank",
@@ -3003,7 +3003,7 @@ function dn({
     return l;
   };
 }
-function cn({
+function hn({
   moduleSize: n = 3,
   margin: r = 2,
   background: e = "#fff",
@@ -3011,82 +3011,82 @@ function cn({
   showText: s = !1
 } = {}) {
   return ({ value: i }) => {
-    if (E(i)) return "";
+    if (M(i)) return "";
     const o = String(i);
     let a;
     try {
-      const d = ms(o);
-      a = Ss(d, { moduleSize: n, margin: r, background: e, foreground: t });
+      const d = ws(o);
+      a = Ts(d, { moduleSize: n, margin: r, background: e, foreground: t });
     } catch {
-      return h(
+      return f(
         "span",
         { class: "sg-renderer-qr-overflow", title: o },
         document.createTextNode("QR · too long")
       );
     }
-    const l = h("span", { class: "sg-renderer-qr" });
-    return l.innerHTML = a, s && l.append(h("span", { class: "sg-renderer-qr-text" }, document.createTextNode(o))), l;
+    const l = f("span", { class: "sg-renderer-qr" });
+    return l.innerHTML = a, s && l.append(f("span", { class: "sg-renderer-qr-text" }, document.createTextNode(o))), l;
   };
 }
-function un({
+function gn({
   language: n = null,
   copy: r = !0
 } = {}) {
   return ({ value: e, td: t }) => {
-    if (E(e)) return "";
+    if (M(e)) return "";
     const s = String(e);
     if (t) {
       t.classList.add("sg-renderer-code-cell");
       const a = t.parentElement;
       a && a.tagName === "TR" && a.classList.add("sg-has-multiline");
     }
-    const i = h("div", { class: "sg-renderer-code" });
-    if (n && i.append(h(
+    const i = f("div", { class: "sg-renderer-code" });
+    if (n && i.append(f(
       "span",
       { class: "sg-renderer-code-lang" },
       document.createTextNode(String(n))
     )), r) {
-      const a = h("button", {
+      const a = f("button", {
         type: "button",
         class: "sg-renderer-code-copy",
         title: "Copy",
         "aria-label": "Copy code"
       });
-      a.innerHTML = _e, a.addEventListener("click", async (l) => {
+      a.innerHTML = ye, a.addEventListener("click", async (l) => {
         l.stopPropagation();
         try {
-          navigator.clipboard?.writeText ? await navigator.clipboard.writeText(s) : Et(s), a.innerHTML = At, a.classList.add("is-copied"), setTimeout(() => {
-            a.innerHTML = _e, a.classList.remove("is-copied");
+          navigator.clipboard?.writeText ? await navigator.clipboard.writeText(s) : Dt(s), a.innerHTML = Rt, a.classList.add("is-copied"), setTimeout(() => {
+            a.innerHTML = ye, a.classList.remove("is-copied");
           }, 1200);
         } catch {
         }
       }), i.append(a);
     }
-    const o = h("pre", { class: "sg-renderer-code-pre" });
+    const o = f("pre", { class: "sg-renderer-code-pre" });
     return o.textContent = s, i.append(o), i;
   };
 }
-const Sr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M225.8 468.2L46.9 295.4C18.9 268.2 0 230.1 0 187.8C0 117.4 56.1 60 125.7 60c25.3 0 51 9.2 70.3 25.4L256 138l60-52.6C335.3 69.2 361 60 386.3 60C455.9 60 512 117.4 512 187.8c0 42.3-18.9 80.4-46.9 107.6L286.2 468.2c-7.2 7.4-17.1 11.8-27.6 11.8c-10.5 0-20.4-4.4-27.6-11.8z"/></svg>', Lr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2H464c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48H294.5c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3V320 272 247.1c0-29.2 13.3-56.7 36-75.1c16.3-13.2 28.9-30.4 36.6-50l8.1-20.3c5-12.4 11.3-24.2 19-35.2l4.4-6.3 0 0c1.4-2 1.1-4.7-.6-6.4l0 0c-3.8-3.8-9.9-3.8-13.7 0L208.8 84.9c-3 3-7 4.7-11.3 4.7c-8.8 0-16-7.2-16-16V63.4c0-8.8 7.2-16 16-16h.5c8.8 0 16 7.2 16 16v6.2c34-2.4 71-13 100-25.6c11-4.8 22.1-9.3 33-13.6l1-.4c12-4.6 27.3-9.3 41.4-9.3z"/></svg>', Ar = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 479.1c26-5.2 42.9-30.5 37.7-56.5l-2.3-11.4c-5.3-26.7-15.1-52.1-28.8-75.2H464c26.5 0 48-21.5 48-48c0-18.5-10.5-34.6-25.9-42.6C497 236.6 504 223.1 504 208c0-23.4-16.8-42.9-38.9-47.1c4.4-7.3 6.9-15.8 6.9-24.9c0-21.3-13.9-39.4-33.1-45.6c.7-3.3 1.1-6.8 1.1-10.4c0-26.5-21.5-48-48-48H294.5c-19 0-37.5 5.6-53.3 16.1L202.7 73.8C176 91.6 160 121.6 160 153.7V192v48 24.9c0 29.2 13.3 56.7 36 75.1c16.3 13.2 28.9 30.4 36.6 50l8.1 20.3c5 12.4 11.3 24.2 19 35.2l4.4 6.3c1.4 2 1.1 4.7-.6 6.4c-3.8 3.8-9.9 3.8-13.7 0L208.8 427.1c-3-3-7-4.7-11.3-4.7c-8.8 0-16 7.2-16 16v10.2c0 8.8 7.2 16 16 16h.5c8.8 0 16-7.2 16-16v-6.2c34 2.4 71 13 100 25.6c11 4.8 22.1 9.3 33 13.6l1 .4c12 4.6 27.3 9.3 41.4 9.3z"/></svg>', Ae = ["😞", "😕", "😐", "🙂", "😄"], Ze = {
+const Tr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M225.8 468.2L46.9 295.4C18.9 268.2 0 230.1 0 187.8C0 117.4 56.1 60 125.7 60c25.3 0 51 9.2 70.3 25.4L256 138l60-52.6C335.3 69.2 361 60 386.3 60C455.9 60 512 117.4 512 187.8c0 42.3-18.9 80.4-46.9 107.6L286.2 468.2c-7.2 7.4-17.1 11.8-27.6 11.8c-10.5 0-20.4-4.4-27.6-11.8z"/></svg>', Rr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2H464c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48H294.5c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3V320 272 247.1c0-29.2 13.3-56.7 36-75.1c16.3-13.2 28.9-30.4 36.6-50l8.1-20.3c5-12.4 11.3-24.2 19-35.2l4.4-6.3 0 0c1.4-2 1.1-4.7-.6-6.4l0 0c-3.8-3.8-9.9-3.8-13.7 0L208.8 84.9c-3 3-7 4.7-11.3 4.7c-8.8 0-16-7.2-16-16V63.4c0-8.8 7.2-16 16-16h.5c8.8 0 16 7.2 16 16v6.2c34-2.4 71-13 100-25.6c11-4.8 22.1-9.3 33-13.6l1-.4c12-4.6 27.3-9.3 41.4-9.3z"/></svg>', kr = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 479.1c26-5.2 42.9-30.5 37.7-56.5l-2.3-11.4c-5.3-26.7-15.1-52.1-28.8-75.2H464c26.5 0 48-21.5 48-48c0-18.5-10.5-34.6-25.9-42.6C497 236.6 504 223.1 504 208c0-23.4-16.8-42.9-38.9-47.1c4.4-7.3 6.9-15.8 6.9-24.9c0-21.3-13.9-39.4-33.1-45.6c.7-3.3 1.1-6.8 1.1-10.4c0-26.5-21.5-48-48-48H294.5c-19 0-37.5 5.6-53.3 16.1L202.7 73.8C176 91.6 160 121.6 160 153.7V192v48 24.9c0 29.2 13.3 56.7 36 75.1c16.3 13.2 28.9 30.4 36.6 50l8.1 20.3c5 12.4 11.3 24.2 19 35.2l4.4 6.3c1.4 2 1.1 4.7-.6 6.4c-3.8 3.8-9.9 3.8-13.7 0L208.8 427.1c-3-3-7-4.7-11.3-4.7c-8.8 0-16 7.2-16 16v10.2c0 8.8 7.2 16 16 16h.5c8.8 0 16-7.2 16-16v-6.2c34 2.4 71 13 100 25.6c11 4.8 22.1 9.3 33 13.6l1 .4c12 4.6 27.3 9.3 41.4 9.3z"/></svg>', Te = ["😞", "😕", "😐", "🙂", "😄"], nt = {
   star: J,
-  heart: Sr
-}, Je = {
+  heart: Tr
+}, st = {
   star: "#f59e0b",
   heart: "#ec4899"
 };
-function pn({
+function mn({
   icon: n = "heart",
   max: r = 5,
   precision: e = 0.5,
   color: t = null
 } = {}) {
-  if (n === "smiley") return Mr({ max: r });
-  if (n === "thumb") return Er();
-  if (n === "nps") return Rr();
-  const s = Ze[n] || Ze.heart, i = t || Je[n] || Je.heart, o = e > 0 ? 1 / e : 2;
+  if (n === "smiley") return Dr({ max: r });
+  if (n === "thumb") return Nr();
+  if (n === "nps") return $r();
+  const s = nt[n] || nt.heart, i = t || st[n] || st.heart, o = e > 0 ? 1 / e : 2;
   return ({ value: a }) => {
     let l = parseFloat(a);
     Number.isFinite(l) || (l = 0), l = Math.max(0, Math.min(r, l)), l = Math.round(l * o) / o;
-    const d = h("div", {
+    const d = f("div", {
       class: `sg-renderer-rating is-${n}`,
       style: `--rating-color: ${i};`,
       role: "img",
@@ -3094,62 +3094,62 @@ function pn({
     });
     for (let c = 1; c <= r; c++)
       if (l >= c)
-        d.append(h("span", { class: "sg-renderer-rating-glyph is-full" }, s));
+        d.append(f("span", { class: "sg-renderer-rating-glyph is-full" }, s));
       else if (l > c - 1) {
         const u = Math.round((l - (c - 1)) * 100);
-        d.append(h(
+        d.append(f(
           "span",
           { class: "sg-renderer-rating-glyph is-partial" },
           `${s}<span class="sg-rating-clip" style="width:${u}%;">${s}</span>`
         ));
       } else
-        d.append(h("span", { class: "sg-renderer-rating-glyph is-empty" }, s));
+        d.append(f("span", { class: "sg-renderer-rating-glyph is-empty" }, s));
     return d;
   };
 }
-function Mr({ max: n = 5 } = {}) {
+function Dr({ max: n = 5 } = {}) {
   return ({ value: r }) => {
     let e = parseFloat(r);
     if (!Number.isFinite(e)) return "";
     e = Math.max(1, Math.min(n, Math.round(e)));
     const t = Math.min(
-      Ae.length - 1,
-      Math.floor((e - 1) / (n - 1 || 1) * (Ae.length - 1))
+      Te.length - 1,
+      Math.floor((e - 1) / (n - 1 || 1) * (Te.length - 1))
     );
-    return h("span", {
+    return f("span", {
       class: "sg-renderer-rating-smiley",
       title: `${e}/${n}`
-    }, document.createTextNode(Ae[t]));
+    }, document.createTextNode(Te[t]));
   };
 }
-function Er() {
+function Nr() {
   return ({ value: n }) => {
     if (n == null || n === "") return "";
     const r = Number(n);
     if (!Number.isFinite(r)) return "";
-    const e = h("span", { class: "sg-renderer-rating-thumb" });
-    return r > 0 ? (e.classList.add("is-up"), e.title = "Thumbs up", e.innerHTML = Lr) : r < 0 ? (e.classList.add("is-down"), e.title = "Thumbs down", e.innerHTML = Ar) : (e.classList.add("is-neutral"), e.title = "Neutral", e.append(document.createTextNode("—"))), e;
+    const e = f("span", { class: "sg-renderer-rating-thumb" });
+    return r > 0 ? (e.classList.add("is-up"), e.title = "Thumbs up", e.innerHTML = Rr) : r < 0 ? (e.classList.add("is-down"), e.title = "Thumbs down", e.innerHTML = kr) : (e.classList.add("is-neutral"), e.title = "Neutral", e.append(document.createTextNode("—"))), e;
   };
 }
-function Rr() {
+function $r() {
   return ({ value: n }) => {
     const r = parseFloat(n);
     if (!Number.isFinite(r)) return "";
     const e = Math.max(0, Math.min(10, Math.round(r))), t = e <= 6 ? "detractor" : e <= 8 ? "passive" : "promoter", s = t === "detractor" ? "Detractor" : t === "passive" ? "Passive" : "Promoter";
-    return h("span", {
+    return f("span", {
       class: `sg-renderer-rating-nps is-${t}`,
       title: `${e}/10 · ${s}`
     }, document.createTextNode(String(e)));
   };
 }
-const Tr = ["#e5e7eb", "#d1d5db", "#9ca3af"];
-function hn({
+const Ir = ["#e5e7eb", "#d1d5db", "#9ca3af"];
+function bn({
   min: n = 0,
   max: r = 100,
   target: e = null,
   ranges: t = null,
   // [a] | [a, b] | [a, b, c]
-  rangeColors: s = Tr,
+  rangeColors: s = Ir,
   barColor: i = "#111827",
   targetColor: o = "#111827",
   width: a = 120,
@@ -3158,21 +3158,21 @@ function hn({
   return ({ value: d }) => {
     let c, u, p;
     if (d && typeof d == "object" && !Array.isArray(d) ? (c = Number(d.value), u = d.target != null ? Number(d.target) : e, p = d.ranges || t) : (c = Number(d), u = e, p = t), !Number.isFinite(c)) return "";
-    const f = r - n || 1, g = (S) => Math.max(n, Math.min(r, S)), _ = (S) => (g(S) - n) / f * a, y = p && p.length ? p.map(Number) : [n + f * 0.6, n + f * 0.8], L = [n, ...y, r];
-    let b = "";
-    for (let S = 0; S < L.length - 1; S++) {
-      const A = _(L[S]), D = _(L[S + 1]) - A, C = s[S] || s[s.length - 1];
-      b += `<rect x="${A.toFixed(2)}" y="0" width="${D.toFixed(2)}" height="${l}" fill="${C}"/>`;
+    const h = r - n || 1, g = (L) => Math.max(n, Math.min(r, L)), b = (L) => (g(L) - n) / h * a, y = p && p.length ? p.map(Number) : [n + h * 0.6, n + h * 0.8], S = [n, ...y, r];
+    let _ = "";
+    for (let L = 0; L < S.length - 1; L++) {
+      const A = b(S[L]), k = b(S[L + 1]) - A, C = s[L] || s[s.length - 1];
+      _ += `<rect x="${A.toFixed(2)}" y="0" width="${k.toFixed(2)}" height="${l}" fill="${C}"/>`;
     }
-    const w = l * 0.42, v = (l - w) / 2;
-    if (b += `<rect x="0" y="${v.toFixed(2)}" width="${_(c).toFixed(2)}" height="${w.toFixed(2)}" fill="${i}"/>`, u != null && Number.isFinite(u)) {
-      const S = _(u), A = l * 0.85, D = (l - A) / 2;
-      b += `<rect x="${(S - 1).toFixed(2)}" y="${D.toFixed(2)}" width="2" height="${A.toFixed(2)}" fill="${o}"/>`;
+    const v = l * 0.42, w = (l - v) / 2;
+    if (_ += `<rect x="0" y="${w.toFixed(2)}" width="${b(c).toFixed(2)}" height="${v.toFixed(2)}" fill="${i}"/>`, u != null && Number.isFinite(u)) {
+      const L = b(u), A = l * 0.85, k = (l - A) / 2;
+      _ += `<rect x="${(L - 1).toFixed(2)}" y="${k.toFixed(2)}" width="2" height="${A.toFixed(2)}" fill="${o}"/>`;
     }
-    return `<svg class="sg-renderer-bullet" viewBox="0 0 ${a} ${l}" width="${a}" height="${l}" preserveAspectRatio="none" aria-hidden="true">` + b + "</svg>";
+    return `<svg class="sg-renderer-bullet" viewBox="0 0 ${a} ${l}" width="${a}" height="${l}" preserveAspectRatio="none" aria-hidden="true">` + _ + "</svg>";
   };
 }
-function fn({
+function _n({
   size: n = 28,
   thickness: r = 5,
   color: e = "green",
@@ -3180,16 +3180,16 @@ function fn({
   showValue: s = !0,
   inline: i = !1
 } = {}) {
-  const o = $e[e] || e;
+  const o = Pe[e] || e;
   return ({ value: a }) => {
     let l = Number(a);
     if (!Number.isFinite(l)) return "";
     l = Math.max(0, Math.min(100, l));
-    const d = (n - r) / 2, c = n / 2, u = n / 2, p = 2 * Math.PI * d, f = p * (1 - l / 100), g = `<text x="${c}" y="${u + 0.5}" text-anchor="middle" dominant-baseline="middle" font-size="${(n * 0.32).toFixed(1)}" font-weight="600" fill="currentColor">${Math.round(l)}</text>`, _ = `<svg class="sg-renderer-donut" viewBox="0 0 ${n} ${n}" width="${n}" height="${n}" aria-hidden="true"><circle cx="${c}" cy="${u}" r="${d}" fill="none" stroke="${t}" stroke-width="${r}"/><circle cx="${c}" cy="${u}" r="${d}" fill="none" stroke="${o}" stroke-width="${r}" stroke-dasharray="${p.toFixed(2)}" stroke-dashoffset="${f.toFixed(2)}" stroke-linecap="round" transform="rotate(-90 ${c} ${u})"/>` + (s && !i ? g : "") + "</svg>";
-    return i && s ? `<span class="sg-renderer-donut-wrap">${_}<span class="sg-renderer-donut-label">${Math.round(l)}%</span></span>` : _;
+    const d = (n - r) / 2, c = n / 2, u = n / 2, p = 2 * Math.PI * d, h = p * (1 - l / 100), g = `<text x="${c}" y="${u + 0.5}" text-anchor="middle" dominant-baseline="middle" font-size="${(n * 0.32).toFixed(1)}" font-weight="600" fill="currentColor">${Math.round(l)}</text>`, b = `<svg class="sg-renderer-donut" viewBox="0 0 ${n} ${n}" width="${n}" height="${n}" aria-hidden="true"><circle cx="${c}" cy="${u}" r="${d}" fill="none" stroke="${t}" stroke-width="${r}"/><circle cx="${c}" cy="${u}" r="${d}" fill="none" stroke="${o}" stroke-width="${r}" stroke-dasharray="${p.toFixed(2)}" stroke-dashoffset="${h.toFixed(2)}" stroke-linecap="round" transform="rotate(-90 ${c} ${u})"/>` + (s && !i ? g : "") + "</svg>";
+    return i && s ? `<span class="sg-renderer-donut-wrap">${b}<span class="sg-renderer-donut-label">${Math.round(l)}%</span></span>` : b;
   };
 }
-function gn({
+function yn({
   width: n = 120,
   height: r = 32,
   color: e = "blue",
@@ -3198,7 +3198,7 @@ function gn({
   binLabels: i = null,
   showCount: o = !1
 } = {}) {
-  const a = $e[e] || e;
+  const a = Pe[e] || e;
   return ({ value: l, td: d }) => {
     if (l == null || l === "") return "";
     d && d.classList.add("sg-renderer-histogram-cell");
@@ -3206,23 +3206,23 @@ function gn({
     if (l && typeof l == "object" && !Array.isArray(l) && (c = l.counts, u = l.labels || i), !Array.isArray(c)) return "";
     const p = c.map(Number).filter(Number.isFinite);
     if (p.length === 0) return "";
-    const f = Math.max(...p, 1), g = p.reduce((C, R) => C + R, 0), _ = u && u.length ? 10 : 0, y = 1, L = 1, b = n - y * 2, w = r - L * 2 - _, v = Math.max(1, (b - (p.length - 1) * s) / p.length);
-    let S = "";
+    const h = Math.max(...p, 1), g = p.reduce((C, T) => C + T, 0), b = u && u.length ? 10 : 0, y = 1, S = 1, _ = n - y * 2, v = r - S * 2 - b, w = Math.max(1, (_ - (p.length - 1) * s) / p.length);
+    let L = "";
     for (let C = 0; C < p.length; C++) {
-      const R = p[C], T = R / f * w, $ = y + C * (v + s), F = L + w - T, K = t ? R === f ? 1 : 0.45 : 0.85, U = u && u[C] != null ? `${u[C]}: ${R}` : `Bin ${C + 1}: ${R}`;
-      S += `<rect x="${$.toFixed(2)}" y="${F.toFixed(2)}" width="${v.toFixed(2)}" height="${T.toFixed(2)}" fill="${a}" fill-opacity="${K}"><title>${ye(U)}</title></rect>`;
+      const T = p[C], R = T / h * v, $ = y + C * (w + s), F = S + v - R, q = t ? T === h ? 1 : 0.45 : 0.85, U = u && u[C] != null ? `${u[C]}: ${T}` : `Bin ${C + 1}: ${T}`;
+      L += `<rect x="${$.toFixed(2)}" y="${F.toFixed(2)}" width="${w.toFixed(2)}" height="${R.toFixed(2)}" fill="${a}" fill-opacity="${q}"><title>${we(U)}</title></rect>`;
     }
     let A = "";
     if (u && u.length)
       for (let C = 0; C < p.length && C < u.length; C++) {
-        const R = y + C * (v + s) + v / 2;
-        A += `<text x="${R.toFixed(2)}" y="${(r - 1).toFixed(2)}" text-anchor="middle" font-size="7" fill="currentColor" opacity="0.65">${ye(u[C])}</text>`;
+        const T = y + C * (w + s) + w / 2;
+        A += `<text x="${T.toFixed(2)}" y="${(r - 1).toFixed(2)}" text-anchor="middle" font-size="7" fill="currentColor" opacity="0.65">${we(u[C])}</text>`;
       }
-    const D = `<svg class="sg-renderer-histogram" viewBox="0 0 ${n} ${r}" width="${n}" height="${r}" preserveAspectRatio="none" aria-hidden="true">` + S + A + "</svg>";
-    return o ? `<span class="sg-renderer-histogram-wrap">${D}<span class="sg-renderer-histogram-total">n=${g}</span></span>` : D;
+    const k = `<svg class="sg-renderer-histogram" viewBox="0 0 ${n} ${r}" width="${n}" height="${r}" preserveAspectRatio="none" aria-hidden="true">` + L + A + "</svg>";
+    return o ? `<span class="sg-renderer-histogram-wrap">${k}<span class="sg-renderer-histogram-total">n=${g}</span></span>` : k;
   };
 }
-const Dr = {
+const Vr = {
   red: "red",
   r: "red",
   critical: "red",
@@ -3241,42 +3241,42 @@ const Dr = {
   low: "green",
   promoter: "green",
   safe: "green"
-}, kr = { red: "#ef4444", amber: "#f59e0b", green: "#10b981" };
-function mn({
+}, Fr = { red: "#ef4444", amber: "#f59e0b", green: "#10b981" };
+function vn({
   size: n = 10,
   thresholds: r = null,
   inverted: e = !1,
   showLabel: t = !1
 } = {}) {
   return ({ value: s }) => {
-    if (E(s)) return "";
+    if (M(s)) return "";
     let i;
     if (r && Number.isFinite(Number(s))) {
       const a = Number(s), l = e ? r[1] : r[0], d = e ? r[0] : r[1];
       e ? i = a >= l ? "red" : a >= d ? "amber" : "green" : i = a <= l ? "red" : a <= d ? "amber" : "green";
-    } else if (i = Dr[String(s).toLowerCase()] || null, !i) return "";
-    const o = h("span", {
+    } else if (i = Vr[String(s).toLowerCase()] || null, !i) return "";
+    const o = f("span", {
       class: `sg-renderer-rag is-${i}`,
       title: t ? null : i.charAt(0).toUpperCase() + i.slice(1)
     });
-    return o.append(h("span", {
+    return o.append(f("span", {
       class: "sg-renderer-rag-dot",
-      style: `width:${n}px; height:${n}px; background:${kr[i]};`,
+      style: `width:${n}px; height:${n}px; background:${Fr[i]};`,
       "aria-label": i
-    })), t && o.append(h(
+    })), t && o.append(f(
       "span",
       { class: "sg-renderer-rag-label" },
       document.createTextNode(i.charAt(0).toUpperCase() + i.slice(1))
     )), o;
   };
 }
-function _n({
+function wn({
   steps: n = ["Pending", "Shipped", "Delivered"],
   color: r = "#2563eb",
   showLabels: e = !1
 } = {}) {
   return ({ value: t, td: s }) => {
-    if (E(t)) return "";
+    if (M(t)) return "";
     s && s.classList.add("sg-renderer-timeline-cell");
     let i = -1;
     if (Number.isFinite(Number(t)))
@@ -3286,55 +3286,55 @@ function _n({
       i = n.findIndex((l) => String(l).toLowerCase() === a);
     }
     if (i < 0) return "";
-    const o = h("div", {
+    const o = f("div", {
       class: `sg-renderer-timeline${e ? " has-labels" : ""}`,
       style: `--ts-color: ${r};`,
       role: "list",
       "aria-label": `Step ${i + 1} of ${n.length}: ${n[i]}`
     });
     for (let a = 0; a < n.length; a++) {
-      const l = a < i ? "past" : a === i ? "current" : "future", d = h("span", { class: `sg-timeline-step is-${l}`, role: "listitem" });
-      if (d.append(h("span", { class: "sg-timeline-dot", title: n[a], "aria-label": n[a] })), e && d.append(h("span", { class: "sg-timeline-label" }, document.createTextNode(n[a]))), o.append(d), a < n.length - 1) {
+      const l = a < i ? "past" : a === i ? "current" : "future", d = f("span", { class: `sg-timeline-step is-${l}`, role: "listitem" });
+      if (d.append(f("span", { class: "sg-timeline-dot", title: n[a], "aria-label": n[a] })), e && d.append(f("span", { class: "sg-timeline-label" }, document.createTextNode(n[a]))), o.append(d), a < n.length - 1) {
         const c = a < i ? "past" : "future";
-        o.append(h("span", { class: `sg-timeline-line is-${c}`, "aria-hidden": "true" }));
+        o.append(f("span", { class: `sg-timeline-line is-${c}`, "aria-hidden": "true" }));
       }
     }
     return o;
   };
 }
-const Nr = /([@#][a-zA-Z0-9_\-]+)/g;
-function bn({
+const Pr = /([@#][a-zA-Z0-9_\-]+)/g;
+function Cn({
   mentionHref: n = null,
   tagHref: r = null
 } = {}) {
   return ({ value: e }) => {
-    if (E(e)) return "";
-    const t = String(e), s = h("span", { class: "sg-renderer-mentions" }), i = t.split(Nr);
+    if (M(e)) return "";
+    const t = String(e), s = f("span", { class: "sg-renderer-mentions" }), i = t.split(Pr);
     for (const o of i)
       if (o)
         if (o[0] === "@") {
           const a = o.slice(1), l = typeof n == "function" ? n(a) : null;
-          s.append(et(o, l, "sg-renderer-mention"));
+          s.append(rt(o, l, "sg-renderer-mention"));
         } else if (o[0] === "#") {
           const a = o.slice(1), l = typeof r == "function" ? r(a) : null;
-          s.append(et(o, l, "sg-renderer-hashtag"));
+          s.append(rt(o, l, "sg-renderer-hashtag"));
         } else
           s.append(document.createTextNode(o));
     return s;
   };
 }
-function et(n, r, e) {
-  const t = r ? h("a", { href: r, target: "_blank", rel: "noopener noreferrer", class: e }) : h("span", { class: e });
+function rt(n, r, e) {
+  const t = r ? f("a", { href: r, target: "_blank", rel: "noopener noreferrer", class: e }) : f("span", { class: e });
   return r && t.addEventListener("click", (s) => s.stopPropagation()), t.append(document.createTextNode(n)), t;
 }
-function yn({
+function xn({
   chars: n = null,
   lines: r = null,
   moreLabel: e = "Read more",
   lessLabel: t = "Show less"
 } = {}) {
   return ({ value: s, td: i }) => {
-    if (E(s)) return "";
+    if (M(s)) return "";
     const o = String(s), a = n && o.length > n;
     if (!a && !r) return o;
     if (i) {
@@ -3342,29 +3342,29 @@ function yn({
       const c = i.parentElement;
       c && c.tagName === "TR" && c.classList.add("sg-has-multiline");
     }
-    const l = h("div", { class: "sg-renderer-expand" });
+    const l = f("div", { class: "sg-renderer-expand" });
     let d = !1;
     if (a) {
-      const c = o.slice(0, n).trimEnd() + "…", u = h(
+      const c = o.slice(0, n).trimEnd() + "…", u = f(
         "span",
         { class: "sg-renderer-expand-short" },
         document.createTextNode(c)
-      ), p = h(
+      ), p = f(
         "span",
         { class: "sg-renderer-expand-full", hidden: "" },
         document.createTextNode(o)
-      ), f = h(
+      ), h = f(
         "button",
         { type: "button", class: "sg-renderer-expand-toggle" },
         document.createTextNode(e)
       );
-      f.addEventListener("click", (g) => {
-        g.stopPropagation(), d = !d, u.hidden = d, p.hidden = !d, f.textContent = d ? t : e;
-      }), l.append(u, p, document.createTextNode(" "), f);
+      h.addEventListener("click", (g) => {
+        g.stopPropagation(), d = !d, u.hidden = d, p.hidden = !d, h.textContent = d ? t : e;
+      }), l.append(u, p, document.createTextNode(" "), h);
     } else {
-      const c = h("div", { class: "sg-renderer-expand-clamp" });
+      const c = f("div", { class: "sg-renderer-expand-clamp" });
       c.style.setProperty("--sg-clamp", String(r)), c.textContent = o;
-      const u = h(
+      const u = f(
         "button",
         { type: "button", class: "sg-renderer-expand-toggle" },
         document.createTextNode(e)
@@ -3376,7 +3376,7 @@ function yn({
     return l;
   };
 }
-function wn({
+function Sn({
   unit: n = "kilometer",
   unitDisplay: r = "short",
   decimals: e,
@@ -3393,30 +3393,30 @@ function wn({
     o = new Intl.NumberFormat(t, l);
   }
   return ({ value: a, td: l }) => {
-    if (l && l.classList.add("sg-renderer-number"), E(a)) return "";
+    if (l && l.classList.add("sg-renderer-number"), M(a)) return "";
     const d = Number(a);
     return Number.isFinite(d) ? o.format(d) : String(a);
   };
 }
-const $r = /^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(25[0-5]|2[0-4]\d|[01]?\d?\d)$/, Ir = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|:(:[0-9a-fA-F]{1,4}){1,7}|::)$/;
-function Vr(n) {
-  return $r.test(n);
+const Br = /^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(25[0-5]|2[0-4]\d|[01]?\d?\d)$/, Hr = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|:(:[0-9a-fA-F]{1,4}){1,7}|::)$/;
+function Gr(n) {
+  return Br.test(n);
 }
-function Fr(n) {
-  return Ir.test(n);
+function Or(n) {
+  return Hr.test(n);
 }
-function vn({
+function Ln({
   countryField: n = null
 } = {}) {
   return ({ value: r, row: e }) => {
-    if (E(r)) return "";
-    const t = String(r).trim(), s = Vr(t), i = !s && Fr(t);
+    if (M(r)) return "";
+    const t = String(r).trim(), s = Gr(t), i = !s && Or(t);
     if (!s && !i)
-      return h("span", {
+      return f("span", {
         class: "sg-renderer-ip is-invalid",
         title: "Invalid IP address"
       }, document.createTextNode(t));
-    const o = h("span", {
+    const o = f("span", {
       class: `sg-renderer-ip ${i ? "is-v6" : "is-v4"}`,
       title: s ? "IPv4" : "IPv6"
     });
@@ -3427,20 +3427,20 @@ function vn({
           127462 + a.charCodeAt(0) - 65,
           127462 + a.charCodeAt(1) - 65
         );
-        o.append(h("span", {
+        o.append(f("span", {
           class: "sg-renderer-ip-flag",
           "aria-hidden": "true"
         }, document.createTextNode(l)));
       }
     }
-    return o.append(h(
+    return o.append(f(
       "span",
       { class: "sg-renderer-ip-text" },
       document.createTextNode(t)
     )), o;
   };
 }
-const Pr = {
+const zr = {
   "01": "ANZ",
   "03": "Westpac",
   "06": "CBA",
@@ -3460,31 +3460,31 @@ const Pr = {
   "07": "Westpac",
   "09": "NAB"
 };
-function Cn({
-  banks: n = Pr,
+function An({
+  banks: n = zr,
   showBank: r = !0
 } = {}) {
   return ({ value: e }) => {
-    if (E(e)) return "";
+    if (M(e)) return "";
     const t = String(e).trim(), s = t.replace(/\D/g, "");
     if (s.length !== 6)
-      return h("span", {
+      return f("span", {
         class: "sg-renderer-invalid",
         title: "Invalid BSB — must be 6 digits"
       }, document.createTextNode(t));
-    const i = `${s.slice(0, 3)}-${s.slice(3)}`, o = s.slice(0, 2), a = n[o], l = h("span", { class: "sg-renderer-bsb" });
-    return l.append(h(
+    const i = `${s.slice(0, 3)}-${s.slice(3)}`, o = s.slice(0, 2), a = n[o], l = f("span", { class: "sg-renderer-bsb" });
+    return l.append(f(
       "span",
       { class: "sg-renderer-bsb-number sg-renderer-mono" },
       document.createTextNode(i)
-    )), r && a && l.append(h(
+    )), r && a && l.append(f(
       "span",
       { class: "sg-renderer-bsb-bank" },
       document.createTextNode(a)
     )), l;
   };
 }
-function Br(n) {
+function jr(n) {
   const r = String(n).replace(/\s+/g, "");
   if (r.length !== 9 || !/^\d{9}$/.test(r)) return !1;
   const e = [8, 7, 6, 5, 4, 3, 2, 1];
@@ -3492,34 +3492,34 @@ function Br(n) {
   for (let s = 0; s < 8; s++) t += parseInt(r[s], 10) * e[s];
   return parseInt(r[8], 10) === (10 - t % 10) % 10;
 }
-function Hr(n) {
+function Kr(n) {
   const r = String(n).replace(/\D/g, "");
   return r.length !== 9 ? String(n) : `${r.slice(0, 3)} ${r.slice(3, 6)} ${r.slice(6)}`;
 }
-function xn() {
+function En() {
   return ({ value: n }) => {
-    if (E(n)) return "";
-    if (!Br(n))
-      return h("span", {
+    if (M(n)) return "";
+    if (!jr(n))
+      return f("span", {
         class: "sg-renderer-invalid",
         title: "Invalid ACN (checksum failed)"
       }, document.createTextNode(String(n)));
     const r = String(n).replace(/\s+/g, "");
-    return h("a", {
+    return f("a", {
       class: "sg-renderer-link sg-renderer-mono",
       href: `https://abr.business.gov.au/Search/ResultsActiveASIC?SearchText=${r}`,
       target: "_blank",
       rel: "noopener noreferrer",
       title: "Look up on ABR"
-    }, document.createTextNode(Hr(n)));
+    }, document.createTextNode(Kr(n)));
   };
 }
-function Sn() {
+function Mn() {
   return ({ value: n, td: r }) => {
-    if (r && r.classList.add("sg-renderer-mask-numeric"), E(n)) return "";
+    if (r && r.classList.add("sg-renderer-mask-numeric"), M(n)) return "";
     const e = String(n), t = e.replace(/\D/g, "");
     if (t.length < 8 || t.length > 9)
-      return h("span", {
+      return f("span", {
         class: "sg-renderer-invalid",
         title: "Invalid TFN — must be 8 or 9 digits"
       }, document.createTextNode(e));
@@ -3527,40 +3527,40 @@ function Sn() {
     return t.length === 9 ? `${o.slice(0, 3)} ${o.slice(3)} ${s}` : `${o.slice(0, 2)} ${o.slice(2)} ${s}`;
   };
 }
-function Gr(n) {
+function qr(n) {
   if (n.length !== 10 || !/^[2-6]\d{9}$/.test(n)) return !1;
   const r = [1, 3, 7, 9, 1, 3, 7, 9];
   let e = 0;
   for (let t = 0; t < 8; t++) e += parseInt(n[t], 10) * r[t];
   return e % 10 === parseInt(n[8], 10);
 }
-function Ln() {
+function Tn() {
   return ({ value: n }) => {
-    if (E(n)) return "";
+    if (M(n)) return "";
     const r = String(n).trim().replace(/\s+/g, ""), e = /^(\d{10})(?:[\/-]?(\d))?$/.exec(r);
-    if (!e || !Gr(e[1]))
-      return h("span", {
+    if (!e || !qr(e[1]))
+      return f("span", {
         class: "sg-renderer-invalid",
         title: e ? "Invalid Medicare (checksum failed)" : "Invalid Medicare format"
       }, document.createTextNode(String(n)));
     const t = e[1], s = e[2], i = `${t.slice(0, 4)} ${t.slice(4, 9)} ${t.slice(9)}` + (s ? ` / ${s}` : "");
-    return h(
+    return f(
       "span",
       { class: "sg-renderer-medicare sg-renderer-mono" },
       document.createTextNode(i)
     );
   };
 }
-function An({ preload: n = "none" } = {}) {
-  return ({ value: r }) => E(r) ? "" : h("audio", {
+function Rn({ preload: n = "none" } = {}) {
+  return ({ value: r }) => M(r) ? "" : f("audio", {
     class: "sg-renderer-audio",
     controls: "",
     preload: n,
     src: String(r).trim()
   });
 }
-function Mn({ width: n = 200, preload: r = "metadata" } = {}) {
-  return ({ value: e }) => E(e) ? "" : h("video", {
+function kn({ width: n = 200, preload: r = "metadata" } = {}) {
+  return ({ value: e }) => M(e) ? "" : f("video", {
     class: "sg-renderer-video",
     controls: "",
     preload: r,
@@ -3568,9 +3568,9 @@ function Mn({ width: n = 200, preload: r = "metadata" } = {}) {
     width: String(n)
   });
 }
-function En({ sort: n = "count" } = {}) {
+function Dn({ sort: n = "count" } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
+    if (M(r)) return "";
     let e = [];
     if (Array.isArray(r))
       e = r.map((s) => Array.isArray(s) ? s : [s.emoji ?? s.name ?? "?", s.count ?? s.n ?? 0]);
@@ -3579,39 +3579,39 @@ function En({ sort: n = "count" } = {}) {
     else
       return "";
     if (e = e.filter(([, s]) => Number.isFinite(Number(s)) && Number(s) > 0), n === "count" && e.sort((s, i) => Number(i[1]) - Number(s[1])), e.length === 0) return "";
-    const t = h("span", { class: "sg-renderer-reactions" });
+    const t = f("span", { class: "sg-renderer-reactions" });
     for (const [s, i] of e) {
-      const o = h("span", { class: "sg-reaction", title: `${i} ${s}` });
-      o.append(h("span", { class: "sg-reaction-emoji" }, document.createTextNode(String(s)))), o.append(h("span", { class: "sg-reaction-count" }, document.createTextNode(String(i)))), t.append(o);
+      const o = f("span", { class: "sg-reaction", title: `${i} ${s}` });
+      o.append(f("span", { class: "sg-reaction-emoji" }, document.createTextNode(String(s)))), o.append(f("span", { class: "sg-reaction-count" }, document.createTextNode(String(i)))), t.append(o);
     }
     return t;
   };
 }
-function Rn({ icon: n = "💬" } = {}) {
+function Nn({ icon: n = "💬" } = {}) {
   return ({ value: r }) => {
-    if (E(r)) return "";
+    if (M(r)) return "";
     let e = "", t = null;
     typeof r == "object" ? (e = r.value ?? r.text ?? "", t = r.count ?? r.comments ?? null) : Number.isFinite(Number(r)) && typeof r != "string" ? t = Number(r) : e = String(r);
-    const s = h("span", { class: "sg-renderer-comment-count" });
-    if (e && s.append(h("span", { class: "sg-cc-value" }, document.createTextNode(String(e)))), t != null && Number(t) > 0) {
-      const i = h("span", {
+    const s = f("span", { class: "sg-renderer-comment-count" });
+    if (e && s.append(f("span", { class: "sg-cc-value" }, document.createTextNode(String(e)))), t != null && Number(t) > 0) {
+      const i = f("span", {
         class: "sg-cc-badge",
         title: `${t} comment${Number(t) === 1 ? "" : "s"}`
-      }), o = h("span", { class: "sg-cc-icon", "aria-hidden": "true" });
-      typeof n == "string" && n.trimStart().startsWith("<svg") ? o.innerHTML = n : o.append(document.createTextNode(String(n))), i.append(o), i.append(h("span", { class: "sg-cc-num" }, document.createTextNode(String(t)))), s.append(i);
+      }), o = f("span", { class: "sg-cc-icon", "aria-hidden": "true" });
+      typeof n == "string" && n.trimStart().startsWith("<svg") ? o.innerHTML = n : o.append(document.createTextNode(String(n))), i.append(o), i.append(f("span", { class: "sg-cc-num" }, document.createTextNode(String(t)))), s.append(i);
     }
     return s;
   };
 }
-function Tn({ locale: n = void 0 } = {}) {
+function $n({ locale: n = void 0 } = {}) {
   const e = new Intl.Locale(n || Intl.NumberFormat().resolvedOptions().locale).language === "en", t = e ? new Intl.PluralRules(n, { type: "ordinal" }) : null, s = { one: "st", two: "nd", few: "rd", other: "th" };
   return ({ value: i, td: o }) => {
-    if (o && o.classList.add("sg-renderer-number"), E(i)) return "";
+    if (o && o.classList.add("sg-renderer-number"), M(i)) return "";
     const a = Number(i);
     return Number.isInteger(a) ? e ? `${a}${s[t.select(a)]}` : String(a) : String(i);
   };
 }
-function Dn({
+function In({
   one: n = "item",
   other: r = "items",
   zero: e = null,
@@ -3619,23 +3619,23 @@ function Dn({
 } = {}) {
   const s = new Intl.PluralRules(t);
   return ({ value: i, td: o }) => {
-    if (o && o.classList.add("sg-renderer-number"), E(i)) return "";
+    if (o && o.classList.add("sg-renderer-number"), M(i)) return "";
     const a = Number(i);
     return Number.isFinite(a) ? a === 0 && e ? `${a} ${e}` : s.select(a) === "one" ? `${a} ${n}` : `${a} ${r}` : String(i);
   };
 }
-const Or = /* @__PURE__ */ new Set(["", "null", "nil", "none", "n/a", "na", "-", "—"]);
-function kn({
+const Ur = /* @__PURE__ */ new Set(["", "null", "nil", "none", "n/a", "na", "-", "—"]);
+function Vn({
   placeholder: n = "—",
   emptyOnTokens: r = !0
 } = {}) {
-  return ({ value: e }) => e == null || typeof e == "string" && (e === "" || r && Or.has(e.trim().toLowerCase())) ? h(
+  return ({ value: e }) => e == null || typeof e == "string" && (e === "" || r && Ur.has(e.trim().toLowerCase())) ? f(
     "span",
     { class: "sg-renderer-empty", title: "Empty" },
     document.createTextNode(n)
   ) : String(e);
 }
-function zr(n) {
+function Wr(n) {
   let r = 0, e = !1;
   for (let t = n.length - 1; t >= 0; t--) {
     let s = parseInt(n[t], 10);
@@ -3643,14 +3643,14 @@ function zr(n) {
   }
   return r % 10 === 0;
 }
-function jr(n) {
+function Xr(n) {
   return /^4\d{12}(\d{3,6})?$/.test(n) ? "visa" : /^(5[1-5]\d{14}|2(2[2-9]|[3-6]\d|7[01]|720)\d{12})$/.test(n) ? "mastercard" : /^3[47]\d{13}$/.test(n) ? "amex" : /^(6011\d{12,15}|65\d{14,17}|64[4-9]\d{13}|622(12[6-9]|1[3-9]\d|[2-8]\d{2}|9([01]\d|2[0-5]))\d{10,13})$/.test(n) ? "discover" : /^35(2[89]|[3-8]\d)\d{12}$/.test(n) ? "jcb" : /^3(0[0-5]|[68]\d|9\d)\d{11}$/.test(n) ? "diners" : null;
 }
-function Nn({ mask: n = !0 } = {}) {
+function Fn({ mask: n = !0 } = {}) {
   return ({ value: r, td: e }) => {
-    if (e && e.classList.add("sg-renderer-number"), E(r)) return "";
-    const t = String(r).replace(/\D/g, ""), s = t.length >= 13 && t.length <= 19, i = s && zr(t), o = s ? jr(t) : null, a = h("span", { class: `sg-renderer-card${i ? "" : " is-invalid"}` });
-    o && a.append(h("span", {
+    if (e && e.classList.add("sg-renderer-number"), M(r)) return "";
+    const t = String(r).replace(/\D/g, ""), s = t.length >= 13 && t.length <= 19, i = s && Wr(t), o = s ? Xr(t) : null, a = f("span", { class: `sg-renderer-card${i ? "" : " is-invalid"}` });
+    o && a.append(f("span", {
       class: `sg-renderer-card-brand is-${o}`,
       title: o[0].toUpperCase() + o.slice(1)
     }, document.createTextNode(o === "mastercard" ? "MC" : o.toUpperCase())));
@@ -3661,75 +3661,75 @@ function Nn({ mask: n = !0 } = {}) {
       const d = n ? "•".repeat(t.length - 4) + t.slice(-4) : t;
       o === "amex" || o === "diners" ? l = `${d.slice(0, 4)} ${d.slice(4, 10)} ${d.slice(10)}` : l = d.match(/.{1,4}/g).join(" ");
     }
-    return a.append(h(
+    return a.append(f(
       "span",
       { class: "sg-renderer-card-num sg-renderer-mono" },
       document.createTextNode(l)
     )), a;
   };
 }
-function $n({
+function Pn({
   width: n = "70%",
   height: r = "12px"
 } = {}) {
-  return ({ value: e }) => e != null && e !== "" && e !== "loading" && e !== "…" ? String(e) : h("span", {
+  return ({ value: e }) => e != null && e !== "" && e !== "loading" && e !== "…" ? String(e) : f("span", {
     class: "sg-renderer-shimmer",
     style: `width: ${n}; height: ${r};`,
     "aria-label": "Loading"
   });
 }
-function qr(n) {
+function Bn(n) {
   return Array.isArray(n) ? n.map((r) => r == null ? null : typeof r == "object" ? { value: r.value, label: r.label ?? String(r.value), color: r.color || null, icon: r.icon || null } : { value: r, label: String(r), color: null, icon: null }).filter(Boolean) : [];
 }
-function In(n, r) {
-  const e = h("span", { class: "sg-renderer-select-pill" });
-  return n.color ? r.test(n.color) ? e.classList.add(`sg-pill-${n.color}`) : (e.style.background = n.color, e.style.color = on(n.color)) : e.classList.add("sg-renderer-select-pill-bare"), n.icon && e.append(h("span", { class: "sg-renderer-select-pill-icon", "aria-hidden": "true" }, n.icon)), e.append(h(
+function Se(n, r) {
+  const e = f("span", { class: "sg-renderer-select-pill" });
+  return n.color ? r.test(n.color) ? e.classList.add(`sg-pill-${n.color}`) : (e.style.background = n.color, e.style.color = cn(n.color)) : e.classList.add("sg-renderer-select-pill-bare"), n.icon && e.append(f("span", { class: "sg-renderer-select-pill-icon", "aria-hidden": "true" }, n.icon)), e.append(f(
     "span",
     { class: "sg-renderer-select-pill-label" },
     document.createTextNode(n.label)
   )), e;
 }
-const Vn = /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/;
-function Fn({
+const Le = /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/;
+function Hn({
   options: n = [],
   placeholder: r = "Select…",
   editable: e = !0,
   clearable: t = !1,
   colorMap: s = null
 } = {}) {
-  const i = qr(n);
+  const i = Bn(n);
   if (s && typeof s == "object")
     for (const o of i)
       !o.color && Object.prototype.hasOwnProperty.call(s, o.value) && (o.color = s[o.value]);
   return (o) => {
     const { value: a, td: l } = o;
     l && (l.classList.add("sg-renderer-select-cell"), l._sgSelectOpts = i, l._sgSelectClearable = t), e && l && !l._sgSelectEditBound && (l._sgSelectEditBound = !0, l.addEventListener("dblclick", (c) => {
-      c._sgSelectHandled || (c._sgSelectHandled = !0, c.stopPropagation(), Kr(l, o));
+      c._sgSelectHandled || (c._sgSelectHandled = !0, c.stopPropagation(), Yr(l, o));
     }));
     const d = i.find((c) => String(c.value) === String(a)) || null;
-    return d ? In(d, Vn) : E(a) ? h(
+    return d ? Se(d, Le) : M(a) ? f(
       "span",
       { class: "sg-renderer-select-placeholder" },
       document.createTextNode(r)
-    ) : h("span", { class: "sg-renderer-select-bare" }, document.createTextNode(String(a)));
+    ) : f("span", { class: "sg-renderer-select-bare" }, document.createTextNode(String(a)));
   };
 }
-let me = null;
-function Kr(n, r) {
-  le();
-  const e = n._sgSelectOpts || [], t = n._sgSelectClearable, { row: s, col: i } = r, o = s && i?.field != null ? s[i.field] : null, a = h("div", { class: "sg-renderer-select-popover", role: "listbox" });
+let be = null;
+function Yr(n, r) {
+  de();
+  const e = n._sgSelectOpts || [], t = n._sgSelectClearable, { row: s, col: i } = r, o = s && i?.field != null ? s[i.field] : null, a = f("div", { class: "sg-renderer-select-popover", role: "listbox" });
   a.addEventListener("mousedown", (u) => u.stopPropagation());
   function l(u) {
-    const { api: p } = r, f = s && i?.field != null ? s[i.field] : null;
+    const { api: p } = r, h = s && i?.field != null ? s[i.field] : null;
     s && i?.field != null && (s[i.field] = u), p?.applyTransaction && p.applyTransaction({ update: [s] });
     const g = n.closest('[data-controller~="grid"]');
     g && g.dispatchEvent(new CustomEvent("grid:cellValueChanged", {
       bubbles: !0,
-      detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: f, newValue: u }
-    })), le();
+      detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: h, newValue: u }
+    })), de();
   }
   if (t) {
-    const u = h("button", {
+    const u = f("button", {
       type: "button",
       class: "sg-renderer-select-option sg-renderer-select-option-none",
       role: "option"
@@ -3737,163 +3737,245 @@ function Kr(n, r) {
     u.addEventListener("click", () => l(null)), a.append(u);
   }
   for (const u of e) {
-    const p = h("button", {
+    const p = f("button", {
       type: "button",
       class: `sg-renderer-select-option${String(u.value) === String(o) ? " is-selected" : ""}`,
       role: "option"
     });
-    p.append(In(u, Vn)), p.addEventListener("click", () => l(u.value)), a.append(p);
+    p.append(Se(u, Le)), p.addEventListener("click", () => l(u.value)), a.append(p);
   }
   function d(u) {
-    u.key === "Escape" && (u.stopPropagation(), le());
+    u.key === "Escape" && (u.stopPropagation(), de());
   }
   function c(u) {
-    !a.contains(u.target) && !n.contains(u.target) && le();
+    !a.contains(u.target) && !n.contains(u.target) && de();
   }
-  document.addEventListener("keydown", d), setTimeout(() => document.addEventListener("mousedown", c), 0), document.body.appendChild(a), Ce(a, n), me = { pop: a, onKey: d, onDocClick: c };
+  document.addEventListener("keydown", d), setTimeout(() => document.addEventListener("mousedown", c), 0), document.body.appendChild(a), ne(a, n), be = { pop: a, onKey: d, onDocClick: c };
 }
-function le() {
-  if (!me) return;
-  const { pop: n, onKey: r, onDocClick: e } = me;
-  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), me = null;
+function de() {
+  if (!be) return;
+  const { pop: n, onKey: r, onDocClick: e } = be;
+  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), be = null;
 }
-x("email", ut());
-x("url", pt());
-x("phone", ht());
-x("currency", ft());
-x("percent", gt());
-x("progress-bar", qt());
-x("star-rating", Kt());
-x("tags", Ut());
-x("country-flag", Wt());
-x("abn", Xt());
-x("avatar", Yt());
-x("date", mt());
-x("datetime", _t());
-x("relative-time", bt());
-x("duration", yt());
-x("number", wt());
-x("compact-number", vt());
-x("file-size", Ct());
-x("boolean", xt());
-x("delta", St());
-x("truncate", Lt());
-x("copyable", Mt());
-x("image", Rt());
-x("color-swatch", Tt());
-x("sparkline", Dt());
-x("heatmap-cell", $t());
-x("mask", It());
-x("highlight", Vt());
-x("multi-line", Ft());
-x("attachments", Ht());
-x("address-au", jt());
-x("checkbox", Qt());
-x("switch", en());
-x("markdown", tn());
-x("json", nn());
-x("linked-record", sn());
-x("coloured-tags", rn());
-x("time", an());
-x("diff", ln());
-x("geo", dn());
-x("qr", cn());
-x("code", un());
-x("rating", pn());
-x("bullet", hn());
-x("donut", fn());
-x("histogram", gn());
-x("rag", mn());
-x("timeline-steps", _n());
-x("mention", bn());
-x("expand", yn());
-x("units", wn());
-x("ip-address", vn());
-x("bsb", Cn());
-x("acn", xn());
-x("tfn", Sn());
-x("medicare", Ln());
-x("audio", An());
-x("video", Mn());
-x("reactions", En());
-x("comment-count", Rn());
-x("ordinal", Tn());
-x("plural", Dn());
-x("empty", kn());
-x("credit-card", Nn());
-x("loading-shimmer", $n());
-x("audio-attachment", Jt());
-x("select", Fn());
-const Ur = {
-  email: ut,
-  url: pt,
-  phone: ht,
-  currency: ft,
-  percent: gt,
-  progressBar: qt,
-  starRating: Kt,
-  tags: Ut,
-  countryFlag: Wt,
-  abn: Xt,
-  avatar: Yt,
-  statusPill: or,
-  date: mt,
-  datetime: _t,
-  relativeTime: bt,
-  duration: yt,
-  number: wt,
-  compactNumber: vt,
-  fileSize: Ct,
-  boolean: xt,
-  delta: St,
-  truncate: Lt,
-  copyable: Mt,
-  image: Rt,
-  colorSwatch: Tt,
-  sparkline: Dt,
-  heatmap: $t,
-  mask: It,
-  highlight: Vt,
-  multiLine: Ft,
-  attachments: Ht,
-  addressAu: jt,
-  checkbox: Qt,
-  switch: en,
-  markdown: tn,
-  json: nn,
-  linkedRecord: sn,
-  colouredTags: rn,
-  time: an,
-  diff: ln,
-  geo: dn,
-  qr: cn,
-  code: un,
-  rating: pn,
-  bullet: hn,
-  donut: fn,
-  histogram: gn,
-  rag: mn,
-  timelineSteps: _n,
-  mention: bn,
-  expand: yn,
-  units: wn,
-  ipAddress: vn,
-  bsb: Cn,
-  acn: xn,
-  tfn: Sn,
-  medicare: Ln,
-  audio: An,
-  video: Mn,
-  reactions: En,
-  commentCount: Rn,
-  ordinal: Tn,
-  plural: Dn,
-  empty: kn,
-  creditCard: Nn,
-  loadingShimmer: $n,
-  audioAttachment: Jt,
-  select: Fn
-}, Wr = 32, tt = 100, de = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>', Xr = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>', Yr = /* @__PURE__ */ new Set([
+function Gn(n) {
+  return n == null || n === "" ? [] : Array.isArray(n) ? n.map(String) : String(n).split(",").map((r) => r.trim()).filter(Boolean);
+}
+function On({
+  options: n = [],
+  separator: r = ",",
+  placeholder: e = "Add tags…",
+  editable: t = !0,
+  colorMap: s = null
+} = {}) {
+  const i = Bn(n);
+  if (s && typeof s == "object")
+    for (const o of i)
+      !o.color && Object.prototype.hasOwnProperty.call(s, o.value) && (o.color = s[o.value]);
+  return (o) => {
+    const { value: a, td: l } = o;
+    l && (l.classList.add("sg-renderer-multiselect-cell"), l._sgMultiOpts = i, l._sgMultiSep = r), t && l && !l._sgMultiEditBound && (l._sgMultiEditBound = !0, l.addEventListener("dblclick", (u) => {
+      u._sgMultiHandled || (u._sgMultiHandled = !0, u.stopPropagation(), Qr(l, o));
+    }));
+    const d = Gn(a);
+    if (!d.length)
+      return f(
+        "span",
+        { class: "sg-renderer-multiselect-placeholder" },
+        document.createTextNode(e)
+      );
+    const c = f("div", { class: "sg-renderer-multiselect" });
+    for (const u of d) {
+      const p = i.find((h) => String(h.value) === String(u)) || { label: u, color: null, icon: null };
+      c.append(Se(p, Le));
+    }
+    return c;
+  };
+}
+let _e = null;
+function Qr(n, r) {
+  Re();
+  const e = n._sgMultiOpts || [], t = n._sgMultiSep || ",", { row: s, col: i } = r, o = Gn(s && i?.field != null ? s[i.field] : null), a = new Set(o), l = f("div", { class: "sg-renderer-multiselect-popover", role: "listbox", "aria-multiselectable": "true" });
+  l.addEventListener("mousedown", (g) => g.stopPropagation());
+  function d(g) {
+    const b = a.has(String(g.value)), y = f("button", {
+      type: "button",
+      class: `sg-renderer-multiselect-option${b ? " is-selected" : ""}`,
+      role: "option",
+      "aria-selected": b ? "true" : "false"
+    });
+    return y.append(f(
+      "span",
+      { class: `sg-renderer-multiselect-check${b ? " is-on" : ""}` },
+      document.createTextNode(b ? "✓" : "")
+    )), y.append(Se(g, Le)), y.addEventListener("click", () => {
+      a.has(String(g.value)) ? a.delete(String(g.value)) : a.add(String(g.value)), l.replaceChildren(), c();
+    }), y;
+  }
+  function c() {
+    for (const g of e) l.append(d(g));
+  }
+  c();
+  function u() {
+    const { api: g } = r, b = Array.from(a), y = s && i?.field != null ? s[i.field] : null, S = Array.isArray(y) || y == null ? b : b.join(t), _ = y;
+    s && i?.field != null && (s[i.field] = S), g?.applyTransaction && g.applyTransaction({ update: [s] });
+    const v = n.closest('[data-controller~="grid"]');
+    v && v.dispatchEvent(new CustomEvent("grid:cellValueChanged", {
+      bubbles: !0,
+      detail: { rowId: s?.id ?? s?._sg_id, colId: i?.field, oldValue: _, newValue: S }
+    })), Re();
+  }
+  function p(g) {
+    g.key === "Escape" && (g.stopPropagation(), Re()), g.key === "Enter" && (g.stopPropagation(), g.preventDefault(), u());
+  }
+  function h(g) {
+    !l.contains(g.target) && !n.contains(g.target) && u();
+  }
+  document.addEventListener("keydown", p), setTimeout(() => document.addEventListener("mousedown", h), 0), document.body.appendChild(l), ne(l, n), _e = { pop: l, onKey: p, onDocClick: h };
+}
+function Re() {
+  if (!_e) return;
+  const { pop: n, onKey: r, onDocClick: e } = _e;
+  document.removeEventListener("keydown", r), document.removeEventListener("mousedown", e), n.remove(), _e = null;
+}
+x("email", gt());
+x("url", mt());
+x("phone", bt());
+x("currency", _t());
+x("percent", yt());
+x("progress-bar", Xt());
+x("star-rating", Yt());
+x("tags", Qt());
+x("country-flag", Zt());
+x("abn", Jt());
+x("avatar", en());
+x("date", vt());
+x("datetime", wt());
+x("relative-time", Ct());
+x("duration", xt());
+x("number", St());
+x("compact-number", Lt());
+x("file-size", At());
+x("boolean", Et());
+x("delta", Mt());
+x("truncate", Tt());
+x("copyable", kt());
+x("image", Nt());
+x("color-swatch", $t());
+x("sparkline", It());
+x("heatmap-cell", Pt());
+x("mask", Bt());
+x("highlight", Ht());
+x("multi-line", Gt());
+x("attachments", jt());
+x("address-au", Wt());
+x("checkbox", tn());
+x("switch", rn());
+x("markdown", on());
+x("json", an());
+x("linked-record", ln());
+x("coloured-tags", dn());
+x("time", un());
+x("diff", pn());
+x("geo", fn());
+x("qr", hn());
+x("code", gn());
+x("rating", mn());
+x("bullet", bn());
+x("donut", _n());
+x("histogram", yn());
+x("rag", vn());
+x("timeline-steps", wn());
+x("mention", Cn());
+x("expand", xn());
+x("units", Sn());
+x("ip-address", Ln());
+x("bsb", An());
+x("acn", En());
+x("tfn", Mn());
+x("medicare", Tn());
+x("audio", Rn());
+x("video", kn());
+x("reactions", Dn());
+x("comment-count", Nn());
+x("ordinal", $n());
+x("plural", In());
+x("empty", Vn());
+x("credit-card", Fn());
+x("loading-shimmer", Pn());
+x("audio-attachment", sn());
+x("select", Hn());
+x("multiselect", On());
+const Zr = {
+  email: gt,
+  url: mt,
+  phone: bt,
+  currency: _t,
+  percent: yt,
+  progressBar: Xt,
+  starRating: Yt,
+  tags: Qt,
+  countryFlag: Zt,
+  abn: Jt,
+  avatar: en,
+  statusPill: ur,
+  date: vt,
+  datetime: wt,
+  relativeTime: Ct,
+  duration: xt,
+  number: St,
+  compactNumber: Lt,
+  fileSize: At,
+  boolean: Et,
+  delta: Mt,
+  truncate: Tt,
+  copyable: kt,
+  image: Nt,
+  colorSwatch: $t,
+  sparkline: It,
+  heatmap: Pt,
+  mask: Bt,
+  highlight: Ht,
+  multiLine: Gt,
+  attachments: jt,
+  addressAu: Wt,
+  checkbox: tn,
+  switch: rn,
+  markdown: on,
+  json: an,
+  linkedRecord: ln,
+  colouredTags: dn,
+  time: un,
+  diff: pn,
+  geo: fn,
+  qr: hn,
+  code: gn,
+  rating: mn,
+  bullet: bn,
+  donut: _n,
+  histogram: yn,
+  rag: vn,
+  timelineSteps: wn,
+  mention: Cn,
+  expand: xn,
+  units: Sn,
+  ipAddress: Ln,
+  bsb: An,
+  acn: En,
+  tfn: Mn,
+  medicare: Tn,
+  audio: Rn,
+  video: kn,
+  reactions: Dn,
+  commentCount: Nn,
+  ordinal: $n,
+  plural: In,
+  empty: Vn,
+  creditCard: Fn,
+  loadingShimmer: Pn,
+  audioAttachment: sn,
+  select: Hn,
+  multiselect: On
+}, Jr = 32, it = 100, ce = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>', ei = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>', ti = /* @__PURE__ */ new Set([
   "number",
   "currency",
   "percent",
@@ -3905,14 +3987,14 @@ const Ur = {
   "compact-number",
   "file-size",
   "credit-card"
-]), Qr = /* @__PURE__ */ new Set([
+]), ni = /* @__PURE__ */ new Set([
   "color",
   "date",
   "datetime-local",
   "time",
   "month",
   "week"
-]), nt = [
+]), ot = [
   "grid:columnMoved",
   "grid:columnPinned",
   "grid:columnResized",
@@ -3925,7 +4007,7 @@ const Ur = {
   "grid:sortChanged",
   "grid:filterChanged"
 ];
-class Ve extends q {
+class He extends K {
   constructor() {
     super(...arguments);
     N(this, "_onDocMouseDown", (e) => {
@@ -4009,7 +4091,7 @@ class Ve extends q {
           preview_url: u.type?.startsWith("image/") ? p : null
         });
       }
-      i[d] = c, this.scheduleRender("cells"), M(this.element, "grid:cellValueChanged", {
+      i[d] = c, this.scheduleRender("cells"), E(this.element, "grid:cellValueChanged", {
         rowId: t.rowId,
         colId: d,
         oldValue: null,
@@ -4033,14 +4115,14 @@ class Ve extends q {
       const t = this._cellAt(e.target);
       if (!t) return;
       const s = e.metaKey || e.ctrlKey;
-      e.shiftKey && this._activeCell() ? this._extendActiveRange(t) : s ? (this._addCellRange(t), this._cellDragging = !0) : (this._setSingleCellSel(t), this._cellDragging = !0), this._cellDragMoved = !1, this._focusGrid(), this._applyCellSelHighlight(), M(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
+      e.shiftKey && this._activeCell() ? this._extendActiveRange(t) : s ? (this._addCellRange(t), this._cellDragging = !0) : (this._setSingleCellSel(t), this._cellDragging = !0), this._cellDragMoved = !1, this._focusGrid(), this._applyCellSelHighlight(), E(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
     });
     N(this, "_onCellMouseOver", (e) => {
       if (!this._cellDragging) return;
       const t = this._cellAt(e.target);
       if (!t) return;
       const s = this.state.cellSel.ranges[this.state.cellSel.activeIdx];
-      s && s.focus.rowId === t.rowId && s.focus.colId === t.colId || (this._extendActiveRange(t), this._cellDragMoved = !0, this._applyCellSelHighlight(), M(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+      s && s.focus.rowId === t.rowId && s.focus.colId === t.colId || (this._extendActiveRange(t), this._cellDragMoved = !0, this._applyCellSelHighlight(), E(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
     });
     N(this, "_onCellMouseUp", () => {
       this._cellDragging = !1, this._rowDragPending && (document.removeEventListener("mousemove", this._onRowDragMove), this._rowDrag && this._finishRowDrag(), this._rowDragPending = null);
@@ -4141,7 +4223,7 @@ class Ve extends q {
       cellSel: { ranges: [], activeIdx: -1 },
       // multi-range: [{anchor,focus}], active range
       editing: null,
-      pagination: { enabled: !1, page: 0, pageSize: tt },
+      pagination: { enabled: !1, page: 0, pageSize: it },
       scrollTop: 0,
       viewportHeight: 400,
       group: { cols: [], aggs: {}, defaultExpanded: -1 }
@@ -4165,7 +4247,7 @@ class Ve extends q {
       parentField: this.treeParentFieldValue || "parent_id",
       displayField: this.treeDisplayFieldValue || "",
       defaultExpanded: this.treeDefaultExpandedValue
-    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = cs(this), queueMicrotask(() => this._initialLoad());
+    }, this._captureInitialMarkup(), this._buildChrome(), this.element.gridApi = gs(this), queueMicrotask(() => this._initialLoad());
   }
   disconnect() {
     this.element.gridApi = null, this.element.removeEventListener("keydown", this._onGridKeydown), document.removeEventListener("mouseup", this._onCellMouseUp), document.removeEventListener("copy", this._onCopy), document.removeEventListener("mousemove", this._onRowDragMove), this._thead?.removeEventListener("contextmenu", this._onHeaderContextMenu), this._thead?.removeEventListener("click", this._onSynthHeaderClick), this._tbody?.removeEventListener("dragenter", this._onCellDragEnter), this._tbody?.removeEventListener("dragover", this._onCellDragOver), this._tbody?.removeEventListener("dragleave", this._onCellDragLeave), this._tbody?.removeEventListener("drop", this._onCellDrop), this._closeColumnMenu(), this._teardownPersistence(), this._rowDrag?.ghost?.remove(), this._rowDrag?.indicator?.remove(), this._resizeObserver?.disconnect(), this._resizeObserver = null;
@@ -4247,7 +4329,7 @@ class Ve extends q {
         console.error("[stimulus_grid] failed to fetch rowDataUrl", e), this.state.rowData = [];
       }
     else this._initialRows && this._initialRows.length > 0 && (this.state.rowData = this._initialRows);
-    this._dirty.add("data"), this._dirty.add("columns"), this._render(), this._attachBodyListeners(), this._restorePersistedState(), this._setupPersistence(), M(this.element, "grid:ready", { api: this.element.gridApi }), M(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
+    this._dirty.add("data"), this._dirty.add("columns"), this._render(), this._attachBodyListeners(), this._restorePersistedState(), this._setupPersistence(), E(this.element, "grid:ready", { api: this.element.gridApi }), E(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
   }
   // Filter UI bridge — implemented by filter_controller, but the grid is the
   // single source of truth so it brokers the popover.
@@ -4265,19 +4347,19 @@ class Ve extends q {
     this._filterPopover && (this._filterPopover.remove(), this._filterPopover = null, document.removeEventListener("mousedown", this._onDocMouseDown));
   }
   _openFallbackFilterPopover(e, t) {
-    const s = this.state.filterModel[e.field] || {}, i = Jr(e.filter), o = m("div", { class: "sg-filter-popover" }), a = m("select");
+    const s = this.state.filterModel[e.field] || {}, i = ri(e.filter), o = m("div", { class: "sg-filter-popover" }), a = m("select");
     i.forEach((y) => a.append(new Option(y.label, y.value, !1, y.value === s.type)));
     const l = e.filter === "number" ? "number" : e.filter === "date" ? "date" : "text", d = m("input", { type: l, value: s.value ?? "" }), c = m("input", { type: l, value: s.value2 ?? "", style: { display: "none" } }), u = () => {
-      const y = a.value, L = y === "inRange", b = !(y === "blank" || y === "notBlank");
-      d.style.display = b ? "" : "none", c.style.display = L ? "" : "none";
+      const y = a.value, S = y === "inRange", _ = !(y === "blank" || y === "notBlank");
+      d.style.display = _ ? "" : "none", c.style.display = S ? "" : "none";
     };
     a.addEventListener("change", u), u();
-    const p = m("div", { class: "sg-filter-actions" }), f = m("button", { type: "button" }, "Clear"), g = m("button", { type: "button", class: "primary" }, "Apply");
-    p.append(f, g), f.addEventListener("click", () => {
+    const p = m("div", { class: "sg-filter-actions" }), h = m("button", { type: "button" }, "Clear"), g = m("button", { type: "button", class: "primary" }, "Apply");
+    p.append(h, g), h.addEventListener("click", () => {
       this.setColumnFilter(e.field, null), this._closeFilterPopover();
     }), g.addEventListener("click", () => {
-      const y = a.value, L = y === "blank" || y === "notBlank" ? { filterType: e.filter, type: y } : { filterType: e.filter, type: y, value: d.value, value2: c.value || void 0 };
-      this.setColumnFilter(e.field, L), this._closeFilterPopover();
+      const y = a.value, S = y === "blank" || y === "notBlank" ? { filterType: e.filter, type: y } : { filterType: e.filter, type: y, value: d.value, value2: c.value || void 0 };
+      this.setColumnFilter(e.field, S), this._closeFilterPopover();
     }), o.append(
       m("label", {}, "Condition"),
       a,
@@ -4285,8 +4367,8 @@ class Ve extends q {
       c,
       p
     ), document.body.appendChild(o);
-    const _ = t.getBoundingClientRect();
-    o.style.left = `${_.left + window.scrollX}px`, o.style.top = `${_.bottom + window.scrollY + 2}px`, this._filterPopover = o, document.addEventListener("mousedown", this._onDocMouseDown), d.focus();
+    const b = t.getBoundingClientRect();
+    o.style.left = `${b.left + window.scrollX}px`, o.style.top = `${b.bottom + window.scrollY + 2}px`, this._filterPopover = o, document.addEventListener("mousedown", this._onDocMouseDown), d.focus();
   }
   // ----- Column registration (called by header_cell_controller) -----
   registerColumn(e, t) {
@@ -4297,7 +4379,7 @@ class Ve extends q {
     } : {}, l = { ...e, ...i, ...a, _headerEl: t };
     if (s >= 0) {
       const d = this.state.columnDefs[s];
-      if (d._headerEl === t && Zr(d, l)) return;
+      if (d._headerEl === t && si(d, l)) return;
       this.state.columnDefs[s] = l;
     } else
       this.state.columnDefs.push(l);
@@ -4310,21 +4392,21 @@ class Ve extends q {
   toggleSort(e, t = !1) {
     const s = this.state.sortModel.findIndex((o) => o.colId === e);
     let i;
-    s === -1 ? i = { colId: e, sort: "asc" } : this.state.sortModel[s].sort === "asc" ? i = { colId: e, sort: "desc" } : i = null, t ? (s >= 0 && this.state.sortModel.splice(s, 1), i && this.state.sortModel.push(i)) : this.state.sortModel = i ? [i] : [], this.scheduleRender("sort"), M(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
+    s === -1 ? i = { colId: e, sort: "asc" } : this.state.sortModel[s].sort === "asc" ? i = { colId: e, sort: "desc" } : i = null, t ? (s >= 0 && this.state.sortModel.splice(s, 1), i && this.state.sortModel.push(i)) : this.state.sortModel = i ? [i] : [], this.scheduleRender("sort"), E(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
   }
   setSortModel(e) {
-    this.state.sortModel = Array.isArray(e) ? e.slice() : [], this.scheduleRender("sort"), M(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
+    this.state.sortModel = Array.isArray(e) ? e.slice() : [], this.scheduleRender("sort"), E(this.element, "grid:sortChanged", { sortModel: this.state.sortModel });
   }
   // ----- Filter -----
   setColumnFilter(e, t) {
-    t == null ? delete this.state.filterModel[e] : this.state.filterModel[e] = t, this.state.pagination.page = 0, this.scheduleRender("filter"), M(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
+    t == null ? delete this.state.filterModel[e] : this.state.filterModel[e] = t, this.state.pagination.page = 0, this.scheduleRender("filter"), E(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
   }
   setFilterModel(e) {
-    this.state.filterModel = { ...e || {} }, this.state.pagination.page = 0, this.scheduleRender("filter"), M(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
+    this.state.filterModel = { ...e || {} }, this.state.pagination.page = 0, this.scheduleRender("filter"), E(this.element, "grid:filterChanged", { filterModel: { ...this.state.filterModel } });
   }
   setQuickFilter(e) {
     const t = e == null ? "" : String(e);
-    t !== this.state.quickFilter && (this.state.quickFilter = t, this.state.pagination.page = 0, this.scheduleRender("filter"), M(this.element, "grid:filterChanged", {
+    t !== this.state.quickFilter && (this.state.quickFilter = t, this.state.pagination.page = 0, this.scheduleRender("filter"), E(this.element, "grid:filterChanged", {
       filterModel: { ...this.state.filterModel },
       quickFilter: t
     }));
@@ -4336,13 +4418,13 @@ class Ve extends q {
   toggleRowSelection(e, t = "single") {
     if (this.rowSelectionValue === "") return;
     const s = this.state.selection;
-    this.rowSelectionValue === "single" ? (s.clear(), s.add(e)) : t === "range" && this._lastSelectedId != null ? this._selectRange(this._lastSelectedId, e) : t === "toggle" ? s.has(e) ? s.delete(e) : s.add(e) : (s.clear(), s.add(e)), this._lastSelectedId = e, this.scheduleRender("selection"), M(this.element, "grid:selectionChanged", {
+    this.rowSelectionValue === "single" ? (s.clear(), s.add(e)) : t === "range" && this._lastSelectedId != null ? this._selectRange(this._lastSelectedId, e) : t === "toggle" ? s.has(e) ? s.delete(e) : s.add(e) : (s.clear(), s.add(e)), this._lastSelectedId = e, this.scheduleRender("selection"), E(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(s)
     });
   }
   setSelected(e, t) {
-    t ? this.state.selection.add(e) : this.state.selection.delete(e), this.scheduleRender("selection"), M(this.element, "grid:selectionChanged", {
+    t ? this.state.selection.add(e) : this.state.selection.delete(e), this.scheduleRender("selection"), E(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(this.state.selection)
     });
@@ -4350,13 +4432,13 @@ class Ve extends q {
   selectAll() {
     this._displayList.filteredSorted.forEach((e) => {
       !e.__sgGroup && !e.__sgSeparator && this.state.selection.add(this._rowId(e));
-    }), this.scheduleRender("selection"), M(this.element, "grid:selectionChanged", {
+    }), this.scheduleRender("selection"), E(this.element, "grid:selectionChanged", {
       selectedRows: this.getSelectedRows(),
       selectedIds: Array.from(this.state.selection)
     });
   }
   deselectAll() {
-    this.state.selection.clear(), this.scheduleRender("selection"), M(this.element, "grid:selectionChanged", { selectedRows: [], selectedIds: [] });
+    this.state.selection.clear(), this.scheduleRender("selection"), E(this.element, "grid:selectionChanged", { selectedRows: [], selectedIds: [] });
   }
   getSelectedRows() {
     const e = this.state.selection;
@@ -4372,14 +4454,14 @@ class Ve extends q {
   // ----- Pagination -----
   goToPage(e) {
     const t = this.totalPages() - 1;
-    this.state.pagination.page = Math.max(0, Math.min(e, t)), this.scheduleRender("page"), M(this.element, "grid:paginationChanged", {
+    this.state.pagination.page = Math.max(0, Math.min(e, t)), this.scheduleRender("page"), E(this.element, "grid:paginationChanged", {
       page: this.state.pagination.page,
       pageSize: this.state.pagination.pageSize,
       totalPages: this.totalPages()
     });
   }
   setPageSize(e) {
-    this.state.pagination.pageSize = Math.max(1, e), this.state.pagination.page = 0, this.scheduleRender("page"), M(this.element, "grid:paginationChanged", {
+    this.state.pagination.pageSize = Math.max(1, e), this.state.pagination.page = 0, this.scheduleRender("page"), E(this.element, "grid:paginationChanged", {
       page: 0,
       pageSize: this.state.pagination.pageSize,
       totalPages: this.totalPages()
@@ -4393,8 +4475,8 @@ class Ve extends q {
   filteredCount() {
     if (this.state.serverSide) return this.state.serverRowCount;
     const e = Object.fromEntries(this.state.columnDefs.map((i) => [i.field, i])), t = this.state.columnDefs.filter((i) => !i.hidden && !i._isCheckbox);
-    let s = it(this.state.rowData, this.state.filterModel, e);
-    return s = ot(s, this.state.quickFilter, t), s.length;
+    let s = dt(this.state.rowData, this.state.filterModel, e);
+    return s = ct(s, this.state.quickFilter, t), s.length;
   }
   // Server-side row model: set the total row count so pagination reflects the
   // full table even though only one page is loaded client-side. No event is
@@ -4419,36 +4501,36 @@ class Ve extends q {
     let l = i;
     if (!e && a) {
       const d = a.firstElementChild, c = d?.matches?.("[data-editor-input],input,select,textarea") ? d : a.querySelector("[data-editor-input]") || a.querySelector("input,select,textarea");
-      c ? l = ei(c.value, this._colByField(s)?.type) : o !== void 0 && (l = o);
+      c ? l = ii(c.value, this._colByField(s)?.type) : o !== void 0 && (l = o);
     }
     if (this.state.editing = null, !e && l !== i) {
       const d = this.state.rowData.find((u) => this._rowId(u) === t), c = d[s];
-      d[s] = l, M(this.element, "grid:cellValueChanged", { rowId: t, colId: s, oldValue: c, newValue: l });
+      d[s] = l, E(this.element, "grid:cellValueChanged", { rowId: t, colId: s, oldValue: c, newValue: l });
     }
     this.scheduleRender("cells");
   }
   // ----- Column-level mutations from API or interactions -----
   setColumnVisible(e, t) {
     const s = this._colByField(e);
-    s && (s.hidden = !t, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, hidden: !t }, this.scheduleRender("columns"), M(this.element, "grid:columnVisible", { colId: e, visible: t }));
+    s && (s.hidden = !t, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, hidden: !t }, this.scheduleRender("columns"), E(this.element, "grid:columnVisible", { colId: e, visible: t }));
   }
   setColumnPinned(e, t) {
     const s = this._colByField(e);
     if (!s) return;
     const i = t || null;
-    s.pinned = i, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, pinned: i }, this._reorderForPinning(), this.scheduleRender("columns"), M(this.element, "grid:columnPinned", { colId: e, pinned: i });
+    s.pinned = i, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, pinned: i }, this._reorderForPinning(), this.scheduleRender("columns"), E(this.element, "grid:columnPinned", { colId: e, pinned: i });
   }
   setColumnWidth(e, t) {
     const s = this._colByField(e);
     if (!s) return;
     const i = Math.max(s.minWidth || 40, Math.min(s.maxWidth || 4e3, t));
-    s.width = i, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, width: i }, this.scheduleRender("columns"), M(this.element, "grid:columnResized", { colId: e, width: i });
+    s.width = i, this._runtimeOverrides[e] = { ...this._runtimeOverrides[e] || {}, width: i }, this.scheduleRender("columns"), E(this.element, "grid:columnResized", { colId: e, width: i });
   }
   moveColumn(e, t) {
     const s = this.state.columnDefs.findIndex((o) => o.field === e);
     if (s < 0 || s === t) return;
     const [i] = this.state.columnDefs.splice(s, 1);
-    this.state.columnDefs.splice(t, 0, i), this.scheduleRender("columns"), M(this.element, "grid:columnMoved", { colId: e, fromIndex: s, toIndex: t });
+    this.state.columnDefs.splice(t, 0, i), this.scheduleRender("columns"), E(this.element, "grid:columnMoved", { colId: e, fromIndex: s, toIndex: t });
   }
   autoSizeColumn(e) {
     const t = this._colByField(e);
@@ -4508,7 +4590,7 @@ class Ve extends q {
   }
   // ----- Data mutations -----
   setRowData(e) {
-    this.state.rowData = Array.isArray(e) ? e : [], this.state.selection.clear(), this.state.serverSide || (this.state.pagination.page = 0), this.scheduleRender("data"), M(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
+    this.state.rowData = Array.isArray(e) ? e : [], this.state.selection.clear(), this.state.serverSide || (this.state.pagination.page = 0), this.scheduleRender("data"), E(this.element, "grid:rowDataChanged", { rows: this.state.rowData });
   }
   applyTransaction(e) {
     const t = [], s = [], i = [], o = new Map(this.state.rowData.map((a) => [this._rowId(a), a]));
@@ -4521,7 +4603,7 @@ class Ve extends q {
     }), (e.add || []).forEach((a) => {
       const l = this._rowId(a);
       o.has(l) || (o.set(l, a), t.push(a));
-    }), this.state.rowData = Array.from(o.values()), this.scheduleRender("data"), M(this.element, "grid:rowDataChanged", { rows: this.state.rowData }), { added: t, updated: s, removed: i };
+    }), this.state.rowData = Array.from(o.values()), this.scheduleRender("data"), E(this.element, "grid:rowDataChanged", { rows: this.state.rowData }), { added: t, updated: s, removed: i };
   }
   setColumnDefs(e) {
     this.state.columnDefs = e.map((t) => ({ ...t })), this.scheduleRender("columns");
@@ -4549,7 +4631,7 @@ class Ve extends q {
   }
   _render() {
     const e = this._dirty;
-    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.has("group") || e.has("pivot") || e.has("tree") || e.size === 0) && (this._displayList = ls({
+    this._dirty = /* @__PURE__ */ new Set(), (e.has("data") || e.has("filter") || e.has("sort") || e.has("page") || e.has("group") || e.has("pivot") || e.has("tree") || e.size === 0) && (this._displayList = fs({
       rowData: this.state.rowData,
       columnDefs: this.state.columnDefs,
       sortModel: this.state.sortModel,
@@ -4571,7 +4653,7 @@ class Ve extends q {
   }
   _renderHeader() {
     if (!this._thead) return;
-    const e = this._visibleCols(), t = os(e, this._headerLayoutOpts());
+    const e = this._visibleCols(), t = us(e, this._headerLayoutOpts());
     t.depth > 1 ? this._renderHeaderMultiRow(e, t) : this._renderHeaderSingleRow(e), this._renderColgroup(e);
   }
   // Aggregate the options we hand to buildHeaderLayout (auto-derived pivot
@@ -4602,10 +4684,10 @@ class Ve extends q {
   _renderHeaderSingleRow(e) {
     if (this._thead.children.length > 1) {
       const p = this._thead.firstElementChild;
-      for (let f = 1; f < this._thead.children.length; f++) {
-        const g = this._thead.children[f];
-        Array.from(g.children).forEach((_) => {
-          (_.hasAttribute("data-header-cell-field-value") || _.hasAttribute("data-field")) && p.appendChild(_);
+      for (let h = 1; h < this._thead.children.length; h++) {
+        const g = this._thead.children[h];
+        Array.from(g.children).forEach((b) => {
+          (b.hasAttribute("data-header-cell-field-value") || b.hasAttribute("data-field")) && p.appendChild(b);
         });
       }
       for (; this._thead.children.length > 1; ) this._thead.lastElementChild.remove();
@@ -4615,35 +4697,35 @@ class Ve extends q {
       return this._thead.appendChild(p), p;
     })(), s = /* @__PURE__ */ new Map();
     Array.from(this._thead.querySelectorAll("th")).forEach((p) => {
-      const f = p.getAttribute("data-header-cell-field-value") || p.getAttribute("data-field");
-      f && s.set(f, p);
+      const h = p.getAttribute("data-header-cell-field-value") || p.getAttribute("data-field");
+      h && s.set(h, p);
     });
     const i = new Set(e.map((p) => p.field)), o = this.state.columnDefs.filter((p) => !i.has(p.field)), a = [...e, ...o], l = Array.from(t.children).map((p) => p.getAttribute("data-header-cell-field-value") || p.getAttribute("data-field")).filter(Boolean), d = a.map((p) => p.field);
-    if (l.length === d.length && l.every((p, f) => p === d[f]))
+    if (l.length === d.length && l.every((p, h) => p === d[h]))
       Array.from(t.children).forEach((p) => {
         p.removeAttribute("rowspan"), p.removeAttribute("colspan");
       });
     else {
       const p = [];
-      for (const f of a) {
-        let g = s.get(f.field);
+      for (const h of a) {
+        let g = s.get(h.field);
         g ? (g.removeAttribute("rowspan"), g.removeAttribute("colspan")) : g = m("th", {
-          "data-field": f.field,
+          "data-field": h.field,
           "data-synth": "true"
         }, [m("div", { class: "sg-header-content" }, [
-          m("span", { class: "sg-header-label" }, f.headerName || f.field || "")
+          m("span", { class: "sg-header-label" }, h.headerName || h.field || "")
         ])]), p.push(g);
       }
       t.replaceChildren(...p);
     }
     Array.from(t.children).forEach((p) => {
-      const f = p.getAttribute("data-header-cell-field-value") || p.getAttribute("data-field");
-      f != null && (p.style.display = i.has(f) ? "" : "none");
+      const h = p.getAttribute("data-header-cell-field-value") || p.getAttribute("data-field");
+      h != null && (p.style.display = i.has(h) ? "" : "none");
     });
     const u = this._pinOffsets();
     for (const p of e) {
-      const f = t.querySelector(`th[data-header-cell-field-value="${X(p.field)}"]`) || t.querySelector(`th[data-field="${X(p.field)}"]`);
-      f && this._applyLeafThState(f, p, u);
+      const h = t.querySelector(`th[data-header-cell-field-value="${X(p.field)}"]`) || t.querySelector(`th[data-field="${X(p.field)}"]`);
+      h && this._applyLeafThState(h, p, u);
     }
   }
   // Multi-row header: <thead> gets `layout.depth` rows of group headers
@@ -4667,18 +4749,18 @@ class Ve extends q {
           }, p.label || ""));
           continue;
         }
-        const f = p.col;
-        let g = s.get(f.field);
+        const h = p.col;
+        let g = s.get(h.field);
         if (g || (g = m("th", {
-          "data-field": f.field,
+          "data-field": h.field,
           "data-synth": "true"
         }, [m("div", { class: "sg-header-content" }, [
-          m("span", { class: "sg-header-label" }, p.label || f.headerName || f.field || "")
+          m("span", { class: "sg-header-label" }, p.label || h.headerName || h.field || "")
         ])])), p.label) {
-          const _ = g.querySelector(".sg-header-label");
-          _ && _.textContent !== p.label && (_.textContent = p.label);
+          const b = g.querySelector(".sg-header-label");
+          b && b.textContent !== p.label && (b.textContent = p.label);
         }
-        g.setAttribute("rowspan", String(p.rowspan)), g.removeAttribute("colspan"), g.style.display = "", u.appendChild(g), this._applyLeafThState(g, f, a);
+        g.setAttribute("rowspan", String(p.rowspan)), g.removeAttribute("colspan"), g.style.display = "", u.appendChild(g), this._applyLeafThState(g, h, a);
       }
       i.push(u);
     }
@@ -4704,7 +4786,7 @@ class Ve extends q {
   // identical regardless of header depth.
   _applyLeafThState(e, t, s) {
     const i = this.state.sortModel.find((o) => o.colId === t.field);
-    Oe(e, {
+    qe(e, {
       "data-sortable": t.sortable ? "true" : null,
       "data-filterable": t.filter ? "true" : null,
       "data-filter-active": this.state.filterModel[t.field] ? "true" : null,
@@ -4731,7 +4813,7 @@ class Ve extends q {
     if (e.align) return e.align;
     if (e.type === "number") return "right";
     const t = e.cellRenderer;
-    return typeof t == "string" && Yr.has(t) ? "right" : null;
+    return typeof t == "string" && ti.has(t) ? "right" : null;
   }
   _ensureHeaderChrome(e, t, s) {
     if (t._isRowNumber) {
@@ -4757,7 +4839,7 @@ class Ve extends q {
     }
     let o = i.querySelector(".sg-sort-icon");
     if (t.sortable)
-      if (o || (o = m("span", { class: "sg-sort-icon", "aria-hidden": "true" }), o.innerHTML = de, i.appendChild(o)), s && this.state.sortModel.length > 1) {
+      if (o || (o = m("span", { class: "sg-sort-icon", "aria-hidden": "true" }), o.innerHTML = ce, i.appendChild(o)), s && this.state.sortModel.length > 1) {
         let l = i.querySelector(".sg-sort-index");
         l || (l = m("span", { class: "sg-sort-index" }), i.appendChild(l)), l.textContent = String(this.state.sortModel.indexOf(s) + 1);
       } else
@@ -4768,7 +4850,7 @@ class Ve extends q {
       class: "sg-filter-icon",
       "data-action": "click->header-cell#openFilter",
       title: "Filter"
-    }), a.innerHTML = Xr, i.appendChild(a)) : a && a.remove(), t.resizable !== !1 && !e.querySelector(".sg-resize-handle") && !t._isCheckbox && e.appendChild(m("span", {
+    }), a.innerHTML = ei, i.appendChild(a)) : a && a.remove(), t.resizable !== !1 && !e.querySelector(".sg-resize-handle") && !t._isCheckbox && e.appendChild(m("span", {
       class: "sg-resize-handle",
       "data-action": "mousedown->header-cell#startResize"
     }));
@@ -4780,24 +4862,24 @@ class Ve extends q {
     const s = !this.masterDetailValue && (this.virtualValue || t.length > 200);
     let i = t, o = 0;
     if (s) {
-      const p = this._viewport?.clientHeight || 400, f = this.state.rowHeight, g = ds(this.state.scrollTop, p, f, t.length, 8);
+      const p = this._viewport?.clientHeight || 400, h = this.state.rowHeight, g = hs(this.state.scrollTop, p, h, t.length, 8);
       o = g.first, i = t.slice(g.first, g.last);
     }
     const a = /* @__PURE__ */ new Map();
     Array.from(this._tbody.children).forEach((p) => {
-      const f = p.dataset.rowId;
-      f != null && a.set(f, p);
+      const h = p.dataset.rowId;
+      h != null && a.set(h, p);
     });
     const l = document.createDocumentFragment(), d = this.state.pagination.enabled ? this.state.pagination.page * this.state.pagination.pageSize : 0;
     let c = 0;
     for (let p = 0; p < o; p++) {
-      const f = t[p];
-      f && !f.__sgGroup && !f.__sgDetail && !f.__sgSeparator && (c += 1);
+      const h = t[p];
+      h && !h.__sgGroup && !h.__sgDetail && !h.__sgSeparator && (c += 1);
     }
     const u = (p) => !p || p.__sgGroup || p.__sgDetail || p.__sgSeparator ? null : (c += 1, d + c);
     if (s) {
-      const p = this.state.rowHeight, f = o * p, g = (t.length - o - i.length) * p;
-      l.appendChild(this._spacerRow(f, e.length)), i.forEach((_) => l.appendChild(this._buildRow(_, e, a, u(_)))), l.appendChild(this._spacerRow(g, e.length));
+      const p = this.state.rowHeight, h = o * p, g = (t.length - o - i.length) * p;
+      l.appendChild(this._spacerRow(h, e.length)), i.forEach((b) => l.appendChild(this._buildRow(b, e, a, u(b)))), l.appendChild(this._spacerRow(g, e.length));
     } else
       i.forEach((p) => l.appendChild(this._buildRow(p, e, a, u(p))));
     this.pinnedBottomRowValue && this._displayList.grandTotals && !this._displayList.pivot && l.appendChild(this._buildPinnedBottomRow(e)), this._tbody.replaceChildren(l);
@@ -4821,7 +4903,7 @@ class Ve extends q {
     let a = s.get(o);
     a || (a = m("tr")), a.dataset.rowId = o, a.classList.remove("sg-spacer");
     const l = this.state.selection.has(this._rowId(e)), d = this.masterDetailValue && this._isDetailExpanded(o);
-    return Oe(a, {
+    return qe(a, {
       "data-selected": l ? "true" : null,
       "data-detail-expanded": d ? "true" : null
     }), this.masterDetailValue && a.classList.add("sg-master-row"), this._renderRow(a, e, t, i), a;
@@ -4845,8 +4927,8 @@ class Ve extends q {
     const l = (u) => u._isCheckbox || u._isRowNumber || u._isGroupCol || u._isMasterExpand, c = t.filter((u) => !l(u)).length || t.length || 1;
     for (const u of t) {
       if (l(u)) {
-        const f = m("td", { "data-col-id": u.field, class: "sg-separator-gutter" });
-        o.appendChild(f);
+        const h = m("td", { "data-col-id": u.field, class: "sg-separator-gutter" });
+        o.appendChild(h);
         continue;
       }
       const p = m("td", {
@@ -4879,61 +4961,61 @@ class Ve extends q {
   _renderRow(e, t, s, i) {
     e.innerHTML = "";
     const o = this._pinOffsets(), a = this._selKeys || { active: null, range: null }, l = String(this._rowId(t)), d = this._displayList?.treeMeta, c = d ? d.get(l) : null, u = c ? this._treeDisplayColField() : null, p = t && t.__sgSpans || null;
-    let f = 0;
+    let h = 0;
     for (let g = 0; g < s.length; g++) {
-      const _ = s[g];
-      if (f > 0) {
-        f -= 1;
+      const b = s[g];
+      if (h > 0) {
+        h -= 1;
         continue;
       }
-      const y = _._isRowNumber || _._isCheckbox || _._isGroupCol || _._isMasterExpand, L = p && !y ? Number(p[_.field]) : 0, b = Math.max(1, Math.min(L || 1, s.length - g));
-      b > 1 && (f = b - 1);
-      const w = `${l}:${_.field}`, v = m("td", {
-        "data-col-id": _.field,
-        "data-pinned": _.pinned || null,
-        "data-cell-active": a.active === w ? "true" : null,
-        "data-cell-range": a.range && a.range.has(w) ? "true" : null,
-        colspan: b > 1 ? String(b) : null
+      const y = b._isRowNumber || b._isCheckbox || b._isGroupCol || b._isMasterExpand, S = p && !y ? Number(p[b.field]) : 0, _ = Math.max(1, Math.min(S || 1, s.length - g));
+      _ > 1 && (h = _ - 1);
+      const v = `${l}:${b.field}`, w = m("td", {
+        "data-col-id": b.field,
+        "data-pinned": b.pinned || null,
+        "data-cell-active": a.active === v ? "true" : null,
+        "data-cell-range": a.range && a.range.has(v) ? "true" : null,
+        colspan: _ > 1 ? String(_) : null
       });
-      if (b > 1 && v.classList.add("sg-merged-cell"), _.pinned === "left" ? v.style.left = o.left[_.field] + "px" : _.pinned === "right" && (v.style.right = o.right[_.field] + "px"), _._isRowNumber) {
-        v.classList.add("sg-gutter-cell"), v.setAttribute("data-gutter", "true"), v.removeAttribute("data-cell-active"), v.removeAttribute("data-cell-range"), v.textContent = i != null ? String(i) : "", e.appendChild(v);
+      if (_ > 1 && w.classList.add("sg-merged-cell"), b.pinned === "left" ? w.style.left = o.left[b.field] + "px" : b.pinned === "right" && (w.style.right = o.right[b.field] + "px"), b._isRowNumber) {
+        w.classList.add("sg-gutter-cell"), w.setAttribute("data-gutter", "true"), w.removeAttribute("data-cell-active"), w.removeAttribute("data-cell-range"), w.textContent = i != null ? String(i) : "", e.appendChild(w);
         continue;
       }
-      if (_._isCheckbox) {
-        v.classList.add("sg-checkbox-cell");
+      if (b._isCheckbox) {
+        w.classList.add("sg-checkbox-cell");
         const A = m("input", { type: "checkbox" });
-        A.checked = this.state.selection.has(this._rowId(t)), v.appendChild(A), e.appendChild(v);
+        A.checked = this.state.selection.has(this._rowId(t)), w.appendChild(A), e.appendChild(w);
         continue;
       }
-      if (_._isGroupCol) {
-        v.classList.add("sg-group-leaf-cell"), v.removeAttribute("data-cell-active"), v.removeAttribute("data-cell-range"), e.appendChild(v);
+      if (b._isGroupCol) {
+        w.classList.add("sg-group-leaf-cell"), w.removeAttribute("data-cell-active"), w.removeAttribute("data-cell-range"), e.appendChild(w);
         continue;
       }
-      if (_._isMasterExpand) {
-        v.classList.add("sg-master-expand-cell"), v.setAttribute("data-master-expand", "true"), v.removeAttribute("data-cell-active"), v.removeAttribute("data-cell-range");
-        const A = this._isDetailExpanded(this._rowId(t)), D = m("span", {
+      if (b._isMasterExpand) {
+        w.classList.add("sg-master-expand-cell"), w.setAttribute("data-master-expand", "true"), w.removeAttribute("data-cell-active"), w.removeAttribute("data-cell-range");
+        const A = this._isDetailExpanded(this._rowId(t)), k = m("span", {
           class: "sg-master-expand-caret",
           "data-expanded": A ? "true" : "false",
           "aria-hidden": "true"
         });
-        D.innerHTML = de, v.appendChild(D), e.appendChild(v);
+        k.innerHTML = ce, w.appendChild(k), e.appendChild(w);
         continue;
       }
-      if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === _.field) {
-        v.setAttribute("data-editing", "true");
-        const A = this.state.editing.initialValue !== void 0 ? this.state.editing.initialValue : I(t, _), { node: D, control: C } = this._buildEditor(_, A);
-        v.appendChild(D);
-        const R = this.state.editing.initialValue !== void 0;
+      if (this.state.editing && this.state.editing.rowId === this._rowId(t) && this.state.editing.colId === b.field) {
+        w.setAttribute("data-editing", "true");
+        const A = this.state.editing.initialValue !== void 0 ? this.state.editing.initialValue : I(t, b), { node: k, control: C } = this._buildEditor(b, A);
+        w.appendChild(k);
+        const T = this.state.editing.initialValue !== void 0;
         queueMicrotask(() => {
-          if (C?.focus(), R || C?.select?.(), C?.type && Qr.has(C.type))
+          if (C?.focus(), T || C?.select?.(), C?.type && ni.has(C.type))
             try {
               C.showPicker?.();
             } catch {
             }
         });
       } else
-        this._renderCellContent(v, t, _);
-      c && _.field === u && this._decorateTreeCell(v, c), e.appendChild(v);
+        this._renderCellContent(w, t, b);
+      c && b.field === u && this._decorateTreeCell(w, c), e.appendChild(w);
     }
   }
   // Prepend an indent spacer + a chevron (when the row has children) to the
@@ -4948,7 +5030,7 @@ class Ve extends q {
         "data-expanded": t.expanded ? "true" : "false",
         "aria-hidden": "true"
       });
-      s.innerHTML = de, e.insertBefore(s, e.firstChild);
+      s.innerHTML = ce, e.insertBefore(s, e.firstChild);
     } else {
       const s = m("span", { class: "sg-tree-chevron sg-tree-chevron-leaf", "aria-hidden": "true" });
       e.insertBefore(s, e.firstChild);
@@ -4956,7 +5038,7 @@ class Ve extends q {
   }
   _renderCellContent(e, t, s) {
     if (s.cellRenderer) {
-      const i = ze(s.cellRenderer);
+      const i = Ue(s.cellRenderer);
       if (i) {
         const a = I(t, s), l = G(t, s);
         (i.dataset.bind || i.dataset.bindText !== void 0) && (i.textContent = i.dataset.bind ? String(t[i.dataset.bind] ?? "") : l), i.dataset.bindAttr && i.setAttribute(i.dataset.bindAttr, a), i.querySelectorAll("[data-bind], [data-bind-attr], [data-bind-text]").forEach((d) => {
@@ -4964,7 +5046,7 @@ class Ve extends q {
         }), e.appendChild(i);
         return;
       }
-      const o = ct(s.cellRenderer);
+      const o = ht(s.cellRenderer);
       if (typeof o == "function") {
         const a = I(t, s), l = G(t, s), d = o({ value: a, row: t, col: s, td: e, formatted: l, api: this.element.gridApi });
         if (d == null) return;
@@ -4983,7 +5065,7 @@ class Ve extends q {
     e.textContent = G(t, s);
   }
   toggleGroup(e, t = 0) {
-    this._groupExpanded.set(e, !this._isGroupExpanded(e, t)), this.scheduleRender("group"), M(this.element, "grid:groupToggled", { groupId: e, expanded: this._groupExpanded.get(e) });
+    this._groupExpanded.set(e, !this._isGroupExpanded(e, t)), this.scheduleRender("group"), E(this.element, "grid:groupToggled", { groupId: e, expanded: this._groupExpanded.get(e) });
   }
   expandAll() {
     this._groupExpanded.clear(), this.state.group.defaultExpanded = -1, this.scheduleRender("group");
@@ -4992,7 +5074,7 @@ class Ve extends q {
     this._groupExpanded.clear(), this.state.group.defaultExpanded = 0, this.scheduleRender("group");
   }
   setRowGroupColumns(e) {
-    this.state.group.cols = Array.isArray(e) ? e.slice() : [], this._groupExpanded.clear(), this.state.selection.clear(), this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("group"), M(this.element, "grid:columnRowGroupChanged", { rowGroupCols: this.state.group.cols.slice() });
+    this.state.group.cols = Array.isArray(e) ? e.slice() : [], this._groupExpanded.clear(), this.state.selection.clear(), this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("group"), E(this.element, "grid:columnRowGroupChanged", { rowGroupCols: this.state.group.cols.slice() });
   }
   addRowGroupColumn(e) {
     !e || this.state.group.cols.includes(e) || this.setRowGroupColumns([...this.state.group.cols, e]);
@@ -5004,7 +5086,7 @@ class Ve extends q {
     return this.state.group.cols.slice();
   }
   setColumnAggFunc(e, t) {
-    t == null ? delete this.state.group.aggs[e] : this.state.group.aggs[e] = t, this.scheduleRender("group"), M(this.element, "grid:columnValueChanged", { valueCols: this.getValueColumns() });
+    t == null ? delete this.state.group.aggs[e] : this.state.group.aggs[e] = t, this.scheduleRender("group"), E(this.element, "grid:columnValueChanged", { valueCols: this.getValueColumns() });
   }
   // ----- Pivot mode -----
   // Toggling pivot mode rebuilds the display list (and therefore the visible
@@ -5012,13 +5094,13 @@ class Ve extends q {
   // changes shape entirely.
   setPivotMode(e) {
     const t = !!e;
-    this.state.pivot.mode !== t && (this.state.pivot.mode = t, this.state.selection.clear(), this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("pivot"), M(this.element, "grid:pivotModeChanged", { pivot: t }));
+    this.state.pivot.mode !== t && (this.state.pivot.mode = t, this.state.selection.clear(), this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("pivot"), E(this.element, "grid:pivotModeChanged", { pivot: t }));
   }
   isPivotMode() {
     return !!this.state.pivot.mode;
   }
   setPivotColumns(e) {
-    this.state.pivot.cols = Array.isArray(e) ? e.slice() : [], this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("pivot"), M(this.element, "grid:columnPivotChanged", { pivotCols: this.state.pivot.cols.slice() });
+    this.state.pivot.cols = Array.isArray(e) ? e.slice() : [], this.clearCellSelection(), this.state.pagination.page = 0, this.scheduleRender("pivot"), E(this.element, "grid:columnPivotChanged", { pivotCols: this.state.pivot.cols.slice() });
   }
   addPivotColumn(e) {
     !e || this.state.pivot.cols.includes(e) || this.setPivotColumns([...this.state.pivot.cols, e]);
@@ -5039,7 +5121,7 @@ class Ve extends q {
     const t = {};
     for (const { field: s, aggFunc: i } of e || [])
       s && i && (t[s] = i);
-    this.state.group.aggs = t, this.scheduleRender(this.state.pivot.mode ? "pivot" : "group"), M(this.element, "grid:columnValueChanged", { valueCols: this.getValueColumns() });
+    this.state.group.aggs = t, this.scheduleRender(this.state.pivot.mode ? "pivot" : "group"), E(this.element, "grid:columnValueChanged", { valueCols: this.getValueColumns() });
   }
   addValueColumn(e, t = "sum") {
     e && this.setColumnAggFunc(e, t);
@@ -5049,7 +5131,7 @@ class Ve extends q {
   }
   // ----- Column header groups + pinned bottom row -----
   setColumnGroups(e) {
-    this.columnGroupsValue = Array.isArray(e) ? e : [], this.scheduleRender("columns"), M(this.element, "grid:columnGroupsChanged", { columnGroups: this.columnGroupsValue });
+    this.columnGroupsValue = Array.isArray(e) ? e : [], this.scheduleRender("columns"), E(this.element, "grid:columnGroupsChanged", { columnGroups: this.columnGroupsValue });
   }
   getColumnGroups() {
     return Array.isArray(this.columnGroupsValue) ? this.columnGroupsValue.slice() : [];
@@ -5106,7 +5188,7 @@ class Ve extends q {
       Array.isArray(e.columnGroups) && (this.columnGroupsValue = e.columnGroups), typeof e.pinnedBottomRow == "boolean" && (this.pinnedBottomRowValue = e.pinnedBottomRow), Array.isArray(e.sortModel) && (this.state.sortModel = e.sortModel.slice()), e.filterModel && typeof e.filterModel == "object" && (this.state.filterModel = { ...e.filterModel }), typeof e.quickFilter == "string" && (this.state.quickFilter = e.quickFilter);
       for (const t of ["columns", "group", "pivot", "sort", "filter", "data"])
         this.scheduleRender(t);
-      M(this.element, "grid:columnStateApplied", { state: e });
+      E(this.element, "grid:columnStateApplied", { state: e });
     }
   }
   _storageKey() {
@@ -5129,14 +5211,14 @@ class Ve extends q {
       clearTimeout(this._persistTimer), this._persistTimer = setTimeout(() => this._persistState(), 200);
     };
     this._persistListener = e;
-    for (const t of nt) this.element.addEventListener(t, e);
+    for (const t of ot) this.element.addEventListener(t, e);
     this._persistBeforeUnload = () => {
       this._persistTimer && (clearTimeout(this._persistTimer), this._persistState());
     }, window.addEventListener("beforeunload", this._persistBeforeUnload);
   }
   _teardownPersistence() {
     if (this._persistListener) {
-      for (const e of nt) this.element.removeEventListener(e, this._persistListener);
+      for (const e of ot) this.element.removeEventListener(e, this._persistListener);
       this._persistBeforeUnload && (window.removeEventListener("beforeunload", this._persistBeforeUnload), this._persistBeforeUnload = null), this._persistTimer && (clearTimeout(this._persistTimer), this._persistState()), this._persistListener = null;
     }
   }
@@ -5162,31 +5244,31 @@ class Ve extends q {
   }
   _renderGroupRow(e, t, s) {
     e.innerHTML = "";
-    const i = this._pinOffsets(), o = this._isGroupExpanded(t.groupId, t.level), a = (this.state.group.displayType || "singleColumn") === "singleColumn", l = !!(this.state.pivot?.mode && this._displayList?.pivot), d = t.__pivotAll === !0, c = s.filter((f) => !f._isRowNumber && !f._isCheckbox && !f._isGroupCol), u = c.some((f) => f.field === t.field) ? t.field : c[0]?.field, p = Math.max(0, t.level);
+    const i = this._pinOffsets(), o = this._isGroupExpanded(t.groupId, t.level), a = (this.state.group.displayType || "singleColumn") === "singleColumn", l = !!(this.state.pivot?.mode && this._displayList?.pivot), d = t.__pivotAll === !0, c = s.filter((h) => !h._isRowNumber && !h._isCheckbox && !h._isGroupCol), u = c.some((h) => h.field === t.field) ? t.field : c[0]?.field, p = Math.max(0, t.level);
     d && e.classList.add("sg-pivot-all-row");
-    for (const f of s) {
-      const g = m("td", { "data-col-id": f.field, "data-pinned": f.pinned || null });
-      if (f.pinned === "left" ? g.style.left = i.left[f.field] + "px" : f.pinned === "right" && (g.style.right = i.right[f.field] + "px"), f._isRowNumber || f._isCheckbox) {
-        g.classList.add(f._isRowNumber ? "sg-gutter-cell" : "sg-checkbox-cell"), e.appendChild(g);
+    for (const h of s) {
+      const g = m("td", { "data-col-id": h.field, "data-pinned": h.pinned || null });
+      if (h.pinned === "left" ? g.style.left = i.left[h.field] + "px" : h.pinned === "right" && (g.style.right = i.right[h.field] + "px"), h._isRowNumber || h._isCheckbox) {
+        g.classList.add(h._isRowNumber ? "sg-gutter-cell" : "sg-checkbox-cell"), e.appendChild(g);
         continue;
       }
-      if (l || a ? f._isGroupCol : f.field === u) {
+      if (l || a ? h._isGroupCol : h.field === u) {
         if (g.classList.add("sg-group-cell"), g.style.paddingLeft = `${8 + p * 18}px`, !d) {
           const y = m("span", {
             class: "sg-group-caret",
             "data-expanded": o ? "true" : "false",
             "aria-hidden": "true"
           });
-          y.innerHTML = de, g.appendChild(y);
+          y.innerHTML = ce, g.appendChild(y);
         }
         g.append(
           m("span", { class: "sg-group-label" }, this._groupValueLabel(t)),
           m("span", { class: "sg-group-count" }, ` (${t.count})`)
         );
-      } else if (l && f._isPivot) {
-        const y = I(t, f);
+      } else if (l && h._isPivot) {
+        const y = I(t, h);
         y != null && (g.classList.add("sg-agg-cell"), g.textContent = this._formatAggregate(y));
-      } else !f._isGroupCol && t.aggregates && t.aggregates[f.field] != null && (g.classList.add("sg-agg-cell"), g.textContent = this._formatAggregate(t.aggregates[f.field]));
+      } else !h._isGroupCol && t.aggregates && t.aggregates[h.field] != null && (g.classList.add("sg-agg-cell"), g.textContent = this._formatAggregate(t.aggregates[h.field]));
       e.appendChild(g);
     }
   }
@@ -5204,7 +5286,7 @@ class Ve extends q {
   // <template> (col.cellEditor); otherwise a type-appropriate input is built.
   _buildEditor(e, t) {
     if (e.cellEditor) {
-      const i = ze(e.cellEditor);
+      const i = Ue(e.cellEditor);
       if (i) {
         const o = i.matches?.("input,select,textarea,[data-editor-input]") ? i : i.querySelector?.("[data-editor-input]") || i.querySelector?.("input,select,textarea");
         return o && (this._seedEditorValue(o, e, t), o.addEventListener("keydown", this._onEditorKey), o.addEventListener("blur", this._onEditorBlur)), { node: i, control: o };
@@ -5282,7 +5364,7 @@ class Ve extends q {
       }
     }
     const l = a ? `${a.count}|${a.sum}|${a.avg}|${a.min}|${a.max}` : "";
-    l !== this._lastRangeAggs && (this._lastRangeAggs = l, M(this.element, "grid:rangeAggsChanged", { aggs: a }));
+    l !== this._lastRangeAggs && (this._lastRangeAggs = l, E(this.element, "grid:rangeAggsChanged", { aggs: a }));
   }
   _statusPanel(e, t, s = null) {
     const i = m("div", { class: "sg-status-panel" });
@@ -5320,7 +5402,7 @@ class Ve extends q {
     return e;
   }
   getRangeAggregates() {
-    return this.state.cellSel.ranges.length ? Qn(this._cellRangeRawValues()) : null;
+    return this.state.cellSel.ranges.length ? ns(this._cellRangeRawValues()) : null;
   }
   _showColumnMenu(e, t, s) {
     this._closeColumnMenu();
@@ -5345,7 +5427,7 @@ class Ve extends q {
     const a = o.offsetWidth || 220, l = o.offsetHeight || 280;
     o.style.left = `${Math.min(t, window.innerWidth - a - 4)}px`, o.style.top = `${Math.min(s, window.innerHeight - l - 4)}px`, this._columnMenu = o, setTimeout(() => {
       document.addEventListener("mousedown", this._onDocMouseDownColumnMenu), document.addEventListener("keydown", this._onColumnMenuKey), window.addEventListener("resize", this._closeColumnMenuBound = () => this._closeColumnMenu(), { once: !0 }), window.addEventListener("scroll", this._closeColumnMenuBound, { once: !0, capture: !0 });
-    }, 0), M(this.element, "grid:columnMenuOpened", { colId: e.field });
+    }, 0), E(this.element, "grid:columnMenuOpened", { colId: e.field });
   }
   _closeColumnMenu() {
     this._columnMenu && (this._columnMenu.remove(), this._columnMenu = null, document.removeEventListener("mousedown", this._onDocMouseDownColumnMenu), document.removeEventListener("keydown", this._onColumnMenuKey), this._closeColumnMenuBound && (window.removeEventListener("resize", this._closeColumnMenuBound), window.removeEventListener("scroll", this._closeColumnMenuBound, { capture: !0 }), this._closeColumnMenuBound = null));
@@ -5436,14 +5518,14 @@ class Ve extends q {
       }
       if (this.rowSelectionValue !== "") {
         const d = e.shiftKey ? "range" : e.metaKey || e.ctrlKey ? "toggle" : "replace";
-        this.clearCellSelection(), this.toggleRowSelection(o, d), M(this.element, "grid:rowClicked", { rowId: o, row: this.state.rowData.find((c) => this._rowId(c) === o), event: e });
+        this.clearCellSelection(), this.toggleRowSelection(o, d), E(this.element, "grid:rowClicked", { rowId: o, row: this.state.rowData.find((c) => this._rowId(c) === o), event: e });
       }
       this._cellDragMoved = !1;
       return;
     }
     if (a) {
       const d = this.state.rowData.find((u) => this._rowId(u) === o), c = a.dataset.colId;
-      M(this.element, "grid:cellClicked", { rowId: o, colId: c, value: d?.[c], event: e });
+      E(this.element, "grid:cellClicked", { rowId: o, colId: c, value: d?.[c], event: e });
     }
     if (this.cellSelectionValue) {
       if (this._cellDragMoved) {
@@ -5462,7 +5544,7 @@ class Ve extends q {
       return;
     }
     const l = e.shiftKey ? "range" : e.metaKey || e.ctrlKey || this.rowMultiSelectWithClickValue ? "toggle" : "replace";
-    this.toggleRowSelection(o, l), M(this.element, "grid:rowClicked", { rowId: o, row: this.state.rowData.find((d) => this._rowId(d) === o), event: e });
+    this.toggleRowSelection(o, l), E(this.element, "grid:rowClicked", { rowId: o, row: this.state.rowData.find((d) => this._rowId(d) === o), event: e });
   }
   // ----- Cell selection (Numbers/Sheets-style: multi-range + active cell) -----
   _cellAt(e) {
@@ -5520,7 +5602,7 @@ class Ve extends q {
     if (t.remove(), s.remove(), document.body.classList.remove("sg-row-dragging"), this._rowDrag = null, i == null || e.has(String(i))) return;
     const a = this.state.rowData, l = a.filter((u) => e.has(String(this._rowId(u)))), d = a.filter((u) => !e.has(String(this._rowId(u))));
     let c = d.findIndex((u) => this._rowId(u) === i);
-    c < 0 ? c = d.length : o || (c += 1), d.splice(c, 0, ...l), this.state.rowData = d, this.state.sortModel = [], this.scheduleRender("data"), M(this.element, "grid:rowDragEnd", {
+    c < 0 ? c = d.length : o || (c += 1), d.splice(c, 0, ...l), this.state.rowData = d, this.state.sortModel = [], this.scheduleRender("data"), E(this.element, "grid:rowDragEnd", {
       ids: l.map((u) => this._rowId(u)),
       toRowId: i,
       before: o
@@ -5625,12 +5707,12 @@ class Ve extends q {
   _moveActiveCell(e, t, s) {
     const i = this._displayList.pageRows, o = this._navCols();
     if (!i.length || !o.length) return;
-    const a = (p, f, g) => Math.max(f, Math.min(p, g)), l = this._activeCell(), d = () => i.findIndex((p) => !p.__sgGroup && !p.__sgDetail && !p.__sgSeparator);
+    const a = (p, h, g) => Math.max(h, Math.min(p, g)), l = this._activeCell(), d = () => i.findIndex((p) => !p.__sgGroup && !p.__sgDetail && !p.__sgSeparator);
     let c = l ? i.findIndex((p) => this._rowId(p) === l.rowId) : d(), u = l ? o.findIndex((p) => p.field === l.colId) : 0;
     if (c < 0 && (c = d()), !(c < 0)) {
       if (u < 0 && (u = 0), s && this.state.cellSel.ranges[this.state.cellSel.activeIdx]) {
-        const p = this.state.cellSel.ranges[this.state.cellSel.activeIdx], f = a(i.findIndex((_) => this._rowId(_) === p.focus.rowId) + e, 0, i.length - 1), g = a(o.findIndex((_) => _.field === p.focus.colId) + t, 0, o.length - 1);
-        this._extendActiveRange({ rowId: this._rowId(i[f]), colId: o[g].field });
+        const p = this.state.cellSel.ranges[this.state.cellSel.activeIdx], h = a(i.findIndex((b) => this._rowId(b) === p.focus.rowId) + e, 0, i.length - 1), g = a(o.findIndex((b) => b.field === p.focus.colId) + t, 0, o.length - 1);
+        this._extendActiveRange({ rowId: this._rowId(i[h]), colId: o[g].field });
       } else {
         let p = a(c + e, 0, i.length - 1);
         if (e !== 0) {
@@ -5641,10 +5723,10 @@ class Ve extends q {
           }
           if (!i[p] || i[p].__sgGroup || i[p].__sgDetail || i[p].__sgSeparator) return;
         }
-        const f = a(u + t, 0, o.length - 1);
-        this._setSingleCellSel({ rowId: this._rowId(i[p]), colId: o[f].field });
+        const h = a(u + t, 0, o.length - 1);
+        this._setSingleCellSel({ rowId: this._rowId(i[p]), colId: o[h].field });
       }
-      this._applyCellSelHighlight(), this._scrollActiveIntoView(), M(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
+      this._applyCellSelHighlight(), this._scrollActiveIntoView(), E(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail());
     }
   }
   _selectAllCells() {
@@ -5655,7 +5737,7 @@ class Ve extends q {
         focus: { rowId: this._rowId(e[e.length - 1]), colId: t[t.length - 1].field }
       }],
       activeIdx: 0
-    }, this._applyCellSelHighlight(), M(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
+    }, this._applyCellSelHighlight(), E(this.element, "grid:cellSelectionChanged", this.getCellSelectionDetail()));
   }
   // Clear the value of every selected, editable cell (Delete/Backspace).
   _clearSelectedCells() {
@@ -5670,7 +5752,7 @@ class Ve extends q {
               const l = s.cols[a];
               if (!l || !l.editable || l._isCheckbox || l._isRowNumber) continue;
               const d = o[l.field];
-              d === "" || d == null || (o[l.field] = "", e = !0, M(this.element, "grid:cellValueChanged", { rowId: this._rowId(o), colId: l.field, oldValue: d, newValue: "" }));
+              d === "" || d == null || (o[l.field] = "", e = !0, E(this.element, "grid:cellValueChanged", { rowId: this._rowId(o), colId: l.field, oldValue: d, newValue: "" }));
             }
         }
     }
@@ -5774,7 +5856,7 @@ class Ve extends q {
     if (this._detailExpanded.has(t)) return;
     this._detailExpanded.add(t), this.scheduleRender("cells");
     const s = this.state.rowData.find((i) => String(this._rowId(i)) === t);
-    M(this.element, "grid:detailRowExpanded", { rowId: e, masterRow: s });
+    E(this.element, "grid:detailRowExpanded", { rowId: e, masterRow: s });
   }
   collapseDetailRow(e) {
     if (!this.masterDetailValue) return;
@@ -5782,7 +5864,7 @@ class Ve extends q {
     if (!this._detailExpanded.has(t)) return;
     this._detailExpanded.delete(t), this._detailGrids.delete(t), this.scheduleRender("cells");
     const s = this.state.rowData.find((i) => String(this._rowId(i)) === t);
-    M(this.element, "grid:detailRowCollapsed", { rowId: e, masterRow: s });
+    E(this.element, "grid:detailRowCollapsed", { rowId: e, masterRow: s });
   }
   expandAllDetails() {
     if (this.masterDetailValue) {
@@ -5808,7 +5890,7 @@ class Ve extends q {
     const t = String(e), s = this._isTreeRowExpanded(t, 0);
     this._treeExpanded.set(t, !s), this.scheduleRender("tree");
     const i = this.state.rowData.find((o) => String(this._rowId(o)) === t);
-    M(this.element, s ? "grid:treeRowCollapsed" : "grid:treeRowExpanded", { rowId: e, row: i });
+    E(this.element, s ? "grid:treeRowCollapsed" : "grid:treeRowExpanded", { rowId: e, row: i });
   }
   expandTreeRow(e) {
     if (!this.state.tree?.enabled) return;
@@ -5816,7 +5898,7 @@ class Ve extends q {
     if (this._isTreeRowExpanded(t, 0)) return;
     this._treeExpanded.set(t, !0), this.scheduleRender("tree");
     const s = this.state.rowData.find((i) => String(this._rowId(i)) === t);
-    M(this.element, "grid:treeRowExpanded", { rowId: e, row: s });
+    E(this.element, "grid:treeRowExpanded", { rowId: e, row: s });
   }
   collapseTreeRow(e) {
     if (!this.state.tree?.enabled) return;
@@ -5824,7 +5906,7 @@ class Ve extends q {
     if (!this._isTreeRowExpanded(t, 0)) return;
     this._treeExpanded.set(t, !1), this.scheduleRender("tree");
     const s = this.state.rowData.find((i) => String(this._rowId(i)) === t);
-    M(this.element, "grid:treeRowCollapsed", { rowId: e, row: s });
+    E(this.element, "grid:treeRowCollapsed", { rowId: e, row: s });
   }
   expandAllTreeRows() {
     this.state.tree?.enabled && (this._treeExpanded.clear(), this.state.tree.defaultExpanded = -1, this.scheduleRender("tree"));
@@ -5837,7 +5919,7 @@ class Ve extends q {
   }
   setTreeData(e) {
     const t = !!e;
-    this.treeDataValue !== t && (this.treeDataValue = t, this.state.tree.enabled = t, t || this._treeExpanded.clear(), this.scheduleRender("tree"), M(this.element, "grid:treeDataChanged", { treeData: t }));
+    this.treeDataValue !== t && (this.treeDataValue = t, this.state.tree.enabled = t, t || this._treeExpanded.clear(), this.scheduleRender("tree"), E(this.element, "grid:treeDataChanged", { treeData: t }));
   }
   isTreeData() {
     return !!this.state.tree?.enabled;
@@ -5895,7 +5977,7 @@ class Ve extends q {
     }
     const a = e.querySelector('[data-controller~="grid"]');
     a && this._seedNestedGrid(a, t, s), queueMicrotask(() => {
-      M(this.element, "grid:detailRowMounted", {
+      E(this.element, "grid:detailRowMounted", {
         rowId: s,
         masterRow: t,
         detailEl: e,
@@ -5970,7 +6052,7 @@ class Ve extends q {
     return Number.isFinite(t) && String(t) === e ? t : e;
   }
 }
-N(Ve, "values", {
+N(He, "values", {
   rowData: { type: Array, default: [] },
   rowDataUrl: { type: String, default: "" },
   rowSelection: { type: String, default: "" },
@@ -5978,8 +6060,8 @@ N(Ve, "values", {
   rowMultiSelectWithClick: { type: Boolean, default: !1 },
   suppressRowClickSelection: { type: Boolean, default: !1 },
   pagination: { type: Boolean, default: !1 },
-  pageSize: { type: Number, default: tt },
-  rowHeight: { type: Number, default: Wr },
+  pageSize: { type: Number, default: it },
+  rowHeight: { type: Number, default: Jr },
   headerHeight: { type: Number, default: 36 },
   virtual: { type: Boolean, default: !1 },
   virtualThreshold: { type: Number, default: 200 },
@@ -6044,12 +6126,12 @@ N(Ve, "values", {
   attachmentsField: { type: String, default: "" }
   // when set, dropped files are auto-appended to row[<field>] as { name, size, type } objects (the default behaviour when no consumer calls preventDefault on the event)
 });
-function Zr(n, r) {
+function si(n, r) {
   const e = ["headerName", "type", "sortable", "filter", "editable", "width", "minWidth", "maxWidth", "pinned", "hidden", "resizable", "cellRenderer", "cellEditor", "_isCheckbox", "_isRowNumber"];
   for (const t of e) if (n[t] !== r[t]) return !1;
   return !0;
 }
-function Jr(n) {
+function ri(n) {
   return n === "number" || n === "date" ? [
     { value: "equals", label: "Equals" },
     { value: "notEqual", label: "Not equal" },
@@ -6071,7 +6153,7 @@ function Jr(n) {
     { value: "notBlank", label: "Not blank" }
   ];
 }
-function ei(n, r) {
+function ii(n, r) {
   if (r === "number") {
     const e = Number(n);
     return Number.isFinite(e) ? e : n;
@@ -6087,7 +6169,7 @@ function ei(n, r) {
 function X(n) {
   return typeof CSS < "u" && CSS.escape ? CSS.escape(String(n)) : String(n).replace(/["\\\n\r]/g, (r) => "\\" + r);
 }
-class Fe extends q {
+class Ge extends K {
   constructor() {
     super(...arguments);
     /* Single mousedown handler: distinguishes a bare click (→ sort) from a drag
@@ -6107,7 +6189,7 @@ class Fe extends q {
     });
   }
   connect() {
-    if (this.grid = us(this.element, "grid", this.application), !!this.grid) {
+    if (this.grid = ms(this.element, "grid", this.application), !!this.grid) {
       if (!this.headerNameValue) {
         const e = this.element.textContent.trim();
         e && (this.headerNameValue = e);
@@ -6151,8 +6233,8 @@ class Fe extends q {
       const c = d.clientX;
       let u = s.length;
       for (let p = 0; p < s.length; p++) {
-        const f = s[p].getBoundingClientRect();
-        if (c < f.left + f.width / 2) {
+        const h = s[p].getBoundingClientRect();
+        if (c < h.left + h.width / 2) {
           u = p;
           break;
         }
@@ -6179,7 +6261,7 @@ class Fe extends q {
     document.addEventListener("mousemove", i), document.addEventListener("mouseup", o), document.body.style.cursor = "col-resize", document.body.style.userSelect = "none";
   }
 }
-N(Fe, "values", {
+N(Ge, "values", {
   field: String,
   headerName: { type: String, default: "" },
   type: { type: String, default: "text" },
@@ -6206,19 +6288,19 @@ N(Fe, "values", {
   acceptFiles: { type: String, default: "" }
   // '' | 'true' | 'false'
 });
-class Pn extends q {
+class zn extends K {
   connect() {
   }
 }
-class Bn extends q {
+class jn extends K {
   connect() {
   }
 }
-class Hn extends q {
+class Kn extends K {
   connect() {
   }
 }
-class we extends q {
+class Ce extends K {
   constructor() {
     super(...arguments);
     N(this, "_refresh", () => {
@@ -6272,9 +6354,9 @@ class we extends q {
     Number.isFinite(t) && t > 0 && this._gridEl?.gridApi?.paginationSetPageSize(t);
   }
 }
-N(we, "outlets", ["grid"]), N(we, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
-const Me = ["sum", "avg", "count", "min", "max"], ti = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M3 3h5v18H3V3zm6.5 0h5v18h-5V3zM16 3h5v18h-5V3z"/></svg>', ni = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zM8 16h2v2H8v-2zm6 0h2v2h-2v-2z"/></svg>';
-class Gn extends q {
+N(Ce, "outlets", ["grid"]), N(Ce, "targets", ["first", "prev", "next", "last", "pageInfo", "pageSize"]);
+const ke = ["sum", "avg", "count", "min", "max"], oi = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M3 3h5v18H3V3zm6.5 0h5v18h-5V3zM16 3h5v18h-5V3z"/></svg>', ai = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zM8 16h2v2H8v-2zm6 0h2v2h-2v-2z"/></svg>';
+class qn extends K {
   connect() {
     this.grid = this.element.closest(".sg-grid"), this._activeTab = "columns", this._collapsed = !1, this._build(), this.grid?.gridApi ? this._render() : this.grid && this.grid.addEventListener("grid:ready", () => this._render(), { once: !0 }), this._gridListener = () => this._render();
     for (const r of [
@@ -6308,7 +6390,7 @@ class Gn extends q {
       class: "sg-side-panel-tab",
       "aria-pressed": "true",
       title: "Columns"
-    }), this._columnsTab.innerHTML = ti, this._columnsTab.addEventListener("click", () => this._onTabClick("columns")), r.appendChild(this._columnsTab), this.element.append(this._content, r);
+    }), this._columnsTab.innerHTML = oi, this._columnsTab.addEventListener("click", () => this._onTabClick("columns")), r.appendChild(this._columnsTab), this.element.append(this._content, r);
   }
   _onTabClick(r) {
     this._activeTab === r && !this._collapsed ? (this._collapsed = !0, this.element.classList.add("sg-side-panel-collapsed"), this._columnsTab.setAttribute("aria-pressed", "false")) : (this._collapsed = !1, this._activeTab = r, this.element.classList.remove("sg-side-panel-collapsed"), this._columnsTab.setAttribute("aria-pressed", r === "columns" ? "true" : "false"), this._render());
@@ -6353,7 +6435,7 @@ class Gn extends q {
       const l = m("li", { class: "sg-column-list-item", draggable: "true" });
       l.dataset.field = a.field;
       const d = m("span", { class: "sg-column-grip", "aria-hidden": "true" });
-      d.innerHTML = ni;
+      d.innerHTML = ai;
       const c = m("input", { type: "checkbox" });
       c.checked = !a.hidden, c.addEventListener("change", () => r.setColumnVisible(a.field, c.checked));
       const u = m("span", { class: "sg-column-list-label" }, a.headerName || a.field), p = m("span", { class: "sg-column-list-tags" });
@@ -6400,7 +6482,7 @@ class Gn extends q {
     }, e);
     return o.addEventListener("click", (a) => {
       a.stopPropagation();
-      const l = Me.indexOf(e), d = Me[(l === -1 ? 0 : l + 1) % Me.length];
+      const l = ke.indexOf(e), d = ke[(l === -1 ? 0 : l + 1) % ke.length];
       t.setColumnAggFunc(r, d);
     }), i.append(
       o,
@@ -6450,38 +6532,38 @@ class Gn extends q {
     e !== "rowGroup" && t.removeRowGroupColumn(r), e !== "pivot" && t.removePivotColumn(r), e !== "value" && t.removeValueColumn(r);
   }
 }
-function si(n) {
-  const r = n ?? jn.start();
-  return r.register("grid", Ve), r.register("header-cell", Fe), r.register("row", Pn), r.register("cell", Bn), r.register("filter", Hn), r.register("pagination", we), r.register("side-panel", Gn), r;
+function li(n) {
+  const r = n ?? Xn.start();
+  return r.register("grid", He), r.register("header-cell", Ge), r.register("row", zn), r.register("cell", jn), r.register("filter", Kn), r.register("pagination", Ce), r.register("side-panel", qn), r;
 }
-const ri = {
-  start: si,
-  GridController: Ve,
-  HeaderCellController: Fe,
-  RowController: Pn,
-  CellController: Bn,
-  FilterController: Hn,
-  PaginationController: we,
-  SidePanelController: Gn,
+const di = {
+  start: li,
+  GridController: He,
+  HeaderCellController: Ge,
+  RowController: zn,
+  CellController: jn,
+  FilterController: Kn,
+  PaginationController: Ce,
+  SidePanelController: qn,
   registerRenderer: x,
-  getRenderer: ct,
-  listRenderers: As,
-  renderers: Ur
+  getRenderer: ht,
+  listRenderers: ks,
+  renderers: Zr
 };
-typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = ri);
+typeof window < "u" && !window.__stimulusGridStarted && (window.__stimulusGridStarted = !0, window.StimulusGrid = di);
 export {
-  Bn as CellController,
-  Hn as FilterController,
-  Ve as GridController,
-  Fe as HeaderCellController,
-  we as PaginationController,
-  Pn as RowController,
-  Gn as SidePanelController,
-  ri as default,
-  ct as getRenderer,
-  As as listRenderers,
+  jn as CellController,
+  Kn as FilterController,
+  He as GridController,
+  Ge as HeaderCellController,
+  Ce as PaginationController,
+  zn as RowController,
+  qn as SidePanelController,
+  di as default,
+  ht as getRenderer,
+  ks as listRenderers,
   x as registerRenderer,
-  Ur as renderers,
-  si as start
+  Zr as renderers,
+  li as start
 };
 //# sourceMappingURL=stimulus_grid.esm.js.map

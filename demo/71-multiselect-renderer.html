@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>71 — Multiselect editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>71 — Multiselect editor</h1>
+  <p class="lede">
+    Pickable sibling to <code>tags</code> / <code>colouredTags</code>.
+    Double-click to open the picker, toggle multiple rows, then commit on
+    Enter / Escape / outside-click. Input may be an array or a CSV string;
+    the renderer preserves whichever shape the cell started with.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="180">Developer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="skills"
+              data-header-cell-cell-renderer-value="select-skills"
+              data-header-cell-width-value="360">Skills</th>
+          <th data-controller="header-cell" data-header-cell-field-value="labels"
+              data-header-cell-cell-renderer-value="select-labels"
+              data-header-cell-width-value="280">Labels</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dietary"
+              data-header-cell-cell-renderer-value="select-dietary"
+              data-header-cell-width-value="220">Dietary</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Skills + Labels store arrays; Dietary stores a CSV string. Both flows
+    work through the same renderer — open DevTools and watch
+    <code>grid:cellValueChanged</code> events.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('select-skills', renderers.multiselect({
+      options: ['Ruby', 'Rails', 'JS', 'Stimulus', 'CSS', 'Postgres', 'Redis', 'Sidekiq'],
+      colorMap: {
+        Ruby: 'red', Rails: 'red', JS: 'yellow', Stimulus: 'orange',
+        CSS: 'blue', Postgres: 'blue', Redis: 'pink', Sidekiq: 'purple',
+      },
+    }));
+
+    registerRenderer('select-labels', renderers.multiselect({
+      options: [
+        { value: 'bug',         label: 'bug',           color: 'red' },
+        { value: 'feature',     label: 'feature',       color: 'green' },
+        { value: 'docs',        label: 'docs',          color: 'gray' },
+        { value: 'good-first',  label: 'good first issue', color: 'purple' },
+        { value: 'help-wanted', label: 'help wanted',   color: 'orange' },
+      ],
+    }));
+
+    // Stores CSV — initial value is a string.
+    registerRenderer('select-dietary', renderers.multiselect({
+      options: ['Vegetarian', 'Vegan', 'GF', 'Halal', 'Kosher', 'Pescatarian'],
+    }));
+
+    const data = [
+      { id: 1, name: 'Astrid Hale',  skills: ['Ruby', 'Rails', 'CSS'],   labels: ['feature'],         dietary: 'Vegan' },
+      { id: 2, name: 'Marcus Chen',  skills: ['JS', 'Stimulus', 'CSS'],  labels: ['bug', 'good-first'], dietary: 'Vegetarian,GF' },
+      { id: 3, name: 'Priya Patel',  skills: ['Postgres', 'Redis'],      labels: ['help-wanted'],     dietary: '' },
+      { id: 4, name: 'Jamal Owens',  skills: ['Ruby', 'Sidekiq'],        labels: [],                  dietary: 'Halal' },
+      { id: 5, name: 'Lena Brooks',  skills: ['Rails', 'JS', 'CSS'],     labels: ['docs', 'feature'], dietary: 'Pescatarian' },
+      { id: 6, name: 'Tomás Vega',   skills: [],                         labels: [],                  dietary: '' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>

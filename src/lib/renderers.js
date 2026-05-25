@@ -4364,6 +4364,150 @@ function closeSelectEditor() {
   activeSelectEditor = null;
 }
 
+/* ---------- multiselect (multi-choice popover editor) ---------------
+ *
+ * Pickable sibling to `tags` / `colouredTags`. Display reuses the
+ * coloured-tags chip; popover is the same as `select` but rows toggle
+ * instead of commit-and-close. Confirm on outside-click / Escape /
+ * Enter — multiple ticks per popover open.
+ *
+ *   registerRenderer('skills', renderers.multiselect({
+ *     options: ['Ruby', 'Rails', 'JS', 'Stimulus', 'CSS', 'Postgres'],
+ *     colorMap: { Ruby: 'red', Rails: 'red', JS: 'yellow', Postgres: 'blue' },
+ *   }));
+ *
+ * Cell value is an array of option `value`s. Comma-separated strings
+ * are also accepted on input (auto-coerced to array on the way in). */
+function normaliseMultiselectValue(value) {
+  if (value == null || value === '') return [];
+  if (Array.isArray(value)) return value.map(String);
+  return String(value).split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+export function multiselect({
+  options = [],
+  separator = ',',
+  placeholder = 'Add tags…',
+  editable = true,
+  colorMap = null,
+} = {}) {
+  const opts = normaliseSelectOptions(options);
+  if (colorMap && typeof colorMap === 'object') {
+    for (const o of opts) {
+      if (!o.color && Object.prototype.hasOwnProperty.call(colorMap, o.value)) o.color = colorMap[o.value];
+    }
+  }
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-multiselect-cell');
+      td._sgMultiOpts = opts;
+      td._sgMultiSep = separator;
+    }
+
+    if (editable && td && !td._sgMultiEditBound) {
+      td._sgMultiEditBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgMultiHandled) return;
+        e._sgMultiHandled = true;
+        e.stopPropagation();
+        openMultiselectEditor(td, ctx);
+      });
+    }
+
+    const list = normaliseMultiselectValue(value);
+    if (!list.length) {
+      return h('span', { class: 'sg-renderer-multiselect-placeholder' },
+        document.createTextNode(placeholder));
+    }
+    const wrap = h('div', { class: 'sg-renderer-multiselect' });
+    for (const v of list) {
+      const opt = opts.find((o) => String(o.value) === String(v)) || { value: v, label: v, color: null, icon: null };
+      wrap.append(buildSelectPill(opt, SG_PALETTE_RE));
+    }
+    return wrap;
+  };
+}
+
+let activeMultiselectEditor = null;
+
+function openMultiselectEditor(anchor, ctx) {
+  closeMultiselectEditor();
+  const opts = anchor._sgMultiOpts || [];
+  const sep = anchor._sgMultiSep || ',';
+  const { row, col } = ctx;
+  const initial = normaliseMultiselectValue(row && col?.field != null ? row[col.field] : null);
+  const picked = new Set(initial);
+
+  const pop = h('div', { class: 'sg-renderer-multiselect-popover', role: 'listbox', 'aria-multiselectable': 'true' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function renderRow(opt) {
+    const isOn = picked.has(String(opt.value));
+    const rowEl = h('button', {
+      type: 'button',
+      class: `sg-renderer-multiselect-option${isOn ? ' is-selected' : ''}`,
+      role: 'option',
+      'aria-selected': isOn ? 'true' : 'false',
+    });
+    rowEl.append(h('span', { class: `sg-renderer-multiselect-check${isOn ? ' is-on' : ''}` },
+      document.createTextNode(isOn ? '✓' : '')));
+    rowEl.append(buildSelectPill(opt, SG_PALETTE_RE));
+    rowEl.addEventListener('click', () => {
+      if (picked.has(String(opt.value))) picked.delete(String(opt.value));
+      else picked.add(String(opt.value));
+      pop.replaceChildren();
+      build();
+    });
+    return rowEl;
+  }
+
+  function build() {
+    for (const opt of opts) pop.append(renderRow(opt));
+  }
+  build();
+
+  function commit() {
+    const { api } = ctx;
+    const next = Array.from(picked);
+    // Preserve original input shape: array stays array; CSV stays CSV.
+    const original = row && col?.field != null ? row[col.field] : null;
+    const out = Array.isArray(original) || original == null ? next : next.join(sep);
+    const oldValue = original;
+    if (row && col?.field != null) row[col.field] = out;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: out },
+    }));
+    closeMultiselectEditor();
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeMultiselectEditor(); }
+    if (e.key === 'Enter')  { e.stopPropagation(); e.preventDefault(); commit(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) commit();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeMultiselectEditor = { pop, onKey, onDocClick };
+}
+
+function closeMultiselectEditor() {
+  if (!activeMultiselectEditor) return;
+  const { pop, onKey, onDocClick } = activeMultiselectEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeMultiselectEditor = null;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -4435,6 +4579,7 @@ registerRenderer('credit-card',    creditCard());
 registerRenderer('loading-shimmer', loadingShimmer());
 registerRenderer('audio-attachment', audioAttachment());
 registerRenderer('select',           select());
+registerRenderer('multiselect',       multiselect());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -4449,5 +4594,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select,
+  select, multiselect,
 };
