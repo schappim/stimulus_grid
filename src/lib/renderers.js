@@ -9135,6 +9135,30 @@ export function testAndTag(opts = {}) {
   return complianceCard({ prefix: 'T&T', expiryLabel: 'next', ...opts });
 }
 
+// GST registration status (pairs with the existing `abn` renderer).
+// Value: 'registered' / 'not-registered' / 'pending'. Drives whether a
+// quote/invoice template shows GST line items.
+export function gstStatus() {
+  return statusPill({
+    registered: 'green', 'not-registered': 'gray', pending: 'orange',
+  }, { registered: 'check-circle', 'not-registered': 'circle', pending: 'clock' });
+}
+
+// ABN compliance status — pairs with the existing `abn` format renderer
+// to surface live ABR-lookup state. Value: 'active' / 'cancelled' /
+// 'suspended' / 'pending'.
+export function abnStatus() {
+  return statusPill({
+    active: 'green', cancelled: 'red', suspended: 'orange', pending: 'gray',
+  }, { active: 'check-circle', cancelled: 'x-circle', suspended: 'alert', pending: 'clock' });
+}
+
+// NSW Home Building Compensation Fund (icare HBCF). Mandatory cover on
+// any residential reno over $20k. Annual project-level cert.
+export function hbcfCert(opts = {}) {
+  return complianceCard({ prefix: 'HBCF', ...opts });
+}
+
 /* ---------- insurance-cert ----------------------------------------
  *
  * Insurance Certificate of Currency. Shape differs from the other
@@ -9330,6 +9354,7 @@ registerRenderer('refrigerant-licence', refrigerantLicence());
 registerRenderer('pool-safety-cert',  poolSafetyCert());
 registerRenderer('test-and-tag',      testAndTag());
 registerRenderer('insurance-cert',    insuranceCert());
+registerRenderer('gst-status',        gstStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9894,6 +9919,7 @@ wireBuiltin('refrigerant-licence', clip.json);
 wireBuiltin('pool-safety-cert', clip.json);
 wireBuiltin('test-and-tag',   clip.json);
 wireBuiltin('insurance-cert', clip.json);
+wireBuiltin('gst-status',     clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9927,4 +9953,5 @@ export const renderers = {
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
+  gstStatus, abnStatus, hbcfCert,
 };
