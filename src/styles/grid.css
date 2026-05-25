@@ -3354,3 +3354,26 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-renderer-timepicker-ok:hover { background: #1d4ed8; }
 .sg-renderer-timepicker-cancel:hover,
 .sg-renderer-timepicker-clear:hover { background: #f3f4f6; }
+
+/* ----- date-range -------------------------------------------------- */
+.sg-grid .sg-renderer-daterange-cell { cursor: pointer; }
+.sg-renderer-daterange-popover {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.sg-renderer-daterange-months {
+  display: flex;
+  gap: 8px;
+}
+.sg-renderer-daterange-popover .sg-renderer-datepicker-cal { width: 252px; }
+.sg-renderer-datepicker-day.is-in-range {
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 0;
+}

@@ -5248,6 +5248,236 @@ function closeTimePickerEditor() {
   refocusGrid(anchor);
 }
 
+/* ---------- date-range (two-calendar popover) ----------------------
+ *
+ * Display "Jun 4 – Jun 18" (or "Jun 4 – Jul 2" / "Jun 4 2026 – Jul 2 2027"
+ * when the dates span months / years). Double-click opens a dual-calendar
+ * popover: click start, click end. Stores `[startISO, endISO]`.
+ *
+ *   registerRenderer('booking', renderers.dateRange());
+ *
+ * Accepts arrays `[start, end]`, ISO strings `start/end`, or an object
+ * `{ start, end }` on the way in. */
+function normaliseDateRange(value) {
+  if (value == null || value === '') return null;
+  let start, end;
+  if (Array.isArray(value)) {
+    [start, end] = value;
+  } else if (typeof value === 'object') {
+    start = value.start || value.from;
+    end   = value.end   || value.to;
+  } else if (typeof value === 'string') {
+    const m = value.split(/\s*\/\s*|\s*[–-]\s*/);
+    [start, end] = m.length >= 2 ? m : [value, value];
+  }
+  const s = toDate(start);
+  const e = toDate(end);
+  if (!s && !e) return null;
+  return { start: s, end: e };
+}
+
+function formatDateRange(range, locale) {
+  if (!range) return '';
+  const { start, end } = range;
+  if (!start && !end) return '';
+  if (!end || (start && sameDay(start, end))) {
+    return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(start);
+  }
+  if (!start) {
+    return `… – ${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(end)}`;
+  }
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  if (sameMonth) {
+    const left  = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(start);
+    const right = new Intl.DateTimeFormat(locale, { day: 'numeric', year: 'numeric' }).format(end);
+    return `${left} – ${right}`;
+  }
+  if (sameYear) {
+    const left  = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(start);
+    const right = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(end);
+    return `${left} – ${right}`;
+  }
+  const fmt = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${fmt.format(start)} – ${fmt.format(end)}`;
+}
+
+export function dateRange({
+  locale = undefined,
+  editable = true,
+  empty = '—',
+  firstDayOfWeek = 1,
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const fdow = cfg.firstDayOfWeek ?? firstDayOfWeek;
+    const ed = cfg.editable ?? editable;
+
+    if (td) {
+      td.classList.add('sg-renderer-daterange-cell');
+      td._sgRangeFdow = fdow;
+    }
+
+    if (ed && td && !td._sgRangeBound) {
+      td._sgRangeBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgRangeHandled) return;
+        e._sgRangeHandled = true;
+        e.stopPropagation();
+        openDateRangeEditor(td, ctx);
+      });
+    }
+
+    const range = normaliseDateRange(value);
+    if (!range) return empty;
+    return h('span', { class: 'sg-renderer-daterange-value' },
+      document.createTextNode(formatDateRange(range, locale)));
+  };
+}
+
+let activeDateRangeEditor = null;
+
+function openDateRangeEditor(anchor, ctx) {
+  closeDateRangeEditor();
+  const { row, col } = ctx;
+  const initial = normaliseDateRange(row && col?.field != null ? row[col.field] : null) || { start: null, end: null };
+  let start = initial.start;
+  let end = initial.end;
+  let viewYear = (start || new Date()).getFullYear();
+  let viewMonth = (start || new Date()).getMonth();
+  const fdow = anchor._sgRangeFdow ?? 1;
+
+  const pop = h('div', { class: 'sg-renderer-daterange-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit() {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    const next = start || end
+      ? { start: start ? ymd(start) : null, end: end ? ymd(end) : null }
+      : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeDateRangeEditor();
+  }
+
+  function onPick(d) {
+    if (!start || (start && end)) {
+      start = d; end = null;
+    } else if (d < start) {
+      end = start; start = d;
+    } else {
+      end = d;
+    }
+    render();
+  }
+
+  function buildRangeCalendar(year, month) {
+    const wrap = h('div', { class: 'sg-renderer-datepicker-cal' });
+    const head = h('div', { class: 'sg-renderer-datepicker-head' });
+    const prev = h('button', { type: 'button', class: 'sg-renderer-datepicker-nav' },
+      document.createTextNode('‹'));
+    const title = h('span', { class: 'sg-renderer-datepicker-title' },
+      document.createTextNode(`${DP_MONTHS[month]} ${year}`));
+    const next = h('button', { type: 'button', class: 'sg-renderer-datepicker-nav' },
+      document.createTextNode('›'));
+    head.append(prev, title, next);
+
+    const dows = h('div', { class: 'sg-renderer-datepicker-dows' });
+    for (let i = 0; i < 7; i++) {
+      dows.append(h('span', { class: 'sg-renderer-datepicker-dow' },
+        document.createTextNode(DP_DOW[(i + fdow) % 7])));
+    }
+
+    const grid = h('div', { class: 'sg-renderer-datepicker-grid' });
+    const firstOfMonth = new Date(year, month, 1);
+    const startDow = (firstOfMonth.getDay() - fdow + 7) % 7;
+    const startD = new Date(year, month, 1 - startDow);
+    const today = new Date();
+    for (let i = 0; i < 42; i++) {
+      const cur = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate() + i);
+      const inMonth = cur.getMonth() === month;
+      const isStart = sameDay(cur, start);
+      const isEnd   = sameDay(cur, end);
+      const inRange = start && end && cur > start && cur < end;
+      const isToday = sameDay(cur, today);
+      const cls = ['sg-renderer-datepicker-day'];
+      if (!inMonth) cls.push('is-other-month');
+      if (isStart || isEnd) cls.push('is-selected');
+      if (inRange) cls.push('is-in-range');
+      if (isToday)  cls.push('is-today');
+      const btn = h('button', { type: 'button', class: cls.join(' '), title: ymd(cur) },
+        document.createTextNode(String(cur.getDate())));
+      btn.addEventListener('click', () => onPick(cur));
+      grid.append(btn);
+    }
+    wrap.append(head, dows, grid);
+    return { wrap, prev, next };
+  }
+
+  function render() {
+    pop.replaceChildren();
+    const months = h('div', { class: 'sg-renderer-daterange-months' });
+    const ny = viewMonth === 11 ? viewYear + 1 : viewYear;
+    const nm = (viewMonth + 1) % 12;
+    const left  = buildRangeCalendar(viewYear, viewMonth);
+    const right = buildRangeCalendar(ny, nm);
+    left.prev.addEventListener('click', () => {
+      if (viewMonth === 0) { viewMonth = 11; viewYear -= 1; } else viewMonth -= 1;
+      render();
+    });
+    right.next.addEventListener('click', () => {
+      if (viewMonth === 11) { viewMonth = 0; viewYear += 1; } else viewMonth += 1;
+      render();
+    });
+    // Hide the unused inner nav buttons so users don't think they paginate the
+    // already-paired panel (left's `next` and right's `prev`).
+    left.next.style.visibility = 'hidden';
+    right.prev.style.visibility = 'hidden';
+    months.append(left.wrap, right.wrap);
+    const footer = h('div', { class: 'sg-renderer-datepicker-footer' });
+    const clearBtn = h('button', { type: 'button', class: 'sg-renderer-datepicker-clear' },
+      document.createTextNode('Clear'));
+    const okBtn    = h('button', { type: 'button', class: 'sg-renderer-timepicker-ok' },
+      document.createTextNode('Set'));
+    clearBtn.addEventListener('click', () => { start = null; end = null; commit(); });
+    okBtn.addEventListener('click', commit);
+    footer.append(clearBtn, okBtn);
+    pop.append(months, footer);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeDateRangeEditor(); }
+    if (e.key === 'Enter')  { e.stopPropagation(); e.preventDefault(); commit(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeDateRangeEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  render();
+  positionPopover(pop, anchor);
+  activeDateRangeEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeDateRangeEditor() {
+  if (!activeDateRangeEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeDateRangeEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeDateRangeEditor = null;
+  refocusGrid(anchor);
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -5454,6 +5684,7 @@ registerRenderer('combobox',          combobox());
 registerRenderer('slider',            slider());
 registerRenderer('date-picker',       datePicker());
 registerRenderer('time-picker',       timePicker());
+registerRenderer('date-range',        dateRange());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -5468,5 +5699,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select, multiselect, combobox, slider, datePicker, timePicker,
+  select, multiselect, combobox, slider, datePicker, timePicker, dateRange,
 };

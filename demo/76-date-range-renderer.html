@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>76 — Date range renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>76 — Date range renderer</h1>
+  <p class="lede">
+    Display + editor for a start/end date pair. Compact formatting
+    collapses repeated month / year ("Jun 4 – 18, 2026" vs "Jun 4 – Jul
+    2, 2026" vs "Dec 4, 2025 – Jan 3, 2026"). Double-click opens a
+    two-month calendar; click start, click end. Stores
+    <code>{ start, end }</code> ISO dates.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="trip"
+              data-header-cell-width-value="240">Trip</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dates"
+              data-header-cell-cell-renderer-value="date-range"
+              data-header-cell-width-value="280">Dates</th>
+          <th data-controller="header-cell" data-header-cell-field-value="window"
+              data-header-cell-cell-renderer-value="date-range"
+              data-header-cell-width-value="240">Booking window</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Click a date in the left calendar to set the start; click a later
+    date (either calendar) to set the end. The fill bar highlights every
+    day in between.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const data = [
+      { id: 1, trip: 'Family holiday — Tasmania',  dates: ['2026-06-04', '2026-06-18'], window: { start: '2026-04-01', end: '2026-05-15' } },
+      { id: 2, trip: 'Customer offsite — Kyoto',    dates: ['2026-07-12', '2026-07-19'], window: { start: '2026-05-01', end: '2026-06-30' } },
+      { id: 3, trip: 'Conference — Berlin',         dates: ['2026-09-22', '2026-09-26'], window: { start: '2026-08-01', end: '2026-08-31' } },
+      { id: 4, trip: 'NYE trip — Sydney',           dates: ['2026-12-28', '2027-01-04'], window: null },
+      { id: 5, trip: 'Onboarding bootcamp',         dates: '2026-08-10 – 2026-08-14',    window: { start: '2026-06-20', end: '2026-07-31' } },
+      { id: 6, trip: 'Unscheduled',                 dates: null,                          window: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>
