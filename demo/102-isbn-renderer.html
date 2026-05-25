@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>102 — ISBN renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>102 — ISBN renderer</h1>
+  <p class="lede">
+    ISBN-10 (e.g. 0-306-40615-2) and ISBN-13 (978-3-16-148410-0) with
+    conventional hyphenation. Strips embedded spaces / dashes from the
+    input.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="280">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="author"
+              data-header-cell-width-value="180">Author</th>
+          <th data-controller="header-cell" data-header-cell-field-value="isbn"
+              data-header-cell-cell-renderer-value="isbn"
+              data-header-cell-width-value="200">ISBN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="published"
+              data-header-cell-width-value="100">Year</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { title: 'The Pragmatic Programmer',         author: 'D. Thomas / A. Hunt', isbn: '978-0-13-595705-9', published: 2019 },
+      { title: 'Designing Data-Intensive Applications', author: 'Martin Kleppmann',     isbn: '9781449373320',     published: 2017 },
+      { title: 'Programming Pearls',                 author: 'Jon Bentley',          isbn: '0-201-65788-0',      published: 2000 },
+      { title: 'The C Programming Language',         author: 'Kernighan / Ritchie',   isbn: '0131103628',         published: 1988 },
+      { title: 'Invalid Entry',                      author: '—',                     isbn: 'NOT-AN-ISBN',        published: null },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

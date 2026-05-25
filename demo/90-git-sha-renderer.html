@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>90 — Git SHA renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>90 — Git SHA renderer</h1>
+  <p class="lede">
+    7-character abbreviation by default. Pass <code>href: (sha) =&gt;
+    …</code> to make it a clickable link to your commit URL.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sha"
+              data-header-cell-cell-renderer-value="sha-link"
+              data-header-cell-width-value="150">SHA</th>
+          <th data-controller="header-cell" data-header-cell-field-value="message"
+              data-header-cell-width-value="360">Subject</th>
+          <th data-controller="header-cell" data-header-cell-field-value="author"
+              data-header-cell-width-value="160">Author</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="140">When</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('sha-link', renderers.gitSha({
+      length: 7,
+      href: (sha) => `https://github.com/schappim/stimulus_grid/commit/${sha}`,
+    }));
+
+    const now = Date.now();
+    const data = [
+      { sha: '5082cfb9a86c2eb4d27c44d1f2e8e1f0a3b7c9d2', message: 'feat(renderers): slider', author: 'Marcus', when: new Date(now - 3600 * 1000)        },
+      { sha: 'cf4fb11abcd1e2f3a4b5c6d7e8f9a0b1c2d3e4f5', message: 'feat(renderers): combobox', author: 'Marcus', when: new Date(now - 2 * 3600 * 1000) },
+      { sha: '88f03dafee011223344556677889aabbccddeeff', message: 'feat(rails): auto-wire',  author: 'Marcus', when: new Date(now - 4 * 3600 * 1000) },
+      { sha: '411aa43',                                  message: 'feat: multiselect',      author: 'Marcus', when: new Date(now - 6 * 3600 * 1000) },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

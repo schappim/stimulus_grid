@@ -6133,6 +6133,205 @@ export function expandToggle() {
   };
 }
 
+/* ---------- uuid (short-form + copy) -------------------------------
+ *
+ * Renders a UUID v4 (or any other 36-char form) as a monospace chip
+ * with a "first-segment…last-segment" abbreviation by default. Tooltip
+ * shows the full value; click copies it. Use `full: true` for the
+ * untruncated form.
+ *
+ *   registerRenderer('uuid', renderers.uuid({ short: true })); */
+const UUID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+
+function shortUuid(v) {
+  const s = String(v).toLowerCase();
+  if (s.length <= 13) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
+}
+
+export function uuid({ short = true, copy = true } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-uuid-cell');
+    const text = String(value);
+    const valid = UUID_RE.test(text);
+    const display = (short ? shortUuid(text) : text);
+    const wrap = h('span', {
+      class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`,
+      title: text,
+    });
+    wrap.append(h('code', { class: 'sg-renderer-uuid-mono' },
+      document.createTextNode(display)));
+    if (copy) {
+      const btn = h('button', {
+        type: 'button',
+        class: 'sg-renderer-copyable-btn',
+        title: 'Copy',
+        'aria-label': 'Copy UUID',
+      }, document.createTextNode('⧉'));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            btn.classList.add('is-copied');
+            setTimeout(() => btn.classList.remove('is-copied'), 900);
+          });
+        }
+      });
+      wrap.append(btn);
+    }
+    return wrap;
+  };
+}
+
+/* ---------- git-sha (commit hash abbreviation) ---------------------
+ *
+ * Render full or 40-char Git SHA as a 7-character short hash by default.
+ * Optional `href` builds a clickable link to the commit (e.g.
+ * `https://github.com/foo/bar/commit/{sha}`).
+ *
+ *   registerRenderer('git-sha', renderers.gitSha({
+ *     length: 7,
+ *     href: (sha) => `https://github.com/foo/bar/commit/${sha}`,
+ *   })); */
+const GIT_SHA_RE = /^[0-9a-f]{4,64}$/i;
+
+export function gitSha({ length = 7, href = null, copy = true } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-gitsha-cell');
+    const cfg = td?._sgPickerPalette;       // unused; left for symmetry
+    const text = String(value).trim();
+    const valid = GIT_SHA_RE.test(text);
+    const short = valid ? text.slice(0, length) : text;
+    const wrap = h('span', {
+      class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`,
+      title: text,
+    });
+    const inner = href
+      ? h('a', { class: 'sg-renderer-uuid-mono', href: typeof href === 'function' ? href(text) : `${href}${text}`, target: '_blank', rel: 'noopener noreferrer' })
+      : h('code', { class: 'sg-renderer-uuid-mono' });
+    inner.append(document.createTextNode(short));
+    wrap.append(inner);
+    if (copy) {
+      const btn = h('button', {
+        type: 'button',
+        class: 'sg-renderer-copyable-btn',
+        title: 'Copy',
+        'aria-label': 'Copy SHA',
+      }, document.createTextNode('⧉'));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            btn.classList.add('is-copied');
+            setTimeout(() => btn.classList.remove('is-copied'), 900);
+          });
+        }
+      });
+      wrap.append(btn);
+    }
+    return wrap;
+  };
+}
+
+/* ---------- mac-address (xx:xx:xx:xx:xx:xx) ------------------------
+ *
+ * Normalises common forms (xx-xx-xx-xx-xx-xx, xxxxxxxxxxxx, xxxx.xxxx.xxxx)
+ * to colon-separated lowercase. Looks up the OUI (first 3 octets) as the
+ * tooltip when a vendor lookup is provided.
+ *
+ *   registerRenderer('mac', renderers.macAddress()); */
+const MAC_RE = /^(?:[0-9a-f]{2}[:-]?){5}[0-9a-f]{2}$|^(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}$/i;
+
+export function macAddress({ vendorLookup = null } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-mac-cell');
+    const raw = String(value).trim();
+    const valid = MAC_RE.test(raw);
+    const hex = raw.replace(/[^0-9a-f]/gi, '').toLowerCase();
+    const formatted = hex.length === 12
+      ? `${hex.slice(0,2)}:${hex.slice(2,4)}:${hex.slice(4,6)}:${hex.slice(6,8)}:${hex.slice(8,10)}:${hex.slice(10,12)}`
+      : raw;
+    const oui = hex.slice(0, 6);
+    const vendor = typeof vendorLookup === 'function' ? vendorLookup(oui) : null;
+    return h('span', {
+      class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`,
+      title: vendor ? `${formatted} — ${vendor}` : formatted,
+    }, h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(formatted)));
+  };
+}
+
+/* ---------- license-key (XXXX-XXXX-XXXX-XXXX format) ---------------
+ *
+ * Normalise a license/serial key into uppercase groups separated by `-`.
+ * `groups: 4` default; per-cell config `{ groups, groupLen }` overrides. */
+export function licenseKey({ groups = 4, groupLen = 4, mask = false } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-license-cell');
+    const cfg = td?._sgLicCfg || {};
+    const g = cfg.groups || groups;
+    const gl = cfg.groupLen || groupLen;
+    const cleaned = String(value).replace(/[^a-z0-9]/gi, '').toUpperCase();
+    const parts = [];
+    for (let i = 0; i < cleaned.length; i += gl) parts.push(cleaned.slice(i, i + gl));
+    const text = parts.slice(0, g).join('-');
+    const displayed = mask
+      ? text.split('-').map((p, i) => i === parts.length - 1 ? p : p.replace(/./g, '•')).join('-')
+      : text;
+    return h('span', { class: 'sg-renderer-uuid', title: text },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(displayed)));
+  };
+}
+
+/* ---------- vin (Vehicle Identification Number, 17 chars) ----------
+ *
+ * Renders the 17-character VIN in three semantic blocks: WMI (1-3) +
+ * VDS (4-9) + VIS (10-17). Invalid lengths get the .is-invalid tint
+ * but still render. */
+const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+
+export function vin({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-vin-cell');
+    const text = String(value).trim().toUpperCase();
+    const valid = VIN_RE.test(text);
+    const display = valid ? `${text.slice(0,3)} ${text.slice(3,9)} ${text.slice(9)}` : text;
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: text },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
+/* ---------- isbn (10 or 13 digit book identifier) ------------------
+ *
+ * Renders an ISBN-10 (e.g. 0-306-40615-2) or ISBN-13 (e.g.
+ * 978-3-16-148410-0) with conventional hyphenation. */
+function formatIsbn13(d) {
+  if (d.length !== 13) return d;
+  return `${d.slice(0,3)}-${d.slice(3,4)}-${d.slice(4,8)}-${d.slice(8,12)}-${d.slice(12)}`;
+}
+function formatIsbn10(d) {
+  if (d.length !== 10) return d;
+  return `${d.slice(0,1)}-${d.slice(1,4)}-${d.slice(4,9)}-${d.slice(9)}`;
+}
+
+export function isbn({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-isbn-cell');
+    const text = String(value).replace(/[^\dXx]/g, '');
+    let display, valid;
+    if (text.length === 13) { display = formatIsbn13(text); valid = /^\d{13}$/.test(text); }
+    else if (text.length === 10) { display = formatIsbn10(text); valid = /^\d{9}[\dXx]$/.test(text); }
+    else { display = String(value); valid = false; }
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: String(value) },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
 /* ---------- avatar-stack (overlapping avatars + overflow counter) ---
  *
  * Linear / Jira / GitHub-style overlapping avatar pile with a `+N`
@@ -6522,6 +6721,12 @@ registerRenderer('expand-toggle',     expandToggle());
 registerRenderer('avatar-stack',      avatarStack());
 registerRenderer('presence',          presence());
 registerRenderer('assignee',          assignee());
+registerRenderer('uuid',              uuid());
+registerRenderer('git-sha',           gitSha());
+registerRenderer('mac-address',       macAddress());
+registerRenderer('license-key',       licenseKey());
+registerRenderer('vin',               vin());
+registerRenderer('isbn',              isbn());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -7090,4 +7295,5 @@ export const renderers = {
   actionButton, menu, splitButton, rowActions,
   dragHandle, rowNumber, expandToggle,
   avatarStack, presence, assignee,
+  uuid, gitSha, macAddress, licenseKey, vin, isbn,
 };

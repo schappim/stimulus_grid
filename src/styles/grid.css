@@ -3765,3 +3765,26 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-style: italic;
   font-size: 12px;
 }
+
+/* ----- uuid / git-sha / mac / license / vin / isbn ---------------- */
+.sg-grid .sg-renderer-uuid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sg-grid .sg-renderer-uuid.is-invalid { color: #b91c1c; }
+.sg-grid .sg-renderer-uuid-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #1f2937;
+  text-decoration: none;
+}
+.sg-grid a.sg-renderer-uuid-mono { color: #2563eb; }
+.sg-grid a.sg-renderer-uuid-mono:hover { text-decoration: underline; }
+.sg-grid .sg-renderer-uuid.is-invalid .sg-renderer-uuid-mono {
+  background: #fef2f2;
+  color: #b91c1c;
+}

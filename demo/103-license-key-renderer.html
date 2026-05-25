@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>103 — License key renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>103 — License key renderer</h1>
+  <p class="lede">
+    XXXX-XXXX-XXXX-XXXX style display. <code>mask: true</code> hides all
+    but the last group so support staff can quote the suffix without
+    leaking the rest of the key.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="product"
+              data-header-cell-width-value="200">Product</th>
+          <th data-controller="header-cell" data-header-cell-field-value="key"
+              data-header-cell-cell-renderer-value="license-key"
+              data-header-cell-width-value="220">Key</th>
+          <th data-controller="header-cell" data-header-cell-field-value="key_masked"
+              data-header-cell-cell-renderer-value="license-masked"
+              data-header-cell-width-value="220">Masked</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('license-masked', renderers.licenseKey({ mask: true }));
+    const data = [
+      { product: 'Studio',  key: 'A1B2C3D4E5F6G7H8',         key_masked: 'A1B2C3D4E5F6G7H8' },
+      { product: 'Pro',     key: 'XXXX-YYYY-ZZZZ-AAAA',     key_masked: 'XXXX-YYYY-ZZZZ-AAAA' },
+      { product: 'Team',    key: '1q2w-3e4r-5t6y-7u8i',     key_masked: '1q2w-3e4r-5t6y-7u8i' },
+      { product: 'Lab',     key: 'WXYZWXYZWXYZWXYZ',        key_masked: 'WXYZWXYZWXYZWXYZ' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>89 — UUID renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>89 — UUID renderer</h1>
+  <p class="lede">
+    Monospace chip with first-segment…last-segment abbreviation by
+    default; full value in the title. Click the copy icon to copy the
+    full string. Use <code>short: false</code> for the untruncated form.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="id"
+              data-header-cell-cell-renderer-value="uuid"
+              data-header-cell-width-value="180">ID</th>
+          <th data-controller="header-cell" data-header-cell-field-value="full"
+              data-header-cell-cell-renderer-value="uuid-full"
+              data-header-cell-width-value="320">Full UUID</th>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="200">Subject</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('uuid-full', renderers.uuid({ short: false }));
+    const data = [
+      { id: '6a1e5a2c-9c87-4b35-a4f5-c2c12e7a30b1', full: '6a1e5a2c-9c87-4b35-a4f5-c2c12e7a30b1', name: 'Astrid Hale' },
+      { id: 'b8e2c1f4-7d45-4d78-9c3a-44218f93cb2a', full: 'b8e2c1f4-7d45-4d78-9c3a-44218f93cb2a', name: 'Marcus Chen' },
+      { id: 'd7f1990e-5e21-4ab3-b7c1-019b3a3b2c8e', full: 'd7f1990e-5e21-4ab3-b7c1-019b3a3b2c8e', name: 'Priya Patel' },
+      { id: 'not-a-uuid', full: 'definitely-not-a-uuid', name: 'Invalid example' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
