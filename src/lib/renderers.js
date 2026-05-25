@@ -9088,6 +9088,13 @@ export function coc(opts = {}) {
   return complianceCard({ prefix: 'COC', classLabel: 'Compliance', ...opts });
 }
 
+// Queensland Building & Construction Commission licence. Up to 7-digit
+// number; `class` is the scope (Open Builder, Plumbing, Drainage, etc.).
+// Renewal is annual.
+export function qbccLicence(opts = {}) {
+  return complianceCard({ prefix: 'QBCC', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9240,6 +9247,7 @@ registerRenderer('wwcc',              wwcc());
 registerRenderer('high-risk-licence', highRiskLicence());
 registerRenderer('coes',              coes());
 registerRenderer('coc',               coc());
+registerRenderer('qbcc-licence',      qbccLicence());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9796,6 +9804,7 @@ wireBuiltin('wwcc',           clip.json);
 wireBuiltin('high-risk-licence', clip.json);
 wireBuiltin('coes',           clip.json);
 wireBuiltin('coc',            clip.json);
+wireBuiltin('qbcc-licence',   clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9826,5 +9835,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
+  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc, qbccLicence,
 };
