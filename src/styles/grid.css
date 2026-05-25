@@ -4940,6 +4940,109 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   text-transform: lowercase;
 }
 
+/* Email thread — mail-list cell shape: sender + time row, subject,
+ * one-line dim preview, optional attachment chip(s). Sits in a
+ * multi-line row (row gets .sg-has-multiline so neighbour cells
+ * vertical-align to the top). */
+.sg-grid td.sg-renderer-email-thread-cell { padding-top: 6px; padding-bottom: 6px; }
+.sg-grid .sg-renderer-email-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #1f2937;
+}
+.sg-grid .sg-renderer-email-thread-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.sg-grid .sg-renderer-email-thread-from {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.sg-grid .sg-renderer-email-thread-time {
+  color: #6b7280;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.sg-grid .sg-renderer-email-thread-subject {
+  font-weight: 500;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-email-thread-preview {
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-email-thread-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.sg-grid .sg-renderer-email-thread-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1px 6px 1px 1px;
+  max-width: 100%;
+  font-size: 11px;
+  color: #374151;
+}
+.sg-grid .sg-renderer-email-thread-attachment-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #6b7280;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 22px;
+  text-align: center;
+}
+.sg-grid .sg-renderer-email-thread-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+/* Unread — bolder sender + small blue dot before it. */
+.sg-grid .sg-renderer-email-thread.is-unread .sg-renderer-email-thread-from {
+  font-weight: 800;
+}
+.sg-grid .sg-renderer-email-thread.is-unread .sg-renderer-email-thread-from::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
 /* Strata plan — "SP 12345" identifier (+ optional unit). */
 .sg-grid .sg-renderer-strata-plan {
   display: inline-flex;

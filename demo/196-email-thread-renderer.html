@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>196 — Email thread | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>196 — Email thread</h1>
+  <p class="lede">
+    Mail-list cell — bold sender + time on the first row, subject below,
+    a dim one-line preview, and optional file chips for attachments.
+    The cell value is a <code>{ from, time, subject, preview, attachments, unread }</code>
+    object; <code>time</code> accepts a Date / ISO string (auto-formatted as
+    <code>3:19 pm</code> / <code>23 May</code>) or pre-formatted text.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="contact"
+              data-header-cell-width-value="180">Contact</th>
+          <th data-controller="header-cell" data-header-cell-field-value="thread"
+              data-header-cell-cell-renderer-value="email-thread"
+              data-header-cell-width-value="560">Latest mail</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pair with <code>relative-time</code> on a separate column if you also
+    want a "5d ago" style timestamp; this renderer's <code>time</code>
+    field is intentionally compact (matches Apple Mail / Gmail).
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const today = new Date();
+    const at = (h, m) => {
+      const d = new Date(today);
+      d.setHours(h, m, 0, 0);
+      return d.toISOString();
+    };
+    const daysAgo = (n, h = 9, m = 0) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - n);
+      d.setHours(h, m, 0, 0);
+      return d.toISOString();
+    };
+    const ROWS = [
+      {
+        id: 1,
+        contact: 'Dean Sarelius',
+        thread: {
+          from: 'Dean Sarelius',
+          time: at(15, 19),
+          subject: 'Introducing Complete AI Edge Solutions — Compulab + Hailo-8 + NX Witness',
+          preview: 'Dear Marcus, I hope this message finds you well. I am pleased to announce that we have completed the full integration…',
+          unread: true,
+        },
+      },
+      {
+        id: 2,
+        contact: 'Edtechs',
+        thread: {
+          from: 'Edtechs',
+          time: at(15, 5),
+          subject: 'Your invoice #ETS19035 from Edtechs',
+          preview: 'Edtechs Thank you for your purchase. Please see attached your tax invoice. Should you need anything further…',
+          attachments: [{ filename: 'invoice_ETS19035.pdf' }],
+          unread: true,
+        },
+      },
+      {
+        id: 3,
+        contact: 'Sarah O’Brien',
+        thread: {
+          from: { name: 'Sarah O’Brien', email: 'sarah@nullstrata.com.au' },
+          time: at(11, 42),
+          subject: 'Re: Site visit Thursday — bring the moisture meter?',
+          preview: 'No worries, I’ll be on site from 8 — just buzz the intercom for unit 12. The leak in the ceiling has been getting worse since…',
+        },
+      },
+      {
+        id: 4,
+        contact: 'Liam Hartwell',
+        thread: {
+          from: 'Liam Hartwell',
+          time: daysAgo(1, 17, 28),
+          subject: 'Quote 4421 — kitchen splashback regrout (2 Bay St)',
+          preview: 'Hi Marcus, attaching the updated quote with the materials breakdown you asked for. Happy to walk through it any time tomorrow…',
+          attachments: [
+            { filename: 'quote_4421.pdf' },
+            { filename: 'materials.xlsx' },
+          ],
+        },
+      },
+      {
+        id: 5,
+        contact: 'CGU Insurance',
+        thread: {
+          from: 'CGU Insurance',
+          time: daysAgo(2, 9, 12),
+          subject: 'Certificate of Currency — PCY-22038A renewal',
+          preview: 'Please find attached the renewed certificate for your Public Liability and Tools cover. Your policy renews on 30 November…',
+          attachments: [{ filename: 'COC_PCY-22038A.pdf' }],
+        },
+      },
+      {
+        id: 6,
+        contact: 'Strata Manager',
+        thread: {
+          from: { name: 'Bondi Strata', email: 'admin@bondistrata.com.au' },
+          time: daysAgo(4, 14, 3),
+          subject: 'Photos from yesterday’s walkthrough — unit 17',
+          preview: 'Here are the photos from the inspection of the kitchen and balcony. Committee meeting is next Wednesday — let me know if…',
+          attachments: [
+            { filename: 'IMG_3201.jpg' },
+            { filename: 'IMG_3202.jpg' },
+            { filename: 'IMG_3203.jpg' },
+          ],
+        },
+      },
+      {
+        id: 7,
+        contact: 'Toolbox Talk',
+        thread: {
+          from: 'Toolbox Talk',
+          time: daysAgo(11, 7, 30),
+          subject: 'May safety brief — working at heights refresher',
+          preview: 'Reminder: anyone working above 2m needs the harness sign-off this quarter. Booking link below; please complete by end of…',
+        },
+      },
+      {
+        id: 8,
+        contact: 'Stripe',
+        thread: {
+          from: { name: 'Stripe', email: 'receipts@stripe.com' },
+          time: daysAgo(40, 12, 0),
+          subject: 'Your receipt from Stripe',
+          preview: 'Thanks for your subscription. Your card ending 4242 was charged AUD $89.00 on 15 April 2026. View it in your dashboard…',
+        },
+      },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
