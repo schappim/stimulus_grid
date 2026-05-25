@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>166 — Progress claim | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>166 — Progress claim (milestone progress)</h1>
+  <p class="lede">
+    Milestone progress claim. "Claim 2 of 5" + thin fill bar + percent.
+    Accepts <code>{ index, total }</code> (auto-derives percent),
+    <code>{ percent }</code>, or a bare number 0–100.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="240">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="claim"
+              data-header-cell-cell-renderer-value="progress-claim"
+              data-header-cell-width-value="260">Progress claim</th>
+          <th data-controller="header-cell" data-header-cell-field-value="value"
+              data-header-cell-cell-renderer-value="currency"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="160">Value</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    StimulusGrid.registerRenderer('currency', StimulusGrid.renderers.currency({ currency: 'AUD', locale: 'en-AU' }));
+    const ROWS = [
+      { id: 1, project: 'Bondi Reno (Hale Builders)',     claim: { index: 1, total: 5 }, value: 48000 },
+      { id: 2, project: 'Vega Studio Fitout',             claim: { index: 3, total: 6 }, value: 22000 },
+      { id: 3, project: 'Coogee Holdings Tower',          claim: { index: 2, total: 8 }, value: 1200000 },
+      { id: 4, project: 'Manly Reno (Patel Renovations)', claim: { index: 5, total: 5 }, value: 35000 },
+      { id: 5, project: 'Glebe House Build',              claim: { percent: 72 }, value: 480000 },
+      { id: 6, project: 'Newtown Bakery Refit',           claim: { index: 0, total: 4 }, value: 12000 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

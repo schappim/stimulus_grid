@@ -9197,6 +9197,37 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- progress-claim ----------------------------------------
+ *
+ * Milestone progress claim. "Claim 2 of 5 · 40%" with a thin bar that
+ * fills proportionally. Value: { index, total, percent } — percent is
+ * 0-100, default = index/total * 100. */
+export function progressClaim() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = (typeof value === 'object') ? value : { percent: Number(value) };
+    const idx = +v.index || null;
+    const tot = +v.total || null;
+    let pct = v.percent != null ? Number(v.percent) : null;
+    if (pct == null && idx && tot) pct = (idx / tot) * 100;
+    if (pct != null) pct = Math.max(0, Math.min(100, pct));
+    const wrap = h('span', { class: 'sg-renderer-progress-claim' });
+    if (idx && tot) wrap.append(h('span', { class: 'sg-renderer-progress-claim-step' },
+      document.createTextNode(`Claim ${idx} of ${tot}`)));
+    if (pct != null) {
+      const bar = h('span', { class: 'sg-renderer-progress-claim-bar' });
+      bar.append(h('span', {
+        class: 'sg-renderer-progress-claim-bar-fill',
+        style: `width: ${pct.toFixed(1)}%;`,
+      }));
+      wrap.append(bar);
+      wrap.append(h('span', { class: 'sg-renderer-progress-claim-pct' },
+        document.createTextNode(`${Math.round(pct)}%`)));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- technician-slot ---------------------------------------
  *
  * Colour-coded calendar slot in a roster/dispatch grid. Same shape as
@@ -9542,6 +9573,7 @@ registerRenderer('arrival-window',    arrivalWindow());
 registerRenderer('route-stop',        routeStop());
 registerRenderer('travel-time',       travelTime());
 registerRenderer('technician-slot',   technicianSlot());
+registerRenderer('progress-claim',    progressClaim());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10114,6 +10146,7 @@ wireBuiltin('arrival-window', clip.json);
 wireBuiltin('route-stop',     clip.json);
 wireBuiltin('travel-time',    clip.json);
 wireBuiltin('technician-slot', clip.json);
+wireBuiltin('progress-claim', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10148,5 +10181,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
-  jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot,
+  jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
 };

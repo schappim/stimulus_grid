@@ -4433,6 +4433,39 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-tech-slot-label { font-weight: 500; }
 
+/* Progress claim — "Claim 2 of 5" + thin bar + percent. */
+.sg-grid .sg-renderer-progress-claim {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-progress-claim-step {
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-progress-claim-bar {
+  display: inline-block;
+  width: 80px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.sg-grid .sg-renderer-progress-claim-bar-fill {
+  display: block;
+  height: 100%;
+  background: #22c55e;
+  border-radius: inherit;
+}
+.sg-grid .sg-renderer-progress-claim-pct {
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+  font-weight: 600;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
