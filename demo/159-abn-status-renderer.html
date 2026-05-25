@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>159 — ABN status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>159 — ABN compliance status</h1>
+  <p class="lede">
+    The live state of an ABN from an ABR lookup. Pairs with the existing
+    <code>abn</code> format renderer. Values:
+    <code>active</code> / <code>cancelled</code> / <code>suspended</code> /
+    <code>pending</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="entity"
+              data-header-cell-width-value="220">Entity</th>
+          <th data-controller="header-cell" data-header-cell-field-value="abn"
+              data-header-cell-cell-renderer-value="abn"
+              data-header-cell-width-value="180">ABN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="abn-status"
+              data-header-cell-width-value="200">ABR status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, entity: 'Vega Studio Pty Ltd', abn: '53004085616', status: 'active' },
+      { id: 2, entity: 'Old Trading Name',     abn: '49093669660', status: 'cancelled' },
+      { id: 3, entity: 'Marcus Schappi',       abn: '11223445678', status: 'active' },
+      { id: 4, entity: 'NewCo Pty Ltd',        abn: '88800077711', status: 'pending' },
+      { id: 5, entity: 'Acme Holdings',        abn: '12345678901', status: 'suspended' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

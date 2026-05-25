@@ -9355,6 +9355,7 @@ registerRenderer('pool-safety-cert',  poolSafetyCert());
 registerRenderer('test-and-tag',      testAndTag());
 registerRenderer('insurance-cert',    insuranceCert());
 registerRenderer('gst-status',        gstStatus());
+registerRenderer('abn-status',        abnStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9920,6 +9921,7 @@ wireBuiltin('pool-safety-cert', clip.json);
 wireBuiltin('test-and-tag',   clip.json);
 wireBuiltin('insurance-cert', clip.json);
 wireBuiltin('gst-status',     clip.text);
+wireBuiltin('abn-status',     clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
