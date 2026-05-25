@@ -9139,18 +9139,20 @@ export function testAndTag(opts = {}) {
 // Value: 'registered' / 'not-registered' / 'pending'. Drives whether a
 // quote/invoice template shows GST line items.
 export function gstStatus() {
-  return statusPill({
+  return editablePill({
     registered: 'green', 'not-registered': 'gray', pending: 'orange',
-  }, { registered: 'check-circle', 'not-registered': 'circle', pending: 'clock' });
+  }, { registered: 'check-circle', 'not-registered': 'circle', pending: 'clock' },
+  { title: 'GST status' });
 }
 
 // ABN compliance status — pairs with the existing `abn` format renderer
 // to surface live ABR-lookup state. Value: 'active' / 'cancelled' /
 // 'suspended' / 'pending'.
 export function abnStatus() {
-  return statusPill({
+  return editablePill({
     active: 'green', cancelled: 'red', suspended: 'orange', pending: 'gray',
-  }, { active: 'check-circle', cancelled: 'x-circle', suspended: 'alert', pending: 'clock' });
+  }, { active: 'check-circle', cancelled: 'x-circle', suspended: 'alert', pending: 'clock' },
+  { title: 'ABN status' });
 }
 
 // NSW Home Building Compensation Fund (icare HBCF). Mandatory cover on
@@ -9169,7 +9171,7 @@ export function hbcfCert(opts = {}) {
 //   quoted → scheduled → dispatched → on-site → completed → invoiced → paid
 // plus off-path states: on-hold / cancelled / no-show.
 export function jobStatus() {
-  return statusPill({
+  return editablePill({
     quoted: 'gray', scheduled: 'blue', dispatched: 'indigo', 'on-site': 'purple',
     completed: 'green', invoiced: 'orange', paid: 'green',
     'on-hold': 'yellow', cancelled: 'red', 'no-show': 'red',
@@ -9177,7 +9179,7 @@ export function jobStatus() {
     quoted: 'circle', scheduled: 'clock', dispatched: 'truck', 'on-site': 'dot',
     completed: 'check-circle', invoiced: 'cart', paid: 'check-circle',
     'on-hold': 'clock', cancelled: 'x-circle', 'no-show': 'alert',
-  });
+  }, { title: 'Job status' });
 }
 
 /* ---------- arrival-window ----------------------------------------
@@ -9206,25 +9208,25 @@ export function jobStatus() {
 // Safe Work Method Statement status. Required for every HRCW activity.
 //   value: 'signed' | 'pending' | 'expired' | 'missing' | 'not-required'
 export function swmsStatus() {
-  return statusPill({
+  return editablePill({
     signed: 'green', pending: 'orange', expired: 'red',
     missing: 'red', 'not-required': 'gray',
   }, {
     signed: 'check-circle', pending: 'clock', expired: 'alert',
     missing: 'x-circle', 'not-required': 'circle',
-  });
+  }, { title: 'SWMS status' });
 }
 
 // Job Safety Analysis state — pre-task hazard walkthrough record.
 //   value: 'completed' | 'in-progress' | 'open' | 'approved' | 'not-required'
 export function jsaStatus() {
-  return statusPill({
+  return editablePill({
     completed: 'green', approved: 'green', 'in-progress': 'blue',
     open: 'orange', 'not-required': 'gray',
   }, {
     completed: 'check-circle', approved: 'check-circle', 'in-progress': 'clock',
     open: 'alert', 'not-required': 'circle',
-  });
+  }, { title: 'JSA status' });
 }
 
 /* ---------- AU FSM people / trades renderers ----------------------
@@ -9248,11 +9250,11 @@ export function jsaStatus() {
 //   value: 'residential' | 'commercial' | 'strata' | 'real-estate'
 //        | 'insurance' | 'builder' | 'government' | 'body-corp'
 export function customerType() {
-  return statusPill({
+  return editablePill({
     residential: 'blue', commercial: 'indigo', strata: 'purple',
     'real-estate': 'orange', insurance: 'pink', builder: 'gray',
     government: 'green', 'body-corp': 'purple',
-  });
+  }, null, { title: 'Customer type' });
 }
 
 /* ---------- suburb-postcode-au ------------------------------------
@@ -9263,8 +9265,43 @@ export function customerType() {
  *
  *   value: { suburb, state, postcode }
  *        | 'Bondi, NSW 2026'                       string passes through */
-export function suburbPostcodeAu() {
-  return ({ value }) => {
+export function suburbPostcodeAu({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'suburb-postcode-au', () => openCompositeEditor(td, ctx, {
+        title: 'Locality (AU)',
+        prior: value,
+        fields: [
+          { name: 'suburb',   label: 'Suburb',   type: 'text', span: 2, placeholder: 'Bondi' },
+          { name: 'state',    label: 'State',    type: 'select',
+            options: AU_STATES.map((s) => ({ value: s, label: s })) },
+          { name: 'postcode', label: 'Postcode', type: 'text', mono: true,
+            placeholder: '2026', pattern: '\\d{4}', maxLength: 4 },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') {
+            // Best-effort parse "BONDI NSW 2026" → fields.
+            const m = v.match(/^(.*?)\s+(NSW|VIC|QLD|SA|WA|TAS|NT|ACT)\s+(\d{4})$/i);
+            if (m) return { suburb: m[1].trim(), state: m[2].toUpperCase(), postcode: m[3] };
+            return { suburb: v, state: '', postcode: '' };
+          }
+          if (v && typeof v === 'object') return {
+            suburb: v.suburb || '', state: (v.state || '').toUpperCase(),
+            postcode: v.postcode == null ? '' : String(v.postcode),
+          };
+          return { suburb: '', state: '', postcode: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.suburb && !raw.state && !raw.postcode) return null;
+          return {
+            suburb: raw.suburb.trim(),
+            state: raw.state,
+            postcode: raw.postcode.trim(),
+          };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') return h('span', { class: 'sg-renderer-suburb-postcode-au' },
       document.createTextNode(value));
@@ -9296,13 +9333,13 @@ export function suburbPostcodeAu() {
  *   value: 'metro' | 'regional' | 'remote' | 'very-remote'
  *        | 'outer-regional' | 'inner-regional' */
 export function regionClassifier() {
-  return statusPill({
+  return editablePill({
     metro: 'blue', 'inner-regional': 'green', regional: 'green',
     'outer-regional': 'yellow', remote: 'orange', 'very-remote': 'red',
   }, {
     metro: 'dot', 'inner-regional': 'dot', regional: 'circle',
     'outer-regional': 'circle', remote: 'half-circle', 'very-remote': 'alert',
-  });
+  }, { title: 'Region' });
 }
 
 /* ---------- council-lga -------------------------------------------
@@ -9312,8 +9349,32 @@ export function regionClassifier() {
  *
  *   value: 'Waverley'                              shorthand
  *        | { name: 'Waverley', state: 'NSW' }      full */
-export function councilLga() {
-  return ({ value }) => {
+export function councilLga({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'council-lga', () => openCompositeEditor(td, ctx, {
+        title: 'Council LGA',
+        prior: value,
+        fields: [
+          { name: 'name',  label: 'Council', type: 'text', placeholder: 'Waverley' },
+          { name: 'state', label: 'State',   type: 'select',
+            options: AU_STATES.map((s) => ({ value: s, label: s })) },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { name: v, state: '' };
+          if (v && typeof v === 'object') return {
+            name: v.name || '', state: (v.state || '').toUpperCase(),
+          };
+          return { name: '', state: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.name && !raw.state) return null;
+          if (raw.state) return { name: raw.name.trim(), state: raw.state };
+          return raw.name.trim();
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = typeof value === 'object' ? value : { name: String(value) };
     const wrap = h('span', { class: 'sg-renderer-council-lga' });
@@ -9335,8 +9396,39 @@ export function councilLga() {
  *   { lot, sp }                  → Strata Plan
  *   { lot, plan, planType }      → generic / other state schemes
  *   'Lot 12 DP 456789'           → string passes through */
-export function lotPlan() {
-  return ({ value }) => {
+export function lotPlan({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'lot-plan', () => openCompositeEditor(td, ctx, {
+        title: 'Lot plan',
+        prior: value,
+        fields: [
+          { name: 'lot',      label: 'Lot',      type: 'text', placeholder: '12' },
+          { name: 'planType', label: 'Plan type', type: 'select',
+            options: ['DP', 'SP', 'CP', 'RP'].map((k) => ({ value: k, label: k })) },
+          { name: 'plan',     label: 'Plan #',    type: 'text', mono: true, span: 2,
+            placeholder: '456789' },
+        ],
+        toEditState: (v) => {
+          if (!v || typeof v === 'string') return { lot: '', planType: 'DP', plan: typeof v === 'string' ? v : '' };
+          const pt = v.dp ? 'DP' : v.sp ? 'SP' : (v.planType || 'DP');
+          const p  = v.dp ?? v.sp ?? v.plan ?? '';
+          return { lot: v.lot == null ? '' : String(v.lot), planType: pt, plan: p == null ? '' : String(p) };
+        },
+        fromEditState: (raw) => {
+          if (!raw.lot && !raw.plan) return null;
+          const next = {};
+          if (raw.lot) next.lot = raw.lot.trim();
+          if (raw.plan) {
+            if (raw.planType === 'DP')      next.dp = raw.plan.trim();
+            else if (raw.planType === 'SP') next.sp = raw.plan.trim();
+            else { next.plan = raw.plan.trim(); next.planType = raw.planType || 'DP'; }
+          }
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') return h('span', { class: 'sg-renderer-lot-plan' },
       document.createTextNode(value));
@@ -9360,8 +9452,32 @@ export function lotPlan() {
 // AU strata-plan identifier — "SP 12345" formatting. Strata plans are
 // the cadastral document number used to identify a strata-titled
 // development. Value: number / string / { number, unit? }.
-export function strataPlan() {
-  return ({ value }) => {
+export function strataPlan({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'strata-plan', () => openCompositeEditor(td, ctx, {
+        title: 'Strata plan',
+        prior: value,
+        fields: [
+          { name: 'number', label: 'SP number', type: 'text', mono: true, placeholder: '12345' },
+          { name: 'unit',   label: 'Unit (opt)', type: 'text', placeholder: '14B' },
+        ],
+        toEditState: (v) => {
+          if (v == null) return { number: '', unit: '' };
+          if (typeof v === 'object') return {
+            number: v.number == null ? '' : String(v.number),
+            unit:   v.unit == null   ? '' : String(v.unit),
+          };
+          return { number: String(v).replace(/[^\d]/g, ''), unit: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.number && !raw.unit) return null;
+          if (!raw.unit) return raw.number.trim();
+          return { number: raw.number.trim(), unit: raw.unit.trim() };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let number, unit = null;
     if (typeof value === 'object') { number = value.number; unit = value.unit; }
@@ -9384,8 +9500,20 @@ export function strataPlan() {
  * Odometer reading — pretty-formatted number with the "km" unit
  * suffix (set `unit: 'mi'` to override). Whole numbers only on the
  * grid; fractional km dropped. */
-export function odometer({ unit = 'km', locale = 'en-AU' } = {}) {
-  return ({ value }) => {
+export function odometer({ unit = 'km', locale = 'en-AU', editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'odometer', () => openCompositeEditor(td, ctx, {
+        title: `Odometer (${unit})`,
+        prior: value,
+        fields: [
+          { name: 'reading', label: `Reading (${unit})`, type: 'number', min: 0, step: 1, span: 2 },
+        ],
+        toEditState: (v) => ({ reading: v == null ? '' : v }),
+        fromEditState: (raw) => raw.reading == null ? null : +raw.reading,
+      }));
+    }
     if (isBlank(value)) return '';
     const n = Number(value);
     if (!Number.isFinite(n)) return String(value);
@@ -9414,9 +9542,35 @@ const FUEL_CARD_BADGES = {
   fleetcard:{ bg: '#475569', fg: '#ffffff', short: 'Fleetcard' },
   motorpass:{ bg: '#0f172a', fg: '#ffffff', short: 'Motorpass' },
 };
-export function fuelCard() {
-  return ({ value, td }) => {
+export function fuelCard({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
     if (td) td.classList.add('sg-renderer-fuel-card-cell');
+    if (td && editable) {
+      bindDblClickEditor(td, 'fuel-card', () => openCompositeEditor(td, ctx, {
+        title: 'Fuel card',
+        prior: value,
+        fields: [
+          { name: 'provider', label: 'Provider', type: 'select',
+            options: Object.keys(FUEL_CARD_BADGES).map((k) =>
+              ({ value: FUEL_CARD_BADGES[k].short, label: FUEL_CARD_BADGES[k].short })) },
+          { name: 'number', label: 'Card #', type: 'text', mono: true,
+            placeholder: '7081 •••• 4421' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { provider: '', number: v };
+          if (v && typeof v === 'object') return {
+            provider: v.provider || '', number: v.number || '',
+          };
+          return { provider: '', number: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.provider && !raw.number) return null;
+          if (!raw.provider) return raw.number.trim();
+          return { provider: raw.provider, number: raw.number.trim() };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = typeof value === 'object' ? value : { number: String(value) };
     const wrap = h('span', { class: 'sg-renderer-fuel-card' });
@@ -9443,8 +9597,35 @@ export function fuelCard() {
  * by whichever is closer (or already over).
  *
  *   value: { currentKm, dueKm, dueDate } */
-export function serviceDue() {
-  return ({ value }) => {
+export function serviceDue({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'service-due', () => openCompositeEditor(td, ctx, {
+        title: 'Service due',
+        prior: value,
+        fields: [
+          { name: 'currentKm', label: 'Current km', type: 'number', min: 0, step: 1 },
+          { name: 'dueKm',     label: 'Due at km',  type: 'number', min: 0, step: 1 },
+          { name: 'dueDate',   label: 'Due by date', type: 'date', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (v && typeof v === 'object') return {
+            currentKm: v.currentKm ?? '', dueKm: v.dueKm ?? '',
+            dueDate: v.dueDate ? String(v.dueDate).slice(0, 10) : '',
+          };
+          return { currentKm: '', dueKm: '', dueDate: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.currentKm == null && raw.dueKm == null && !raw.dueDate) return null;
+          const next = {};
+          if (raw.currentKm != null) next.currentKm = +raw.currentKm;
+          if (raw.dueKm != null)     next.dueKm     = +raw.dueKm;
+          if (raw.dueDate)           next.dueDate   = raw.dueDate;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = typeof value === 'object' ? value : null;
     if (!v) return '';
@@ -9488,8 +9669,24 @@ export function serviceDue() {
 // Vehicle rego currency. Value: ISO date string (the rego expiry) or
 // `{ expires }`. Renders "Rego current/expires in N days/expired" pill
 // in traffic-light colour.
-export function regoStatus() {
-  return ({ value }) => {
+export function regoStatus({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'rego-status', () => openCompositeEditor(td, ctx, {
+        title: 'Rego expiry',
+        prior: value,
+        fields: [
+          { name: 'expires', label: 'Expires', type: 'date', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (!v) return { expires: '' };
+          if (typeof v === 'string') return { expires: String(v).slice(0, 10) };
+          return { expires: v.expires ? String(v.expires).slice(0, 10) : '' };
+        },
+        fromEditState: (raw) => raw.expires || null,
+      }));
+    }
     if (isBlank(value)) return h('span', { class: 'sg-pill sg-pill-gray' },
       document.createTextNode('No rego'));
     const v = typeof value === 'object' ? value : { expires: value };
@@ -9508,8 +9705,24 @@ export function regoStatus() {
 // CTP / Green Slip currency. Same shape as rego-status — separate
 // renderer because the two often live side-by-side on a fleet card
 // and the label needs to read "CTP".
-export function ctpStatus() {
-  return ({ value }) => {
+export function ctpStatus({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'ctp-status', () => openCompositeEditor(td, ctx, {
+        title: 'CTP expiry',
+        prior: value,
+        fields: [
+          { name: 'expires', label: 'Expires', type: 'date', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (!v) return { expires: '' };
+          if (typeof v === 'string') return { expires: String(v).slice(0, 10) };
+          return { expires: v.expires ? String(v.expires).slice(0, 10) : '' };
+        },
+        fromEditState: (raw) => raw.expires || null,
+      }));
+    }
     if (isBlank(value)) return h('span', { class: 'sg-pill sg-pill-gray' },
       document.createTextNode('No CTP'));
     const v = typeof value === 'object' ? value : { expires: value };
@@ -9530,8 +9743,32 @@ export function ctpStatus() {
 // yellow/black, VIC blue/white, QLD maroon/white, etc.). Value:
 //   string                  → unknown state, neutral plate
 //   { state, plate }        → coloured to match the state */
-export function regoPlate() {
-  return ({ value }) => {
+export function regoPlate({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'rego-plate', () => openCompositeEditor(td, ctx, {
+        title: 'Rego plate',
+        prior: value,
+        fields: [
+          { name: 'state', label: 'State', type: 'select',
+            options: AU_STATES.map((s) => ({ value: s, label: `${s} — ${AU_STATE_NAMES[s]}` })) },
+          { name: 'plate', label: 'Plate', type: 'text', mono: true, placeholder: 'CAB 42K' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { state: '', plate: v };
+          if (v && typeof v === 'object') return {
+            state: (v.state || '').toUpperCase(), plate: v.plate || '',
+          };
+          return { state: '', plate: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.state && !raw.plate) return null;
+          if (!raw.state) return raw.plate.trim();
+          return { state: raw.state, plate: raw.plate.trim() };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let state = '', plate = '';
     if (typeof value === 'string') plate = value;
@@ -9559,8 +9796,51 @@ export function regoPlate() {
  *     members: [{ name, avatar?, initials? }, …],
  *     trades:  ['Electrician', 'Plumber', …],
  *   } */
-export function crew({ maxAvatars = 4, avatarSize = 22 } = {}) {
-  return ({ value }) => {
+export function crew({ maxAvatars = 4, avatarSize = 22, editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'crew', () => openCompositeEditor(td, ctx, {
+        title: 'Crew',
+        prior: value,
+        fields: [
+          { name: 'name',    label: 'Crew name',  type: 'text', placeholder: 'Crew A' },
+          { name: 'leader',  label: 'Leading hand', type: 'text', placeholder: 'Astrid Hale' },
+          { name: 'members', label: 'Members (one per line, "Name" or "Name, AB")', type: 'textarea', span: 2, rows: 3 },
+          { name: 'trades',  label: 'Trade mix (comma-separated)', type: 'text', span: 2,
+            placeholder: 'Electrician, Plumber' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { name: v, leader: '', members: '', trades: '' };
+          if (v && typeof v === 'object') {
+            const memberLines = Array.isArray(v.members)
+              ? v.members.map((m) => m.initials ? `${m.name || ''}, ${m.initials}` : (m.name || ''))
+              : [];
+            return {
+              name: v.name || '', leader: v.leader || '',
+              members: memberLines.join('\n'),
+              trades: Array.isArray(v.trades) ? v.trades.join(', ') : (v.trades || ''),
+            };
+          }
+          return { name: '', leader: '', members: '', trades: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.name && !raw.leader && !raw.members.trim() && !raw.trades.trim()) return null;
+          const members = raw.members.split('\n').map((l) => l.trim()).filter(Boolean)
+            .map((line) => {
+              const [name, initials] = line.split(',').map((s) => s.trim());
+              return initials ? { name, initials } : { name };
+            });
+          const trades = raw.trades.split(',').map((s) => s.trim()).filter(Boolean);
+          const next = {};
+          if (raw.name)    next.name = raw.name.trim();
+          if (raw.leader)  next.leader = raw.leader.trim();
+          if (members.length) next.members = members;
+          if (trades.length)  next.trades = trades;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') return h('span', { class: 'sg-renderer-crew' },
       document.createTextNode(value));
@@ -9623,9 +9903,38 @@ export function crew({ maxAvatars = 4, avatarSize = 22 } = {}) {
  *     swms:      false,                // ← red flag
  *     induction: true,
  *   } */
-export function subcontractor() {
+export function subcontractor({ editable = true } = {}) {
   const FLAGS = ['licence', 'insurance', 'swms', 'induction'];
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'subcontractor', () => openCompositeEditor(td, ctx, {
+        title: 'Subcontractor',
+        prior: value,
+        fields: [
+          { name: 'name', label: 'Name', type: 'text', span: 2 },
+          { name: 'abn',  label: 'ABN',  type: 'text', mono: true, span: 2 },
+          { name: 'flags', label: 'Compliance OK', type: 'multiselect', span: 2,
+            options: FLAGS.map((k) => ({ value: k, label: titleCaseStr(k) })) },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { name: v, abn: '', flags: [] };
+          if (v && typeof v === 'object') {
+            const ok = FLAGS.filter((k) => v[k] !== false);
+            return { name: v.name || '', abn: v.abn || '', flags: ok };
+          }
+          return { name: '', abn: '', flags: [] };
+        },
+        fromEditState: (raw) => {
+          if (!raw.name && !raw.abn && !raw.flags.length) return null;
+          const next = {};
+          if (raw.name) next.name = raw.name.trim();
+          if (raw.abn)  next.abn  = raw.abn.trim();
+          for (const k of FLAGS) next[k] = raw.flags.includes(k);
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') return h('span', { class: 'sg-renderer-subcontractor' },
       document.createTextNode(value));
@@ -9653,8 +9962,38 @@ export function subcontractor() {
  *
  *   value: 'Solar PV install'
  *        | { skill: 'Solar PV install', expires: '2027-11-30', issuer?: 'CEC' } */
-export function skillEndorsement() {
-  return ({ value }) => {
+export function skillEndorsement({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'skill-endorsement', () => openCompositeEditor(td, ctx, {
+        title: 'Skill endorsement',
+        prior: value,
+        fields: [
+          { name: 'skill',   label: 'Skill',   type: 'text', span: 2,
+            placeholder: 'Solar PV install' },
+          { name: 'issuer',  label: 'Issuer',  type: 'text', placeholder: 'CEC' },
+          { name: 'expires', label: 'Expires', type: 'date' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { skill: v, issuer: '', expires: '' };
+          if (v && typeof v === 'object') return {
+            skill: v.skill || '', issuer: v.issuer || '',
+            expires: v.expires ? String(v.expires).slice(0, 10) : '',
+          };
+          return { skill: '', issuer: '', expires: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.skill && !raw.issuer && !raw.expires) return null;
+          if (raw.skill && !raw.issuer && !raw.expires) return raw.skill.trim();
+          const next = {};
+          if (raw.skill)   next.skill = raw.skill.trim();
+          if (raw.issuer)  next.issuer = raw.issuer.trim();
+          if (raw.expires) next.expires = raw.expires;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = typeof value === 'object' ? value : { skill: String(value) };
     const wrap = h('span', { class: 'sg-renderer-skill-endorsement' });
@@ -9677,8 +10016,18 @@ const TRADE_ICONS = {
   labourer: '🦺', mechanic: '🔩', welder: '🔥', steel: '⚙️',
   scaffolder: '🪜', earthworks: '🚜', solar: '☀️',
 };
-export function tradeType({ icons = TRADE_ICONS } = {}) {
-  return ({ value }) => {
+export function tradeType({ icons = TRADE_ICONS, editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'trade-type', () => openPillEditor(td, ctx, {
+        title: 'Trade',
+        options: Object.keys(icons).map((k) => ({
+          value: k, label: titleCaseStr(k), icon: icons[k],
+        })),
+        current: value ? String(value).toLowerCase().trim() : '',
+      }));
+    }
     if (isBlank(value)) return '';
     const k = String(value).toLowerCase().trim();
     const ic = icons[k] || icons[k.split(/\s+/)[0]] || null;
@@ -9698,8 +10047,38 @@ export function tradeType({ icons = TRADE_ICONS } = {}) {
  *
  *   value: bool                              shorthand: inducted true / not
  *        | { inducted, site?, expires? } */
-export function siteInduction() {
-  return ({ value }) => {
+export function siteInduction({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'site-induction', () => openCompositeEditor(td, ctx, {
+        title: 'Site induction',
+        prior: value,
+        fields: [
+          { name: 'inducted', label: 'Inducted', type: 'boolean',
+            checkboxLabel: 'Person is inducted on this site' },
+          { name: 'site',     label: 'Site',     type: 'text', span: 2 },
+          { name: 'expires',  label: 'Expires',  type: 'date', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (v === true)  return { inducted: true,  site: '', expires: '' };
+          if (v === false || v == null) return { inducted: false, site: '', expires: '' };
+          if (typeof v === 'object') return {
+            inducted: v.inducted !== false,
+            site: v.site || '',
+            expires: v.expires ? String(v.expires).slice(0, 10) : '',
+          };
+          return { inducted: false, site: '', expires: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.site && !raw.expires) return !!raw.inducted;
+          const next = { inducted: !!raw.inducted };
+          if (raw.site)    next.site    = raw.site.trim();
+          if (raw.expires) next.expires = raw.expires;
+          return next;
+        },
+      }));
+    }
     if (value === false || value === null || value === undefined) {
       return h('span', { class: 'sg-pill sg-pill-red sg-renderer-site-induction' },
         document.createTextNode('Not inducted'));
@@ -9741,8 +10120,30 @@ export function siteInduction() {
  *   value: number (1-25)
  *        | { likelihood, consequence }
  *        | { score, band? } */
-export function hazardRating() {
-  return ({ value }) => {
+export function hazardRating({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'hazard-rating', () => openCompositeEditor(td, ctx, {
+        title: 'Hazard rating',
+        prior: value,
+        fields: [
+          { name: 'likelihood',  label: 'Likelihood (1-5)',  type: 'number', min: 1, max: 5, step: 1 },
+          { name: 'consequence', label: 'Consequence (1-5)', type: 'number', min: 1, max: 5, step: 1 },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'number') return { likelihood: '', consequence: '' };
+          if (v && typeof v === 'object') return {
+            likelihood:  v.likelihood ?? '', consequence: v.consequence ?? '',
+          };
+          return { likelihood: '', consequence: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.likelihood == null && raw.consequence == null) return null;
+          return { likelihood: +raw.likelihood || 1, consequence: +raw.consequence || 1 };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let score = null, L = null, C = null;
     if (typeof value === 'number') score = value;
@@ -9783,13 +10184,13 @@ export function hazardRating() {
  *   notifiable  red    statutory regulator-notifiable event
  *   fatality    red    work-related fatality */
 export function incidentSeverity() {
-  return statusPill({
+  return editablePill({
     'near-miss': 'gray', 'first-aid': 'yellow', mti: 'orange',
     lti: 'red', notifiable: 'red', fatality: 'red',
   }, {
     'near-miss': 'circle', 'first-aid': 'check-circle', mti: 'alert',
     lti: 'alert', notifiable: 'alert', fatality: 'x-circle',
-  });
+  }, { title: 'Incident severity' });
 }
 
 /* ---------- ppe-checklist -----------------------------------------
@@ -9812,8 +10213,42 @@ const PPE_ICONS = {
   'hearing':  '🎧', 'ear-pro': '🎧',
   'harness':  '🪢',
 };
-export function ppeChecklist({ icons = PPE_ICONS } = {}) {
-  return ({ value }) => {
+export function ppeChecklist({ icons = PPE_ICONS, editable = true } = {}) {
+  // De-duplicate aliased glyphs ('helmet'→'hard-hat', etc.) so the editor
+  // shows the canonical key set once.
+  const canonical = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const k of Object.keys(icons)) {
+      const g = icons[k];
+      if (seen.has(g)) continue;
+      seen.add(g);
+      out.push(k);
+    }
+    return out;
+  })();
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'ppe-checklist', () => openCompositeEditor(td, ctx, {
+        title: 'PPE checklist',
+        prior: value,
+        fields: [
+          { name: 'items', label: 'Required items', type: 'multiselect', span: 2,
+            options: canonical.map((k) => ({
+              value: k, label: `${icons[k]} ${titleCaseStr(k.replace('-', ' '))}`,
+            })) },
+        ],
+        toEditState: (v) => {
+          if (Array.isArray(v))    return { items: v.map((x) => String(x).toLowerCase()) };
+          if (typeof v === 'string') return {
+            items: v.split(/\s*,\s*/).filter(Boolean).map((x) => x.toLowerCase()),
+          };
+          return { items: [] };
+        },
+        fromEditState: (raw) => (raw.items && raw.items.length) ? raw.items : null,
+      }));
+    }
     if (isBlank(value)) return '';
     const list = Array.isArray(value) ? value
                : typeof value === 'string' ? value.split(/\s*,\s*/).filter(Boolean)
@@ -9838,9 +10273,34 @@ export function ppeChecklist({ icons = PPE_ICONS } = {}) {
  * default `dueDays: 7`).
  *
  *   value: ISO date string | { lastDate, topic? } */
-export function toolboxTalk({ dueDays = 7 } = {}) {
+export function toolboxTalk({ dueDays = 7, editable = true } = {}) {
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'toolbox-talk', () => openCompositeEditor(td, ctx, {
+        title: 'Toolbox talk',
+        prior: value,
+        fields: [
+          { name: 'lastDate', label: 'Last date', type: 'date', span: 2 },
+          { name: 'topic',    label: 'Topic',     type: 'text', span: 2,
+            placeholder: 'Working at heights' },
+        ],
+        toEditState: (v) => {
+          if (!v) return { lastDate: '', topic: '' };
+          if (typeof v === 'string') return { lastDate: String(v).slice(0, 10), topic: '' };
+          return {
+            lastDate: v.lastDate ? String(v.lastDate).slice(0, 10) : '',
+            topic: v.topic || '',
+          };
+        },
+        fromEditState: (raw) => {
+          if (!raw.lastDate && !raw.topic) return null;
+          if (raw.lastDate && !raw.topic) return raw.lastDate;
+          return { lastDate: raw.lastDate, topic: raw.topic.trim() };
+        },
+      }));
+    }
     if (isBlank(value)) return h('span', { class: 'sg-renderer-toolbox-talk is-missing' },
       document.createTextNode('no record'));
     const v = typeof value === 'object' ? value : { lastDate: value };
@@ -9870,12 +10330,44 @@ export function toolboxTalk({ dueDays = 7 } = {}) {
  *     status: 'in-stock' | 'backorder' | 'out-of-stock' | 'special-order'
  *
  * Renders qty + name (+ sku in tooltip) with a stock-status pill. */
-export function materialsPick() {
+export function materialsPick({ editable = true } = {}) {
   const STOCK_COLOR = {
     'in-stock': 'green', 'backorder': 'orange',
     'out-of-stock': 'red', 'special-order': 'blue',
   };
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'materials-pick', () => openCompositeEditor(td, ctx, {
+        title: 'Materials',
+        prior: value,
+        fields: [
+          { name: 'qty',    label: 'Qty',    type: 'number', min: 0, step: 1 },
+          { name: 'sku',    label: 'SKU',    type: 'text', mono: true },
+          { name: 'name',   label: 'Name',   type: 'text', span: 2 },
+          { name: 'status', label: 'Stock',  type: 'select', span: 2,
+            options: Object.keys(STOCK_COLOR).map((k) =>
+              ({ value: k, label: titleCaseStr(k.replace('-', ' ')) })) },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { qty: '', sku: '', name: v, status: '' };
+          if (v && typeof v === 'object') return {
+            qty: v.qty == null ? '' : v.qty,
+            sku: v.sku || '', name: v.name || '', status: v.status || '',
+          };
+          return { qty: '', sku: '', name: '', status: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.name && raw.qty == null && !raw.sku && !raw.status) return null;
+          const next = {};
+          if (raw.qty != null) next.qty = +raw.qty;
+          if (raw.sku)         next.sku = raw.sku.trim();
+          if (raw.name)        next.name = raw.name.trim();
+          if (raw.status)      next.status = raw.status;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = (typeof value === 'object') ? value : { name: String(value) };
     const wrap = h('span', { class: 'sg-renderer-materials-pick', title: v.sku || '' });
@@ -9901,8 +10393,34 @@ export function materialsPick() {
  * defects liability period ends).
  *
  *   value: { amount, releaseDate } */
-export function retention({ currency = 'AUD', locale = 'en-AU' } = {}) {
-  return ({ value }) => {
+export function retention({ currency = 'AUD', locale = 'en-AU', editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'retention', () => openCompositeEditor(td, ctx, {
+        title: 'Retention',
+        prior: value,
+        fields: [
+          { name: 'amount',      label: 'Amount',       type: 'number', step: 0.01, min: 0 },
+          { name: 'releaseDate', label: 'Release date', type: 'date' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'number') return { amount: v, releaseDate: '' };
+          if (v && typeof v === 'object') return {
+            amount: v.amount == null ? '' : v.amount,
+            releaseDate: v.releaseDate ? String(v.releaseDate).slice(0, 10) : '',
+          };
+          return { amount: '', releaseDate: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.amount == null && !raw.releaseDate) return null;
+          const next = {};
+          if (raw.amount != null)  next.amount = +raw.amount;
+          if (raw.releaseDate)     next.releaseDate = raw.releaseDate;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = (typeof value === 'object') ? value : { amount: Number(value) };
     const amt = +v.amount;
@@ -9932,13 +10450,13 @@ export function retention({ currency = 'AUD', locale = 'en-AU' } = {}) {
  *   draft → sent → viewed → paid
  * plus exception states: overdue / disputed / void / written-off. */
 export function invoiceStatus() {
-  return statusPill({
+  return editablePill({
     draft: 'gray', sent: 'blue', viewed: 'indigo', paid: 'green',
     overdue: 'red', disputed: 'orange', void: 'gray', 'written-off': 'gray',
   }, {
     draft: 'circle', sent: 'cart', viewed: 'check', paid: 'check-circle',
     overdue: 'alert', disputed: 'alert', void: 'x-circle', 'written-off': 'x-circle',
-  });
+  }, { title: 'Invoice status' });
 }
 
 /* ---------- payment-terms -----------------------------------------
@@ -10105,9 +10623,36 @@ function commitPaymentTerms(td, ctx, next) {
  *   'included'   → "Included" pill (green)
  *   'charged'    → "Charged" pill (orange) — when no dollar amount known
  *   { amount, status? }  → both together; status overrides colour */
-export function calloutFee({ currency = 'AUD', locale = 'en-AU' } = {}) {
+export function calloutFee({ currency = 'AUD', locale = 'en-AU', editable = true } = {}) {
   const STATUS_COLOR = { charged: 'orange', waived: 'gray', included: 'green' };
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'callout-fee', () => openCompositeEditor(td, ctx, {
+        title: 'Callout fee',
+        prior: value,
+        fields: [
+          { name: 'amount', label: 'Amount', type: 'number', step: 0.01, min: 0 },
+          { name: 'status', label: 'Status', type: 'select',
+            options: Object.keys(STATUS_COLOR).map((k) => ({ value: k, label: titleCaseStr(k) })) },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'number') return { amount: v, status: 'charged' };
+          if (typeof v === 'string') return { amount: '', status: v };
+          if (v && typeof v === 'object') return {
+            amount: v.amount == null ? '' : v.amount,
+            status: v.status || '',
+          };
+          return { amount: '', status: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.amount == null && !raw.status) return null;
+          if (raw.amount != null && raw.status === 'charged') return raw.amount;
+          if (raw.amount == null && raw.status) return raw.status;
+          return { amount: +raw.amount, status: raw.status || 'charged' };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let amount = null, status = null;
     if (typeof value === 'number') { amount = value; status = 'charged'; }
@@ -10130,9 +10675,37 @@ export function calloutFee({ currency = 'AUD', locale = 'en-AU' } = {}) {
  * Job site photo with a Before / During / After badge in the corner.
  * Value: URL string, or `{ url, stage, caption? }`. Stage drives the
  * badge colour (gray / blue / green). */
-export function jobPhoto({ width = 60, height = 60 } = {}) {
+export function jobPhoto({ width = 60, height = 60, editable = true } = {}) {
   const STAGE_COLOR = { before: 'gray', during: 'blue', after: 'green' };
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'job-photo', () => openCompositeEditor(td, ctx, {
+        title: 'Job photo',
+        prior: value,
+        fields: [
+          { name: 'url',     label: 'Photo URL', type: 'url', span: 2,
+            placeholder: 'https://…/photo.jpg' },
+          { name: 'stage',   label: 'Stage',   type: 'select',
+            options: Object.keys(STAGE_COLOR).map((k) => ({ value: k, label: titleCaseStr(k) })) },
+          { name: 'caption', label: 'Caption', type: 'text' },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { url: v, stage: '', caption: '' };
+          if (v && typeof v === 'object') return {
+            url: v.url || '', stage: v.stage || '', caption: v.caption || '',
+          };
+          return { url: '', stage: '', caption: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.url) return null;
+          const next = { url: raw.url.trim() };
+          if (raw.stage)   next.stage   = raw.stage;
+          if (raw.caption) next.caption = raw.caption.trim();
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = typeof value === 'string' ? { url: value } : value;
     if (!v.url) return '';
@@ -10391,6 +10964,307 @@ function commitSignature(td, ctx, next) {
   }));
 }
 
+/* ---------- composite popover editor (shared) ----------------------
+ *
+ * Many FSM renderers need the same shape: dblclick → popover with a
+ * grid of labelled fields → "Save"/"Cancel" → dispatch
+ * `grid:cellValueChanged`. This helper builds that for a given
+ * field schema, reusing the existing .sg-licence-editor-* chrome.
+ *
+ * Each field:
+ *   { name, label, type, options?, placeholder?, span?, mono?,
+ *     min?, max?, step?, rows?, allowEmpty? }
+ *
+ * Types: text | number | date | datetime | time | url | select |
+ *        multiselect | textarea | boolean */
+let activeCompositeEditor = null;
+function closeCompositeEditor() {
+  if (!activeCompositeEditor) return;
+  const { pop, onKey, onDocClick } = activeCompositeEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeCompositeEditor = null;
+}
+
+function openCompositeEditor(anchor, ctx, opts) {
+  closeCompositeEditor();
+  const { title = 'Edit', fields, toEditState, fromEditState, prior } = opts;
+  const start = toEditState
+    ? toEditState(prior)
+    : (prior && typeof prior === 'object' ? { ...prior } : {});
+
+  const pop = h('div', { class: 'sg-licence-editor', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+  pop.append(h('div', { class: 'sg-licence-editor-header' },
+    document.createTextNode(title)));
+
+  const form = h('form', { class: 'sg-licence-editor-form', novalidate: 'novalidate' });
+  const grid = h('div', { class: 'sg-licence-editor-grid' });
+  const inputs = {};
+  for (const f of fields) {
+    const wrap = h('label', { class: 'sg-licence-editor-field', 'data-field': f.name });
+    if (f.span) wrap.setAttribute('data-span', String(f.span));
+    if (f.span === 2) wrap.style.gridColumn = '1 / -1';
+    wrap.append(h('span', { class: 'sg-licence-editor-label' },
+      document.createTextNode(f.label)));
+    const input = buildEditorField(f, start[f.name]);
+    inputs[f.name] = input;
+    wrap.append(input);
+    grid.append(wrap);
+  }
+
+  const footer = h('div', { class: 'sg-licence-editor-footer' });
+  const cancel = h('button', { type: 'button', class: 'sg-licence-editor-cancel' },
+    document.createTextNode('Cancel'));
+  const save = h('button', { type: 'submit', class: 'sg-licence-editor-save' },
+    document.createTextNode('Save'));
+  footer.append(cancel, save);
+  form.append(grid, footer);
+  pop.append(form);
+
+  function commit() {
+    const raw = {};
+    for (const f of fields) raw[f.name] = readEditorField(f, inputs[f.name]);
+    const next = fromEditState ? fromEditState(raw) : raw;
+    commitCellValue(anchor, ctx, next);
+    closeCompositeEditor();
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); commit(); });
+  cancel.addEventListener('click', () => closeCompositeEditor());
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeCompositeEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeCompositeEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+
+  // Focus the first focusable field.
+  for (const f of fields) {
+    const el = inputs[f.name];
+    if (!el) continue;
+    if (typeof el.focus === 'function') {
+      el.focus();
+      if (typeof el.select === 'function') el.select();
+      break;
+    }
+  }
+
+  activeCompositeEditor = { pop, onKey, onDocClick };
+}
+
+function buildEditorField(f, value) {
+  const cls = 'sg-licence-editor-input' + (f.mono ? ' sg-renderer-mono' : '');
+  if (f.type === 'select') {
+    const sel = h('select', { name: f.name, class: cls });
+    if (f.allowEmpty !== false) sel.append(h('option', { value: '' },
+      document.createTextNode(f.emptyLabel || '—')));
+    const cur = value == null ? '' : String(value);
+    for (const opt of (f.options || [])) {
+      const o = (opt && typeof opt === 'object') ? opt : { value: opt, label: opt };
+      sel.append(h('option', {
+        value: String(o.value),
+        selected: cur === String(o.value) ? '' : null,
+      }, document.createTextNode(o.label)));
+    }
+    return sel;
+  }
+  if (f.type === 'multiselect') {
+    const wrap = h('div', { class: 'sg-composite-editor-multiselect' });
+    const selected = Array.isArray(value) ? value.map((x) => String(x).toLowerCase()) : [];
+    for (const opt of (f.options || [])) {
+      const o = (opt && typeof opt === 'object') ? opt : { value: opt, label: opt };
+      const isOn = selected.includes(String(o.value).toLowerCase());
+      const cb = h('input', { type: 'checkbox', value: String(o.value),
+        checked: isOn ? '' : null });
+      const lbl = h('label', { class: 'sg-composite-editor-multiselect-item' });
+      lbl.append(cb, h('span', {}, document.createTextNode(o.label)));
+      wrap.append(lbl);
+    }
+    return wrap;
+  }
+  if (f.type === 'boolean') {
+    const wrap = h('div', { class: 'sg-composite-editor-bool-wrap' });
+    const cb = h('input', { type: 'checkbox', class: 'sg-composite-editor-bool',
+      name: f.name, checked: value ? '' : null });
+    wrap.append(cb);
+    if (f.checkboxLabel) {
+      wrap.append(h('span', { class: 'sg-composite-editor-bool-label' },
+        document.createTextNode(f.checkboxLabel)));
+    }
+    return wrap;
+  }
+  if (f.type === 'textarea') {
+    const ta = h('textarea', { name: f.name, class: cls,
+      rows: String(f.rows || 2),
+      placeholder: f.placeholder || '' });
+    if (value != null) ta.value = String(value);
+    return ta;
+  }
+  const type = f.type === 'number'   ? 'number'
+             : f.type === 'date'     ? 'date'
+             : f.type === 'datetime' ? 'datetime-local'
+             : f.type === 'time'     ? 'time'
+             : f.type === 'url'      ? 'url'
+             : 'text';
+  const attrs = { type, name: f.name, class: cls, placeholder: f.placeholder || '' };
+  if (f.min != null) attrs.min = String(f.min);
+  if (f.max != null) attrs.max = String(f.max);
+  if (f.step != null) attrs.step = String(f.step);
+  if (f.pattern) attrs.pattern = String(f.pattern);
+  if (f.maxLength != null) attrs.maxlength = String(f.maxLength);
+  const input = h('input', attrs);
+  if (value != null && value !== '') input.value = String(value);
+  return input;
+}
+
+function readEditorField(f, input) {
+  if (f.type === 'select')      return input.value || '';
+  if (f.type === 'multiselect') return Array.from(
+    input.querySelectorAll('input[type=checkbox]:checked')).map((c) => c.value);
+  if (f.type === 'boolean')     return !!input.querySelector?.('input[type=checkbox]')?.checked
+                                    || (!!input.checked);
+  if (f.type === 'textarea')    return input.value;
+  if (f.type === 'number') {
+    const v = input.value.trim();
+    if (v === '') return null;
+    const n = +v;
+    return Number.isFinite(n) ? n : null;
+  }
+  return input.value;
+}
+
+function commitCellValue(td, ctx, next) {
+  const { row, col, api } = ctx;
+  const oldValue = row && col?.field != null ? row[col.field] : null;
+  if (row && col?.field != null) row[col.field] = next;
+  if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+  const grid = td.closest('[data-controller~="grid"]');
+  if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+    bubbles: true,
+    detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+  }));
+}
+
+/* ---------- inline single-select editor (for statusPill renderers) -
+ *
+ * Tiny dropdown popover for renderers whose entire value is a single
+ * key from a known set (job-status, swms-status, customer-type, …).
+ * Renders a stack of clickable options; clicking commits + closes. */
+// Renamed to avoid collision with the `select` renderer's own
+// `openSelectEditor`/`activeSelectEditor` defined earlier in this module.
+let activePillEditor = null;
+function closePillEditor() {
+  if (!activePillEditor) return;
+  const { pop, onKey, onDocClick } = activePillEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activePillEditor = null;
+}
+
+function openPillEditor(anchor, ctx, opts) {
+  closePillEditor();
+  const {
+    title = '', options, current,
+    allowEmpty = true, emptyLabel = '— clear —',
+  } = opts;
+  const cur = current == null ? '' : String(current);
+
+  const pop = h('div', { class: 'sg-select-editor', role: 'listbox' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+  if (title) pop.append(h('div', { class: 'sg-select-editor-header' },
+    document.createTextNode(title)));
+  const list = h('div', { class: 'sg-select-editor-list' });
+
+  function pick(next) {
+    commitCellValue(anchor, ctx, next === '' ? null : next);
+    closePillEditor();
+  }
+
+  if (allowEmpty) {
+    const it = h('button', { type: 'button',
+      class: 'sg-select-editor-item is-empty' + (cur === '' ? ' is-current' : '') },
+      document.createTextNode(emptyLabel));
+    it.addEventListener('click', () => pick(''));
+    list.append(it);
+  }
+
+  for (const opt of options) {
+    const o = (opt && typeof opt === 'object') ? opt : { value: opt, label: opt };
+    const it = h('button', {
+      type: 'button',
+      class: 'sg-select-editor-item' + (cur === String(o.value) ? ' is-current' : ''),
+    });
+    if (o.dot) it.append(h('span', { class: 'sg-select-editor-dot',
+      style: `background:${o.dot};` }));
+    if (o.icon) it.append(h('span', { class: 'sg-select-editor-icon' },
+      document.createTextNode(o.icon)));
+    it.append(h('span', { class: 'sg-select-editor-label' },
+      document.createTextNode(o.label)));
+    it.addEventListener('click', () => pick(String(o.value)));
+    list.append(it);
+  }
+  pop.append(list);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closePillEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closePillEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activePillEditor = { pop, onKey, onDocClick };
+}
+
+function bindDblClickEditor(td, key, openFn) {
+  const bound = `_sgEdit_${key}_bound`;
+  if (td[bound]) return;
+  td[bound] = true;
+  td.addEventListener('dblclick', (e) => {
+    const flag = `_sgEdit_${key}_handled`;
+    if (e[flag]) return;
+    e[flag] = true;
+    e.stopPropagation();
+    openFn();
+  });
+}
+
+/* ---------- editable statusPill ------------------------------------
+ *
+ * Drop-in wrapper around `statusPill` that adds a double-click
+ * select-popover editor whose options are the pill's own colour-map
+ * keys. Used by every FSM "lifecycle pill" renderer (job-status,
+ * swms-status, customer-type, invoice-status, …). */
+function editablePill(colorMap, iconMap = null, opts = {}) {
+  const { title = 'Status', editable = true, ...rest } = opts;
+  const inner = statusPill(colorMap, iconMap, rest);
+  const keys = Object.keys(colorMap);
+  return (ctx) => {
+    const { td, value } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'pill', () => openPillEditor(td, ctx, {
+        title,
+        options: keys.map((k) => ({ value: k,
+          label: titleCaseStr(k.replace(/-/g, ' ')) })),
+        current: value,
+      }));
+    }
+    return inner(ctx);
+  };
+}
+
 /* ---------- defect / snag -----------------------------------------
  *
  * Snag-list item. Severity pill + short description.
@@ -10401,9 +11275,38 @@ function commitSignature(td, ctx, next) {
  *
  * Aliased as `snag` because the two terms get used interchangeably
  * across QA / PC inspection reports. */
-export function defect() {
+export function defect({ editable = true } = {}) {
   const SEV_COLOR = { critical: 'red', major: 'orange', minor: 'yellow', cosmetic: 'gray' };
-  return ({ value }) => {
+  const STATUS = ['open', 'wip', 'closed'];
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'defect', () => openCompositeEditor(td, ctx, {
+        title: 'Defect',
+        prior: value,
+        fields: [
+          { name: 'severity', label: 'Severity', type: 'select',
+            options: Object.keys(SEV_COLOR).map((k) => ({ value: k, label: titleCaseStr(k) })) },
+          { name: 'status',   label: 'Status',   type: 'select',
+            options: STATUS.map((k) => ({ value: k, label: titleCaseStr(k) })) },
+          { name: 'title',    label: 'Title',    type: 'text', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (v && typeof v === 'object') return {
+            severity: v.severity || '', status: v.status || '', title: v.title || '',
+          };
+          return { severity: '', status: '', title: typeof v === 'string' ? v : '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.severity && !raw.status && !raw.title) return null;
+          const next = {};
+          if (raw.severity) next.severity = raw.severity;
+          if (raw.status)   next.status   = raw.status;
+          if (raw.title)    next.title    = raw.title.trim();
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = (typeof value === 'object') ? value : { title: String(value) };
     const wrap = h('span', { class: 'sg-renderer-defect' });
@@ -10432,9 +11335,37 @@ export function defect() {
  *     delta: 2400,                          // signed AUD; negative = credit
  *     status: 'approved' | 'pending' | 'rejected' | 'draft',
  *   } */
-export function variation({ currency = 'AUD', locale = 'en-AU' } = {}) {
+export function variation({ currency = 'AUD', locale = 'en-AU', editable = true } = {}) {
   const STATUS_COLOR = { approved: 'green', pending: 'orange', rejected: 'red', draft: 'gray' };
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'variation', () => openCompositeEditor(td, ctx, {
+        title: 'Variation',
+        prior: value,
+        fields: [
+          { name: 'id',     label: 'ID',     type: 'text',   placeholder: 'VAR-001', mono: true, span: 2 },
+          { name: 'delta',  label: '$ delta', type: 'number', step: 0.01, placeholder: '2400' },
+          { name: 'status', label: 'Status', type: 'select',
+            options: Object.keys(STATUS_COLOR).map((k) => ({ value: k, label: titleCaseStr(k) })),
+          },
+        ],
+        toEditState: (v) => {
+          if (v && typeof v === 'object') return {
+            id: v.id || '', delta: v.delta == null ? '' : v.delta, status: v.status || '',
+          };
+          return { id: typeof v === 'string' ? v : '', delta: '', status: '' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.id && raw.delta == null && !raw.status) return null;
+          const next = {};
+          if (raw.id)            next.id = raw.id.trim();
+          if (raw.delta != null) next.delta = +raw.delta;
+          if (raw.status)        next.status = raw.status;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = (typeof value === 'object') ? value : { id: String(value) };
     const wrap = h('span', { class: 'sg-renderer-variation' });
@@ -10464,8 +11395,34 @@ export function variation({ currency = 'AUD', locale = 'en-AU' } = {}) {
  * Milestone progress claim. "Claim 2 of 5 · 40%" with a thin bar that
  * fills proportionally. Value: { index, total, percent } — percent is
  * 0-100, default = index/total * 100. */
-export function progressClaim() {
-  return ({ value }) => {
+export function progressClaim({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'progress-claim', () => openCompositeEditor(td, ctx, {
+        title: 'Progress claim',
+        prior: value,
+        fields: [
+          { name: 'index',   label: 'Claim #',    type: 'number', min: 0, step: 1 },
+          { name: 'total',   label: 'Of total',   type: 'number', min: 0, step: 1 },
+          { name: 'percent', label: 'Percent',    type: 'number', min: 0, max: 100, step: 1, span: 2 },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'number') return { index: '', total: '', percent: v };
+          if (v && typeof v === 'object') return {
+            index: v.index ?? '', total: v.total ?? '', percent: v.percent ?? '',
+          };
+          return { index: '', total: '', percent: '' };
+        },
+        fromEditState: (raw) => {
+          const next = {};
+          if (raw.index != null)   next.index = +raw.index;
+          if (raw.total != null)   next.total = +raw.total;
+          if (raw.percent != null) next.percent = +raw.percent;
+          return Object.keys(next).length ? next : null;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const v = (typeof value === 'object') ? value : { percent: Number(value) };
     const idx = +v.index || null;
@@ -10500,8 +11457,40 @@ export function progressClaim() {
  *     label: 'J-1042 · Bondi',       // job ref / customer / etc.
  *     color: 'blue',                  // pill colour family
  *   } */
-export function technicianSlot() {
-  return ({ value }) => {
+export function technicianSlot({ editable = true } = {}) {
+  const COLORS = ['blue', 'indigo', 'green', 'orange', 'red', 'purple', 'pink', 'gray', 'yellow'];
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'tech-slot', () => openCompositeEditor(td, ctx, {
+        title: 'Technician slot',
+        prior: value,
+        fields: [
+          { name: 'start', label: 'Start', type: 'time' },
+          { name: 'end',   label: 'End',   type: 'time' },
+          { name: 'label', label: 'Label', type: 'text', span: 2, placeholder: 'J-1042 · Bondi' },
+          { name: 'color', label: 'Colour', type: 'select', span: 2,
+            options: COLORS.map((c) => ({ value: c, label: titleCaseStr(c) })) },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'string') return { start: '', end: '', label: v, color: 'blue' };
+          if (v && typeof v === 'object') return {
+            start: v.start || '', end: v.end || '',
+            label: v.label || '', color: v.color || 'blue',
+          };
+          return { start: '', end: '', label: '', color: 'blue' };
+        },
+        fromEditState: (raw) => {
+          if (!raw.start && !raw.end && !raw.label) return null;
+          const next = {};
+          if (raw.start) next.start = raw.start;
+          if (raw.end)   next.end   = raw.end;
+          if (raw.label) next.label = raw.label.trim();
+          if (raw.color) next.color = raw.color;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') {
       return h('span', { class: 'sg-renderer-tech-slot sg-pill sg-pill-blue' },
@@ -10526,9 +11515,39 @@ export function technicianSlot() {
  * `{ minutes, distance?, traffic? }` where `traffic` is
  * 'light' | 'moderate' | 'heavy'. Renders "12 min · 4.2 km" with the
  * traffic-light icon coloured by congestion. */
-export function travelTime() {
+export function travelTime({ editable = true } = {}) {
   const TRAFFIC_DOT = { light: '#22c55e', moderate: '#f59e0b', heavy: '#ef4444' };
-  return ({ value }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'travel-time', () => openCompositeEditor(td, ctx, {
+        title: 'Travel time',
+        prior: value,
+        fields: [
+          { name: 'minutes',  label: 'Minutes',  type: 'number', min: 0, step: 1 },
+          { name: 'distance', label: 'Distance', type: 'text',   placeholder: '4.2 km' },
+          { name: 'traffic',  label: 'Traffic',  type: 'select', span: 2,
+            options: ['light', 'moderate', 'heavy'].map((v) => ({ value: v, label: titleCaseStr(v) })),
+          },
+        ],
+        toEditState: (v) => {
+          if (typeof v === 'number') return { minutes: v, distance: '', traffic: '' };
+          if (v && typeof v === 'object') return {
+            minutes:  v.minutes ?? '',
+            distance: v.distance == null ? '' : String(v.distance),
+            traffic:  v.traffic || '',
+          };
+          return { minutes: '', distance: '', traffic: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.minutes == null && !raw.distance && !raw.traffic) return null;
+          const next = { minutes: +raw.minutes || 0 };
+          if (raw.distance) next.distance = raw.distance.trim();
+          if (raw.traffic)  next.traffic  = raw.traffic;
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let minutes = null, distance = null, traffic = null;
     if (typeof value === 'number') minutes = value;
@@ -10563,8 +11582,28 @@ export function travelTime() {
  * route each tech is at a glance.
  *
  * Value: { position, total } (1-based) — or [position, total]. */
-export function routeStop({ maxDots = 10 } = {}) {
-  return ({ value }) => {
+export function routeStop({ maxDots = 10, editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'route-stop', () => openCompositeEditor(td, ctx, {
+        title: 'Route stop',
+        prior: value,
+        fields: [
+          { name: 'position', label: 'Position', type: 'number', min: 0, step: 1 },
+          { name: 'total',    label: 'Total',    type: 'number', min: 0, step: 1 },
+        ],
+        toEditState: (v) => {
+          if (Array.isArray(v)) return { position: v[0] ?? '', total: v[1] ?? '' };
+          if (v && typeof v === 'object') return { position: v.position ?? '', total: v.total ?? '' };
+          return { position: typeof v === 'number' ? v : '', total: '' };
+        },
+        fromEditState: (raw) => {
+          if (raw.position == null && raw.total == null) return null;
+          return { position: +raw.position || 0, total: +raw.total || 0 };
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let pos = 0, total = 0;
     if (Array.isArray(value)) { pos = +value[0] || 0; total = +value[1] || 0; }
@@ -10586,7 +11625,7 @@ export function routeStop({ maxDots = 10 } = {}) {
   };
 }
 
-export function arrivalWindow({ now = () => new Date() } = {}) {
+export function arrivalWindow({ now = () => new Date(), editable = true } = {}) {
   const fmt12 = (d) => {
     let h = d.getHours();
     const m = d.getMinutes();
@@ -10596,7 +11635,37 @@ export function arrivalWindow({ now = () => new Date() } = {}) {
   };
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return ({ value }) => {
+  const toDtLocal = (v) => {
+    if (!v) return '';
+    const d = v instanceof Date ? v : new Date(v);
+    if (Number.isNaN(d.valueOf())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'arrival-window', () => openCompositeEditor(td, ctx, {
+        title: 'Arrival window',
+        prior: value,
+        fields: [
+          { name: 'start', label: 'Start', type: 'datetime', span: 2 },
+          { name: 'end',   label: 'End',   type: 'datetime', span: 2 },
+        ],
+        toEditState: (v) => {
+          if (!v || typeof v === 'string') return { start: '', end: '' };
+          if (Array.isArray(v)) return { start: toDtLocal(v[0]), end: toDtLocal(v[1]) };
+          return { start: toDtLocal(v.start), end: toDtLocal(v.end) };
+        },
+        fromEditState: (raw) => {
+          if (!raw.start && !raw.end) return null;
+          const next = {};
+          if (raw.start) next.start = new Date(raw.start).toISOString();
+          if (raw.end)   next.end   = new Date(raw.end).toISOString();
+          return next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     let start = null, end = null;
     if (typeof value === 'string') {
@@ -10645,8 +11714,34 @@ export function arrivalWindow({ now = () => new Date() } = {}) {
  *     number:  'PCY-22038A',           // policy number
  *     expires: '2026-11-30',           // ISO date
  *   } */
-export function insuranceCert() {
-  return ({ value }) => {
+export function insuranceCert({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td && editable) {
+      bindDblClickEditor(td, 'insurance-cert', () => openCompositeEditor(td, ctx, {
+        title: 'Insurance certificate',
+        prior: value,
+        fields: [
+          { name: 'issuer',  label: 'Insurer',     type: 'text',   placeholder: 'CGU', span: 2 },
+          { name: 'class',   label: 'Cover',       type: 'text',   placeholder: 'PL $20m' },
+          { name: 'number',  label: 'Policy #',    type: 'text',   placeholder: 'PCY-22038A', mono: true },
+          { name: 'expires', label: 'Expires',     type: 'date',   span: 2 },
+        ],
+        toEditState: (v) => (v && typeof v === 'object')
+          ? { issuer: v.issuer || '', class: v.class || '', number: v.number || '',
+              expires: v.expires ? String(v.expires).slice(0, 10) : '' }
+          : { issuer: '', class: '', number: typeof v === 'string' ? v : '', expires: '' },
+        fromEditState: (raw) => {
+          const next = {
+            issuer: raw.issuer.trim(),
+            class:  raw.class.trim(),
+            number: raw.number.trim(),
+            expires: raw.expires || '',
+          };
+          return Object.values(next).every((v) => !v) ? null : next;
+        },
+      }));
+    }
     if (isBlank(value)) return '';
     const wrap = h('span', { class: 'sg-renderer-compliance' });
     if (typeof value === 'string') {
@@ -10674,12 +11769,14 @@ export function insuranceCert() {
  * to sit naturally in a CRM "Inbox" column or a contact's comms log.
  *
  *   value: {
- *     from:        'Dean Sarelius' | { name, email },
+ *     from:        'Dean Sarelius' | { name, email } | ['Caitlin', 'me'],
  *     time:        Date | ISO string | pre-formatted string,
  *     subject:     'Introducing Complete AI Edge Solutions — …',
  *     preview:     'Dear Marcus, I hope this message finds you well…',
  *     attachments: [{ filename }, …],   // optional
+ *     count:       3,                    // optional — conversation length badge (>=2)
  *     unread:      true,                 // optional — bolds sender + adds dot
+ *     highlighted: true,                 // optional — solid blue selected look
  *   }
  *
  * Time formats relative to "today": same-day → "3:19 pm", same-year →
@@ -10734,6 +11831,10 @@ function emailThreadTime(value, locale) {
 
 function emailThreadFromName(from) {
   if (isBlank(from)) return '(unknown sender)';
+  if (Array.isArray(from)) {
+    const names = from.map((p) => emailThreadFromName(p)).filter((s) => s && s !== '(unknown sender)');
+    return names.length ? names.join(', ') : '(unknown sender)';
+  }
   if (typeof from === 'string') return from;
   if (typeof from === 'object') return from.name || from.email || '(unknown sender)';
   return String(from);
@@ -10748,12 +11849,20 @@ export function emailThread({ locale = 'en-AU' } = {}) {
       const tr = td.parentElement;
       if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
     }
-    const wrap = h('div', {
-      class: `sg-renderer-email-thread${v.unread ? ' is-unread' : ''}`,
-    });
+    const cls = ['sg-renderer-email-thread'];
+    if (v.unread) cls.push('is-unread');
+    if (v.highlighted) cls.push('is-highlighted');
+    const wrap = h('div', { class: cls.join(' ') });
     const head = h('div', { class: 'sg-renderer-email-thread-row' });
-    head.append(h('span', { class: 'sg-renderer-email-thread-from' },
-      document.createTextNode(emailThreadFromName(v.from))));
+    const fromSpan = h('span', { class: 'sg-renderer-email-thread-from' },
+      document.createTextNode(emailThreadFromName(v.from)));
+    head.append(fromSpan);
+    // Conversation-length badge: Apple Mail / Gmail show "3" after the
+    // participant list when a thread has 3 messages. Skip on counts < 2.
+    if (Number.isFinite(+v.count) && +v.count > 1) {
+      fromSpan.append(h('span', { class: 'sg-renderer-email-thread-count' },
+        document.createTextNode(String(+v.count))));
+    }
     const timeText = emailThreadTime(v.time, locale);
     if (timeText) {
       head.append(h('span', { class: 'sg-renderer-email-thread-time' },

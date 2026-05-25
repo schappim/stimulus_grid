@@ -5042,6 +5042,52 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   margin-right: 6px;
   vertical-align: 1px;
 }
+/* Conversation-length badge — "Caitlin, me 3". Sits next to the sender
+ * list with a tiny gutter; lighter weight + dimmer colour so it reads as
+ * a count, not part of the name. */
+.sg-grid .sg-renderer-email-thread-count {
+  font-weight: 500;
+  color: #6b7280;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+/* Highlighted — Apple Mail / Gmail "this thread is selected" look: solid
+ * blue cell with white text on every part. Bleeds into the row's padding
+ * by negative-margin trick on the cell so the highlight goes edge-to-edge. */
+.sg-grid td.sg-renderer-email-thread-cell:has(.sg-renderer-email-thread.is-highlighted) {
+  padding: 0;
+}
+.sg-grid .sg-renderer-email-thread.is-highlighted {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 6px 8px;
+  margin: 0;
+}
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-from,
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-subject {
+  color: #ffffff;
+}
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-time {
+  color: rgba(255, 255, 255, 0.92);
+}
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-preview {
+  color: rgba(255, 255, 255, 0.78);
+}
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-count {
+  color: rgba(255, 255, 255, 0.72);
+}
+/* When highlighted + unread, the dot would clash with the blue background —
+ * swap to white so it stays visible. */
+.sg-grid .sg-renderer-email-thread.is-highlighted.is-unread .sg-renderer-email-thread-from::before {
+  background: #ffffff;
+}
+/* Attachment chips on a highlighted cell — translucent white pill that
+ * reads against the blue without losing the file-type accent colour. */
+.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-attachment {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
 
 /* Strata plan — "SP 12345" identifier (+ optional unit). */
 .sg-grid .sg-renderer-strata-plan {
@@ -5197,3 +5243,91 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   color: #ffffff;
 }
 .sg-licence-editor-save:hover { background: #1d4ed8; }
+
+/* Composite-editor multi-checkbox (PPE checklist, subcontractor flags). */
+.sg-composite-editor-multiselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 4px 0;
+}
+.sg-composite-editor-multiselect-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #1f2937;
+  cursor: pointer;
+}
+.sg-composite-editor-multiselect-item input[type="checkbox"] { margin: 0; }
+.sg-composite-editor-bool-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.sg-composite-editor-bool-label { font-size: 12px; color: #374151; }
+
+/* Inline select-popover (job-status, customer-type, …) — same chrome
+ * family as the licence editor, just a vertical option list. */
+.sg-select-editor {
+  z-index: 1000;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  min-width: 180px;
+  max-width: 260px;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+}
+.sg-select-editor-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-weight: 600;
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sg-select-editor-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.sg-select-editor-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: #1f2937;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sg-select-editor-item:hover { background: #f3f4f6; }
+.sg-select-editor-item.is-current { background: #eff6ff; color: #1d4ed8; }
+.sg-select-editor-item.is-empty { color: #9ca3af; font-style: italic; }
+.sg-select-editor-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.sg-select-editor-icon {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sg-select-editor-label { flex: 1; }
