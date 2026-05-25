@@ -4888,6 +4888,24 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-rego-plate-text { font-variant-numeric: tabular-nums; }
 
+/* Service due — km left + days left, coloured by closer-to-due. */
+.sg-grid .sg-renderer-service-due {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.sg-grid .sg-renderer-service-due-km {}
+.sg-grid .sg-renderer-service-due-date { opacity: 0.85; font-weight: 500; }
+.sg-grid .sg-renderer-service-due.is-current { background: #dcfce7; color: #14532d; }
+.sg-grid .sg-renderer-service-due.is-warning { background: #fef3c7; color: #713f12; }
+.sg-grid .sg-renderer-service-due.is-soon    { background: #fed7aa; color: #7c2d12; }
+.sg-grid .sg-renderer-service-due.is-overdue { background: #fecaca; color: #7f1d1d; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

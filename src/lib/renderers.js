@@ -9237,6 +9237,55 @@ export function jsaStatus() {
  * Rego plates, rego currency, CTP / green-slip, service-due, fuel
  * cards, odometer readings — the fleet-management vocabulary. */
 
+/* ---------- service-due -------------------------------------------
+ *
+ * Vehicle service-due indicator. Vehicle services come due on the
+ * earlier of km or time — this renderer shows both deltas and colours
+ * by whichever is closer (or already over).
+ *
+ *   value: { currentKm, dueKm, dueDate } */
+export function serviceDue() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : null;
+    if (!v) return '';
+    const cur = +v.currentKm;
+    const dKm = +v.dueKm;
+    const kmLeft = Number.isFinite(cur) && Number.isFinite(dKm) ? dKm - cur : null;
+    const dayLeft = v.dueDate ? daysUntil(v.dueDate) : null;
+    // Determine band — whichever is most-overdue or closest.
+    const kmBand = kmLeft == null ? null
+                 : kmLeft < 0 ? 'is-overdue'
+                 : kmLeft < 500 ? 'is-soon'
+                 : kmLeft < 2000 ? 'is-warning'
+                 : 'is-current';
+    const dayBand = dayLeft == null ? null
+                  : dayLeft < 0 ? 'is-overdue'
+                  : dayLeft < 14 ? 'is-soon'
+                  : dayLeft < 60 ? 'is-warning'
+                  : 'is-current';
+    const band = [kmBand, dayBand].includes('is-overdue') ? 'is-overdue'
+               : [kmBand, dayBand].includes('is-soon')    ? 'is-soon'
+               : [kmBand, dayBand].includes('is-warning') ? 'is-warning'
+               : 'is-current';
+    const wrap = h('span', { class: `sg-renderer-service-due ${band}` });
+    if (kmLeft != null) {
+      const label = kmLeft < 0 ? `${Math.abs(kmLeft).toLocaleString()} km over`
+                  : `${kmLeft.toLocaleString()} km left`;
+      wrap.append(h('span', { class: 'sg-renderer-service-due-km' },
+        document.createTextNode(label)));
+    }
+    if (dayLeft != null) {
+      const label = dayLeft < 0 ? `${Math.abs(dayLeft)}d over`
+                  : dayLeft === 0 ? 'today'
+                  : `${dayLeft}d left`;
+      wrap.append(h('span', { class: 'sg-renderer-service-due-date' },
+        document.createTextNode(label)));
+    }
+    return wrap;
+  };
+}
+
 // Vehicle rego currency. Value: ISO date string (the rego expiry) or
 // `{ expires }`. Renders "Rego current/expires in N days/expired" pill
 // in traffic-light colour.
@@ -10612,6 +10661,7 @@ registerRenderer('crew',              crew());
 registerRenderer('rego-plate',        regoPlate());
 registerRenderer('rego-status',       regoStatus());
 registerRenderer('ctp-status',        ctpStatus());
+registerRenderer('service-due',       serviceDue());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11209,6 +11259,7 @@ wireBuiltin('crew',           clip.json);
 wireBuiltin('rego-plate',     clip.json);
 wireBuiltin('rego-status',    clip.json);
 wireBuiltin('ctp-status',     clip.json);
+wireBuiltin('service-due',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11249,5 +11300,5 @@ export const renderers = {
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
-  regoPlate, regoStatus, ctpStatus,
+  regoPlate, regoStatus, ctpStatus, serviceDue,
 };

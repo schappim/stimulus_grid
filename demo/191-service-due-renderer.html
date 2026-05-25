@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>191 — Service due | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>191 — Service due (km / date — whichever first)</h1>
+  <p class="lede">
+    Vehicle services fall due on the earlier of km or date. This
+    renderer shows both deltas in one pill, coloured by the
+    most-overdue side. Pass <code>{ currentKm, dueKm, dueDate }</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="240">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="plate"
+              data-header-cell-cell-renderer-value="rego-plate"
+              data-header-cell-width-value="160">Plate</th>
+          <th data-controller="header-cell" data-header-cell-field-value="service"
+              data-header-cell-cell-renderer-value="service-due"
+              data-header-cell-width-value="220">Service due</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, vehicle: 'HiLux #1',  plate: { state: 'NSW', plate: 'ABK 42T' }, service: { currentKm: 38500, dueKm: 45000, dueDate: inDays(180) } },
+      { id: 2, vehicle: 'Ranger #2', plate: { state: 'VIC', plate: '1AB 2CD' }, service: { currentKm: 89800, dueKm: 90000, dueDate: inDays(40) } },
+      { id: 3, vehicle: 'D-Max #3',  plate: { state: 'QLD', plate: '321 ABC' }, service: { currentKm: 119500,dueKm: 120000,dueDate: inDays(8) } },
+      { id: 4, vehicle: 'Triton #4', plate: { state: 'SA',  plate: 'S 123 AAB' }, service: { currentKm: 220300,dueKm: 220000,dueDate: inDays(-12) } },
+      { id: 5, vehicle: 'LC79 #5',   plate: { state: 'WA',  plate: '1ABC 234' }, service: { currentKm: 60100, dueKm: 65000, dueDate: inDays(120) } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
