@@ -43,7 +43,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 - [x] **49 — `donut`** Single-percentage donut chart (sibling to `progress-bar`).
 - [x] **50 — `histogram`** Frequency bars from an array (sibling to `sparkline`).
 - [x] **51 — `rag`** Pure red / amber / green dot — no label. Risk-dashboard primitive.
-- [ ] **52 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
+- [x] **52 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
 - [ ] **53 — `mention`** Parses `@user` and `#tag` inside long text into styled chips.
 - [ ] **54 — `expand`** Click-to-expand long text in-place (vs `truncate`'s clip-with-hover-tooltip).
 - [ ] **55 — `units`** Distance / temperature / weight formatter ("12 km", "23 °C", "1.4 kg"). Locale-aware unit conversion.

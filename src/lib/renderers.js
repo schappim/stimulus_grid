@@ -3511,6 +3511,59 @@ export function rag({
   };
 }
 
+/* ---------- timelineSteps (ordered status progression) --------------
+ *
+ * Order-status / progress columns where the value is one of an ordered
+ * set of steps: "Pending → Picked → Shipped → Delivered". Past steps
+ * fill solid; the current step gets a halo ring; future steps stay
+ * hollow / muted. Connecting lines between steps go solid behind past
+ * steps and muted between future ones.
+ *
+ *   registerRenderer('shipment', timelineSteps({
+ *     steps: ['Pending', 'Picked', 'Shipped', 'Delivered'],
+ *     showLabels: true,
+ *   }))
+ *
+ * Value can be the step *name* (case-insensitive) or the 0-based index. */
+export function timelineSteps({
+  steps = ['Pending', 'Shipped', 'Delivered'],
+  color = '#2563eb',
+  showLabels = false,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let curIdx = -1;
+    if (Number.isFinite(Number(value))) {
+      curIdx = Math.max(0, Math.min(steps.length - 1, Math.floor(Number(value))));
+    } else {
+      const v = String(value).toLowerCase();
+      curIdx = steps.findIndex((s) => String(s).toLowerCase() === v);
+    }
+    if (curIdx < 0) return '';
+
+    const wrap = h('div', {
+      class: `sg-renderer-timeline${showLabels ? ' has-labels' : ''}`,
+      style: `--ts-color: ${color};`,
+      role: 'list',
+      'aria-label': `Step ${curIdx + 1} of ${steps.length}: ${steps[curIdx]}`,
+    });
+    for (let i = 0; i < steps.length; i++) {
+      const state = i < curIdx ? 'past' : i === curIdx ? 'current' : 'future';
+      const step = h('span', { class: `sg-timeline-step is-${state}`, role: 'listitem' });
+      step.append(h('span', { class: 'sg-timeline-dot', title: steps[i], 'aria-label': steps[i] }));
+      if (showLabels) {
+        step.append(h('span', { class: 'sg-timeline-label' }, document.createTextNode(steps[i])));
+      }
+      wrap.append(step);
+      if (i < steps.length - 1) {
+        const lineState = i < curIdx ? 'past' : 'future';
+        wrap.append(h('span', { class: `sg-timeline-line is-${lineState}`, 'aria-hidden': 'true' }));
+      }
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3562,6 +3615,7 @@ registerRenderer('bullet',         bullet());
 registerRenderer('donut',          donut());
 registerRenderer('histogram',      histogram());
 registerRenderer('rag',            rag());
+registerRenderer('timeline-steps', timelineSteps());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3573,5 +3627,6 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, rating, bullet, donut, histogram, rag, audioAttachment,
+  diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
+  audioAttachment,
 };

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>52 — Timeline steps renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>52 — Timeline steps renderer</h1>
+  <p class="lede">
+    Order-status / pipeline columns where the value is one of an ordered
+    set of steps. Past steps fill solid, the current step gets a halo,
+    future steps stay hollow. Pass <code>showLabels: true</code> for the
+    text labels under each dot.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true" data-grid-row-height-value="56">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="order"
+              data-header-cell-width-value="140"
+              data-header-cell-sortable-value="true">Order</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="shipment-compact"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Status (compact)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="shipment-labelled"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="380">Status (with labels)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Editing:</strong> the Status columns are editable — type the
+    step name (case-insensitive) or its 0-based index. The dots
+    re-paint immediately. Try typing <code>2</code> or
+    <code>shipped</code> in any cell.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    const STEPS = ['Pending', 'Picked', 'Shipped', 'Delivered'];
+
+    registerRenderer('shipment-compact', renderers.timelineSteps({
+      steps: STEPS,
+      color: '#2563eb',
+    }));
+    registerRenderer('shipment-labelled', renderers.timelineSteps({
+      steps: STEPS,
+      color: '#10b981',
+      showLabels: true,
+    }));
+
+    const ROWS = [
+      { id: 1, order: 'ORD-8721', customer: 'Astrid Hale',   status: 'Pending' },
+      { id: 2, order: 'ORD-8722', customer: 'Marcus Chen',   status: 'Picked' },
+      { id: 3, order: 'ORD-8723', customer: 'Priya Patel',   status: 'Shipped' },
+      { id: 4, order: 'ORD-8724', customer: 'Jamal Owens',   status: 'Delivered' },
+      { id: 5, order: 'ORD-8725', customer: 'Lena Brooks',   status: 'Picked' },
+      { id: 6, order: 'ORD-8726', customer: 'Tomás Vega',    status: 'Shipped' },
+      { id: 7, order: 'ORD-8727', customer: 'Mei Tanaka',    status: 'Pending' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

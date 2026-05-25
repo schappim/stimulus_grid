@@ -2576,3 +2576,65 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   color: var(--sg-fg, #1f2937);
   font-weight: 500;
 }
+
+/* Timeline steps — ordered status progression. Past steps fill, the
+   current step gets a halo, future steps stay hollow. Connecting lines
+   between steps mirror the same past/future state.
+
+   The --ts-color custom property is set inline so per-renderer tints
+   (e.g. orange for issues, green for orders) don't need separate CSS. */
+.sg-grid .sg-renderer-timeline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-timeline.has-labels { align-items: flex-start; }
+.sg-grid .sg-timeline-step {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.sg-grid .sg-timeline-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1.5px solid var(--sg-border-strong, #d1d5db);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.sg-grid .sg-timeline-step.is-past .sg-timeline-dot {
+  background: var(--ts-color, #2563eb);
+  border-color: var(--ts-color, #2563eb);
+}
+.sg-grid .sg-timeline-step.is-current .sg-timeline-dot {
+  background: var(--ts-color, #2563eb);
+  border-color: var(--ts-color, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+.sg-grid .sg-timeline-step.is-future .sg-timeline-dot {
+  background: #fff;
+  border-color: var(--sg-border-strong, #d1d5db);
+}
+.sg-grid .sg-timeline-line {
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  margin-top: 4px;            /* aligns with dot centre when labels are on */
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-timeline:not(.has-labels) .sg-timeline-line { margin-top: 0; }
+.sg-grid .sg-timeline-line.is-past   { background: var(--ts-color, #2563eb); }
+.sg-grid .sg-timeline-line.is-future { background: var(--sg-border, #e5e7eb); }
+.sg-grid .sg-timeline-label {
+  color: var(--sg-fg-muted, #6b7280);
+  font-size: 10px;
+  white-space: nowrap;
+  text-align: center;
+}
+.sg-grid .sg-timeline-step.is-current .sg-timeline-label {
+  color: var(--sg-fg, #1f2937);
+  font-weight: 600;
+}
