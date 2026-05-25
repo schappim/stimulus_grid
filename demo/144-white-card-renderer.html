@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>144 — White Card renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>144 — White Card (Construction Induction Card)</h1>
+  <p class="lede">
+    The General Construction Induction Card (CIC, "White Card") — required
+    on every Australian construction site. Issued by RTOs nationally so
+    the state on the card is the holder's state of issue. Double-click to
+    open the four-field editor (state / number / class / expiry).
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="180">Worker</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trade"
+              data-header-cell-width-value="130">Trade</th>
+          <th data-controller="header-cell" data-header-cell-field-value="card"
+              data-header-cell-cell-renderer-value="white-card"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="320">White Card</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    CICs do not federally carry an expiry, but most builders self-impose
+    a 2-year refresh window. Pass <code>expires</code> in the value
+    object and the traffic-light pill kicks in.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale',  trade: 'Electrician',  card: { state: 'NSW', number: '12345678', expires: inDays(540) } },
+      { id: 2, name: 'Marcus Chen',  trade: 'Carpenter',    card: { state: 'VIC', number: '87654321', expires: inDays(70) } },
+      { id: 3, name: 'Priya Patel',  trade: 'Plumber',      card: { state: 'QLD', number: '23456789', expires: inDays(15) } },
+      { id: 4, name: 'Jamal Owens',  trade: 'Labourer',     card: { state: 'SA',  number: '98765432', expires: inDays(-30) } },
+      { id: 5, name: 'Lena Brooks',  trade: 'Roofer',       card: { state: 'WA',  number: '11223344' } },
+      { id: 6, name: 'Tomás Vega',   trade: 'Tiler',        card: 'CIC-AS445566' },
+      { id: 7, name: '(no card)',    trade: 'Apprentice',   card: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('white card change:', e.detail));
+  </script>
+</body>
+</html>

@@ -9201,6 +9201,7 @@ registerRenderer('battery',           battery());
 registerRenderer('signal-bars',       signalBars());
 registerRenderer('volume',            volumeIndicator());
 registerRenderer('trade-licence',     tradeLicence());
+registerRenderer('white-card',        whiteCard());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9751,6 +9752,7 @@ wireBuiltin('menu',           clip.text);
 wireBuiltin('split-button',   clip.text);
 wireBuiltin('row-actions',    clip.text);
 wireBuiltin('trade-licence',  clip.json);
+wireBuiltin('white-card',     clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9781,5 +9783,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence,
+  tradeLicence, whiteCard,
 };
