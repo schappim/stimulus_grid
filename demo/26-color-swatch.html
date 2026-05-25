@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>26 — Color swatch | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>26 — Color swatch</h1>
+  <p class="lede">
+    Coloured chip + label. The cell value is the colour (any CSS-valid
+    value — hex, <code>rgb()</code>, <code>hsl()</code>, named, even
+    <code>oklch()</code>). Variants: circle (default) or square chip,
+    sized to taste; <code>label: 'name'</code> reads the friendly name
+    from another row field; <code>showLabel: false</code> gives a
+    chip-only column for dense palette previews.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Token</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hex"
+              data-header-cell-cell-renderer-value="color-swatch"
+              data-header-cell-width-value="140">Hex</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hex_named"
+              data-header-cell-cell-renderer-value="color-swatch-named"
+              data-header-cell-width-value="160">Named</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hex_square"
+              data-header-cell-cell-renderer-value="color-swatch-square"
+              data-header-cell-width-value="140">Square</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hex_big"
+              data-header-cell-cell-renderer-value="color-swatch-chip-only"
+              data-header-cell-width-value="80">Chip</th>
+          <th data-controller="header-cell" data-header-cell-field-value="usage"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="240">Used for</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Variants:</strong> the <em>Named</em> column is
+    <code>colorSwatch({ label: 'name' })</code> — pulls the friendly name
+    from <code>row.name</code> instead of the hex code. The <em>Square</em>
+    column is <code>colorSwatch({ shape: 'square' })</code>. The
+    <em>Chip</em> column is
+    <code>colorSwatch({ showLabel: false, size: 22 })</code> — chip-only,
+    perfect for palette overview columns.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('color-swatch-named',     renderers.colorSwatch({ label: 'name' }));
+    registerRenderer('color-swatch-square',    renderers.colorSwatch({ shape: 'square' }));
+    registerRenderer('color-swatch-chip-only', renderers.colorSwatch({ showLabel: false, size: 22 }));
+
+    const ROWS = [
+      { id: 1, name: 'brand/primary',     hex: '#2563eb', hex_named: '#2563eb', hex_square: '#2563eb', hex_big: '#2563eb',
+        usage: 'Primary buttons, links' },
+      { id: 2, name: 'brand/accent',      hex: '#f59e0b', hex_named: '#f59e0b', hex_square: '#f59e0b', hex_big: '#f59e0b',
+        usage: 'Star ratings, chevrons' },
+      { id: 3, name: 'status/success',    hex: '#10b981', hex_named: '#10b981', hex_square: '#10b981', hex_big: '#10b981',
+        usage: 'Toast success, valid states' },
+      { id: 4, name: 'status/warning',    hex: '#facc15', hex_named: '#facc15', hex_square: '#facc15', hex_big: '#facc15',
+        usage: 'Pending, partial fulfilment' },
+      { id: 5, name: 'status/danger',     hex: '#dc2626', hex_named: '#dc2626', hex_square: '#dc2626', hex_big: '#dc2626',
+        usage: 'Destructive actions, errors' },
+      { id: 6, name: 'surface/canvas',    hex: '#ffffff', hex_named: '#ffffff', hex_square: '#ffffff', hex_big: '#ffffff',
+        usage: 'Page background (light)' },
+      { id: 7, name: 'surface/ink',       hex: '#0f172a', hex_named: '#0f172a', hex_square: '#0f172a', hex_big: '#0f172a',
+        usage: 'Body text, headings' },
+      { id: 8, name: 'oklch test',        hex: 'oklch(0.71 0.18 145)', hex_named: 'oklch(0.71 0.18 145)',
+        hex_square: 'oklch(0.71 0.18 145)', hex_big: 'oklch(0.71 0.18 145)',
+        usage: 'Modern colour space — works straight through' },
+      { id: 9, name: 'transparent',       hex: 'rgba(15, 23, 42, 0.18)', hex_named: 'rgba(15, 23, 42, 0.18)',
+        hex_square: 'rgba(15, 23, 42, 0.18)', hex_big: 'rgba(15, 23, 42, 0.18)',
+        usage: 'Modal scrim' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

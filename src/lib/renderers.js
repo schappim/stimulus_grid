@@ -532,6 +532,39 @@ function openImageZoom(src, alt) {
   document.body.appendChild(overlay);
 }
 
+/* ---------- color swatch -------------------------------------------- */
+
+// Coloured chip + label. Accepts any CSS colour the browser groks: hex
+// (#f59e0b, #f5b), rgb()/rgba()/hsl()/hsla(), named colours, oklch(),
+// etc. — we pass it straight to background-color and let the engine
+// validate. `showLabel: false` for a label-less swatch (great for
+// dense palette previews); `label: 'name'|'value'|fn` controls what
+// text appears beside the chip (default 'value' — just the cell value).
+export function colorSwatch({
+  showLabel = true,
+  label = 'value',                       // 'value' | 'name' | (value, row) => string
+  shape = 'circle',                      // 'circle' | 'square'
+  size = 14,
+} = {}) {
+  return ({ value, row }) => {
+    if (isBlank(value)) return '';
+    const color = String(value).trim();
+    const wrap = h('span', { class: 'sg-renderer-swatch' });
+    const chip = h('span', {
+      class: `sg-renderer-swatch-chip is-${shape}`,
+      style: `width: ${size}px; height: ${size}px; background: ${color};`,
+      'aria-hidden': 'true',
+    });
+    wrap.append(chip);
+    if (showLabel) {
+      const text = typeof label === 'function' ? label(value, row)
+                 : label === 'name' ? (row?.name ?? color) : color;
+      wrap.append(h('span', { class: 'sg-renderer-swatch-label' }, document.createTextNode(text)));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -814,6 +847,7 @@ registerRenderer('delta',          delta());
 registerRenderer('truncate',       truncate());
 registerRenderer('copyable',       copyable());
 registerRenderer('image',          image());
+registerRenderer('color-swatch',   colorSwatch());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -821,5 +855,5 @@ export const renderers = {
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
   boolean, delta,
-  truncate, copyable, image,
+  truncate, copyable, image, colorSwatch,
 };
