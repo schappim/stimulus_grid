@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort, aggregateRange, buildHeaderLayout } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
-import { getRenderer } from '../lib/renderers.js';
+import { getRenderer, defaultParseValue, defaultCopyValue } from '../lib/renderers.js';
 
 const DEFAULT_ROW_HEIGHT = 32;
 const DEFAULT_PAGE_SIZE = 100;
@@ -183,6 +183,7 @@ export default class GridController extends Controller {
     this.element.removeEventListener('keydown', this._onGridKeydown);
     document.removeEventListener('mouseup', this._onCellMouseUp);
     document.removeEventListener('copy', this._onCopy);
+    document.removeEventListener('paste', this._onPaste);
     document.removeEventListener('mousemove', this._onRowDragMove);
     this._thead?.removeEventListener('contextmenu', this._onHeaderContextMenu);
     this._thead?.removeEventListener('click', this._onSynthHeaderClick);
@@ -2454,6 +2455,7 @@ export default class GridController extends Controller {
     this._tbody.addEventListener('mouseover', this._onCellMouseOver);
     document.addEventListener('mouseup', this._onCellMouseUp);
     document.addEventListener('copy', this._onCopy);
+    document.addEventListener('paste', this._onPaste);
     this._viewport.addEventListener('scroll', this._onScroll, { passive: true });
     // Drag-to-attach: opt-in via data-grid-accept-files-value="true" (and an
     // optional per-column override). Every data cell becomes a file drop
@@ -2883,7 +2885,10 @@ export default class GridController extends Controller {
     this._renderStatusBar();
   }
 
-  // Copy the active cell range to the clipboard as TSV (rows \n, cols \t).
+  // Copy the active cell range to the clipboard as TSV. Cells that contain
+  // tabs, newlines, or double-quotes are wrapped in "…" with embedded "
+  // doubled — the same rule Excel / Sheets / Numbers use, so a multi-line
+  // markdown cell round-trips through the clipboard intact.
   _onCopy = (e) => {
     if (this.state.editing) return;
     const ae = document.activeElement;
@@ -2891,11 +2896,125 @@ export default class GridController extends Controller {
     const rect = this._activeRect();
     if (!rect) return;
     const tsv = this._cellRangeRows(rect)
-      .map((r) => r.map((v) => String(v ?? '')).join('\t')).join('\n');
-    if (!tsv) return;
+      .map((r) => r.map((v) => tsvEscape(v)).join('\t')).join('\n');
+    if (tsv === '') return;
     e.clipboardData?.setData('text/plain', tsv);
     e.preventDefault();
   };
+
+  // Paste clipboard TSV starting at the active cell. Each cell goes through
+  // the column's renderer.parseValue (or defaultParseValue for unrendered
+  // columns); cells the renderer rejects (returns `undefined`) are skipped
+  // and reported via `grid:pasteRejected`. Editable columns only — pastes
+  // onto non-editable cells (gutters, checkbox columns, computed columns)
+  // are reported as `not-editable` rejections but never silently mutate.
+  //
+  // Single-value pastes tile across the whole selection (Sheets convention),
+  // so "Cmd+C a single price → Cmd+V on a 5-row selection" fills five rows.
+  _onPaste = (e) => {
+    if (!this.cellSelectionValue) return;
+    if (this.state.editing) return;
+    const ae = document.activeElement;
+    if (ae && /^(input|textarea|select)$/i.test(ae.tagName) && !this.element.contains(ae)) return;
+    const rect = this._activeRect();
+    if (!rect) return;
+    const text = e.clipboardData?.getData('text/plain');
+    if (text == null || text === '') return;
+    e.preventDefault();
+
+    const rows = parseTSV(text);
+    if (!rows.length) return;
+    // Drop a trailing empty row left by a final "\n" in the clipboard.
+    if (rows.length > 1 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') rows.pop();
+    if (!rows.length) return;
+
+    // Single-value paste tiles across the active selection rectangle.
+    const single = rows.length === 1 && rows[0].length === 1;
+    const targetR = single ? (rect.r1 - rect.r0 + 1) : rows.length;
+    const targetC = single ? (rect.c1 - rect.c0 + 1) : rows[0].length;
+
+    const dataRows = rect.rows;
+    const cols = rect.cols;
+    const rejected = [];
+    let any = false;
+
+    for (let dr = 0; dr < targetR; dr++) {
+      const ri = rect.r0 + dr;
+      if (ri >= dataRows.length) break;
+      const row = dataRows[ri];
+      if (!row) continue;
+      if (row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
+      const srcRow = single ? rows[0] : rows[dr];
+      for (let dc = 0; dc < targetC; dc++) {
+        const ci = rect.c0 + dc;
+        if (ci >= cols.length) break;
+        const col = cols[ci];
+        if (!col) continue;
+        if (!col.editable || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand) {
+          rejected.push({ rowId: this._rowId(row), colId: col.field || '', reason: 'not-editable' });
+          continue;
+        }
+        const cellText = single ? srcRow[0] : (srcRow[dc] ?? '');
+        const parsed = this._parsePasteValue(cellText, row, col);
+        if (parsed === undefined) {
+          rejected.push({ rowId: this._rowId(row), colId: col.field, reason: 'parse-failed', text: cellText });
+          continue;
+        }
+        const oldValue = row[col.field];
+        if (parsed === oldValue) continue;
+        row[col.field] = parsed;
+        any = true;
+        emit(this.element, 'grid:cellValueChanged', {
+          rowId: this._rowId(row), colId: col.field, oldValue, newValue: parsed, source: 'paste',
+        });
+      }
+    }
+    if (any) this.scheduleRender('cells');
+    if (rejected.length || any) {
+      emit(this.element, 'grid:pasteApplied', { appliedCount: any ? 1 : 0, rejectedCount: rejected.length });
+    }
+    if (rejected.length) {
+      emit(this.element, 'grid:pasteRejected', { rejected });
+    }
+  };
+
+  // Resolve a single cell's pasted text → value (or `undefined` to reject).
+  // Renderer-defined `parseValue` wins; otherwise we fall back to the type-
+  // aware default that knows how to coerce numbers, booleans, dates.
+  _parsePasteValue(text, row, col) {
+    if (col.cellRenderer) {
+      const fn = getRenderer(col.cellRenderer);
+      if (fn && typeof fn.parseValue === 'function') {
+        try {
+          return fn.parseValue(String(text ?? ''), {
+            row, col, api: this.element.gridApi,
+          });
+        } catch (_) { return undefined; }
+      }
+    }
+    return defaultParseValue(text, col);
+  }
+
+  // The clipboard-bound flip side of _parsePasteValue. Returns a string;
+  // empty string is fine ("…\t\t…"). Renderer-defined `copyValue` wins;
+  // otherwise we use the model's formatted display string (existing
+  // behaviour — keeps non-renderer columns identical to v0).
+  _copyCellValue(row, col) {
+    const value = getValue(row, col);
+    const formatted = formatValue(row, col);
+    if (col.cellRenderer) {
+      const fn = getRenderer(col.cellRenderer);
+      if (fn && typeof fn.copyValue === 'function') {
+        try {
+          const out = fn.copyValue({
+            value, row, col, formatted, api: this.element.gridApi,
+          });
+          return out == null ? '' : String(out);
+        } catch (_) { /* fall through to default */ }
+      }
+    }
+    return defaultCopyValue(value, col, formatted);
+  }
 
   // Rectangle (display indices) for a {anchor,focus} range, or null.
   _rangeRect(range) {
@@ -2925,7 +3044,7 @@ export default class GridController extends Controller {
       const line = [];
       for (let c = rect.c0; c <= rect.c1; c++) {
         const col = rect.cols[c];
-        if (col) line.push(formatValue(row, col));
+        if (col) line.push(this._copyCellValue(row, col));
       }
       out.push(line);
     }

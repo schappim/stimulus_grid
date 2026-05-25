@@ -5041,6 +5041,213 @@ function closeDatePickerEditor() {
   refocusGrid(anchor);
 }
 
+/* ---------- time-picker (HH:MM popover editor) ---------------------
+ *
+ * Display sibling to the existing `time` renderer; opens a compact
+ * popover with hour + minute (+ optional AM/PM) wheels. Use for
+ * appointment times, deadlines, daily schedules.
+ *
+ *   registerRenderer('start', renderers.timePicker({
+ *     style: '12h',
+ *     minuteStep: 15,
+ *   }));
+ *
+ * Commits ISO-ish "HH:MM" (24-hour) regardless of display style — the
+ * canonical wire shape matches the existing `time` renderer's input. */
+export function timePicker({
+  style = '24h',                  // '24h' | '12h'
+  minuteStep = 5,
+  editable = true,
+  empty = '—',
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const st = cfg.style ?? style;
+    const ms = cfg.minuteStep ?? minuteStep;
+    const ed = cfg.editable ?? editable;
+
+    if (td) {
+      td.classList.add('sg-renderer-timepicker-cell');
+      td._sgTimePickerStyle = st;
+      td._sgTimePickerStep = ms;
+    }
+
+    if (ed && td && !td._sgTimePickerBound) {
+      td._sgTimePickerBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgTimePickerHandled) return;
+        e._sgTimePickerHandled = true;
+        e.stopPropagation();
+        openTimePickerEditor(td, ctx);
+      });
+    }
+
+    const t = toTime(value);
+    if (!t) return empty;
+    return h('span', { class: 'sg-renderer-timepicker-value' },
+      document.createTextNode(formatTimeForPicker(t, st)));
+  };
+}
+
+function formatTimeForPicker(t, style) {
+  const m = String(t.m).padStart(2, '0');
+  if (style === '12h') {
+    const ampm = t.h >= 12 ? 'PM' : 'AM';
+    const h12 = (t.h % 12) || 12;
+    return `${h12}:${m} ${ampm}`;
+  }
+  return `${String(t.h).padStart(2, '0')}:${m}`;
+}
+
+let activeTimePickerEditor = null;
+
+function openTimePickerEditor(anchor, ctx) {
+  closeTimePickerEditor();
+  const style = anchor._sgTimePickerStyle || '24h';
+  const step = anchor._sgTimePickerStep || 5;
+  const { row, col } = ctx;
+  const start = toTime(row && col?.field != null ? row[col.field] : null) || { h: 9, m: 0, s: 0 };
+  let h24 = start.h;
+  let mm = Math.round(start.m / step) * step;
+  if (mm >= 60) mm = 0;
+
+  const pop = h('div', { class: 'sg-renderer-timepicker-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit(value) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = value;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: value },
+    }));
+    closeTimePickerEditor();
+  }
+
+  function commitCurrent() {
+    const hh = String(h24).padStart(2, '0');
+    const m  = String(mm).padStart(2, '0');
+    commit(`${hh}:${m}`);
+  }
+
+  const hoursWrap = h('div', { class: 'sg-renderer-timepicker-col' });
+  hoursWrap.append(h('div', { class: 'sg-renderer-timepicker-col-label' },
+    document.createTextNode('Hour')));
+  const hoursList = h('div', { class: 'sg-renderer-timepicker-list' });
+  hoursWrap.append(hoursList);
+
+  function renderHours() {
+    hoursList.replaceChildren();
+    const range = style === '12h' ? Array.from({ length: 12 }, (_, i) => (i === 0 ? 12 : i)) : Array.from({ length: 24 }, (_, i) => i);
+    for (const h12 of range) {
+      const value24 = style === '12h'
+        ? (h24 >= 12 ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12))
+        : h12;
+      const sel = value24 === h24;
+      const btn = h('button', {
+        type: 'button',
+        class: `sg-renderer-timepicker-item${sel ? ' is-selected' : ''}`,
+      }, document.createTextNode(style === '12h' ? String(h12) : String(h12).padStart(2, '0')));
+      btn.addEventListener('click', () => { h24 = value24; renderHours(); });
+      btn.addEventListener('dblclick', () => { h24 = value24; commitCurrent(); });
+      hoursList.append(btn);
+      if (sel) setTimeout(() => btn.scrollIntoView({ block: 'nearest' }), 0);
+    }
+  }
+
+  const minutesWrap = h('div', { class: 'sg-renderer-timepicker-col' });
+  minutesWrap.append(h('div', { class: 'sg-renderer-timepicker-col-label' },
+    document.createTextNode('Min')));
+  const minutesList = h('div', { class: 'sg-renderer-timepicker-list' });
+  minutesWrap.append(minutesList);
+
+  function renderMinutes() {
+    minutesList.replaceChildren();
+    for (let i = 0; i < 60; i += step) {
+      const sel = i === mm;
+      const btn = h('button', {
+        type: 'button',
+        class: `sg-renderer-timepicker-item${sel ? ' is-selected' : ''}`,
+      }, document.createTextNode(String(i).padStart(2, '0')));
+      btn.addEventListener('click', () => { mm = i; renderMinutes(); });
+      btn.addEventListener('dblclick', () => { mm = i; commitCurrent(); });
+      minutesList.append(btn);
+      if (sel) setTimeout(() => btn.scrollIntoView({ block: 'nearest' }), 0);
+    }
+  }
+
+  const cols = h('div', { class: 'sg-renderer-timepicker-cols' });
+  cols.append(hoursWrap, minutesWrap);
+  if (style === '12h') {
+    const ampmWrap = h('div', { class: 'sg-renderer-timepicker-col' });
+    ampmWrap.append(h('div', { class: 'sg-renderer-timepicker-col-label' },
+      document.createTextNode(' ')));
+    const ampmList = h('div', { class: 'sg-renderer-timepicker-list' });
+    for (const ap of ['AM', 'PM']) {
+      const sel = (ap === 'AM' && h24 < 12) || (ap === 'PM' && h24 >= 12);
+      const btn = h('button', {
+        type: 'button',
+        class: `sg-renderer-timepicker-item${sel ? ' is-selected' : ''}`,
+      }, document.createTextNode(ap));
+      btn.addEventListener('click', () => {
+        if (ap === 'AM' && h24 >= 12) h24 -= 12;
+        if (ap === 'PM' && h24 < 12)  h24 += 12;
+        renderHours();
+        ampmList.querySelectorAll('.sg-renderer-timepicker-item').forEach((e, i) => {
+          e.classList.toggle('is-selected', (i === 0 && h24 < 12) || (i === 1 && h24 >= 12));
+        });
+      });
+      ampmList.append(btn);
+    }
+    ampmWrap.append(ampmList);
+    cols.append(ampmWrap);
+  }
+
+  const footer = h('div', { class: 'sg-renderer-timepicker-footer' });
+  const cancel = h('button', { type: 'button', class: 'sg-renderer-timepicker-cancel' },
+    document.createTextNode('Cancel'));
+  const ok = h('button', { type: 'button', class: 'sg-renderer-timepicker-ok' },
+    document.createTextNode('Set'));
+  const clear = h('button', { type: 'button', class: 'sg-renderer-timepicker-clear' },
+    document.createTextNode('Clear'));
+  cancel.addEventListener('click', () => closeTimePickerEditor());
+  clear.addEventListener('click', () => commit(null));
+  ok.addEventListener('click', () => commitCurrent());
+  footer.append(clear, cancel, ok);
+
+  pop.append(cols, footer);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeTimePickerEditor(); }
+    if (e.key === 'Enter')  { e.stopPropagation(); e.preventDefault(); commitCurrent(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeTimePickerEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  renderHours();
+  renderMinutes();
+  positionPopover(pop, anchor);
+  activeTimePickerEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeTimePickerEditor() {
+  if (!activeTimePickerEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeTimePickerEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeTimePickerEditor = null;
+  refocusGrid(anchor);
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -5246,6 +5453,7 @@ registerRenderer('multiselect',       multiselect());
 registerRenderer('combobox',          combobox());
 registerRenderer('slider',            slider());
 registerRenderer('date-picker',       datePicker());
+registerRenderer('time-picker',       timePicker());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -5260,5 +5468,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select, multiselect, combobox, slider, datePicker,
+  select, multiselect, combobox, slider, datePicker, timePicker,
 };

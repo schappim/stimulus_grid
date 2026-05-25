@@ -3267,3 +3267,90 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-renderer-datepicker-today:hover,
 .sg-renderer-datepicker-clear:hover { background: #f3f4f6; }
 .sg-renderer-datepicker-clear { color: #6b7280; }
+
+/* ----- time-picker ------------------------------------------------- */
+.sg-grid .sg-renderer-timepicker-cell { cursor: pointer; }
+.sg-renderer-timepicker-popover {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.sg-renderer-timepicker-cols {
+  display: flex;
+  gap: 6px;
+}
+.sg-renderer-timepicker-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 52px;
+}
+.sg-renderer-timepicker-col-label {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.sg-renderer-timepicker-list {
+  height: 160px;
+  overflow-y: auto;
+  border: 1px solid #f3f4f6;
+  border-radius: 4px;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+.sg-renderer-timepicker-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+  text-align: center;
+}
+.sg-renderer-timepicker-item:hover { background: #f3f4f6; }
+.sg-renderer-timepicker-item.is-selected {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+.sg-renderer-timepicker-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.sg-renderer-timepicker-clear,
+.sg-renderer-timepicker-cancel,
+.sg-renderer-timepicker-ok {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #2563eb;
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+.sg-renderer-timepicker-clear { color: #6b7280; margin-right: auto; }
+.sg-renderer-timepicker-cancel { color: #6b7280; }
+.sg-renderer-timepicker-ok {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 500;
+}
+.sg-renderer-timepicker-ok:hover { background: #1d4ed8; }
+.sg-renderer-timepicker-cancel:hover,
+.sg-renderer-timepicker-clear:hover { background: #f3f4f6; }

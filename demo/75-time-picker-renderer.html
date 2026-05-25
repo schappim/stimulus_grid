@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>75 — Time picker editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>75 — Time picker editor</h1>
+  <p class="lede">
+    Editable sibling to the display-only <code>time</code> renderer.
+    Double-click to open hour + minute (+ optional AM/PM) wheels. The
+    wire format is always 24-hour <code>HH:MM</code> regardless of how
+    it's shown.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="event"
+              data-header-cell-width-value="240">Event</th>
+          <th data-controller="header-cell" data-header-cell-field-value="start"
+              data-header-cell-cell-renderer-value="tp-12h-5"
+              data-header-cell-width-value="180">Start (12h, 5-min step)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="end"
+              data-header-cell-cell-renderer-value="tp-12h-15"
+              data-header-cell-width-value="200">End (12h, 15-min step)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="run"
+              data-header-cell-cell-renderer-value="tp-24h"
+              data-header-cell-width-value="180">Cron tick (24h)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Double-click an hour/minute to commit immediately; or single-click
+    to pre-select and press <strong>Set</strong> (or Enter).
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('tp-12h-5',  renderers.timePicker({ style: '12h', minuteStep: 5  }));
+    registerRenderer('tp-12h-15', renderers.timePicker({ style: '12h', minuteStep: 15 }));
+    registerRenderer('tp-24h',    renderers.timePicker({ style: '24h', minuteStep: 1  }));
+
+    const data = [
+      { id: 1, event: 'Daily standup',         start: '09:00', end: '09:15', run: '08:55' },
+      { id: 2, event: 'Pair on payments bug',  start: '10:30', end: '12:00', run: '10:25' },
+      { id: 3, event: 'Lunch',                 start: '12:30', end: '13:30', run: null    },
+      { id: 4, event: 'Customer call',         start: '14:00', end: '14:45', run: '13:55' },
+      { id: 5, event: 'Code review',           start: '15:15', end: '16:00', run: '15:14' },
+      { id: 6, event: 'End-of-day cron',       start: null,    end: null,    run: '23:50' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>
