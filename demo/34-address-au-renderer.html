@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>34 — Address (AU) renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>34 — Address (AU) renderer</h1>
+  <p class="lede">
+    A formatted Australian street address with a colour-coded state badge.
+    Double-click a cell to open a multi-field popover editor with
+    address1, address2 (and an optional third line), suburb, state,
+    postcode, and country — laid out for AU conventions.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="180"
+              data-header-cell-editable-value="true">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-cell-renderer-value="email"
+              data-header-cell-width-value="220">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="shipping_address"
+              data-header-cell-cell-renderer-value="address-au"
+              data-header-cell-sortable-value="true">Shipping address</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last_order"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="130">Last order</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>How to use it:</strong> the value is an object —
+    <code>{ address1, address2, address3, suburb, state, postcode, country }</code>.
+    <strong>Double-click</strong> any address cell to edit. The third address line
+    only appears once you type into line 2 (or click "+ Add another line").
+    State changes are reflected immediately as a coloured badge.
+    Listen for <code>grid:cellValueChanged</code> to persist edits to your server.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale', email: 'astrid@chickcom.com',
+        shipping_address: { address1: '12 Smith Street', suburb: 'Bondi',
+          state: 'NSW', postcode: '2026', country: 'Australia' },
+        last_order: '2026-05-18' },
+      { id: 2, name: 'Marcus Chen', email: 'marcus@chickcom.com',
+        shipping_address: { address1: '480 Collins Street', address2: 'Level 14',
+          suburb: 'Melbourne', state: 'VIC', postcode: '3000', country: 'Australia' },
+        last_order: '2026-05-22' },
+      { id: 3, name: 'Priya Patel', email: 'priya@example.com',
+        shipping_address: { address1: '88 Queen Street', address2: 'Suite 9A',
+          address3: 'Riverside Tower', suburb: 'Brisbane', state: 'QLD',
+          postcode: '4000', country: 'Australia' },
+        last_order: '2026-04-29' },
+      { id: 4, name: 'Jamal Owens', email: 'jamal@studio.io',
+        shipping_address: { address1: '34 St Georges Terrace', suburb: 'Perth',
+          state: 'WA', postcode: '6000', country: 'Australia' },
+        last_order: '2026-05-09' },
+      { id: 5, name: 'Lena Brooks', email: 'lena@example.org',
+        shipping_address: { address1: '160 North Terrace', suburb: 'Adelaide',
+          state: 'SA', postcode: '5000', country: 'Australia' },
+        last_order: '2026-05-15' },
+      { id: 6, name: 'Tomás Vega', email: 'tomas@example.es',
+        shipping_address: { address1: '23 Salamanca Place', suburb: 'Hobart',
+          state: 'TAS', postcode: '7000', country: 'Australia' },
+        last_order: '2026-05-02' },
+      { id: 7, name: 'Mei Tanaka', email: 'mei@example.jp',
+        shipping_address: { address1: '7 Lonsdale Street', address2: 'Suite 12',
+          suburb: 'Braddon', state: 'ACT', postcode: '2612', country: 'Australia' },
+        last_order: '2026-05-19' },
+      { id: 8, name: 'Sione Tuilagi', email: 'sione@example.com',
+        shipping_address: { address1: '55 Mitchell Street', suburb: 'Darwin',
+          state: 'NT', postcode: '0800', country: 'Australia' },
+        last_order: '2026-04-12' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      // Wire this up to fetch('/customers/:id', { method: 'PATCH', body: … }) in production
+      console.log('[address edit]', e.detail);
+    });
+  </script>
+</body>
+</html>

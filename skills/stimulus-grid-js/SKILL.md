@@ -219,6 +219,7 @@ ship pre-registered:
 | `highlight` | Wraps matches of the grid's active `quickFilter` in `<mark>` tags — case-insensitive by default; pass `{ query }` for a fixed search term |
 | `multi-line` | Preserves `\n` newlines + optional `{ lines: N }` clamp; bump `data-grid-row-height-value` to fit |
 | `attachments` | Airtable-style file strip: image thumbs + kind-tinted icons for PDFs/docs/audio/video/zips; click an image → lightbox carousel (← / → / Esc); click a file → opens in a new tab. `editable: true` enables a popover editor (dblclick or `+` button) with drag-drop, paste, and per-tile × remove; supply `onUpload(files, ctx)` / `onRemove(att, ctx)` to persist to your server. Value shape: `[{ id, filename, url, content_type, byte_size, thumb_url? }]` |
+| `address-au` | One-line formatted AU street address — `12 Smith Street, Bondi NSW 2026` — with the state shown as a colour-coded badge (NSW sky · VIC navy · QLD maroon · WA gold · SA red · TAS forest · ACT/NT ochre). Dblclick opens a multi-field popover editor (address1, address2, optional address3, suburb, state dropdown, postcode, country). Commits via `applyTransaction` + fires `grid:cellValueChanged`. Value shape: `{ address1, address2?, address3?, suburb, state, postcode, country? }`; pass `{ editable: false }` for display-only |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the
@@ -229,6 +230,12 @@ column and the `type` attribute picks the right native input —
 `type="boolean"` → `<select>`. On commit the cell re-renders through the
 renderer with the new value. Native pickers (color, date, datetime, time,
 month, week) auto-open via `showPicker()` on dblclick — no second click.
+
+**Structured-value renderers** (`attachments`, `address-au`) ship their
+own popover editors — dblclick opens a bespoke form (file uploader,
+multi-field address form) rather than the standard cell editor.
+They write back via `api.applyTransaction({ update: [row] })` and fire
+`grid:cellValueChanged` like the standard editor does.
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

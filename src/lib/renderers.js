@@ -1474,28 +1474,29 @@ export function addressAu({ editable = true, empty = '' } = {}) {
       return wrap;
     }
 
-    const street = [a.address1, a.address2 && `· ${a.address2}`].filter(Boolean).join(' ');
+    const street = [a.address1, a.address2].filter(Boolean).join(', ');
+    const hasTail = a.suburb || a.state || a.postcode;
     if (street) {
       wrap.append(h('span', { class: 'sg-address-au-street' }, document.createTextNode(street)));
     }
-    if (a.suburb || a.state || a.postcode) {
-      const tail = h('span', { class: 'sg-address-au-tail' });
-      if (a.suburb) tail.append(document.createTextNode(a.suburb));
-      if (a.state) {
-        if (a.suburb) tail.append(document.createTextNode(' '));
-        tail.append(h('span', {
-          class: `sg-address-au-state is-${a.state.toLowerCase()}`,
-          title: AU_STATE_NAMES[a.state] || a.state,
-        }, document.createTextNode(a.state)));
-      }
-      if (a.postcode) {
-        if (a.suburb || a.state) tail.append(document.createTextNode(' '));
-        tail.append(h('span', { class: 'sg-address-au-postcode' },
-          document.createTextNode(a.postcode)));
-      }
-      wrap.append(tail);
+    if (street && hasTail) {
+      wrap.append(h('span', { class: 'sg-address-au-sep' }, document.createTextNode(', ')));
+    }
+    if (a.suburb) wrap.append(document.createTextNode(a.suburb));
+    if (a.state) {
+      if (a.suburb) wrap.append(document.createTextNode(' '));
+      wrap.append(h('span', {
+        class: `sg-address-au-state is-${a.state.toLowerCase()}`,
+        title: AU_STATE_NAMES[a.state] || a.state,
+      }, document.createTextNode(a.state)));
+    }
+    if (a.postcode) {
+      if (a.suburb || a.state) wrap.append(document.createTextNode(' '));
+      wrap.append(h('span', { class: 'sg-address-au-postcode' },
+        document.createTextNode(a.postcode)));
     }
     if (a.country && a.country.toLowerCase() !== 'australia') {
+      wrap.append(document.createTextNode(' '));
       wrap.append(h('span', { class: 'sg-address-au-country' },
         document.createTextNode(a.country)));
     }
@@ -1518,8 +1519,6 @@ function openAddressAuEditor(anchor, ctx) {
   const header = h('div', { class: 'sg-address-au-editor-header' });
   header.append(
     h('span', { class: 'sg-address-au-editor-title' }, document.createTextNode('Edit address')),
-    h('span', { class: 'sg-address-au-editor-flag', title: 'Australian address' },
-      document.createTextNode('🇦🇺')),
   );
 
   const form = h('form', { class: 'sg-address-au-editor-form', novalidate: 'novalidate' });

@@ -279,6 +279,7 @@ without conflict.
 | `highlight` | search-result grids | Wraps matches of the grid's active `quickFilter` in `<mark>` tags so users see *why* a row matched; case-insensitive by default; pass a fixed `query` to highlight regardless of filter |
 | `multi-line` | notes / descriptions / commit messages | Preserves `\n` newlines via `white-space: pre-line`; pass `{ lines: N }` for `-webkit-line-clamp` truncation with the full value in `title=`. Pair with a taller `data-grid-row-height-value` (~64 for 2 lines, 84 for 3) |
 | `attachments` | files on a record (Active Storage / S3 / arbitrary) | Airtable-style strip of thumbs for images + kind-tinted icons for PDFs/docs/audio/video/zips; click an image to open a keyboard-navigable lightbox carousel; click a non-image to open in a new tab; collapses to `+N` past `maxThumbs`. Pass `{ editable: true }` to enable a popover editor (dblclick or `+` button) with drag-drop, paste, and per-file × remove; supply `onUpload(files, ctx)` / `onRemove(att, ctx)` to wire it to your server (Rails Active Storage, S3 presigned, etc.). Falls back to `URL.createObjectURL` when no callbacks are given |
+| `address-au` | Australian street addresses | One-line formatted display — `12 Smith Street, Bondi NSW 2026` — with the state shown as a colour-coded badge (NSW sky, VIC navy, QLD maroon, WA gold, SA red, TAS forest, ACT ochre, NT ochre). Value shape: `{ address1, address2, address3, suburb, state, postcode, country }`. Dblclick a cell to open a multi-field popover editor with all seven fields laid out for AU conventions (state dropdown, 4-digit postcode, the third address line revealed only when needed). Commits via `applyTransaction` and fires `grid:cellValueChanged`. Pass `{ editable: false }` for display-only |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
@@ -340,6 +341,56 @@ registerRenderer("severity", ({ value, td }) => {
 
 See **[demo 19](demo/19-cell-renderers.html)** for every built-in side
 by side.
+
+### Structured-value renderers (`address-au`)
+
+Most built-ins take a scalar value. `address-au` takes an **object**
+and ships its own popover editor, since a multi-field form is the only
+sensible edit affordance for a postal address.
+
+![stimulus_grid address-au renderer: one-line display "12 Smith Street, Bondi NSW 2026" with the NSW state code shown as a colour-coded badge; alongside it, a multi-field popover editor titled "Edit address" with labelled inputs for address line 1, address line 2, suburb, state (dropdown), postcode, and country](docs/images/grid-address-au-editor.png)
+
+Value shape:
+
+```js
+{
+  address1: '12 Smith Street',
+  address2: 'Unit 4',          // optional
+  address3: 'Level 2',         // optional, revealed in the editor only when needed
+  suburb:   'Bondi',
+  state:    'NSW',             // NSW / VIC / QLD / WA / SA / TAS / ACT / NT
+  postcode: '2026',            // 4 digits
+  country:  'Australia',       // defaults to Australia; non-AU countries get a pill
+}
+```
+
+Display: `address1[, address2], suburb STATE postcode` on one line —
+state rendered as a colour-coded badge (each state takes its
+traditional sporting / coat-of-arms colour, so locals recognise it at a
+glance). The full multi-line address (including `address3`) appears in
+the cell `title` for hover.
+
+Editing: double-click any address cell to open a popover with all
+seven fields. The third address line is hidden until the user types
+into line 2 (or clicks "+ Add another line"). Commit with **Save** or
+**Enter**; cancel with **Cancel** or **Esc**. The grid writes the new
+object through `applyTransaction` and fires the standard
+`grid:cellValueChanged` event — wire it to your server for
+persistence:
+
+```js
+grid.addEventListener('grid:cellValueChanged', (e) => {
+  if (e.detail.colId !== 'shipping_address') return
+  fetch(`/customers/${e.detail.rowId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shipping_address: e.detail.newValue }),
+  })
+})
+```
+
+Set `{ editable: false }` for a display-only column. See
+**[demo 34](demo/34-address-au-renderer.html)** for a working example.
 
 ### Editing renderer cells
 
@@ -1019,8 +1070,9 @@ demos covering basics, JSON data, filtering, selection, pagination, editing,
 custom renderers, 10k-row virtual scroll, everything-together, live filtering,
 row grouping with aggregation, the status bar, pivot mode, header groups,
 the right-click column menu, persisted column state, master/detail, tree
-data, the built-in renderer library, attachments, and the invoice / quote
-layout (separators + merged cells).
+data, the built-in renderer library, attachments, the invoice / quote
+layout (separators + merged cells), and Australian addresses with a
+multi-field popover editor.
 
 ## Build
 

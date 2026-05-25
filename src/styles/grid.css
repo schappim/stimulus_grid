@@ -861,14 +861,25 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Numeric column headers: text-align follows the body cells so "Qty",
-   "Unit price", "Amount" sit flush right above their values. The header
-   row uses .sg-header-content (flex) for the label/icons stack; aligning
-   the label end-justifies it inside its flex slot, while the sort and
-   filter icons stay tucked at the row's right edge as before. */
+/* Header alignment mirrors the body cells. data-align is set by
+   _columnAlignment on the grid controller — it resolves from explicit
+   col.align / col.headerAlign, col.type === 'number', or a known
+   right-aligning cellRenderer (currency, percent, number, etc.). The
+   header row uses .sg-header-content (flex) for the label/icons stack, so
+   the label is end- or center-justified inside its flex slot while the
+   sort and filter icons stay tucked at the row's edge as before.
+   data-type="number" is kept as a fallback for any external code that
+   sets it directly on a <th>. */
+.sg-grid thead th[data-align="right"],
 .sg-grid thead th[data-type="number"] { text-align: right; }
+.sg-grid thead th[data-align="right"] .sg-header-content,
 .sg-grid thead th[data-type="number"] .sg-header-content { justify-content: flex-end; }
+.sg-grid thead th[data-align="right"] .sg-header-label,
 .sg-grid thead th[data-type="number"] .sg-header-label { text-align: right; }
+
+.sg-grid thead th[data-align="center"] { text-align: center; }
+.sg-grid thead th[data-align="center"] .sg-header-content { justify-content: center; }
+.sg-grid thead th[data-align="center"] .sg-header-label { text-align: center; }
 
 /* Links inside cells inherit the grid's accent colour but stay subtle —
    no underline at rest, on hover. */
@@ -1639,3 +1650,184 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 /* Translate-up hover affordance on attachment thumbs needs the wrapping
    stack to be visible too — otherwise the 1px lift gets sliced off. */
 .sg-grid .sg-attach-thumb { will-change: transform; }
+
+/* ----- address-au renderer (formatted street address + state badge) -----
+   A two-part cell: street line on the left, suburb + STATE badge +
+   postcode on the right. The state badge uses each state's traditional
+   sporting / coat-of-arms palette so an Aussie reader recognises the
+   colour at a glance. */
+.sg-grid tbody td.sg-renderer-address-au-cell { cursor: text; }
+.sg-grid .sg-renderer-address-au {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #1f2937;
+}
+.sg-grid .sg-address-au-street { color: #1f2937; }
+.sg-grid .sg-address-au-sep { color: #6b7280; }
+.sg-grid .sg-address-au-postcode {
+  font-variant-numeric: tabular-nums;
+  color: #111827;
+}
+.sg-grid .sg-address-au-country {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 1px 6px;
+  background: #f3f4f6;
+  border-radius: 9999px;
+  margin-left: 2px;
+}
+.sg-grid .sg-address-au-state {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: #fff;
+  background: #6b7280;
+}
+.sg-grid .sg-address-au-state.is-nsw { background: #0ea5e9; }    /* sky blue */
+.sg-grid .sg-address-au-state.is-vic { background: #1e3a8a; }    /* navy */
+.sg-grid .sg-address-au-state.is-qld { background: #7f1d1d; }    /* maroon */
+.sg-grid .sg-address-au-state.is-wa  { background: #ca8a04; color: #1f1300; }  /* gold */
+.sg-grid .sg-address-au-state.is-sa  { background: #dc2626; }    /* red */
+.sg-grid .sg-address-au-state.is-tas { background: #166534; }    /* forest */
+.sg-grid .sg-address-au-state.is-act { background: #b45309; }    /* gold/ochre */
+.sg-grid .sg-address-au-state.is-nt  { background: #c2410c; }    /* ochre */
+
+/* ----- address-au editor popover (multi-field form) -----
+   Reuses the popover positioning helper that powers .sg-attach-editor,
+   so visual rhythm matches. Two-column grid for suburb / state /
+   postcode; full-width rows for line1 + country. */
+.sg-address-au-editor {
+  position: fixed;
+  z-index: 50;
+  min-width: 360px;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
+  font-family: inherit;
+  color: #1f2937;
+}
+.sg-address-au-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.sg-address-au-editor-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+.sg-address-au-editor-form { padding: 12px 14px 14px; }
+.sg-address-au-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 10px;
+}
+.sg-address-au-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sg-address-au-editor-field[data-field="address1"],
+.sg-address-au-editor-field[data-field="address2"],
+.sg-address-au-editor-field[data-field="address3"],
+.sg-address-au-editor-field[data-field="country"],
+.sg-address-au-editor-field[data-field="suburb"] {
+  grid-column: 1 / -1;
+}
+.sg-address-au-editor-field[data-field="suburb"] { grid-column: 1 / span 2; }
+.sg-address-au-editor-field[data-field="state"]  { grid-column: 1 / span 1; }
+.sg-address-au-editor-field[data-field="postcode"] { grid-column: 2 / span 1; }
+.sg-address-au-editor-line3-wrap { grid-column: 1 / -1; }
+.sg-address-au-editor-line3-wrap[hidden] { display: none; }
+.sg-address-au-editor-add-line {
+  grid-column: 1 / -1;
+  justify-self: start;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: -4px;
+}
+.sg-address-au-editor-add-line:hover { text-decoration: underline; }
+.sg-address-au-editor-add-line[hidden] { display: none; }
+.sg-address-au-editor-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-address-au-editor-input {
+  appearance: none;
+  width: 100%;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  box-sizing: border-box;
+}
+.sg-address-au-editor-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+.sg-address-au-editor-postcode {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.sg-address-au-editor-state {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  padding-right: 26px;
+}
+.sg-address-au-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+.sg-address-au-editor-cancel,
+.sg-address-au-editor-save {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.sg-address-au-editor-cancel {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.sg-address-au-editor-cancel:hover { background: #f9fafb; }
+.sg-address-au-editor-save {
+  background: #2563eb;
+  color: #fff;
+}
+.sg-address-au-editor-save:hover { background: #1d4ed8; }
