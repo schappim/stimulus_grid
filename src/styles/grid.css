@@ -3581,7 +3581,9 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   gap: 8px;
   font-family: system-ui, -apple-system, sans-serif;
 }
-.sg-renderer-volume-slider { width: 180px; }
+.sg-renderer-volume-slider { width: 180px; outline: none; }
+.sg-renderer-volume-slider:focus { outline: none; box-shadow: none; }
+.sg-renderer-volume-slider:focus-visible { outline: none; box-shadow: none; }
 .sg-renderer-volume-popover-value {
   font-size: 12px;
   color: #374151;
