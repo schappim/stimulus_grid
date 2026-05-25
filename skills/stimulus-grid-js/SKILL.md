@@ -208,6 +208,7 @@ ship pre-registered:
 | `heatmap-cell` | Colour-graded cell **background** on a numeric scale; `min`/`max` + 2-or-3-stop palette; `inverted` flips for "lower is better" columns; text colour auto-flips dark/light for legibility |
 | `mask` | Mask sensitive data — format presets `cc-last4`, `cc-bin-last4`, `phone-last4`, `email`, `last4`, or generic `{ showFirst, showLast, char }`; groups right-aligned so the visible last-N always sits as a clean trailing block (Amex-friendly); numeric formats auto-right-align in monospace |
 | `highlight` | Wraps matches of the grid's active `quickFilter` in `<mark>` tags — case-insensitive by default; pass `{ query }` for a fixed search term |
+| `multi-line` | Preserves `\n` newlines + optional `{ lines: N }` clamp; bump `data-grid-row-height-value` to fit |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the
