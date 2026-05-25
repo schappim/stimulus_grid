@@ -9255,6 +9255,27 @@ export function customerType() {
   });
 }
 
+/* ---------- council-lga -------------------------------------------
+ *
+ * Local Government Area badge. The jurisdiction that drives building
+ * approvals / DAs / certifier rules — every quote needs it.
+ *
+ *   value: 'Waverley'                              shorthand
+ *        | { name: 'Waverley', state: 'NSW' }      full */
+export function councilLga() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : { name: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-council-lga' });
+    if (v.state) wrap.append(stateBadge(v.state));
+    if (v.name) wrap.append(h('span', { class: 'sg-renderer-council-lga-name' },
+      document.createTextNode(String(v.name))));
+    wrap.append(h('span', { class: 'sg-renderer-council-lga-suffix' },
+      document.createTextNode('Council')));
+    return wrap;
+  };
+}
+
 /* ---------- lot-plan ----------------------------------------------
  *
  * AU lot-plan cadastral identifier — "Lot 12 DP 456789" / "Lot 4 SP
@@ -10795,6 +10816,7 @@ registerRenderer('odometer',          odometer());
 registerRenderer('customer-type',     customerType());
 registerRenderer('strata-plan',       strataPlan());
 registerRenderer('lot-plan',          lotPlan());
+registerRenderer('council-lga',       councilLga());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11398,6 +11420,7 @@ wireBuiltin('odometer',       clip.number);
 wireBuiltin('customer-type',  clip.text);
 wireBuiltin('strata-plan',    clip.json);
 wireBuiltin('lot-plan',       clip.json);
+wireBuiltin('council-lga',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11439,5 +11462,5 @@ export const renderers = {
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
-  customerType, strataPlan, lotPlan,
+  customerType, strataPlan, lotPlan, councilLga,
 };

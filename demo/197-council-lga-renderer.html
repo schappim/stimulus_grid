@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>197 — Council LGA | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>197 — Council LGA (Local Government Area)</h1>
+  <p class="lede">
+    The jurisdiction that drives building approvals / DAs / waste
+    schedules. Pass <code>{ name, state }</code> for the state badge,
+    or just a string for the name alone.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="160">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="address"
+              data-header-cell-width-value="240">Address</th>
+          <th data-controller="header-cell" data-header-cell-field-value="council"
+              data-header-cell-cell-renderer-value="council-lga"
+              data-header-cell-width-value="240">Council (LGA)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, job: 'J-1042', address: '12 Smith St, Bondi',         council: { name: 'Waverley',     state: 'NSW' } },
+      { id: 2, job: 'J-1043', address: '88 Pacific Hwy, Manly',      council: { name: 'Northern Beaches', state: 'NSW' } },
+      { id: 3, job: 'J-1044', address: 'Bay St, St Kilda',            council: { name: 'Port Phillip', state: 'VIC' } },
+      { id: 4, job: 'J-1045', address: 'Adelaide St, Brisbane',       council: { name: 'Brisbane',     state: 'QLD' } },
+      { id: 5, job: 'J-1046', address: 'Rundle Mall, Adelaide',       council: { name: 'Adelaide',     state: 'SA' } },
+      { id: 6, job: 'J-1047', address: 'Hay St, Perth',               council: { name: 'Perth',        state: 'WA' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

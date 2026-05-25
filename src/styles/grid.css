@@ -4969,6 +4969,16 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-lot-plan-lot { color: #6b7280; font-weight: 500; }
 .sg-grid .sg-renderer-lot-plan-plan { color: #1f2937; font-weight: 600; }
 
+/* Council LGA — state badge + name + "Council" suffix. */
+.sg-grid .sg-renderer-council-lga {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-council-lga-name { color: #1f2937; font-weight: 500; }
+.sg-grid .sg-renderer-council-lga-suffix { color: #6b7280; font-size: 11px; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
