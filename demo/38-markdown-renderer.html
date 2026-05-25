@@ -36,10 +36,14 @@
         <tr>
           <th data-controller="header-cell" data-header-cell-field-value="title"
               data-header-cell-cell-renderer-value="markdown"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="280">Title (inline md)</th>
           <th data-controller="header-cell" data-header-cell-field-value="notes"
-              data-header-cell-cell-renderer-value="markdown">Notes (block md)</th>
+              data-header-cell-cell-renderer-value="markdown"
+              data-header-cell-cell-editor-value="md-textarea-editor"
+              data-header-cell-editable-value="true">Notes (block md)</th>
           <th data-controller="header-cell" data-header-cell-field-value="author"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="140">Author</th>
         </tr>
       </thead>
@@ -54,7 +58,25 @@
     <code>- bullet</code> / <code>1. ordered</code> lists. Pass
     <code>{ inline: true }</code> for headlines / chip text where lists
     and line-breaks aren't wanted.
+    <br><br>
+    <strong>Editing:</strong> double-click any cell to edit the raw
+    markdown source. The Notes column wires up a custom
+    <code>&lt;textarea&gt;</code> editor template so newlines survive a
+    round-trip — Shift+Enter inserts a newline, Enter commits, Escape
+    cancels.
   </div>
+
+  <!-- Custom textarea editor for the Notes column. The grid resolves
+       cellEditor as a template id first; here it finds a textarea
+       carrying [data-editor-input] and uses that as the live editor. -->
+  <template id="md-textarea-editor">
+    <textarea data-editor-input rows="5" style="
+      width: 100%; min-height: 80px; padding: 6px 8px;
+      font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      border: 1px solid var(--sg-accent, #2563eb); border-radius: 3px;
+      resize: vertical; box-sizing: border-box;
+    "></textarea>
+  </template>
 
   <script src="../dist/stimulus_grid.js"></script>
   <script>
@@ -82,6 +104,23 @@
 
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Inside the Notes column's <textarea> editor we want Enter to insert
+    // a newline (default textarea behaviour) instead of committing the
+    // edit — but Shift+Enter / Tab / blur / Escape should still commit
+    // or cancel as usual. The grid's editor keydown handler runs in the
+    // bubble phase, so a capture-phase listener that stopImmediatePropagation
+    // beats it without monkey-patching the controller.
+    grid.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (t?.tagName === 'TEXTAREA' && t.matches('[data-editor-input]')) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          // Let the browser insert "\n" by NOT preventDefault'ing, and
+          // suppress the grid's bubble-phase commit handler.
+          e.stopImmediatePropagation();
+        }
+      }
+    }, true);
   </script>
 </body>
 </html>
