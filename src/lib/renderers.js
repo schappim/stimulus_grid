@@ -9197,6 +9197,41 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- travel-time -------------------------------------------
+ *
+ * ETA from the previous stop. Value: bare number (minutes), or
+ * `{ minutes, distance?, traffic? }` where `traffic` is
+ * 'light' | 'moderate' | 'heavy'. Renders "12 min · 4.2 km" with the
+ * traffic-light icon coloured by congestion. */
+export function travelTime() {
+  const TRAFFIC_DOT = { light: '#22c55e', moderate: '#f59e0b', heavy: '#ef4444' };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let minutes = null, distance = null, traffic = null;
+    if (typeof value === 'number') minutes = value;
+    else if (typeof value === 'object') {
+      minutes = +value.minutes;
+      distance = value.distance;
+      traffic = value.traffic ? String(value.traffic).toLowerCase() : null;
+    }
+    if (!Number.isFinite(minutes)) return String(value);
+    const wrap = h('span', { class: 'sg-renderer-travel-time' });
+    if (traffic && TRAFFIC_DOT[traffic]) {
+      wrap.append(h('span', {
+        class: 'sg-renderer-travel-time-dot',
+        title: `${traffic} traffic`,
+        style: `background:${TRAFFIC_DOT[traffic]};`,
+      }));
+    }
+    const parts = [];
+    parts.push(`${minutes} min`);
+    if (distance) parts.push(String(distance).includes('km') ? distance : `${distance} km`);
+    wrap.append(h('span', { class: 'sg-renderer-travel-time-text' },
+      document.createTextNode(parts.join(' · '))));
+    return wrap;
+  };
+}
+
 /* ---------- route-stop --------------------------------------------
  *
  * Position-in-route indicator for dispatch boards. "Stop 3 of 7" with a
@@ -9475,6 +9510,7 @@ registerRenderer('hbcf-cert',         hbcfCert());
 registerRenderer('job-status',        jobStatus());
 registerRenderer('arrival-window',    arrivalWindow());
 registerRenderer('route-stop',        routeStop());
+registerRenderer('travel-time',       travelTime());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10045,6 +10081,7 @@ wireBuiltin('hbcf-cert',      clip.json);
 wireBuiltin('job-status',     clip.text);
 wireBuiltin('arrival-window', clip.json);
 wireBuiltin('route-stop',     clip.json);
+wireBuiltin('travel-time',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10079,5 +10116,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
-  jobStatus, arrivalWindow, routeStop,
+  jobStatus, arrivalWindow, routeStop, travelTime,
 };

@@ -4404,6 +4404,22 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Travel time — "12 min · 4.2 km" with traffic-coloured dot. */
+.sg-grid .sg-renderer-travel-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+}
+.sg-grid .sg-renderer-travel-time-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
