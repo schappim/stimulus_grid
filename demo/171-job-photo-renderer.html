@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>171 — Job photo | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    /* Make every photo cell tall enough to host the 60×60 thumb plus padding. */
+    .panel .sg-grid td { padding-top: 4px; padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>171 — Job photo (Before / During / After)</h1>
+  <p class="lede">
+    Job site photo thumbnail with a corner pill that identifies the
+    stage in the build cycle — Before (grey), During (blue), After
+    (green). Click the thumb to open the full image.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="before"
+              data-header-cell-cell-renderer-value="job-photo"
+              data-header-cell-width-value="100">Before</th>
+          <th data-controller="header-cell" data-header-cell-field-value="during"
+              data-header-cell-cell-renderer-value="job-photo"
+              data-header-cell-width-value="100">During</th>
+          <th data-controller="header-cell" data-header-cell-field-value="after"
+              data-header-cell-cell-renderer-value="job-photo"
+              data-header-cell-width-value="100">After</th>
+          <th data-controller="header-cell" data-header-cell-field-value="caption"
+              data-header-cell-width-value="280">Caption</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // SVG placeholder thumbs (so the demo works offline).
+    const tile = (label, fill) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>` +
+      `<rect width='100' height='100' fill='${fill}'/>` +
+      `<text x='50' y='55' fill='%23fff' font-family='system-ui' font-size='14' text-anchor='middle'>${label}</text></svg>`);
+
+    const before = (id) => ({ url: tile('B'+id, '%23475569'), stage: 'before' });
+    const during = (id) => ({ url: tile('D'+id, '%231d4ed8'), stage: 'during' });
+    const after  = (id) => ({ url: tile('A'+id, '%2316a34a'), stage: 'after' });
+
+    const ROWS = [
+      { id: 1, ref: 'J-1042', before: before(42), during: during(42), after: after(42), caption: 'Bathroom reno — Bondi' },
+      { id: 2, ref: 'J-1043', before: before(43), during: during(43), after: null,        caption: 'Kitchen rough-in — Vega' },
+      { id: 3, ref: 'J-1044', before: before(44), during: null,        after: null,        caption: 'Deck demolition — Coogee' },
+      { id: 4, ref: 'J-1045', before: null,        during: during(45), after: after(45),   caption: 'Roof repair — Manly' },
+      { id: 5, ref: 'J-1046', before: before(46), during: during(46), after: after(46),   caption: 'New build PC — Glebe' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

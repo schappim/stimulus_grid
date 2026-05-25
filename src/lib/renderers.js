@@ -9197,6 +9197,39 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- job-photo ---------------------------------------------
+ *
+ * Job site photo with a Before / During / After badge in the corner.
+ * Value: URL string, or `{ url, stage, caption? }`. Stage drives the
+ * badge colour (gray / blue / green). */
+export function jobPhoto({ width = 60, height = 60 } = {}) {
+  const STAGE_COLOR = { before: 'gray', during: 'blue', after: 'green' };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'string' ? { url: value } : value;
+    if (!v.url) return '';
+    const wrap = h('span', { class: 'sg-renderer-job-photo' });
+    const link = h('a', {
+      class: 'sg-renderer-job-photo-link', href: v.url,
+      target: '_blank', rel: 'noopener noreferrer',
+      title: v.caption || v.stage || 'Open photo',
+    });
+    link.append(h('img', {
+      class: 'sg-renderer-job-photo-img', src: v.url,
+      width, height, alt: v.caption || v.stage || 'Job photo',
+    }));
+    if (v.stage) {
+      const k = String(v.stage).toLowerCase();
+      const color = STAGE_COLOR[k] || 'gray';
+      link.append(h('span', {
+        class: `sg-renderer-job-photo-badge sg-pill sg-pill-${color}`,
+      }, document.createTextNode(titleCaseStr(v.stage))));
+    }
+    wrap.append(link);
+    return wrap;
+  };
+}
+
 /* ---------- signature ---------------------------------------------
  *
  * Customer sign-off image preview. Value: URL string, or
@@ -9688,6 +9721,7 @@ registerRenderer('variation',         variation());
 registerRenderer('defect',            defect());
 registerRenderer('snag',              defect());      // alias — same shape, different vocabulary
 registerRenderer('signature',         signature());
+registerRenderer('job-photo',         jobPhoto());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10265,6 +10299,7 @@ wireBuiltin('variation',      clip.json);
 wireBuiltin('defect',         clip.json);
 wireBuiltin('snag',           clip.json);
 wireBuiltin('signature',      clip.json);
+wireBuiltin('job-photo',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10300,5 +10335,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation, defect, signature,
+  variation, defect, signature, jobPhoto,
 };
