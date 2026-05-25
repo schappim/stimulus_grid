@@ -9061,6 +9061,13 @@ export function blueCard(opts = {}) {
   return complianceCard({ prefix: 'BC', classLabel: 'Blue Card (QLD)', ...opts });
 }
 
+// Working With Children Check — NSW / VIC / SA / WA / TAS / NT / ACT.
+// Each state has a different prefix; the state badge surfaces which.
+// Pass `state` to drive the badge colour and the source-of-issue.
+export function wwcc(opts = {}) {
+  return complianceCard({ prefix: 'WWCC', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9209,6 +9216,7 @@ registerRenderer('volume',            volumeIndicator());
 registerRenderer('trade-licence',     tradeLicence());
 registerRenderer('white-card',        whiteCard());
 registerRenderer('blue-card',         blueCard());
+registerRenderer('wwcc',              wwcc());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9761,6 +9769,7 @@ wireBuiltin('row-actions',    clip.text);
 wireBuiltin('trade-licence',  clip.json);
 wireBuiltin('white-card',     clip.json);
 wireBuiltin('blue-card',      clip.json);
+wireBuiltin('wwcc',           clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9791,5 +9800,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard,
+  tradeLicence, whiteCard, blueCard, wwcc,
 };
