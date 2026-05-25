@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>138 — Hex / binary / octal renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}code{background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:.9em}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>138 — Hex / binary / octal renderer</h1>
+  <p class="lede">One <code>radix({ base })</code> behind <code>hex</code> / <code>binary</code> / <code>octal</code>. Optional <code>prefix</code> + <code>pad</code>.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="dec" data-header-cell-type-value="number" data-header-cell-width-value="120">Decimal</th>
+      <th data-controller="header-cell" data-header-cell-field-value="dec" data-header-cell-cell-renderer-value="hex" data-header-cell-width-value="120">Hex</th>
+      <th data-controller="header-cell" data-header-cell-field-value="dec" data-header-cell-cell-renderer-value="binary" data-header-cell-width-value="200">Binary</th>
+      <th data-controller="header-cell" data-header-cell-field-value="dec" data-header-cell-cell-renderer-value="octal" data-header-cell-width-value="140">Octal</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [0, 1, 15, 16, 255, 256, 1024, 65535].map((dec) => ({ id: dec, dec }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

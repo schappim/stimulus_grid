@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>139 — Percentile renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>139 — Percentile renderer</h1>
+  <p class="lede">Show a value and its rank within a population. Pass a <code>population</code> array (or a function for per-row context).</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="user" data-header-cell-width-value="200">User</th>
+      <th data-controller="header-cell" data-header-cell-field-value="score" data-header-cell-cell-renderer-value="percentile-school" data-header-cell-width-value="200">Test score</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    const POPULATION = [42, 56, 61, 64, 67, 72, 78, 81, 83, 87, 89, 91, 94, 96];
+    registerRenderer('percentile-school', renderers.percentile({ population: POPULATION }));
+    const data = [
+      { user: 'Astrid', score: 87 },
+      { user: 'Marcus', score: 72 },
+      { user: 'Priya',  score: 96 },
+      { user: 'Lena',   score: 56 },
+      { user: 'Tomás',  score: 64 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

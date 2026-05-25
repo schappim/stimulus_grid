@@ -6332,6 +6332,357 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- html (sanitized HTML preview) --------------------------
+ *
+ * Limited safe HTML preview — sanitises by serialising/re-parsing
+ * through a permissive but explicit allowlist. Handles `<b>`, `<i>`,
+ * `<em>`, `<strong>`, `<u>`, `<s>`, `<code>`, `<a>` (http/https/mailto
+ * only), `<br>`. Everything else is stripped. */
+const HTML_ALLOWED_TAGS = new Set(['B','I','EM','STRONG','U','S','DEL','CODE','A','BR','SPAN']);
+function sanitizeHtml(input) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = input;
+  function walk(node) {
+    const kids = Array.from(node.childNodes);
+    for (const k of kids) {
+      if (k.nodeType === 3) continue; // text
+      if (k.nodeType !== 1) { k.remove(); continue; }
+      const tag = k.tagName;
+      if (!HTML_ALLOWED_TAGS.has(tag)) {
+        // Unwrap: replace with its children (so the text survives).
+        const txt = document.createTextNode(k.textContent || '');
+        k.replaceWith(txt);
+        continue;
+      }
+      // Strip every attribute except href on <a>.
+      [...k.attributes].forEach((a) => {
+        const name = a.name.toLowerCase();
+        if (tag === 'A' && name === 'href') {
+          if (!/^(https?:|mailto:)/i.test(a.value)) k.removeAttribute(name);
+        } else {
+          k.removeAttribute(name);
+        }
+      });
+      if (tag === 'A') {
+        k.setAttribute('target', '_blank');
+        k.setAttribute('rel', 'noopener noreferrer');
+      }
+      walk(k);
+    }
+  }
+  walk(tpl.content);
+  return tpl.innerHTML;
+}
+
+export function html({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-html-cell');
+    const wrap = h('span', { class: 'sg-renderer-html' });
+    wrap.innerHTML = sanitizeHtml(String(value));
+    return wrap;
+  };
+}
+
+/* ---------- yaml / xml (mono preview) ------------------------------
+ *
+ * Plain-text mono preview. We don't lex YAML/XML for syntax highlighting
+ * (that pushes past the "no heavy deps" line) — but we do clamp to a
+ * fixed height with overflow ellipsis so a 50-line config doesn't
+ * blow out the row. */
+export function yaml({ maxLines = 4 } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-yaml-cell');
+    const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    const block = h('pre', {
+      class: 'sg-renderer-yaml',
+      style: `--sg-multiline-lines: ${maxLines};`,
+      title: text,
+    });
+    block.textContent = text;
+    return block;
+  };
+}
+
+export function xml({ maxLines = 4 } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-xml-cell');
+    const text = String(value);
+    const block = h('pre', {
+      class: 'sg-renderer-yaml',          // share the yaml mono style
+      style: `--sg-multiline-lines: ${maxLines};`,
+      title: text,
+    });
+    block.textContent = text;
+    return block;
+  };
+}
+
+/* ---------- autolink (auto-linkify URLs / emails in plain text) ----
+ *
+ * Turn bare URLs / emails inside plain text into `<a>` links. Safe by
+ * design: text is HTML-escaped first, then a regex inserts anchors. */
+const AUTOLINK_URL_RE   = /\bhttps?:\/\/[^\s<>"']+/g;
+const AUTOLINK_EMAIL_RE = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g;
+
+export function autolink({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-autolink-cell');
+    let s = mdEscapeHTML(String(value));
+    s = s.replace(AUTOLINK_URL_RE, (u) => `<a class="sg-renderer-link" href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
+    s = s.replace(AUTOLINK_EMAIL_RE, (e) => `<a class="sg-renderer-link" href="mailto:${e}">${e}</a>`);
+    const wrap = h('span', { class: 'sg-renderer-autolink' });
+    wrap.innerHTML = s;
+    return wrap;
+  };
+}
+
+/* ---------- redacted (black-bar redaction) -------------------------
+ *
+ * Render the value as a black bar of approximately the same width.
+ * Click to reveal (briefly) — releases mousedown to re-redact. Useful
+ * for sensitive PII previews where the operator wants a peek without
+ * actually exposing the field. */
+export function redacted({
+  revealOnHold = true,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-redacted-cell');
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const bar = h('span', { class: 'sg-renderer-redacted', title: revealOnHold ? 'Hold to reveal' : '' });
+    bar.append(h('span', { class: 'sg-renderer-redacted-text', 'aria-hidden': 'true' },
+      document.createTextNode(text)));
+    if (revealOnHold) {
+      bar.addEventListener('mousedown', (e) => { e.stopPropagation(); bar.classList.add('is-revealed'); });
+      const off = () => bar.classList.remove('is-revealed');
+      document.addEventListener('mouseup', off);
+      bar.addEventListener('mouseleave', off);
+    }
+    return bar;
+  };
+}
+
+/* ---------- spoiler (click-to-reveal) ------------------------------
+ *
+ * Like redacted but commits to the revealed state on click — Discord /
+ * Reddit pattern. Re-redacting needs a row re-render. */
+export function spoiler({} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-spoiler-cell');
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const wrap = h('span', { class: 'sg-renderer-spoiler', title: 'Click to reveal' });
+    wrap.append(h('span', { class: 'sg-renderer-spoiler-text', 'aria-hidden': 'true' },
+      document.createTextNode(text)));
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wrap.classList.add('is-revealed');
+    });
+    return wrap;
+  };
+}
+
+/* ---------- fraction (decimal → fraction display) ------------------
+ *
+ * Convert a decimal value to its closest fraction at a maximum
+ * denominator (default 16). Used for inches, cooking measures, baking. */
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function decimalToFraction(n, maxDenom = 16) {
+  if (!Number.isFinite(n)) return null;
+  const sign = n < 0 ? '-' : '';
+  n = Math.abs(n);
+  const whole = Math.floor(n);
+  const frac = n - whole;
+  if (frac < 1 / (maxDenom * 2)) return `${sign}${whole}`;
+  let bestNum = 1, bestDen = 1, bestDiff = Infinity;
+  for (let d = 1; d <= maxDenom; d++) {
+    const num = Math.round(frac * d);
+    const diff = Math.abs(frac - num / d);
+    if (diff < bestDiff) { bestNum = num; bestDen = d; bestDiff = diff; }
+  }
+  if (bestNum === 0) return `${sign}${whole}`;
+  if (bestNum === bestDen) return `${sign}${whole + 1}`;
+  const g = gcd(bestNum, bestDen);
+  const num = bestNum / g, den = bestDen / g;
+  return whole === 0 ? `${sign}${num}/${den}` : `${sign}${whole} ${num}/${den}`;
+}
+
+export function fraction({ maxDenom = 16 } = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return decimalToFraction(n, maxDenom) || String(value);
+  };
+}
+
+/* ---------- scientific (1.23 × 10^6 notation) ----------------------
+ *
+ * Render a number in scientific notation: 1234567 → "1.23e+6" (default)
+ * or "1.23 × 10⁶" (pretty mode). */
+const SUPER_DIGITS = ['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'];
+function toSuper(n) {
+  return String(n).split('').map((c) => c === '-' ? '⁻' : SUPER_DIGITS[Number(c)] || c).join('');
+}
+
+export function scientific({
+  decimals = 2,
+  pretty = true,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    if (n === 0) return '0';
+    const exp = Math.floor(Math.log10(Math.abs(n)));
+    const mant = n / Math.pow(10, exp);
+    const m = mant.toFixed(decimals);
+    if (pretty) return `${m} × 10${toSuper(exp)}`;
+    return n.toExponential(decimals);
+  };
+}
+
+/* ---------- hex / binary / octal -----------------------------------
+ *
+ * Render an integer in another base. `prefix: true` adds the conventional
+ * 0x / 0b / 0o prefix. */
+export function radix({
+  base = 16,
+  prefix = true,
+  uppercase = true,
+  pad = 0,
+} = {}) {
+  const PREFIX = { 2: '0b', 8: '0o', 16: '0x' };
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) return String(value);
+    let s = Math.abs(n).toString(base);
+    if (uppercase) s = s.toUpperCase();
+    if (pad > 0) s = s.padStart(pad, '0');
+    if (prefix && PREFIX[base]) s = PREFIX[base] + s;
+    return (n < 0 ? '-' : '') + s;
+  };
+}
+
+/* ---------- percentile (p50 / p95 tag) -----------------------------
+ *
+ * Show a value with its percentile rank within a population. Pass a
+ * `population` array (or a function `population: (row, col) => arr`)
+ * for context; the renderer computes percentile rank and renders
+ * "n (p47)". Defaults to compact decimals on the percentile. */
+export function percentile({
+  population = null,
+  decimals = 0,
+} = {}) {
+  return ({ value, row, col, td }) => {
+    if (td) td.classList.add('sg-renderer-percentile-cell');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    const pop = typeof population === 'function' ? population(row, col) : population;
+    if (!Array.isArray(pop) || pop.length === 0) return String(value);
+    const sorted = pop.slice().sort((a, b) => a - b);
+    let lower = 0;
+    for (const v of sorted) if (v < n) lower++;
+    const pct = (lower / sorted.length) * 100;
+    const wrap = h('span', { class: 'sg-renderer-percentile' });
+    wrap.append(document.createTextNode(String(value)));
+    wrap.append(h('span', { class: 'sg-renderer-percentile-tag' },
+      document.createTextNode(`p${pct.toFixed(decimals)}`)));
+    return wrap;
+  };
+}
+
+/* ---------- battery (multi-state icon) -----------------------------
+ *
+ * Visual battery indicator: 0..100 percent → bars. Red below 15%, amber
+ * below 35%, green otherwise. */
+export function battery({
+  showValue = true,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-battery-cell');
+    if (isBlank(value)) return '';
+    let n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    n = Math.max(0, Math.min(100, n));
+    const color = n < 15 ? '#ef4444' : n < 35 ? '#f59e0b' : '#22c55e';
+    const wrap = h('span', { class: 'sg-renderer-battery', title: `${Math.round(n)}%` });
+    const ic = h('span', { class: 'sg-renderer-battery-icon', 'aria-hidden': 'true' });
+    ic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 12" width="24" height="12"><rect x="0.5" y="0.5" width="20" height="11" rx="2" fill="none" stroke="#9ca3af"/><rect x="20.5" y="3" width="2.5" height="6" rx="0.5" fill="#9ca3af"/><rect x="2" y="2" width="${(n / 100) * 17}" height="8" fill="${color}"/></svg>`;
+    wrap.append(ic);
+    if (showValue) wrap.append(h('span', { class: 'sg-renderer-battery-pct' },
+      document.createTextNode(`${Math.round(n)}%`)));
+    return wrap;
+  };
+}
+
+/* ---------- signal-bars (0-4 indicator) ----------------------------
+ *
+ * 4-bar cellular/wifi signal icon. Accepts a 0-100 strength value or a
+ * 0-4 bar count. */
+export function signalBars({
+  bars = 4,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-signal-cell');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    const active = n <= bars ? Math.round(n) : Math.round((n / 100) * bars);
+    const wrap = h('span', { class: 'sg-renderer-signal', title: `${active}/${bars}` });
+    for (let i = 1; i <= bars; i++) {
+      wrap.append(h('span', {
+        class: `sg-renderer-signal-bar${i <= active ? ' is-on' : ''}`,
+        style: `height: ${4 + i * 2}px;`,
+      }));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- volume-indicator (0..100 speaker glyph) ----------------
+ *
+ * Speaker icon with 0/1/2/3 sound-wave arcs depending on level. Mute
+ * (0 or `null`) renders the muted glyph. */
+const VOL_BASE = '<path fill="currentColor" d="M3 6v4h3l4 3V3L6 6H3z"/>';
+const VOL_W1 = '<path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 6.5q1 1 0 3"/>';
+const VOL_W2 = '<path fill="none" stroke="currentColor" stroke-width="1.4" d="M14 5q2 2 0 6"/>';
+const VOL_W3 = '<path fill="none" stroke="currentColor" stroke-width="1.4" d="M16 3.5q3 3 0 9"/>';
+const VOL_MUTE = '<line x1="13" y1="4" x2="17" y2="9" stroke="currentColor" stroke-width="1.4"/><line x1="17" y1="4" x2="13" y2="9" stroke="currentColor" stroke-width="1.4"/>';
+
+export function volumeIndicator({
+  showValue = false,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-volume-cell');
+    if (isBlank(value)) return '';
+    let n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    n = Math.max(0, Math.min(100, n));
+    let waves = '';
+    if (n === 0) waves = VOL_MUTE;
+    else if (n < 33)  waves = VOL_W1;
+    else if (n < 66)  waves = VOL_W1 + VOL_W2;
+    else              waves = VOL_W1 + VOL_W2 + VOL_W3;
+    const wrap = h('span', { class: 'sg-renderer-volume', title: `${Math.round(n)}%` });
+    const ic = h('span', { class: 'sg-renderer-volume-icon', 'aria-hidden': 'true' });
+    ic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 16" width="20" height="14">${VOL_BASE}${waves}</svg>`;
+    wrap.append(ic);
+    if (showValue) wrap.append(h('span', { class: 'sg-renderer-volume-pct' },
+      document.createTextNode(`${Math.round(n)}%`)));
+    return wrap;
+  };
+}
+
 /* ---------- file (single file + mime-type icon) --------------------
  *
  * Single-file sibling to the multi-file `attachments` renderer. Value
@@ -8104,6 +8455,21 @@ registerRenderer('download-link',     downloadLink());
 registerRenderer('mime-icon',         mimeIcon());
 registerRenderer('gallery',           gallery());
 registerRenderer('waveform',          waveform());
+registerRenderer('html',              html());
+registerRenderer('yaml',              yaml());
+registerRenderer('xml',               xml());
+registerRenderer('autolink',          autolink());
+registerRenderer('redacted',          redacted());
+registerRenderer('spoiler',           spoiler());
+registerRenderer('fraction',          fraction());
+registerRenderer('scientific',        scientific());
+registerRenderer('hex',               radix({ base: 16 }));
+registerRenderer('binary',            radix({ base: 2 }));
+registerRenderer('octal',             radix({ base: 8 }));
+registerRenderer('percentile',        percentile());
+registerRenderer('battery',           battery());
+registerRenderer('signal-bars',       signalBars());
+registerRenderer('volume',            volumeIndicator());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -8680,4 +9046,7 @@ export const renderers = {
   spinner, errorCell, syncStatus, staleCell, freshCell,
   favicon, domain, socialLink, trackingNumber, videoLink,
   file, downloadLink, mimeIcon, gallery, waveform,
+  html, yaml, xml, autolink, redacted, spoiler,
+  fraction, scientific, radix, percentile,
+  battery, signalBars, volumeIndicator,
 };

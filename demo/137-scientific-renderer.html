@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>137 — Scientific renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>137 — Scientific notation renderer</h1>
+  <p class="lede">Pretty mode (1.23 × 10⁶) by default; opt out for the JS-canonical 1.23e+6.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="constant" data-header-cell-width-value="200">Constant</th>
+      <th data-controller="header-cell" data-header-cell-field-value="value" data-header-cell-type-value="number" data-header-cell-width-value="240">Decimal</th>
+      <th data-controller="header-cell" data-header-cell-field-value="value" data-header-cell-cell-renderer-value="scientific" data-header-cell-width-value="200">Scientific</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { constant: 'Speed of light (m/s)',   value: 299_792_458 },
+      { constant: "Planck's constant (J·s)", value: 6.62607015e-34 },
+      { constant: "Avogadro's number",      value: 6.02214076e23 },
+      { constant: 'Earth radius (m)',       value: 6_371_000 },
+      { constant: 'Hydrogen mass (kg)',     value: 1.6735575e-27 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

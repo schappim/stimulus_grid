@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>133 — Autolink renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>133 — Autolink renderer</h1>
+  <p class="lede">Auto-link bare URLs / emails inside plain text. HTML-escaped first; no inline tags survive.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="note" data-header-cell-cell-renderer-value="autolink" data-header-cell-width-value="600">Note</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { note: 'Ping the team via marcus@chickcom.com or check the docs at https://example.com/api' },
+      { note: 'Bare https://github.com/schappim/stimulus_grid link, no fancy formatting' },
+      { note: '<b>HTML</b> should be escaped — only links pass through.' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

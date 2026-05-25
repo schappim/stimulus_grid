@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>141 — Signal bars renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>141 — Signal bars renderer</h1>
+  <p class="lede">4-bar cellular / wifi strength indicator. Accepts 0-4 bar count or 0-100 strength.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="host" data-header-cell-width-value="200">Host</th>
+      <th data-controller="header-cell" data-header-cell-field-value="signal" data-header-cell-cell-renderer-value="signal-bars" data-header-cell-width-value="120">Signal</th>
+      <th data-controller="header-cell" data-header-cell-field-value="rssi" data-header-cell-type-value="number" data-header-cell-width-value="120">RSSI</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { host: 'astrid-mbp',    signal: 4, rssi: -42 },
+      { host: 'office-ap',      signal: 3, rssi: -58 },
+      { host: 'lab-pi-3',       signal: 2, rssi: -72 },
+      { host: 'rogue-device',   signal: 1, rssi: -85 },
+      { host: 'cottage-thermo', signal: 0, rssi: -95 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

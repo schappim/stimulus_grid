@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>130 — HTML renderer | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}code{background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:.9em}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>130 — Sanitized HTML preview</h1>
+  <p class="lede">Allowlist: <code>&lt;b&gt;</code> <code>&lt;i&gt;</code> <code>&lt;em&gt;</code> <code>&lt;strong&gt;</code> <code>&lt;u&gt;</code> <code>&lt;s&gt;</code> <code>&lt;code&gt;</code> <code>&lt;a&gt;</code> (http/https/mailto) <code>&lt;br&gt;</code> <code>&lt;span&gt;</code>. Everything else stripped to text.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="src" data-header-cell-width-value="320">Source</th>
+      <th data-controller="header-cell" data-header-cell-field-value="src" data-header-cell-cell-renderer-value="html" data-header-cell-width-value="380">Rendered</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { src: '<b>Bold</b> + <em>italic</em>' },
+      { src: 'Click <a href="https://example.com">here</a>' },
+      { src: '<script>alert("xss")<\/script> safe' },
+      { src: '<a href="javascript:alert(1)">bad link</a>' },
+      { src: 'Plain <code>inline code</code> too' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><title>142 — Volume indicator | stimulus_grid</title><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../dist/stimulus_grid.css"/><style>body{font-family:system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px}h1{margin-bottom:4px}p.lede{color:#6b7280;margin-top:0}.panel{height:460px;margin-top:16px}.crumbs a{color:#2563eb;text-decoration:none}</style></head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>142 — Volume indicator</h1>
+  <p class="lede">0-100% speaker glyph. 0 renders the muted icon; 1-32 / 33-65 / 66-100 add one, two, three sound-wave arcs.</p>
+  <div class="panel" data-controller="grid">
+    <table><thead><tr>
+      <th data-controller="header-cell" data-header-cell-field-value="room" data-header-cell-width-value="200">Room</th>
+      <th data-controller="header-cell" data-header-cell-field-value="volume" data-header-cell-cell-renderer-value="vol-with-pct" data-header-cell-width-value="160">Volume</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('vol-with-pct', renderers.volumeIndicator({ showValue: true }));
+    const data = [
+      { room: 'Living room',  volume: 0   },
+      { room: 'Kitchen',      volume: 22  },
+      { room: 'Bedroom',      volume: 50  },
+      { room: 'Office',       volume: 78  },
+      { room: 'Garage gym',   volume: 100 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body></html>
