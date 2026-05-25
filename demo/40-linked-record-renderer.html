@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>40 — Linked-record renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>40 — Linked-record renderer</h1>
+  <p class="lede">
+    Airtable / Notion-style FK chip — cell value is the foreign key, the
+    renderer resolves it to a display name (+ optional thumb, tint, and
+    outbound link) via a lookup function. <em>Projects</em> uses
+    <code>multiple: true</code> to render a chip per linked project.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="260"
+              data-header-cell-sortable-value="true">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="owner_id"
+              data-header-cell-cell-renderer-value="owner"
+              data-header-cell-width-value="180">Owner</th>
+          <th data-controller="header-cell" data-header-cell-field-value="project_ids"
+              data-header-cell-cell-renderer-value="projects"
+              data-header-cell-width-value="280">Projects</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status_id"
+              data-header-cell-cell-renderer-value="status-link"
+              data-header-cell-width-value="140">Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Lookup contract:</strong>
+    <code>lookup(value, row)</code> returns
+    <code>{ name, thumb?, color?, href? }</code>. The chip is rendered as
+    an <code>&lt;a&gt;</code> when an <code>href</code> is provided
+    (opens in a new tab) and as an inert <code>&lt;span&gt;</code>
+    otherwise. <code>color</code> tints the chip background.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // -- Reference data (a real app would keep these in a store) ----------
+    const USERS = new Map([
+      ['u1', { name: 'Astrid Hale',   thumb: 'https://i.pravatar.cc/64?img=1' }],
+      ['u2', { name: 'Marcus Chen',   thumb: 'https://i.pravatar.cc/64?img=3' }],
+      ['u3', { name: 'Priya Patel',   thumb: 'https://i.pravatar.cc/64?img=5' }],
+      ['u4', { name: 'Jamal Owens',   thumb: 'https://i.pravatar.cc/64?img=8' }],
+      ['u5', { name: 'Lena Brooks',   thumb: 'https://i.pravatar.cc/64?img=9' }],
+      ['u6', { name: 'Tomás Vega',    thumb: 'https://i.pravatar.cc/64?img=12' }],
+    ]);
+    const PROJECTS = new Map([
+      ['p1', { name: 'Storefront v3', color: '#bfdbfe' }],
+      ['p2', { name: 'Pricing engine', color: '#fed7aa' }],
+      ['p3', { name: 'Mobile app',     color: '#bbf7d0' }],
+      ['p4', { name: 'Onboarding',     color: '#e9d5ff' }],
+      ['p5', { name: 'Analytics',      color: '#fef08a' }],
+    ]);
+    const STATUSES = new Map([
+      ['s1', { name: 'In progress', color: '#bfdbfe' }],
+      ['s2', { name: 'Blocked',     color: '#fecaca' }],
+      ['s3', { name: 'Done',        color: '#bbf7d0' }],
+      ['s4', { name: 'On hold',     color: '#e5e7eb' }],
+    ]);
+
+    registerRenderer('owner', renderers.linkedRecord({
+      lookup: (id) => USERS.get(id),
+      href:   (id) => `/users/${id}`,
+    }));
+    registerRenderer('projects', renderers.linkedRecord({
+      lookup: (id) => PROJECTS.get(id),
+      multiple: true,
+      showThumb: false,
+      href: (id) => `/projects/${id}`,
+    }));
+    registerRenderer('status-link', renderers.linkedRecord({
+      lookup: (id) => STATUSES.get(id),
+      showThumb: false,
+    }));
+
+    const ROWS = [
+      { id: 1, title: 'Migrate to Postgres 17', owner_id: 'u1',
+        project_ids: ['p1', 'p5'], status_id: 's1' },
+      { id: 2, title: 'Recsys v3 canary roll-out', owner_id: 'u3',
+        project_ids: ['p5'], status_id: 's1' },
+      { id: 3, title: 'Multi-currency invoices', owner_id: 'u6',
+        project_ids: ['p2', 'p1'], status_id: 's2' },
+      { id: 4, title: 'iOS push notifications', owner_id: 'u4',
+        project_ids: ['p3'], status_id: 's3' },
+      { id: 5, title: 'Onboarding tour copy', owner_id: 'u5',
+        project_ids: ['p4', 'p1', 'p3'], status_id: 's4' },
+      { id: 6, title: 'PR triage cleanup', owner_id: 'u2',
+        project_ids: ['p1'], status_id: 's3' },
+      { id: 7, title: 'Unknown owner (lookup miss)', owner_id: 'u-missing',
+        project_ids: ['p-zzz'], status_id: 's1' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

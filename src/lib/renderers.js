@@ -2666,6 +2666,88 @@ export function json({ maxKeys = 3, indent = 2 } = {}) {
   };
 }
 
+/* ---------- linkedRecord (foreign-key chip) -------------------------
+ *
+ * Airtable / Notion-style relationship chip: the cell value is a key,
+ * the renderer resolves that key to a display name (+ optional avatar /
+ * tint / outbound link) via a lookup function or a global map. Mirrors
+ * `avatar`'s lookup contract:
+ *
+ *   1. opts.lookup(value, row) — full control
+ *   2. window[opts.windowKey]  — a Map / object keyed by the FK
+ *   3. opts.fallback(value)    — last-resort string formatter
+ *
+ *   registerRenderer('owner', linkedRecord({
+ *     lookup: (id) => USERS.get(id),
+ *     href:   (id) => `/users/${id}`,
+ *   }))
+ *
+ * Pass `multiple: true` for array-of-keys columns (one chip per key);
+ * pass a per-entry `color` (any CSS colour) and the chip background
+ * tints to match — useful for project / status / tag-linked records. */
+export function linkedRecord({
+  lookup = null,
+  windowKey = '__sgLinks',
+  showThumb = true,
+  href = null,
+  multiple = false,
+  fallback = (v) => String(v),
+} = {}) {
+  return ({ value, row }) => {
+    if (isBlank(value)) return '';
+    const keys = multiple
+      ? (Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim()).filter(Boolean))
+      : [value];
+    const wrap = h('span', { class: 'sg-renderer-linked-records' });
+    for (const k of keys) {
+      const entry = resolveLinkedRecord(k, row, lookup, windowKey);
+      wrap.append(buildLinkedRecordChip(k, row, entry, { showThumb, href, fallback }));
+    }
+    return wrap;
+  };
+}
+
+function resolveLinkedRecord(value, row, lookup, windowKey) {
+  if (typeof lookup === 'function') return lookup(value, row) || null;
+  if (typeof window === 'undefined') return null;
+  const src = window[windowKey];
+  if (!src) return null;
+  if (src instanceof Map) return src.get(value) || src.get(String(value)) || null;
+  if (typeof src === 'object') return src[value] ?? src[String(value)] ?? null;
+  return null;
+}
+
+function buildLinkedRecordChip(value, row, entry, { showThumb, href, fallback }) {
+  const name = entry?.name ?? fallback(value);
+  const url = typeof href === 'function' ? href(value, row, entry) : (entry?.href || null);
+  const chip = document.createElement(url ? 'a' : 'span');
+  chip.className = 'sg-renderer-linked-record';
+  if (url) {
+    chip.href = url;
+    chip.target = '_blank';
+    chip.rel = 'noopener noreferrer';
+    chip.addEventListener('click', (e) => e.stopPropagation());
+  }
+  if (entry?.color) chip.style.setProperty('--lr-tint', entry.color);
+  if (showThumb && entry?.thumb) {
+    chip.append(h('img', {
+      src: entry.thumb, alt: '', class: 'sg-renderer-linked-record-thumb',
+      loading: 'lazy', decoding: 'async',
+    }));
+  } else if (showThumb && name) {
+    const initials = String(name).split(/\s+/).filter(Boolean).slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || '').join('');
+    if (initials) {
+      chip.append(h('span', {
+        class: 'sg-renderer-linked-record-initials', 'aria-hidden': 'true',
+      }, document.createTextNode(initials)));
+    }
+  }
+  chip.append(h('span', { class: 'sg-renderer-linked-record-name' },
+    document.createTextNode(name)));
+  return chip;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2705,6 +2787,7 @@ registerRenderer('checkbox',       checkbox());
 registerRenderer('switch',         switchRenderer());
 registerRenderer('markdown',       markdown());
 registerRenderer('json',           json());
+registerRenderer('linked-record',  linkedRecord());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2715,5 +2798,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, switch: switchRenderer, markdown, json, audioAttachment,
+  checkbox, switch: switchRenderer, markdown, json, linkedRecord, audioAttachment,
 };

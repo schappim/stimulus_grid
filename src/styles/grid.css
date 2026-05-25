@@ -2204,3 +2204,57 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-json-number { color: #be185d; }   /* pink-700 */
 .sg-grid .sg-json-bool   { color: #c2410c; }   /* orange-700 */
 .sg-grid .sg-json-null   { color: var(--sg-fg-muted, #9ca3af); font-style: italic; }
+
+/* Linked-record chip — FK → resolved display name. Pill-shaped, with an
+   optional thumb (image) or initials on the left, tinted background
+   via --lr-tint set by the renderer when the resolved entry has a
+   `color`. When the lookup returns an `href` the chip is an <a> and
+   opens in a new tab; otherwise it's an inert <span>. */
+.sg-grid .sg-renderer-linked-records {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.sg-grid .sg-renderer-linked-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: var(--lr-tint, var(--sg-pill-blue-bg, #bfdbfe));
+  color: var(--sg-pill-blue-fg, #1e3a8a);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+  line-height: 1.6;
+  max-width: 220px;
+  cursor: pointer;
+}
+.sg-grid .sg-renderer-linked-record:hover { filter: brightness(0.96); }
+.sg-grid a.sg-renderer-linked-record:hover .sg-renderer-linked-record-name {
+  text-decoration: underline;
+}
+.sg-grid .sg-renderer-linked-record-thumb {
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-linked-record-initials {
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  color: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-linked-record-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
