@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>80 — Menu (kebab) renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>80 — Menu (kebab) renderer</h1>
+  <p class="lede">
+    Kebab icon per row; click to open a popover menu. Items support
+    <code>icon</code>, <code>shortcut</code>, <code>danger</code>,
+    <code>disabled</code>, and either <code>onClick</code> or
+    <code>action</code> (event-driven). Use <code>'---'</code> as a
+    separator.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="180">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-width-value="120">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="updated"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="160">Updated</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_menu"
+              data-header-cell-cell-renderer-value="kebab"
+              data-header-cell-width-value="50"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Click a kebab and pick an item.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('kebab', renderers.menu({
+      items: [
+        { label: 'Edit',       action: 'edit',       icon: '✎', shortcut: '⌘E' },
+        { label: 'Duplicate',  action: 'duplicate',  icon: '⧉', shortcut: '⌘D' },
+        { label: 'Move…',      action: 'move',       icon: '↗' },
+        '---',
+        { label: 'Archive',    action: 'archive',    icon: '📦' },
+        { label: 'Delete',     action: 'delete',     icon: '🗑', danger: true, shortcut: '⌫' },
+      ],
+    }));
+
+    const now = Date.now();
+    const data = [
+      { id: 1, name: 'Acquisition funnel',     status: 'Live',     updated: new Date(now - 12 * 60 * 1000)            },
+      { id: 2, name: 'Onboarding wizard v3',   status: 'Draft',    updated: new Date(now - 3  * 3600 * 1000)          },
+      { id: 3, name: 'Pricing experiment A',   status: 'Live',     updated: new Date(now - 2  * 86400 * 1000)         },
+      { id: 4, name: 'Legacy admin sunset',    status: 'Archived', updated: new Date(now - 30 * 86400 * 1000)         },
+      { id: 5, name: 'Internal beta cohort',   status: 'Paused',   updated: new Date(now - 5  * 86400 * 1000)         },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    const log = document.getElementById('log');
+    grid.addEventListener('grid:rowAction', (e) => {
+      log.textContent = `▶ ${e.detail.action} on "${e.detail.row.name}" (row ${e.detail.rowId})`;
+    });
+  </script>
+</body>
+</html>

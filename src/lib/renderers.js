@@ -5766,6 +5766,262 @@ function closeTextareaEditor() {
   refocusGrid(anchor);
 }
 
+/* ---------- action-button (single per-row button) -------------------
+ *
+ * Render a single inline button per row that fires either a callback
+ * (`onClick(row, ctx)`) or dispatches a `grid:rowAction` custom event
+ * with a configured `action` name. The grid stays "thin" — actual side
+ * effects live in the consuming code.
+ *
+ *   registerRenderer('row-archive', renderers.actionButton({
+ *     label: 'Archive', icon: '📦', variant: 'secondary',
+ *     onClick: (row) => archiveRow(row),
+ *   }));
+ *
+ * Variants: 'primary' | 'secondary' | 'danger' | 'ghost'. */
+function dispatchRowAction(td, ctx, name, payload) {
+  const grid = td?.closest('[data-controller~="grid"]');
+  if (!grid) return;
+  grid.dispatchEvent(new CustomEvent('grid:rowAction', {
+    bubbles: true,
+    detail: {
+      action: name,
+      rowId: ctx.row?.id ?? ctx.row?._sg_id,
+      row: ctx.row,
+      col: ctx.col,
+      ...payload,
+    },
+  }));
+}
+
+export function actionButton({
+  label = 'Go',
+  icon = null,
+  variant = 'primary',
+  action = null,
+  onClick = null,
+  disabled = false,
+} = {}) {
+  return (ctx) => {
+    const { td, row } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const lab = cfg.label ?? label;
+    const ic  = cfg.icon  ?? icon;
+    const vr  = cfg.variant ?? variant;
+    const act = cfg.action ?? action;
+    const dis = (typeof disabled === 'function') ? disabled(row) : (cfg.disabled ?? disabled);
+
+    if (td) td.classList.add('sg-renderer-action-cell');
+    const btn = h('button', {
+      type: 'button',
+      class: `sg-renderer-action-btn is-${vr}`,
+      disabled: dis ? '' : null,
+    });
+    if (ic) btn.append(h('span', { class: 'sg-renderer-action-icon', 'aria-hidden': 'true' }, ic));
+    btn.append(h('span', { class: 'sg-renderer-action-label' }, document.createTextNode(lab)));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (dis) return;
+      if (typeof onClick === 'function') onClick(row, ctx);
+      if (act) dispatchRowAction(td, ctx, act);
+    });
+    return btn;
+  };
+}
+
+/* ---------- menu (kebab/overflow row-action menu) -------------------
+ *
+ * Single kebab icon per row; click opens a popover with a configured
+ * list of items. Each item commits via callback or `grid:rowAction`.
+ *
+ *   registerRenderer('actions', renderers.menu({
+ *     items: [
+ *       { label: 'Edit',     action: 'edit',     icon: '✎' },
+ *       { label: 'Duplicate', action: 'duplicate' },
+ *       { label: 'Archive',  action: 'archive' },
+ *       '---',
+ *       { label: 'Delete',   action: 'delete',   danger: true },
+ *     ],
+ *   })); */
+const SG_KEBAB_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="3" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/></svg>';
+
+export function menu({
+  items = [],
+  icon = SG_KEBAB_SVG,
+  ariaLabel = 'Open menu',
+} = {}) {
+  return (ctx) => {
+    const { td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const its = cfg.items || items;
+    const ic = cfg.icon ?? icon;
+    if (td) {
+      td.classList.add('sg-renderer-menu-cell');
+      td._sgMenuItems = its;
+    }
+    const btn = h('button', {
+      type: 'button',
+      class: 'sg-renderer-menu-trigger',
+      'aria-label': cfg.ariaLabel ?? ariaLabel,
+    }, ic);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMenuPopover(td, ctx, its);
+    });
+    return btn;
+  };
+}
+
+let activeMenuPopover = null;
+
+function openMenuPopover(anchor, ctx, items) {
+  closeMenuPopover();
+  const pop = h('div', { class: 'sg-renderer-menu-popover', role: 'menu' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  for (const item of items) {
+    if (item === '---' || item === null) {
+      pop.append(h('div', { class: 'sg-renderer-menu-sep', role: 'separator' }));
+      continue;
+    }
+    const it = typeof item === 'string' ? { label: item, action: item } : item;
+    const cls = ['sg-renderer-menu-item'];
+    if (it.danger) cls.push('is-danger');
+    if (it.disabled) cls.push('is-disabled');
+    const row = h('button', {
+      type: 'button',
+      class: cls.join(' '),
+      role: 'menuitem',
+      disabled: it.disabled ? '' : null,
+    });
+    if (it.icon) row.append(h('span', { class: 'sg-renderer-menu-icon', 'aria-hidden': 'true' }, it.icon));
+    row.append(h('span', { class: 'sg-renderer-menu-label' }, document.createTextNode(it.label)));
+    if (it.shortcut) {
+      row.append(h('span', { class: 'sg-renderer-menu-shortcut' }, document.createTextNode(it.shortcut)));
+    }
+    row.addEventListener('click', () => {
+      if (it.disabled) return;
+      closeMenuPopover();
+      if (typeof it.onClick === 'function') it.onClick(ctx.row, ctx);
+      if (it.action) dispatchRowAction(anchor, ctx, it.action);
+    });
+    pop.append(row);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeMenuPopover(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeMenuPopover();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeMenuPopover = { pop, onKey, onDocClick, anchor };
+}
+
+function closeMenuPopover() {
+  if (!activeMenuPopover) return;
+  const { pop, onKey, onDocClick, anchor } = activeMenuPopover;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeMenuPopover = null;
+  refocusGrid(anchor);
+}
+
+/* ---------- split-button (primary + dropdown caret) -----------------
+ *
+ * Two halves: left fires the primary action; right opens a menu popover
+ * for secondary actions.
+ *
+ *   registerRenderer('publish', renderers.splitButton({
+ *     primary: { label: 'Publish', action: 'publish' },
+ *     items:   [ { label: 'Schedule…', action: 'schedule' },
+ *                { label: 'Save draft', action: 'save_draft' } ],
+ *   })); */
+export function splitButton({
+  primary = { label: 'Go', action: null, icon: null },
+  items = [],
+  variant = 'primary',
+} = {}) {
+  return (ctx) => {
+    const { td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const p = cfg.primary || primary;
+    const its = cfg.items || items;
+    const vr = cfg.variant ?? variant;
+
+    if (td) td.classList.add('sg-renderer-splitbtn-cell');
+    const group = h('span', { class: `sg-renderer-splitbtn is-${vr}`, role: 'group' });
+    const mainBtn = h('button', { type: 'button', class: 'sg-renderer-splitbtn-main' });
+    if (p.icon) mainBtn.append(h('span', { class: 'sg-renderer-action-icon', 'aria-hidden': 'true' }, p.icon));
+    mainBtn.append(h('span', { class: 'sg-renderer-action-label' }, document.createTextNode(p.label)));
+    mainBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof p.onClick === 'function') p.onClick(ctx.row, ctx);
+      if (p.action) dispatchRowAction(td, ctx, p.action);
+    });
+    const caret = h('button', { type: 'button', class: 'sg-renderer-splitbtn-caret', 'aria-label': 'More actions' },
+      document.createTextNode('▾'));
+    caret.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMenuPopover(caret, ctx, its);
+    });
+    group.append(mainBtn, caret);
+    return group;
+  };
+}
+
+/* ---------- row-actions (edit / delete / archive icon trio) ---------
+ *
+ * Convenience renderer for the common "small icon buttons at the end
+ * of a row" pattern. Default trio is edit + duplicate + delete; pass
+ * `actions: [...]` to override. Each action fires onClick(row) and/or
+ * dispatches `grid:rowAction` with the action name.
+ *
+ *   registerRenderer('row-ops', renderers.rowActions());
+ *   registerRenderer('row-ops', renderers.rowActions({
+ *     actions: [
+ *       { name: 'edit', label: 'Edit',  icon: '✎' },
+ *       { name: 'star', label: 'Star',  icon: '★' },
+ *     ],
+ *   })); */
+const ROW_ACTIONS_DEFAULT = [
+  { name: 'edit',      label: 'Edit',      icon: '✎' },
+  { name: 'duplicate', label: 'Duplicate', icon: '⧉' },
+  { name: 'delete',    label: 'Delete',    icon: '✕', danger: true },
+];
+
+export function rowActions({
+  actions = ROW_ACTIONS_DEFAULT,
+} = {}) {
+  return (ctx) => {
+    const { td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const list = cfg.actions || actions;
+    if (td) td.classList.add('sg-renderer-rowactions-cell');
+    const wrap = h('span', { class: 'sg-renderer-rowactions' });
+    for (const a of list) {
+      const btn = h('button', {
+        type: 'button',
+        class: `sg-renderer-rowactions-btn${a.danger ? ' is-danger' : ''}`,
+        title: a.label,
+        'aria-label': a.label,
+      }, a.icon || a.label);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof a.onClick === 'function') a.onClick(ctx.row, ctx);
+        if (a.name) dispatchRowAction(td, ctx, a.name);
+      });
+      wrap.append(btn);
+    }
+    return wrap;
+  };
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -5975,6 +6231,557 @@ registerRenderer('time-picker',       timePicker());
 registerRenderer('date-range',        dateRange());
 registerRenderer('color-picker',      colorPicker());
 registerRenderer('textarea',          textarea());
+registerRenderer('action-button',     actionButton());
+registerRenderer('menu',              menu());
+registerRenderer('split-button',      splitButton());
+registerRenderer('row-actions',       rowActions());
+
+/* ---------- built-in clipboard wiring -------------------------------
+ *
+ * Every entry attaches `copyValue` / `parseValue` to the renderer
+ * instance that `registerRenderer('…', factory())` placed in the
+ * registry above. Users who register their OWN factory instance — e.g.
+ * `registerRenderer('eur', currency({ currency: 'EUR' }))` — can either
+ * use `withClipboard()` to attach a matching pair OR rely on the
+ * column-type fallback the grid uses when a renderer has no
+ * copyValue / parseValue defined.
+ *
+ * For renderers whose behaviour depends on configuration (select /
+ * multiselect / combobox / rag), parse functions read from
+ * `ctx.col.cellRendererConfig` / `ctx.col.enumValues` at parse time —
+ * the same path the render functions use, so the wiring works for any
+ * column without per-instance refitting.
+ *
+ * `withClipboard` is re-exported so external code can attach the same
+ * round-trip semantics to custom renderers it builds. */
+
+export { withClipboard };
+
+// Small kit of reusable clipboard pairs. Each is named after the value
+// shape it handles, not the renderer that uses it — so the reader can
+// see exactly what the round-trip contract is.
+const clip = {
+  // Plain text. The 99% case.
+  text: {
+    copy:  ({ value }) => value == null ? '' : String(value),
+    parse: (text) => String(text ?? ''),
+  },
+  // Numeric — strips currency / percent / commas before Number().
+  number: {
+    copy:  ({ value }) => value == null || value === '' ? '' : String(value),
+    parse: parseNumeric,
+  },
+  // Boolean — true / false / yes / no / 1 / 0 / on / off / ✓ / ✗.
+  boolean: {
+    copy:  ({ value }) => value === true ? 'true'
+                       : value === false ? 'false'
+                       : value == null   ? ''
+                       : String(value),
+    parse: parseBooleanText,
+  },
+  // ISO date (YYYY-MM-DD). Date objects normalise to ISO on copy;
+  // already-string values round-trip as supplied so existing
+  // "2026-05-25" strings come back exactly as they went out.
+  date: {
+    copy: ({ value }) => {
+      if (value == null || value === '') return '';
+      if (value instanceof Date && !Number.isNaN(value.valueOf())) {
+        const y = value.getFullYear();
+        const m = String(value.getMonth() + 1).padStart(2, '0');
+        const d = String(value.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return String(value);
+    },
+    parse: (text) => {
+      const s = String(text ?? '');
+      if (s === '') return '';
+      const d = new Date(s);
+      return Number.isNaN(d.valueOf()) ? undefined : s;
+    },
+  },
+  // ISO datetime (full ISO 8601).
+  datetime: {
+    copy: ({ value }) => {
+      if (value == null || value === '') return '';
+      if (value instanceof Date && !Number.isNaN(value.valueOf())) return value.toISOString();
+      return String(value);
+    },
+    parse: (text) => {
+      const s = String(text ?? '');
+      if (s === '') return '';
+      const d = new Date(s);
+      return Number.isNaN(d.valueOf()) ? undefined : s;
+    },
+  },
+  // Comma-separated strings. Preserves array-ness if the original was
+  // an array (the renderer's display call has its own normalisation).
+  stringList: {
+    copy:  ({ value }) => Array.isArray(value) ? value.join(', ')
+                       : isBlank(value)        ? ''
+                       : String(value),
+    parse: (text) => {
+      const s = String(text ?? '').trim();
+      if (s === '') return [];
+      return s.split(/\s*,\s*/).filter(Boolean);
+    },
+  },
+  // Comma-separated numbers (sparkline / histogram).
+  numberList: {
+    copy: ({ value }) => Array.isArray(value) ? value.join(', ') : '',
+    parse: (text) => {
+      const s = String(text ?? '').trim();
+      if (s === '') return [];
+      const parts = s.split(/\s*,\s*/).filter(Boolean).map(Number);
+      return parts.some((n) => !Number.isFinite(n)) ? undefined : parts;
+    },
+  },
+  // JSON for object / array values. Non-JSON text passes through as a
+  // string — the renderer may still know what to do with it.
+  json: {
+    copy: ({ value }) => {
+      if (value == null || value === '') return '';
+      if (typeof value === 'string') return value;
+      try { return JSON.stringify(value); }
+      catch (_) { return String(value); }
+    },
+    parse: (text) => {
+      const s = String(text ?? '').trim();
+      if (s === '') return '';
+      try { return JSON.parse(s); }
+      catch (_) { return undefined; }
+    },
+  },
+  // Strip non-digit chars on parse; pass the raw value through on copy
+  // (renderer formats it). Used by abn / acn / bsb / medicare /
+  // credit-card / phone — anything where the persisted form is digits.
+  digits: {
+    copy:  ({ value }) => value == null ? '' : String(value).trim(),
+    parse: (text) => {
+      const s = String(text ?? '');
+      if (s === '') return '';
+      const digits = s.replace(/\D/g, '');
+      return digits || s;          // keep raw if no digits — renderer marks invalid
+    },
+  },
+};
+
+// Per-renderer wiring. Each line attaches one pair to one registered
+// renderer. Listed in the same order as the registerRenderer block above
+// so any omission is obvious at a glance.
+function wireBuiltin(name, pair) {
+  const fn = getRenderer(name);
+  if (fn) withClipboard(fn, pair);
+}
+
+wireBuiltin('email',          { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('url',            { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('phone',          clip.digits);
+wireBuiltin('currency',       clip.number);
+wireBuiltin('percent',        {
+  copy:  clip.number.copy,
+  parse: (text) => parseNumeric(String(text ?? '').replace(/%$/, '')),
+});
+wireBuiltin('progress-bar',   clip.number);
+wireBuiltin('star-rating',    clip.number);
+wireBuiltin('tags',           clip.stringList);
+wireBuiltin('country-flag',   {
+  copy:  ({ value }) => value == null ? '' : String(value).trim().toUpperCase(),
+  parse: (text) => {
+    const k = String(text ?? '').trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(k) ? k : undefined;
+  },
+});
+wireBuiltin('abn',            clip.digits);
+wireBuiltin('avatar',         clip.text);
+wireBuiltin('date',           clip.date);
+wireBuiltin('datetime',       clip.datetime);
+wireBuiltin('relative-time',  clip.datetime);
+wireBuiltin('duration',       {
+  copy:  clip.number.copy,
+  // Accept either a bare number ("125000") OR a human form ("2h 5m" /
+  // "02:05:00"). The parsed value is in milliseconds — most columns
+  // already use that; the renderer's `unit` option converts on display.
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    const colon = /^(\d+):(\d+)(?::(\d+))?$/.exec(s);
+    if (colon) {
+      const a = +colon[1], b = +colon[2], c = colon[3] ? +colon[3] : 0;
+      const totalSec = colon[3] ? a * 3600 + b * 60 + c : a * 60 + b;
+      return totalSec * 1000;
+    }
+    let ms = 0; let touched = false;
+    const re = /(-?\d+(?:\.\d+)?)\s*(ms|milliseconds?|s|sec|seconds?|m|min|minutes?|h|hr|hours?|d|days?)\b/gi;
+    let m;
+    while ((m = re.exec(s)) !== null) {
+      const n = Number(m[1]); const u = m[2].toLowerCase();
+      if (u.startsWith('ms') || u.startsWith('milli'))     ms += n;
+      else if (u === 's' || u.startsWith('sec'))           ms += n * 1000;
+      else if (u === 'm' || u.startsWith('min'))           ms += n * 60_000;
+      else if (u.startsWith('h'))                          ms += n * 3_600_000;
+      else if (u.startsWith('d'))                          ms += n * 86_400_000;
+      touched = true;
+    }
+    return touched ? ms : undefined;
+  },
+});
+wireBuiltin('number',         clip.number);
+wireBuiltin('compact-number', {
+  copy:  clip.number.copy,
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m = /^(-?\d+(?:\.\d+)?)\s*([kmbt])$/i.exec(s);
+    if (m) {
+      const n = Number(m[1]);
+      const unit = m[2].toLowerCase();
+      const mult = unit === 'k' ? 1e3 : unit === 'm' ? 1e6 : unit === 'b' ? 1e9 : 1e12;
+      return Number.isFinite(n) ? n * mult : undefined;
+    }
+    return parseNumeric(s);
+  },
+});
+wireBuiltin('file-size',      {
+  copy:  clip.number.copy,
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m = /^(-?\d+(?:\.\d+)?)\s*(b|kb|mb|gb|tb|pb|kib|mib|gib|tib|pib)?$/i.exec(s);
+    if (!m) return parseNumeric(s);
+    const n = Number(m[1]);
+    if (!Number.isFinite(n)) return undefined;
+    const unit = (m[2] || 'b').toLowerCase();
+    const base = unit.endsWith('ib') ? 1024 : 1000;
+    const k = unit.endsWith('ib') ? unit.slice(0, -2) + 'b' : unit;
+    const map = { b: 1, kb: base, mb: base ** 2, gb: base ** 3, tb: base ** 4, pb: base ** 5 };
+    return n * (map[k] ?? 1);
+  },
+});
+wireBuiltin('boolean',        clip.boolean);
+wireBuiltin('delta',          clip.number);
+wireBuiltin('truncate',       clip.text);
+wireBuiltin('copyable',       clip.text);
+wireBuiltin('image',          { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('color-swatch',   { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('sparkline',      clip.numberList);
+wireBuiltin('heatmap-cell',   clip.number);
+wireBuiltin('mask',           clip.text);
+wireBuiltin('highlight',      clip.text);
+wireBuiltin('multi-line',     clip.text);
+wireBuiltin('attachments',    {
+  copy:  clip.json.copy,
+  parse: (text) => {
+    const out = clip.json.parse(text);
+    if (out === undefined) return undefined;
+    if (out === '' || out == null) return [];
+    return Array.isArray(out) ? out : undefined;
+  },
+});
+wireBuiltin('address-au',     {
+  copy: ({ value }) => {
+    if (value == null || value === '') return '';
+    if (typeof value === 'string') return value;
+    if (typeof value !== 'object') return String(value);
+    try { return JSON.stringify(value); }
+    catch (_) { return String(value); }
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return null;
+    if (s.startsWith('{')) {
+      try { return JSON.parse(s); }
+      catch (_) { /* fall through — renderer treats raw text as _raw */ }
+    }
+    return s;
+  },
+});
+wireBuiltin('checkbox',       clip.boolean);
+wireBuiltin('switch',         clip.boolean);
+wireBuiltin('markdown',       clip.text);
+wireBuiltin('json',           clip.json);
+wireBuiltin('linked-record',  {
+  copy:  ({ value }) => {
+    if (value == null || value === '') return '';
+    if (Array.isArray(value)) return value.join(', ');
+    return String(value);
+  },
+  parse: (text) => {
+    const s = String(text ?? '');
+    if (s === '') return '';
+    return s.includes(',') ? s.split(/\s*,\s*/).filter(Boolean) : s;
+  },
+});
+wireBuiltin('coloured-tags',  clip.stringList);
+wireBuiltin('time',           {
+  copy:  ({ value }) => value == null ? '' : String(value).trim(),
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m12 = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)$/i.exec(s);
+    if (m12) {
+      let h = parseInt(m12[1], 10);
+      const mn = m12[2]; const sec = m12[3];
+      if (m12[4].toLowerCase() === 'pm' && h < 12) h += 12;
+      if (m12[4].toLowerCase() === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${mn}${sec ? ':' + sec : ''}`;
+    }
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s;
+    if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
+    return undefined;
+  },
+});
+wireBuiltin('diff',           {
+  copy: ({ value }) => {
+    if (value == null || value === '') return '';
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return `${value[0] ?? ''} → ${value[1] ?? ''}`;
+    const from = value.from ?? value.old ?? value.before ?? value.previous ?? null;
+    const to   = value.to   ?? value.new ?? value.after  ?? value.current  ?? null;
+    if (from == null && to == null) return '';
+    return `${from ?? ''} → ${to ?? ''}`;
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return null;
+    const m = /^(.*?)\s*(?:→|->|=>|—>)\s*(.+)$/.exec(s);
+    if (m) return { from: m[1].trim(), to: m[2].trim() };
+    return { from: null, to: s };
+  },
+});
+wireBuiltin('geo',            {
+  copy: ({ value }) => {
+    if (value == null || value === '') return '';
+    if (Array.isArray(value)) return `${value[0]}, ${value[1]}`;
+    if (typeof value === 'object') {
+      const lat = value.lat ?? value.latitude;
+      const lng = value.lng ?? value.long ?? value.lon ?? value.longitude;
+      return `${lat}, ${lng}`;
+    }
+    return String(value);
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return null;
+    const parts = s.split(/\s*,\s*/);
+    if (parts.length !== 2) return undefined;
+    const lat = Number(parts[0]), lng = Number(parts[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return undefined;
+    return { lat, lng };
+  },
+});
+wireBuiltin('qr',             clip.text);
+wireBuiltin('code',           clip.text);
+wireBuiltin('rating',         clip.number);
+wireBuiltin('bullet',         clip.number);
+wireBuiltin('donut',          clip.number);
+wireBuiltin('histogram',      clip.numberList);
+wireBuiltin('rag',            {
+  // RAG_TOKENS lookup keeps "high" / "low" / "critical" / "ok" /
+  // "passive" / "detractor" all parseable to the three canonical bands.
+  copy:  ({ value }) => value == null ? '' : String(value).trim().toLowerCase(),
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const k = s.toLowerCase();
+    if (RAG_TOKENS[k]) return RAG_TOKENS[k];
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    return undefined;
+  },
+});
+wireBuiltin('timeline-steps', clip.text);
+wireBuiltin('mention',        clip.text);
+wireBuiltin('expand',         clip.text);
+wireBuiltin('units',          clip.number);
+wireBuiltin('ip-address',     { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('bsb',            clip.digits);
+wireBuiltin('acn',            clip.digits);
+wireBuiltin('tfn',            clip.digits);
+wireBuiltin('medicare',       clip.digits);
+wireBuiltin('audio',          { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('video',          { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('reactions',      clip.json);
+wireBuiltin('comment-count',  {
+  copy:  ({ value }) => {
+    if (value == null || value === '') return '';
+    if (typeof value === 'object') {
+      const text = value.value ?? value.text ?? '';
+      const count = value.count ?? value.comments ?? null;
+      if (count != null && text) return `${text} (${count})`;
+      if (count != null) return String(count);
+      return String(text);
+    }
+    return String(value);
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m = /^(.*?)\s*\((\d+)\)$/.exec(s);
+    if (m) return { value: m[1].trim(), count: Number(m[2]) };
+    if (/^\d+$/.test(s)) return Number(s);
+    return s;
+  },
+});
+wireBuiltin('ordinal',        {
+  copy:  clip.number.copy,
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m = /^(-?\d+)(?:st|nd|rd|th)?$/i.exec(s);
+    return m ? Number(m[1]) : undefined;
+  },
+});
+wireBuiltin('plural',         clip.number);
+wireBuiltin('empty',          clip.text);
+wireBuiltin('credit-card',    clip.digits);
+wireBuiltin('loading-shimmer', clip.text);
+wireBuiltin('audio-attachment', {
+  copy: ({ value }) => {
+    if (value == null || value === '') return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') return value.url || JSON.stringify(value);
+    return String(value);
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return null;
+    if (s.startsWith('{')) {
+      try { return JSON.parse(s); }
+      catch (_) { /* fall through */ }
+    }
+    return s;
+  },
+});
+// select / multiselect / combobox read options from
+// ctx.col.cellRendererConfig at parse time — the same path the renderer
+// uses at render time. A column wired through Rails' column DSL (which
+// writes cellRendererConfig.options) round-trips through copy/paste
+// without per-renderer config plumbing.
+wireBuiltin('select',         {
+  copy:  ({ value }) => value == null || value === '' ? '' : String(value),
+  parse: (text, ctx) => {
+    const s = String(text ?? '');
+    if (s === '') return null;
+    const opts = ctx?.col?.cellRendererConfig?.options || ctx?.col?.enumValues || [];
+    if (!Array.isArray(opts) || opts.length === 0) return s;
+    const norm = (v) => String(v).trim().toLowerCase();
+    const k = norm(s);
+    for (const o of opts) {
+      const value = typeof o === 'object' ? o.value : o;
+      const label = typeof o === 'object' ? (o.label ?? value) : o;
+      if (norm(value) === k || norm(label) === k) return value;
+    }
+    return undefined;
+  },
+});
+wireBuiltin('multiselect',    {
+  copy: ({ value }) => Array.isArray(value) ? value.join(', ')
+                     : isBlank(value)        ? ''
+                     : String(value),
+  parse: (text, ctx) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return [];
+    const tokens = s.split(/\s*,\s*/).filter(Boolean);
+    const opts = ctx?.col?.cellRendererConfig?.options || ctx?.col?.enumValues || [];
+    if (!Array.isArray(opts) || opts.length === 0) return tokens;
+    const norm = (v) => String(v).trim().toLowerCase();
+    const out = [];
+    for (const t of tokens) {
+      const k = norm(t);
+      const match = opts.find((o) => {
+        const value = typeof o === 'object' ? o.value : o;
+        const label = typeof o === 'object' ? (o.label ?? value) : o;
+        return norm(value) === k || norm(label) === k;
+      });
+      if (!match) return undefined;   // any unmatchable token → reject the whole paste
+      out.push(typeof match === 'object' ? match.value : match);
+    }
+    return out;
+  },
+});
+wireBuiltin('combobox',       {
+  copy:  ({ value }) => value == null || value === '' ? '' : String(value),
+  parse: (text, ctx) => {
+    const s = String(text ?? '');
+    if (s === '') return null;
+    const opts = ctx?.col?.cellRendererConfig?.options || ctx?.col?.enumValues || [];
+    const allowCustom = !!ctx?.col?.cellRendererConfig?.allowCustom;
+    if (Array.isArray(opts) && opts.length > 0) {
+      const norm = (v) => String(v).trim().toLowerCase();
+      const k = norm(s);
+      for (const o of opts) {
+        const value = typeof o === 'object' ? o.value : o;
+        const label = typeof o === 'object' ? (o.label ?? value) : o;
+        if (norm(value) === k || norm(label) === k) return value;
+      }
+      return allowCustom ? s : undefined;
+    }
+    return s;
+  },
+});
+wireBuiltin('slider',         clip.number);
+wireBuiltin('date-picker',    clip.date);
+wireBuiltin('time-picker',    {
+  // The picker commits HH:MM (24-hour) regardless of display style, so
+  // clipboard round-trips do the same.
+  copy: ({ value }) => value == null ? '' : String(value),
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return '';
+    const m12 = /^(\d{1,2}):(\d{2})\s*(am|pm)$/i.exec(s);
+    if (m12) {
+      let h = parseInt(m12[1], 10);
+      if (m12[3].toLowerCase() === 'pm' && h < 12) h += 12;
+      if (m12[3].toLowerCase() === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${m12[2]}`;
+    }
+    if (/^\d{1,2}:\d{2}$/.test(s)) {
+      const [h, m] = s.split(':');
+      return `${h.padStart(2, '0')}:${m}`;
+    }
+    return undefined;
+  },
+});
+wireBuiltin('date-range',     {
+  copy: ({ value }) => {
+    if (value == null || value === '') return '';
+    let start, end;
+    if (Array.isArray(value)) [start, end] = value;
+    else if (typeof value === 'object') { start = value.start || value.from; end = value.end || value.to; }
+    else return String(value);
+    const fmt = (d) => {
+      if (!d) return '';
+      const dt = d instanceof Date ? d : new Date(d);
+      if (Number.isNaN(dt.valueOf())) return String(d);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    return `${fmt(start)}/${fmt(end)}`;
+  },
+  parse: (text) => {
+    const s = String(text ?? '').trim();
+    if (s === '') return null;
+    const parts = s.split(/\s*\/\s*|\s*[–-]\s*/);
+    if (parts.length < 2) return undefined;
+    const [start, end] = parts;
+    const check = (p) => p === '' || !Number.isNaN(new Date(p).valueOf());
+    if (!check(start) || !check(end)) return undefined;
+    return [start, end];
+  },
+});
+wireBuiltin('color-picker',   { copy: clip.text.copy, parse: (t) => String(t ?? '').trim() });
+wireBuiltin('textarea',       clip.text);
+// action-button / menu / split-button / row-actions are action triggers,
+// not data — they don't carry a meaningful cell value. Wired as plain
+// text so the cell still copies a sensible string (the value, if any)
+// and pastes don't blow up.
+wireBuiltin('action-button',  clip.text);
+wireBuiltin('menu',           clip.text);
+wireBuiltin('split-button',   clip.text);
+wireBuiltin('row-actions',    clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -5991,4 +6798,5 @@ export const renderers = {
   loadingShimmer, audioAttachment,
   select, multiselect, combobox, slider, datePicker, timePicker, dateRange,
   colorPicker, textarea,
+  actionButton, menu, splitButton, rowActions,
 };

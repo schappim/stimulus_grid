@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>79 — Action button renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>79 — Action button renderer</h1>
+  <p class="lede">
+    Single inline button per row. Variants: <code>primary</code>,
+    <code>secondary</code>, <code>danger</code>, <code>ghost</code>.
+    Fires via <code>onClick(row, ctx)</code> or by dispatching a
+    bubbling <code>grid:rowAction</code> event with a configured
+    <code>action</code> name — the grid stays "thin".
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="id"
+              data-header-cell-width-value="60">#</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="100">Amount</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_approve"
+              data-header-cell-cell-renderer-value="ab-approve"
+              data-header-cell-width-value="130">Approve</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_refund"
+              data-header-cell-cell-renderer-value="ab-refund"
+              data-header-cell-width-value="120">Refund</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_open"
+              data-header-cell-cell-renderer-value="ab-open"
+              data-header-cell-width-value="120">Open</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Click any action button.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('ab-approve', renderers.actionButton({
+      label: 'Approve', variant: 'primary', action: 'approve', icon: '✓',
+    }));
+    registerRenderer('ab-refund', renderers.actionButton({
+      label: 'Refund', variant: 'danger', action: 'refund',
+      // Disabled when amount is < $5 (per-row eval).
+      disabled: (row) => Number(row.amount) < 5,
+    }));
+    registerRenderer('ab-open', renderers.actionButton({
+      label: 'Open', variant: 'ghost', action: 'open', icon: '↗',
+    }));
+
+    const data = [
+      { id: 1001, customer: 'Astrid Hale',  amount: 124.50 },
+      { id: 1002, customer: 'Marcus Chen',  amount: 4.99   },
+      { id: 1003, customer: 'Priya Patel',  amount: 89.10  },
+      { id: 1004, customer: 'Jamal Owens',  amount: 4.00   },
+      { id: 1005, customer: 'Lena Brooks',  amount: 230.00 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    const log = document.getElementById('log');
+    grid.addEventListener('grid:rowAction', (e) => {
+      log.textContent = `▶ ${e.detail.action} on row ${e.detail.rowId} (${e.detail.row.customer}, $${e.detail.row.amount.toFixed(2)})`;
+    });
+  </script>
+</body>
+</html>

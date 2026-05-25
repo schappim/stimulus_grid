@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>82 — Row actions trio renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>82 — Row actions trio renderer</h1>
+  <p class="lede">
+    Compact icon-only buttons at the end of a row. Default is edit /
+    duplicate / delete; override with <code>actions: [...]</code>. The
+    set fades to 65% when the row isn't hovered so it doesn't compete
+    with cell content.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-width-value="320">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="due"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-width-value="160">Due</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_default"
+              data-header-cell-cell-renderer-value="row-actions"
+              data-header-cell-width-value="120">Actions</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_custom"
+              data-header-cell-cell-renderer-value="ra-custom"
+              data-header-cell-width-value="160">Custom</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Hover a row, click an icon.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('ra-custom', renderers.rowActions({
+      actions: [
+        { name: 'star',     label: 'Star',     icon: '★' },
+        { name: 'comment',  label: 'Comment',  icon: '💬' },
+        { name: 'share',    label: 'Share',    icon: '↗' },
+        { name: 'flag',     label: 'Flag',     icon: '⚑', danger: true },
+      ],
+    }));
+
+    const data = [
+      { id: 1, task: 'OAuth callback drops session on Safari',  due: '2026-06-04' },
+      { id: 2, task: 'Reconcile Stripe invoices nightly',       due: '2026-05-30' },
+      { id: 3, task: 'Crash on launch when locale=ja_JP',       due: '2026-06-10' },
+      { id: 4, task: 'Audit log export — CSV column order',     due: '2026-06-30' },
+      { id: 5, task: 'Empty-state illustration for dashboards', due: '2026-07-15' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    const log = document.getElementById('log');
+    grid.addEventListener('grid:rowAction', (e) => {
+      log.textContent = `▶ ${e.detail.action} on row ${e.detail.rowId}: "${e.detail.row.task}"`;
+    });
+  </script>
+</body>
+</html>
