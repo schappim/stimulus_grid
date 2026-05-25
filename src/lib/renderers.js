@@ -851,6 +851,32 @@ function wrapHighlightMatches(text, q, caseSensitive, className) {
   return wrap;
 }
 
+/* ---------- multi-line --------------------------------------------- */
+
+// Preserve "\n" newlines in the cell + optionally line-clamp to N lines
+// with an ellipsis. The full value still goes into title= so users can
+// hover for the rest. The grid uses a fixed row height by default; for
+// 2-3 lines of text bump data-grid-row-height-value on the grid element
+// to a number that fits (e.g. 64 for two lines, 80 for three).
+export function multiLine({ lines = null, separator = '\n' } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    if (td) {
+      td.classList.add('sg-renderer-multiline');
+      td.setAttribute('title', text);
+      if (lines != null && lines > 0) {
+        td.classList.add('sg-renderer-multiline-clamp');
+        td.style.setProperty('--sg-clamp', String(lines));
+      }
+    }
+    // Normalise the separator to a literal "\n" — CSS white-space:pre-line
+    // handles wrapping; we don't need <br> nodes. Keeps text content clean
+    // for cell-selection copy.
+    return separator === '\n' ? text : text.split(separator).join('\n');
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -1138,6 +1164,7 @@ registerRenderer('sparkline',      sparkline());
 registerRenderer('heatmap-cell',   heatmap());
 registerRenderer('mask',           mask());
 registerRenderer('highlight',      highlight());
+registerRenderer('multi-line',     multiLine());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -1146,5 +1173,5 @@ export const renderers = {
   number, compactNumber, fileSize,
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
-  heatmap, mask, highlight,
+  heatmap, mask, highlight, multiLine,
 };

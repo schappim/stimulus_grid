@@ -1047,6 +1047,22 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   letter-spacing: 0.02em;
 }
 
+/* Multi-line — preserve \n via white-space:pre-line. Optional line-clamp
+   reads from --sg-clamp set inline by the renderer. Vertically top-aligns
+   so the first line sits where a normal cell's text would. */
+.sg-grid td.sg-renderer-multiline {
+  white-space: pre-line;
+  vertical-align: top;
+  line-height: 1.4;
+}
+.sg-grid td.sg-renderer-multiline-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--sg-clamp, 2);
+          line-clamp: var(--sg-clamp, 2);
+  overflow: hidden;
+}
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

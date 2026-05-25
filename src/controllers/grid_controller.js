@@ -717,14 +717,70 @@ export default class GridController extends Controller {
   autoSizeColumn(colId) {
     const c = this._colByField(colId);
     if (!c) return;
-    const headerLen = (c.headerName || c.field || '').length;
-    const sample = this.state.rowData.slice(0, 200);
-    let maxLen = headerLen;
-    for (const r of sample) {
-      const len = String(formatValue(r, c) ?? '').length;
-      if (len > maxLen) maxLen = len;
+    // Measure the actual rendered DOM via a hidden table-layout:auto
+    // sandbox. Works for every content shape — text, images, SVG
+    // sparklines, status pills — because we let the browser do the
+    // sizing instead of guessing from character count. (The old
+    // `formatValue(r,c).length * 8` heuristic blew up for renderer
+    // columns whose underlying value was a long array / URL.) Falls
+    // back to character measurement when nothing has rendered yet.
+    const escapedId = cssEscape(colId);
+    const header = this._thead?.querySelector(
+      `th[data-header-cell-field-value="${escapedId}"], th[data-field="${escapedId}"]`,
+    );
+    const cells = Array.from(
+      this._tbody?.querySelectorAll(`td[data-col-id="${escapedId}"]`) || [],
+    ).filter((td) => !td.closest('tr')?.classList?.contains('sg-spacer'));
+    let measured = 0;
+    if (header || cells.length) {
+      measured = this._measureColumnContentWidth(header, cells);
     }
-    this.setColumnWidth(colId, Math.min(400, Math.max(60, maxLen * 8 + 24)));
+    if (!measured) {
+      // No DOM yet — fall back to a cheap text-length heuristic.
+      const headerLen = (c.headerName || c.field || '').length;
+      const sample = this.state.rowData.slice(0, 200);
+      let maxLen = headerLen;
+      for (const r of sample) {
+        const len = String(formatValue(r, c) ?? '').length;
+        if (len > maxLen) maxLen = len;
+      }
+      measured = maxLen * 8;
+    }
+    // 16 px of breathing room past the natural content width; 60 px floor
+    // so an icon-only cell isn't unreadably narrow; 400 px ceiling to keep
+    // verbose cells (long notes, long URLs) from dominating the table.
+    this.setColumnWidth(colId, Math.min(400, Math.max(60, measured + 16)));
+  }
+
+  // Build an off-screen single-column <table table-layout:auto> with clones
+  // of the header + a sample of body cells, mount it inside .sg-grid so
+  // scoped CSS still applies, read the natural td widths, return the max.
+  _measureColumnContentWidth(header, cells, sampleSize = 50) {
+    const sandbox = document.createElement('table');
+    sandbox.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;'
+      + 'table-layout:auto;width:auto;border-collapse:separate;border-spacing:0;';
+    const tbody = document.createElement('tbody');
+    sandbox.appendChild(tbody);
+    const addRow = (sourceCell) => {
+      if (!sourceCell) return;
+      const tr = document.createElement('tr');
+      const clone = sourceCell.cloneNode(true);
+      clone.removeAttribute('style');             // drop pin offsets / inline widths
+      // <th>s clone as <th>; the measurement is the same.
+      tr.appendChild(clone);
+      tbody.appendChild(tr);
+    };
+    addRow(header);
+    cells.slice(0, sampleSize).forEach(addRow);
+    if (!tbody.children.length) return 0;
+    this.element.appendChild(sandbox);
+    let maxWidth = 0;
+    for (const tr of tbody.children) {
+      const td = tr.firstElementChild;
+      if (td && td.offsetWidth > maxWidth) maxWidth = td.offsetWidth;
+    }
+    this.element.removeChild(sandbox);
+    return maxWidth;
   }
 
   sizeColumnsToFit() {
