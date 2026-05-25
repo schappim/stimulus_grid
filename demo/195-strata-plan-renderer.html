@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>195 — Strata plan | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>195 — Strata plan (SP 12345 identifier)</h1>
+  <p class="lede">
+    AU cadastral strata-plan identifier. Renders as "<strong>SP</strong>
+    12345" with optional unit number caption. Strata plans key into
+    NSW LRS / Landgate / DCS etc. for the full title document.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="address"
+              data-header-cell-width-value="260">Address</th>
+          <th data-controller="header-cell" data-header-cell-field-value="plan"
+              data-header-cell-cell-renderer-value="strata-plan"
+              data-header-cell-width-value="200">Plan</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, address: '4/22 Bay St, Bondi',          plan: { number: 4421, unit: 4 } },
+      { id: 2, address: 'Lot 12, 88 Pacific Hwy, Manly',plan: { number: 78912, unit: 12 } },
+      { id: 3, address: '17/5 Ocean Ave, Coogee',      plan: { number: 99201, unit: 17 } },
+      { id: 4, address: '102/240 King St, Newtown',    plan: { number: 12340, unit: 102 } },
+      { id: 5, address: 'Penthouse, 1 Macquarie',      plan: 22008 },
+      { id: 6, address: 'Unit 8, 4 Riley St, Surry H', plan: 'SP 5544' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

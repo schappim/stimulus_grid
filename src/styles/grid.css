@@ -4938,6 +4938,25 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   text-transform: lowercase;
 }
 
+/* Strata plan — "SP 12345" identifier (+ optional unit). */
+.sg-grid .sg-renderer-strata-plan {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-strata-plan-prefix {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+.sg-grid .sg-renderer-strata-plan-number { font-weight: 600; color: #1f2937; }
+.sg-grid .sg-renderer-strata-plan-unit {
+  color: #6b7280;
+  font-size: 11px;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

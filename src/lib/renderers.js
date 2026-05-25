@@ -9255,6 +9255,28 @@ export function customerType() {
   });
 }
 
+// AU strata-plan identifier — "SP 12345" formatting. Strata plans are
+// the cadastral document number used to identify a strata-titled
+// development. Value: number / string / { number, unit? }.
+export function strataPlan() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let number, unit = null;
+    if (typeof value === 'object') { number = value.number; unit = value.unit; }
+    else number = value;
+    const digits = String(number).replace(/[^\d]/g, '');
+    if (!digits) return String(value);
+    const wrap = h('span', { class: 'sg-renderer-strata-plan' });
+    wrap.append(h('span', { class: 'sg-renderer-strata-plan-prefix' },
+      document.createTextNode('SP')));
+    wrap.append(h('span', { class: 'sg-renderer-strata-plan-number sg-renderer-mono' },
+      document.createTextNode(digits)));
+    if (unit != null && unit !== '') wrap.append(h('span', { class: 'sg-renderer-strata-plan-unit' },
+      document.createTextNode(`unit ${unit}`)));
+    return wrap;
+  };
+}
+
 /* ---------- odometer ----------------------------------------------
  *
  * Odometer reading — pretty-formatted number with the "km" unit
@@ -10739,6 +10761,7 @@ registerRenderer('service-due',       serviceDue());
 registerRenderer('fuel-card',         fuelCard());
 registerRenderer('odometer',          odometer());
 registerRenderer('customer-type',     customerType());
+registerRenderer('strata-plan',       strataPlan());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11340,6 +11363,7 @@ wireBuiltin('service-due',    clip.json);
 wireBuiltin('fuel-card',      clip.json);
 wireBuiltin('odometer',       clip.number);
 wireBuiltin('customer-type',  clip.text);
+wireBuiltin('strata-plan',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11381,5 +11405,5 @@ export const renderers = {
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
-  customerType,
+  customerType, strataPlan,
 };
