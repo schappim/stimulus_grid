@@ -2453,3 +2453,64 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Rating renderer — configurable-glyph version of star-rating.
+   Uses the same solid-glyph-everywhere + clipped fractional fill trick so
+   the silhouettes stay aligned and the cell background can't bleed
+   through outlined glyphs. */
+.sg-grid .sg-renderer-rating {
+  display: inline-flex; align-items: center; gap: 2px;
+}
+.sg-grid .sg-renderer-rating-glyph {
+  position: relative;
+  display: inline-block;
+  width: 14px; height: 14px;
+  line-height: 0;
+}
+.sg-grid .sg-renderer-rating-glyph > svg {
+  width: 14px; height: 14px; display: block;
+}
+.sg-grid .sg-renderer-rating-glyph.is-full    > svg { color: var(--rating-color, #ec4899); }
+.sg-grid .sg-renderer-rating-glyph.is-empty   > svg { color: #d1d5db; }
+.sg-grid .sg-renderer-rating-glyph.is-partial > svg { color: #d1d5db; }
+.sg-grid .sg-renderer-rating-glyph.is-partial .sg-rating-clip {
+  position: absolute; left: 0; top: 0;
+  height: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+.sg-grid .sg-renderer-rating-glyph.is-partial .sg-rating-clip > svg {
+  color: var(--rating-color, #ec4899);
+  width: 14px; height: 14px;
+}
+
+/* Smiley — single emoji at the row's text size. */
+.sg-grid .sg-renderer-rating-smiley {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Thumb up / down — single FA-style glyph, coloured by sign. */
+.sg-grid .sg-renderer-rating-thumb {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+}
+.sg-grid .sg-renderer-rating-thumb svg { width: 14px; height: 14px; }
+.sg-grid .sg-renderer-rating-thumb.is-up      { color: #10b981; }
+.sg-grid .sg-renderer-rating-thumb.is-down    { color: #ef4444; }
+.sg-grid .sg-renderer-rating-thumb.is-neutral { color: var(--sg-fg-muted, #9ca3af); }
+
+/* NPS — single chip, 0-10, banded by colour. */
+.sg-grid .sg-renderer-rating-nps {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.sg-grid .sg-renderer-rating-nps.is-detractor { background: #ef4444; }   /* red-500 */
+.sg-grid .sg-renderer-rating-nps.is-passive   { background: #f59e0b; }   /* amber-500 */
+.sg-grid .sg-renderer-rating-nps.is-promoter  { background: #10b981; }   /* emerald-500 */

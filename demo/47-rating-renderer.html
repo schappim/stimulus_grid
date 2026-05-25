@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>47 — Rating renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>47 — Rating renderer (configurable icon)</h1>
+  <p class="lede">
+    The generic sibling of <code>star-rating</code>. Hearts and stars
+    use the same fractional-fill engine; thumb is binary (up / down /
+    neutral); smiley picks a face from a 1-N scale; NPS bands a 0-10
+    score into Detractor / Passive / Promoter colours.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="response"
+              data-header-cell-width-value="280"
+              data-header-cell-sortable-value="true">Customer response</th>
+          <th data-controller="header-cell" data-header-cell-field-value="stars"
+              data-header-cell-cell-renderer-value="rating-star"
+              data-header-cell-width-value="130">Stars</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hearts"
+              data-header-cell-cell-renderer-value="rating-heart"
+              data-header-cell-width-value="130">Hearts</th>
+          <th data-controller="header-cell" data-header-cell-field-value="thumb"
+              data-header-cell-cell-renderer-value="rating-thumb"
+              data-header-cell-width-value="80">Thumb</th>
+          <th data-controller="header-cell" data-header-cell-field-value="csat"
+              data-header-cell-cell-renderer-value="rating-smiley"
+              data-header-cell-width-value="80">CSAT</th>
+          <th data-controller="header-cell" data-header-cell-field-value="nps"
+              data-header-cell-cell-renderer-value="rating-nps"
+              data-header-cell-width-value="90">NPS</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Half-fills:</strong> stars and hearts both support fractional
+    values (default <code>precision: 0.5</code>). The partial glyph is
+    rendered as a grey silhouette behind a coloured silhouette clipped
+    to the fractional width — same recipe as <code>star-rating</code>,
+    so any precision (halves, quarters, tenths) renders cleanly.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('rating-star',   renderers.rating({ icon: 'star' }));
+    registerRenderer('rating-heart',  renderers.rating({ icon: 'heart' }));
+    registerRenderer('rating-thumb',  renderers.rating({ icon: 'thumb' }));
+    registerRenderer('rating-smiley', renderers.rating({ icon: 'smiley', max: 5 }));
+    registerRenderer('rating-nps',    renderers.rating({ icon: 'nps' }));
+
+    const ROWS = [
+      { id: 1, response: 'Astrid — "Love the new editor"',     stars: 5,   hearts: 5,   thumb: 1,  csat: 5,  nps: 10 },
+      { id: 2, response: 'Marcus — "Pretty good, minor bugs"', stars: 4,   hearts: 4,   thumb: 1,  csat: 4,  nps: 9 },
+      { id: 3, response: 'Priya — "Acceptable, not great"',    stars: 3,   hearts: 3,   thumb: 0,  csat: 3,  nps: 7 },
+      { id: 4, response: 'Jamal — "Hated the onboarding"',     stars: 1,   hearts: 1,   thumb: -1, csat: 1,  nps: 2 },
+      { id: 5, response: 'Lena — "Decent, but pricing!"',      stars: 3.5, hearts: 3.5, thumb: 0,  csat: 3,  nps: 6 },
+      { id: 6, response: 'Tomás — "Best in class"',            stars: 4.5, hearts: 5,   thumb: 1,  csat: 5,  nps: 10 },
+      { id: 7, response: 'Mei — "Email me back"',              stars: 0,   hearts: 0,   thumb: -1, csat: 2,  nps: 4 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

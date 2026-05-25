@@ -3121,6 +3121,132 @@ export function code({
   };
 }
 
+/* ---------- rating (configurable icon) ------------------------------
+ *
+ * The generic sibling of `star-rating`: same fractional-fill engine,
+ * different glyph. Icons:
+ *
+ *   icon: 'star'    — same as the existing `star-rating` renderer
+ *   icon: 'heart'   — pink filled heart (likes / favourites)
+ *   icon: 'thumb'   — binary thumb-up / down (value > 0 / < 0 / 0)
+ *   icon: 'smiley'  — single emoji face on a 1-N scale (1 = sad … N = ecstatic)
+ *   icon: 'nps'     — single 0-10 chip with detractor / passive / promoter
+ *                     colour bands (red / amber / green)
+ *
+ *   registerRenderer('hearts', rating({ icon: 'heart', max: 5 }))
+ *   registerRenderer('csat',   rating({ icon: 'smiley', max: 5 }))
+ *   registerRenderer('nps',    rating({ icon: 'nps' }))
+ *
+ * For `thumb`: value > 0 → up, < 0 → down, 0/null → muted shrug.
+ * For `nps`: 0-6 → red (Detractor), 7-8 → amber (Passive), 9-10 → green
+ * (Promoter). Score is title-tooltipped with the band label. */
+const RATING_HEART_SVG = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M225.8 468.2L46.9 295.4C18.9 268.2 0 230.1 0 187.8C0 117.4 56.1 60 125.7 60c25.3 0 51 9.2 70.3 25.4L256 138l60-52.6C335.3 69.2 361 60 386.3 60C455.9 60 512 117.4 512 187.8c0 42.3-18.9 80.4-46.9 107.6L286.2 468.2c-7.2 7.4-17.1 11.8-27.6 11.8c-10.5 0-20.4-4.4-27.6-11.8z"/></svg>';
+const RATING_THUMB_UP_SVG = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2H464c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48H294.5c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3V320 272 247.1c0-29.2 13.3-56.7 36-75.1c16.3-13.2 28.9-30.4 36.6-50l8.1-20.3c5-12.4 11.3-24.2 19-35.2l4.4-6.3 0 0c1.4-2 1.1-4.7-.6-6.4l0 0c-3.8-3.8-9.9-3.8-13.7 0L208.8 84.9c-3 3-7 4.7-11.3 4.7c-8.8 0-16-7.2-16-16V63.4c0-8.8 7.2-16 16-16h.5c8.8 0 16 7.2 16 16v6.2c34-2.4 71-13 100-25.6c11-4.8 22.1-9.3 33-13.6l1-.4c12-4.6 27.3-9.3 41.4-9.3z"/></svg>';
+const RATING_THUMB_DOWN_SVG = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M313.4 479.1c26-5.2 42.9-30.5 37.7-56.5l-2.3-11.4c-5.3-26.7-15.1-52.1-28.8-75.2H464c26.5 0 48-21.5 48-48c0-18.5-10.5-34.6-25.9-42.6C497 236.6 504 223.1 504 208c0-23.4-16.8-42.9-38.9-47.1c4.4-7.3 6.9-15.8 6.9-24.9c0-21.3-13.9-39.4-33.1-45.6c.7-3.3 1.1-6.8 1.1-10.4c0-26.5-21.5-48-48-48H294.5c-19 0-37.5 5.6-53.3 16.1L202.7 73.8C176 91.6 160 121.6 160 153.7V192v48 24.9c0 29.2 13.3 56.7 36 75.1c16.3 13.2 28.9 30.4 36.6 50l8.1 20.3c5 12.4 11.3 24.2 19 35.2l4.4 6.3c1.4 2 1.1 4.7-.6 6.4c-3.8 3.8-9.9 3.8-13.7 0L208.8 427.1c-3-3-7-4.7-11.3-4.7c-8.8 0-16 7.2-16 16v10.2c0 8.8 7.2 16 16 16h.5c8.8 0 16-7.2 16-16v-6.2c34 2.4 71 13 100 25.6c11 4.8 22.1 9.3 33 13.6l1 .4c12 4.6 27.3 9.3 41.4 9.3z"/></svg>';
+
+const RATING_SMILEYS = ['😞', '😕', '😐', '🙂', '😄'];
+
+const RATING_GLYPHS = {
+  star:  STAR_SVG,
+  heart: RATING_HEART_SVG,
+};
+const RATING_TINTS = {
+  star:  '#f59e0b',
+  heart: '#ec4899',
+};
+
+export function rating({
+  icon = 'heart',
+  max = 5,
+  precision = 0.5,
+  color = null,
+} = {}) {
+  if (icon === 'smiley') return ratingSmiley({ max });
+  if (icon === 'thumb')  return ratingThumb();
+  if (icon === 'nps')    return ratingNps();
+  // Scaled glyph rating (heart / star / arbitrary).
+  const glyph = RATING_GLYPHS[icon] || RATING_GLYPHS.heart;
+  const tint  = color || RATING_TINTS[icon] || RATING_TINTS.heart;
+  const step = precision > 0 ? 1 / precision : 2;
+  return ({ value }) => {
+    let n = parseFloat(value);
+    if (!Number.isFinite(n)) n = 0;
+    n = Math.max(0, Math.min(max, n));
+    n = Math.round(n * step) / step;
+    const wrap = h('div', {
+      class: `sg-renderer-rating is-${icon}`,
+      style: `--rating-color: ${tint};`,
+      role: 'img',
+      'aria-label': `${n} out of ${max}`,
+    });
+    for (let i = 1; i <= max; i++) {
+      if (n >= i) {
+        wrap.append(h('span', { class: 'sg-renderer-rating-glyph is-full' }, glyph));
+      } else if (n > i - 1) {
+        // Same outline-behind / clipped-fill technique star-rating uses for halves.
+        const pct = Math.round((n - (i - 1)) * 100);
+        wrap.append(h('span', { class: 'sg-renderer-rating-glyph is-partial' },
+          `${glyph}<span class="sg-rating-clip" style="width:${pct}%;">${glyph}</span>`));
+      } else {
+        wrap.append(h('span', { class: 'sg-renderer-rating-glyph is-empty' }, glyph));
+      }
+    }
+    return wrap;
+  };
+}
+
+function ratingSmiley({ max = 5 } = {}) {
+  return ({ value }) => {
+    let n = parseFloat(value);
+    if (!Number.isFinite(n)) return '';
+    n = Math.max(1, Math.min(max, Math.round(n)));
+    // Map an arbitrary 1-N onto the 5 face glyphs.
+    const idx = Math.min(RATING_SMILEYS.length - 1,
+      Math.floor((n - 1) / (max - 1 || 1) * (RATING_SMILEYS.length - 1)));
+    return h('span', {
+      class: 'sg-renderer-rating-smiley',
+      title: `${n}/${max}`,
+    }, document.createTextNode(RATING_SMILEYS[idx]));
+  };
+}
+
+function ratingThumb() {
+  return ({ value }) => {
+    if (value == null || value === '') return '';
+    const v = Number(value);
+    if (!Number.isFinite(v)) return '';
+    const wrap = h('span', { class: 'sg-renderer-rating-thumb' });
+    if (v > 0) {
+      wrap.classList.add('is-up');
+      wrap.title = 'Thumbs up';
+      wrap.innerHTML = RATING_THUMB_UP_SVG;
+    } else if (v < 0) {
+      wrap.classList.add('is-down');
+      wrap.title = 'Thumbs down';
+      wrap.innerHTML = RATING_THUMB_DOWN_SVG;
+    } else {
+      wrap.classList.add('is-neutral');
+      wrap.title = 'Neutral';
+      wrap.append(document.createTextNode('—'));
+    }
+    return wrap;
+  };
+}
+
+function ratingNps() {
+  return ({ value }) => {
+    const n = parseFloat(value);
+    if (!Number.isFinite(n)) return '';
+    const score = Math.max(0, Math.min(10, Math.round(n)));
+    const band = score <= 6 ? 'detractor' : score <= 8 ? 'passive' : 'promoter';
+    const label = band === 'detractor' ? 'Detractor' : band === 'passive' ? 'Passive' : 'Promoter';
+    return h('span', {
+      class: `sg-renderer-rating-nps is-${band}`,
+      title: `${score}/10 · ${label}`,
+    }, document.createTextNode(String(score)));
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3167,6 +3293,7 @@ registerRenderer('diff',           diff());
 registerRenderer('geo',            geo());
 registerRenderer('qr',             qr());
 registerRenderer('code',           code());
+registerRenderer('rating',         rating());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3178,5 +3305,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, audioAttachment,
+  diff, geo, qr, code, rating, audioAttachment,
 };
