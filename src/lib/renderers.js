@@ -9197,6 +9197,36 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- technician-slot ---------------------------------------
+ *
+ * Colour-coded calendar slot in a roster/dispatch grid. Same shape as
+ * the chips in any week-view scheduler.
+ *
+ *   value: {
+ *     start: '08:00', end: '10:30',  // HH:MM (string)
+ *     label: 'J-1042 · Bondi',       // job ref / customer / etc.
+ *     color: 'blue',                  // pill colour family
+ *   } */
+export function technicianSlot() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') {
+      return h('span', { class: 'sg-renderer-tech-slot sg-pill sg-pill-blue' },
+        document.createTextNode(value));
+    }
+    const color = value.color || 'blue';
+    const wrap = h('span', { class: `sg-renderer-tech-slot sg-pill sg-pill-${color}` });
+    if (value.start || value.end) {
+      const win = [value.start, value.end].filter(Boolean).join('–');
+      wrap.append(h('span', { class: 'sg-renderer-tech-slot-time' },
+        document.createTextNode(win)));
+    }
+    if (value.label) wrap.append(h('span', { class: 'sg-renderer-tech-slot-label' },
+      document.createTextNode(String(value.label))));
+    return wrap;
+  };
+}
+
 /* ---------- travel-time -------------------------------------------
  *
  * ETA from the previous stop. Value: bare number (minutes), or
@@ -9511,6 +9541,7 @@ registerRenderer('job-status',        jobStatus());
 registerRenderer('arrival-window',    arrivalWindow());
 registerRenderer('route-stop',        routeStop());
 registerRenderer('travel-time',       travelTime());
+registerRenderer('technician-slot',   technicianSlot());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10082,6 +10113,7 @@ wireBuiltin('job-status',     clip.text);
 wireBuiltin('arrival-window', clip.json);
 wireBuiltin('route-stop',     clip.json);
 wireBuiltin('travel-time',    clip.json);
+wireBuiltin('technician-slot', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10116,5 +10148,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
-  jobStatus, arrivalWindow, routeStop, travelTime,
+  jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot,
 };

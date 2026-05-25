@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>165 — Technician slot | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>165 — Technician slot (colour-coded roster pill)</h1>
+  <p class="lede">
+    The chip you see in any week-view dispatch board. Time window +
+    label + colour family (<code>blue</code> / <code>green</code> /
+    <code>orange</code> / etc) so categories of work are scannable at
+    a glance.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="day"
+              data-header-cell-width-value="100">Day</th>
+          <th data-controller="header-cell" data-header-cell-field-value="morning"
+              data-header-cell-cell-renderer-value="technician-slot"
+              data-header-cell-width-value="240">Morning</th>
+          <th data-controller="header-cell" data-header-cell-field-value="midday"
+              data-header-cell-cell-renderer-value="technician-slot"
+              data-header-cell-width-value="240">Midday</th>
+          <th data-controller="header-cell" data-header-cell-field-value="arvo"
+              data-header-cell-cell-renderer-value="technician-slot"
+              data-header-cell-width-value="240">Arvo</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, day: 'Mon', morning: { start: '08:00', end: '10:00', label: 'J-1042 Bondi',    color: 'blue' },
+                          midday:  { start: '11:00', end: '12:30', label: 'J-1043 Vega',     color: 'green' },
+                          arvo:    { start: '13:30', end: '16:00', label: 'J-1044 Coogee',   color: 'orange' } },
+      { id: 2, day: 'Tue', morning: { start: '07:30', end: '09:30', label: 'J-1045 Manly',    color: 'purple' },
+                          midday:  null,
+                          arvo:    { start: '14:00', end: '17:00', label: 'J-1046 Glebe',    color: 'blue' } },
+      { id: 3, day: 'Wed', morning: { start: '08:00', end: '11:00', label: 'J-1047 Pyrmont',  color: 'indigo' },
+                          midday:  { start: '12:00', end: '13:00', label: 'LUNCH',           color: 'gray' },
+                          arvo:    { start: '13:30', end: '15:30', label: 'J-1048 Newtown',  color: 'green' } },
+      { id: 4, day: 'Thu', morning: { start: '08:30', end: '10:00', label: 'J-1049 Surry H',  color: 'yellow' },
+                          midday:  { start: '10:30', end: '13:00', label: 'J-1050 Mosman',   color: 'blue' },
+                          arvo:    { start: '14:00', end: '16:00', label: 'J-1051 Annandale',color: 'pink' } },
+      { id: 5, day: 'Fri', morning: { start: '08:00', end: '11:30', label: 'J-1052 Marrickville',color: 'green' },
+                          midday:  { start: '12:30', end: '14:00', label: 'J-1053 Stanmore', color: 'orange' },
+                          arvo:    null },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

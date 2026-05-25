@@ -4420,6 +4420,19 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   display: inline-block;
 }
 
+/* Technician slot — calendar pill inheriting sg-pill colour family. */
+.sg-grid .sg-renderer-tech-slot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-tech-slot-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.sg-grid .sg-renderer-tech-slot-label { font-weight: 500; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
