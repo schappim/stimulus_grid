@@ -1801,6 +1801,14 @@ export default class GridController extends Controller {
     if (col.type === 'date' && value) {
       const d = value instanceof Date ? value : new Date(value);
       control.value = Number.isNaN(d?.getTime?.()) ? (value ?? '') : d.toISOString().slice(0, 10);
+    } else if (col.type === 'datetime' && value) {
+      const d = value instanceof Date ? value : new Date(value);
+      // `datetime-local` wants "YYYY-MM-DDTHH:MM" in *local* time, not UTC,
+      // so we can't use toISOString() — strip the local TZ offset first.
+      if (!Number.isNaN(d?.getTime?.())) {
+        const off = d.getTimezoneOffset() * 60_000;
+        control.value = new Date(d.getTime() - off).toISOString().slice(0, 16);
+      } else { control.value = value ?? ''; }
     } else if (col.type === 'boolean') {
       control.value = value === true ? 'true' : value === false ? 'false' : '';
     } else {
@@ -1808,6 +1816,12 @@ export default class GridController extends Controller {
     }
   }
 
+  // Native input type per column `type`. HTML5 already covers most of what
+  // the built-in renderers need (color picker, date picker, datetime-local
+  // picker, native email/url/tel validation) — we just have to ask for the
+  // right input type. Anything outside the known list falls through to a
+  // plain text input, which is what cellEditor templates wrap when a column
+  // wants something fancier.
   _buildEditorInput(col, value) {
     let input;
     if (col.type === 'number') input = el('input', { type: 'number', value: value ?? '' });
@@ -1815,7 +1829,25 @@ export default class GridController extends Controller {
       const d = value instanceof Date ? value : (value ? new Date(value) : null);
       const iso = d ? d.toISOString().slice(0, 10) : '';
       input = el('input', { type: 'date', value: iso });
-    } else if (col.type === 'boolean') {
+    } else if (col.type === 'datetime') {
+      const d = value instanceof Date ? value : (value ? new Date(value) : null);
+      let v = '';
+      if (d && !Number.isNaN(d.getTime())) {
+        const off = d.getTimezoneOffset() * 60_000;
+        v = new Date(d.getTime() - off).toISOString().slice(0, 16);
+      }
+      input = el('input', { type: 'datetime-local', value: v });
+    } else if (col.type === 'color') {
+      // <input type="color"> insists on a 7-char #rrggbb; anything else
+      // (named colours, rgba(), oklch()) gets coerced to a sensible black
+      // so the picker shows up. Real arbitrary colours stay editable
+      // through a custom cellEditor template.
+      const v = /^#[0-9a-f]{6}$/i.test(String(value ?? '')) ? value : '#000000';
+      input = el('input', { type: 'color', value: v });
+    } else if (col.type === 'email') input = el('input', { type: 'email', value: value ?? '' });
+    else if (col.type === 'url')   input = el('input', { type: 'url',   value: value ?? '' });
+    else if (col.type === 'tel')   input = el('input', { type: 'tel',   value: value ?? '' });
+    else if (col.type === 'boolean') {
       input = el('select');
       input.append(new Option('—', ''),
         new Option('true', 'true', value === true, value === true),
@@ -3148,6 +3180,13 @@ function coerceByType(value, type) {
     return Number.isFinite(n) ? n : value;
   }
   if (type === 'date') return value;
+  // datetime-local hands us "YYYY-MM-DDTHH:MM" in local time — store it as
+  // an ISO string the rest of the date stack already understands.
+  if (type === 'datetime') {
+    if (!value) return value;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toISOString();
+  }
   if (type === 'boolean') return value === 'true' ? true : value === 'false' ? false : null;
   return value;
 }

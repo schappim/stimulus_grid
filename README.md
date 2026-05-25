@@ -155,7 +155,7 @@ column on the left. Collapsed here to country subtotals:
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
-`field` · `header-name` · `type` (`text`\|`number`\|`date`\|`boolean`) ·
+`field` · `header-name` · `type` (`text`\|`number`\|`date`\|`datetime`\|`boolean`\|`color`\|`email`\|`url`\|`tel`) ·
 `sortable` · `filter` (`text`\|`number`\|`date`\|`boolean`\|`set`) · `editable` ·
 `width` / `min-width` / `max-width` · `pinned` (`left`\|`right`) · `hidden` ·
 `resizable` · `cell-renderer` (template id) · `cell-editor` (template id) ·
@@ -328,6 +328,27 @@ registerRenderer("severity", ({ value, td }) => {
 
 See **[demo 19](demo/19-cell-renderers.html)** for every built-in side
 by side.
+
+### Editing renderer cells
+
+Every renderer except `sparkline` (multi-value) and the `statusPill`
+family (no canonical input) supports inline editing. Set
+`editable: true` on the column and pair the renderer with a `type` that
+picks the right native input — the grid does the rest. On commit
+(Enter / Tab / blur) the cell re-renders through the renderer with the
+new value.
+
+| Renderer | Column `type` | Native editor |
+|---|---|---|
+| `email` | `email` | `<input type="email">` |
+| `url` / `image` | `url` | `<input type="url">` |
+| `phone` | `tel` | `<input type="tel">` |
+| `currency` / `percent` / `number` / `compact-number` / `file-size` / `progress-bar` / `star-rating` / `duration` / `delta` | `number` | `<input type="number">` |
+| `date` | `date` | `<input type="date">` |
+| `datetime` / `relative-time` | `datetime` | `<input type="datetime-local">` |
+| `boolean` | `boolean` | `<select>` with `true`/`false`/`—` |
+| `color-swatch` | `color` | `<input type="color">` |
+| `tags` / `country-flag` / `abn` / `avatar` / `truncate` / `copyable` | _(default)_ | `<input type="text">` |
 
 ## Row grouping & aggregation
 

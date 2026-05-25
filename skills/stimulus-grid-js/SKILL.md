@@ -206,6 +206,15 @@ ship pre-registered:
 | `color-swatch` | Coloured chip + label; takes any CSS colour (hex / `rgb()` / `hsl()` / `oklch()` / named); `{ shape: 'square' }`, `{ label: 'name' }`, `{ showLabel: false }` |
 | `sparkline` | Mini SVG line/area/bar chart from a numeric array; auto-scales y; palette colours or any CSS colour; pure SVG, no library |
 
+**Editable renderers.** Every renderer except `sparkline` and the
+`statusPill` family supports inline editing. Set `editable: true` on the
+column and the `type` attribute picks the right native input —
+`type="email"` → `<input type="email">`, `type="url"` → `<input type="url">`,
+`type="tel"`, `type="number"`, `type="date"`, `type="datetime"` →
+`<input type="datetime-local">`, `type="color"` → `<input type="color">`,
+`type="boolean"` → `<select>`. On commit the cell re-renders through the
+renderer with the new value.
+
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
     data-header-cell-cell-renderer-value="email">Email</th>
