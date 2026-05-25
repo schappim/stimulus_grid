@@ -1017,6 +1017,17 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   vertical-align: middle;
 }
 
+/* Heatmap cell — the renderer sets background-color + text colour inline
+   per-cell. We just nudge the typography (right-align + tabular numerals)
+   so columns of heatmapped numbers stack at the decimal, and dial back
+   the alternating-row backgrounds so they don't leak around the inline
+   background fill. */
+.sg-grid td.sg-renderer-heatmap {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

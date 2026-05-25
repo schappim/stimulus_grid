@@ -1436,7 +1436,9 @@ export default class GridController extends Controller {
       if (typeof fn === 'function') {
         const value = getValue(row, col);
         const formatted = formatValue(row, col);
-        const result = fn({ value, row, col, td, formatted });
+        // `api` is passed so renderers can reach back into grid state
+        // (e.g. `highlight` reads getQuickFilter() to know what to mark).
+        const result = fn({ value, row, col, td, formatted, api: this.element.gridApi });
         if (result == null) return;                           // renderer mutated td directly
         if (typeof result === 'string') { td.innerHTML = result; return; }
         if (result instanceof Node) { td.appendChild(result); return; }

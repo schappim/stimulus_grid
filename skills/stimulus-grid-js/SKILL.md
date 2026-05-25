@@ -205,6 +205,7 @@ ship pre-registered:
 | `image` | Inline thumbnail; configurable size + `rounded`; `{ clickToZoom: true }` opens a centred overlay |
 | `color-swatch` | Coloured chip + label; takes any CSS colour (hex / `rgb()` / `hsl()` / `oklch()` / named); `{ shape: 'square' }`, `{ label: 'name' }`, `{ showLabel: false }` |
 | `sparkline` | Mini SVG line/area/bar chart from a numeric array; auto-scales y; palette colours or any CSS colour; pure SVG, no library |
+| `heatmap-cell` | Colour-graded cell **background** on a numeric scale; `min`/`max` + 2-or-3-stop palette; `inverted` flips for "lower is better" columns; text colour auto-flips dark/light for legibility |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>28 — Heatmap cell | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>28 — Heatmap cell</h1>
+  <p class="lede">
+    Colour-grade the <em>cell background</em> on a numeric scale — green
+    low → yellow mid → red high (or any two/three-stop palette you pass
+    in). Auto-picks readable text colour (dark on light fills, white on
+    dark) so the value stays legible. Pass <code>inverted: true</code>
+    for "lower is better" columns (error rate, churn, latency).
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="region"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="140">Region</th>
+          <th data-controller="header-cell" data-header-cell-field-value="utilisation"
+              data-header-cell-cell-renderer-value="heat-util"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="120">Utilisation %</th>
+          <th data-controller="header-cell" data-header-cell-field-value="error_rate"
+              data-header-cell-cell-renderer-value="heat-errors"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="120">Error rate %</th>
+          <th data-controller="header-cell" data-header-cell-field-value="latency_p95"
+              data-header-cell-cell-renderer-value="heat-latency"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="120">p95 (ms)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="csat"
+              data-header-cell-cell-renderer-value="heat-csat"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="100">CSAT</th>
+          <th data-controller="header-cell" data-header-cell-field-value="budget_burn"
+              data-header-cell-cell-renderer-value="heat-burn"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true" data-header-cell-width-value="120">Burn %</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Variants:</strong> each column registers its own
+    <code>heatmap({...})</code> with the right min/max + palette.
+    Utilisation is the default green→yellow→red @ 0–100. Error rate is
+    <em>inverted</em> (low is good) over 0–5 %. Latency uses a two-stop
+    blue→red @ 50–400 ms. CSAT inverts a green→red over 1–5 (high is
+    good). Budget burn flips back: low = green, high = red over 0–120 %.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('heat-util',    renderers.heatmap({ min: 0, max: 100 }));                                                // default palette
+    registerRenderer('heat-errors',  renderers.heatmap({ min: 0, max: 5, inverted: false,
+                                                          colors: ['#dcfce7', '#fef3c7', '#fecaca'] }));
+    registerRenderer('heat-latency', renderers.heatmap({ min: 50, max: 400,
+                                                          colors: ['#dbeafe', '#fecaca'] }));
+    registerRenderer('heat-csat',    renderers.heatmap({ min: 1, max: 5, inverted: true,
+                                                          colors: ['#dcfce7', '#fef3c7', '#fecaca'] }));
+    registerRenderer('heat-burn',    renderers.heatmap({ min: 0, max: 120 }));
+
+    const ROWS = [
+      { id: 1, region: 'us-east-1',     utilisation: 32,  error_rate: 0.4, latency_p95: 84,  csat: 4.6, budget_burn: 41 },
+      { id: 2, region: 'us-west-2',     utilisation: 58,  error_rate: 1.1, latency_p95: 112, csat: 4.2, budget_burn: 63 },
+      { id: 3, region: 'eu-west-1',     utilisation: 71,  error_rate: 0.7, latency_p95: 168, csat: 4.0, budget_burn: 79 },
+      { id: 4, region: 'eu-central-1',  utilisation: 88,  error_rate: 2.3, latency_p95: 224, csat: 3.4, budget_burn: 92 },
+      { id: 5, region: 'ap-southeast-2', utilisation: 96, error_rate: 4.1, latency_p95: 318, csat: 2.7, budget_burn: 108 },
+      { id: 6, region: 'ap-northeast-1', utilisation: 19, error_rate: 0.1, latency_p95: 62,  csat: 4.9, budget_burn: 22 },
+      { id: 7, region: 'sa-east-1',     utilisation: 46,  error_rate: 1.8, latency_p95: 198, csat: 3.6, budget_burn: 71 },
+      { id: 8, region: 'af-south-1',    utilisation: 4,   error_rate: 0,   latency_p95: 51,  csat: 4.8, budget_burn: 14 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

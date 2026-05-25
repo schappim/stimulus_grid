@@ -650,6 +650,71 @@ export function sparkline({
   };
 }
 
+/* ---------- heatmap cell -------------------------------------------- */
+
+// Parse "#rrggbb" / "#rgb" into [r, g, b]. Returns null for anything else
+// (named colours, rgba(), oklch() — those don't interpolate sensibly with
+// channel-mixing math and are out of scope for the heatmap mapper).
+function hexToRgb(hex) {
+  if (typeof hex !== 'string') return null;
+  let h = hex.trim().replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rgbToHex(r, g, b) {
+  const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+// Mix two RGB triples by a 0-1 ratio (0 = first, 1 = second).
+function mixRgb(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+// W3C-friendly approximation of perceived luminance, used to pick a
+// readable text colour against the heatmap background.
+function isLightRgb([r, g, b]) {
+  return (0.299 * r + 0.587 * g + 0.114 * b) >= 145;
+}
+
+// Map a value to one of N colour stops by linear interpolation. Default
+// palette is the spreadsheet classic (green low → yellow mid → red high).
+// `inverted: true` flips the mapping (green high → red low) — handy for
+// "lower is better" columns. Text colour is auto-picked (#111 on light
+// fills, #fff on dark fills) so the cell stays readable.
+export function heatmap({
+  min = 0,
+  max = 100,
+  colors = ['#dcfce7', '#fef3c7', '#fecaca'],
+  inverted = false,
+  showValue = true,
+  format = null,                     // (value) => string for custom labels
+} = {}) {
+  const stops = colors.map(hexToRgb).filter(Boolean);
+  if (stops.length < 2) throw new Error('heatmap: need at least two valid hex colours');
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-heatmap');
+    if (isBlank(value)) return '';
+    let n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    let t = (max - min) === 0 ? 0.5 : (n - min) / (max - min);
+    t = Math.max(0, Math.min(1, t));
+    if (inverted) t = 1 - t;
+    // Position t across (stops.length - 1) segments; pick the segment, then
+    // mix its two endpoints by the within-segment fraction.
+    const seg = t * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(seg));
+    const local = seg - i;
+    const rgb = mixRgb(stops[i], stops[i + 1], local);
+    if (td) {
+      td.style.backgroundColor = rgbToHex(...rgb);
+      td.style.color = isLightRgb(rgb) ? '#111827' : '#ffffff';
+    }
+    if (!showValue) return '';
+    if (typeof format === 'function') return format(value);
+    return String(value);
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -934,6 +999,7 @@ registerRenderer('copyable',       copyable());
 registerRenderer('image',          image());
 registerRenderer('color-swatch',   colorSwatch());
 registerRenderer('sparkline',      sparkline());
+registerRenderer('heatmap-cell',   heatmap());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -942,4 +1008,5 @@ export const renderers = {
   number, compactNumber, fileSize,
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
+  heatmap,
 };
