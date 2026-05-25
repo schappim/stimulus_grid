@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>105 — Gauge renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>105 — Gauge renderer</h1>
+  <p class="lede">Semicircular KPI dial: same arithmetic as <code>donut</code>, only sweeps 180°. Use for capacity %, goal progress, or any single 0–max metric.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="name" data-header-cell-width-value="200">Service</th>
+        <th data-controller="header-cell" data-header-cell-field-value="cpu" data-header-cell-cell-renderer-value="gauge-pct" data-header-cell-width-value="120">CPU</th>
+        <th data-controller="header-cell" data-header-cell-field-value="mem" data-header-cell-cell-renderer-value="gauge-pct" data-header-cell-width-value="120">RAM</th>
+        <th data-controller="header-cell" data-header-cell-field-value="disk" data-header-cell-cell-renderer-value="gauge-pct-red" data-header-cell-width-value="120">Disk</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('gauge-pct', renderers.gauge({ format: (v) => `${Math.round(v)}%` }));
+    registerRenderer('gauge-pct-red', renderers.gauge({ color: '#ef4444', format: (v) => `${Math.round(v)}%` }));
+    const data = [
+      { name: 'api-gateway',  cpu: 18, mem: 42, disk: 67 },
+      { name: 'auth-service', cpu: 71, mem: 88, disk: 49 },
+      { name: 'billing',      cpu: 6,  mem: 22, disk: 91 },
+      { name: 'analytics-etl', cpu: 95, mem: 76, disk: 33 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

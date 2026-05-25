@@ -6332,6 +6332,240 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- gauge (semicircular KPI dial) --------------------------
+ *
+ * Half-doughnut "KPI gauge". Same arithmetic as `donut` but only sweeps
+ * 180° so the bottom half is empty (the classic speedometer look). Use
+ * for goal vs target, capacity %, or any single 0..max metric. */
+export function gauge({
+  min = 0,
+  max = 100,
+  width = 56,
+  height = 32,
+  thickness = 6,
+  color = '#3b82f6',
+  trackColor = '#e5e7eb',
+  showValue = true,
+  format = null,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-gauge-cell');
+    const cfg = ctx => ctx; // unused; kept for parity
+    if (isBlank(value)) return '';
+    let v = Number(value);
+    if (!Number.isFinite(v)) return String(value);
+    v = Math.max(min, Math.min(max, v));
+    const frac = (v - min) / Math.max(1e-9, (max - min));
+    const cx = width / 2;
+    const cy = height;
+    const r = Math.min(cx - thickness / 2, cy - thickness / 2);
+    const startA = Math.PI;
+    const endA   = startA + Math.PI * frac;
+    const sx = cx + r * Math.cos(startA);
+    const sy = cy + r * Math.sin(startA);
+    const ex = cx + r * Math.cos(endA);
+    const ey = cy + r * Math.sin(endA);
+    const large = frac > 0.5 ? 1 : 0;
+    const bgArc = `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${cx + r},${cy}`;
+    const fgArc = `M ${sx},${sy} A ${r},${r} 0 ${large} 1 ${ex},${ey}`;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height + 2}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height + 2);
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bg.setAttribute('d', bgArc);
+    bg.setAttribute('stroke', trackColor);
+    bg.setAttribute('stroke-width', thickness);
+    bg.setAttribute('fill', 'none');
+    bg.setAttribute('stroke-linecap', 'round');
+    const fg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    fg.setAttribute('d', fgArc);
+    fg.setAttribute('stroke', color);
+    fg.setAttribute('stroke-width', thickness);
+    fg.setAttribute('fill', 'none');
+    fg.setAttribute('stroke-linecap', 'round');
+    svg.append(bg, fg);
+    const wrap = h('span', { class: 'sg-renderer-gauge' });
+    wrap.append(svg);
+    if (showValue) {
+      const fmt = format || ((n) => String(n));
+      wrap.append(h('span', { class: 'sg-renderer-gauge-value' },
+        document.createTextNode(fmt(v))));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- win-loss (Tufte-style binary sparkline) ----------------
+ *
+ * Bars-above-zero (wins) and bars-below-zero (losses), 1-pixel gap
+ * between. Accepts an array of +/-1 (or any truthy/falsy / positive /
+ * negative numeric sequence). */
+export function winLoss({
+  width = 80,
+  height = 18,
+  winColor = '#22c55e',
+  lossColor = '#ef4444',
+  drawColor = '#9ca3af',
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-winloss-cell');
+    if (isBlank(value)) return '';
+    const arr = Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim());
+    if (!arr.length) return '';
+    const barW = width / arr.length;
+    const gap = Math.max(0.5, barW * 0.2);
+    const halfH = height / 2;
+    let body = '';
+    arr.forEach((v, i) => {
+      const n = typeof v === 'number' ? v : (v === 'W' || v === 'w' || v === '1' || v === true ? 1 : v === 'L' || v === 'l' || v === '-1' || v === false ? -1 : 0);
+      const x = i * barW + gap / 2;
+      const bw = barW - gap;
+      if (n > 0) {
+        body += `<rect x="${x}" y="0" width="${bw}" height="${halfH - 1}" fill="${winColor}"/>`;
+      } else if (n < 0) {
+        body += `<rect x="${x}" y="${halfH + 1}" width="${bw}" height="${halfH - 1}" fill="${lossColor}"/>`;
+      } else {
+        // Draw: small centered tick.
+        body += `<rect x="${x}" y="${halfH - 0.5}" width="${bw}" height="1" fill="${drawColor}"/>`;
+      }
+    });
+    const wrap = h('span', { class: 'sg-renderer-winloss' });
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    return wrap;
+  };
+}
+
+/* ---------- mini-bar-chart (categorical bars) ----------------------
+ *
+ * Categorical mini bar chart. Distinct from `histogram` (frequency
+ * distribution); this one renders an array of `{ label, value }` or a
+ * plain number array as individual bars with optional labels. */
+export function miniBarChart({
+  width = 100,
+  height = 24,
+  color = '#3b82f6',
+  showLabels = false,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-minibar-cell');
+    if (isBlank(value)) return '';
+    const entries = Array.isArray(value)
+      ? value.map((v) => typeof v === 'object' ? v : { value: Number(v) })
+      : [];
+    if (!entries.length) return '';
+    const vals = entries.map((e) => Number(e.value) || 0);
+    const maxV = Math.max(1, ...vals);
+    const n = entries.length;
+    const barW = width / n;
+    const gap = Math.max(1, barW * 0.18);
+    let body = '';
+    entries.forEach((e, i) => {
+      const x = i * barW + gap / 2;
+      const bw = barW - gap;
+      const v = Number(e.value) || 0;
+      const bh = (v / maxV) * height;
+      body += `<rect x="${x}" y="${height - bh}" width="${bw}" height="${bh}" fill="${e.color || color}"/>`;
+      if (showLabels && e.label) {
+        body += `<text x="${x + bw/2}" y="${height - 1}" font-size="7" fill="#fff" text-anchor="middle">${String(e.label).slice(0,3)}</text>`;
+      }
+    });
+    const wrap = h('span', { class: 'sg-renderer-minibar' });
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    return wrap;
+  };
+}
+
+/* ---------- mini-line-chart (multi-series) -------------------------
+ *
+ * Multi-series mini line chart. Distinct from `sparkline` (single
+ * series). Accepts either `[[s1...], [s2...]]` (arrays of series) or
+ * `{ series: [{ color, data }, ...] }` for per-series colour. */
+export function miniLineChart({
+  width = 100,
+  height = 24,
+  palette = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444'],
+  smooth = false,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-miniline-cell');
+    if (isBlank(value)) return '';
+    let series = [];
+    if (Array.isArray(value) && Array.isArray(value[0])) {
+      series = value.map((s, i) => ({ color: palette[i % palette.length], data: s }));
+    } else if (value && Array.isArray(value.series)) {
+      series = value.series.map((s, i) => ({ color: s.color || palette[i % palette.length], data: s.data }));
+    } else if (Array.isArray(value)) {
+      series = [{ color: palette[0], data: value }];
+    }
+    if (!series.length) return '';
+    const all = series.flatMap((s) => s.data.map(Number).filter(Number.isFinite));
+    const max = Math.max(...all);
+    const min = Math.min(...all);
+    const span = Math.max(1e-9, max - min);
+    let body = '';
+    for (const s of series) {
+      const pts = s.data.map((v, i) => {
+        const x = (i / Math.max(1, s.data.length - 1)) * width;
+        const y = height - ((Number(v) - min) / span) * height;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      });
+      body += `<polyline fill="none" stroke="${s.color}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/>`;
+    }
+    const wrap = h('span', { class: 'sg-renderer-miniline' });
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    return wrap;
+  };
+}
+
+/* ---------- trend (arrow + delta% + sparkline combined) -------------
+ *
+ * Combined primitive: arrow + % delta + tiny sparkline. Expects either
+ * a row with separate fields, or an object `{ value, change, series }`.
+ * Delta colour: green up / red down / muted flat. */
+const TREND_UP   = '<svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M6 2l4 6H2z"/></svg>';
+const TREND_DOWN = '<svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M6 10L2 4h8z"/></svg>';
+const TREND_FLAT = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="2" fill="currentColor"/></svg>';
+
+export function trend({
+  width = 60,
+  height = 16,
+  showValue = true,
+  format = null,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-trend-cell');
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : { value, change: 0, series: [] };
+    const change = Number(v.change ?? 0);
+    const dir = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+    const wrap = h('span', { class: `sg-renderer-trend is-${dir}` });
+    const icon = h('span', { class: 'sg-renderer-trend-icon', 'aria-hidden': 'true' });
+    icon.innerHTML = dir === 'up' ? TREND_UP : dir === 'down' ? TREND_DOWN : TREND_FLAT;
+    wrap.append(icon);
+    if (showValue) {
+      const fmt = format || ((n) => `${n > 0 ? '+' : ''}${Number(n).toFixed(1)}%`);
+      wrap.append(h('span', { class: 'sg-renderer-trend-pct' },
+        document.createTextNode(fmt(change))));
+    }
+    if (Array.isArray(v.series) && v.series.length) {
+      const max = Math.max(...v.series);
+      const min = Math.min(...v.series);
+      const span = Math.max(1e-9, max - min);
+      const pts = v.series.map((n, i) => {
+        const x = (i / Math.max(1, v.series.length - 1)) * width;
+        const y = height - ((Number(n) - min) / span) * height;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      }).join(' ');
+      const stroke = dir === 'up' ? '#10b981' : dir === 'down' ? '#ef4444' : '#9ca3af';
+      const spark = h('span', { class: 'sg-renderer-trend-spark' });
+      spark.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><polyline fill="none" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" points="${pts}"/></svg>`;
+      wrap.append(spark);
+    }
+    return wrap;
+  };
+}
+
 /* ---------- postal-code (country-aware formatting) -----------------
  *
  * Country-aware postal-code renderer. Pass `country` from a column or
@@ -7066,6 +7300,11 @@ registerRenderer('postal-code',       postalCode());
 registerRenderer('address-us',        addressUs());
 registerRenderer('address-generic',   addressGeneric());
 registerRenderer('barcode',           barcode());
+registerRenderer('gauge',             gauge());
+registerRenderer('win-loss',          winLoss());
+registerRenderer('mini-bar-chart',    miniBarChart());
+registerRenderer('mini-line-chart',   miniLineChart());
+registerRenderer('trend',             trend());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -7637,4 +7876,5 @@ export const renderers = {
   uuid, gitSha, macAddress, licenseKey, vin, isbn,
   iban, swift, ssn, ein, vat, nin,
   postalCode, addressUs, addressGeneric, barcode,
+  gauge, winLoss, miniBarChart, miniLineChart, trend,
 };

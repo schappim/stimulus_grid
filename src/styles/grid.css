@@ -3815,3 +3815,31 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   letter-spacing: 0.04em;
   color: #374151;
 }
+
+/* ----- gauge / mini charts / trend -------------------------------- */
+.sg-grid .sg-renderer-gauge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-grid .sg-renderer-gauge-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #374151;
+}
+.sg-grid .sg-renderer-winloss,
+.sg-grid .sg-renderer-minibar,
+.sg-grid .sg-renderer-miniline { display: inline-flex; align-items: center; }
+.sg-grid .sg-renderer-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-trend.is-up   { color: #15803d; }
+.sg-grid .sg-renderer-trend.is-down { color: #b91c1c; }
+.sg-grid .sg-renderer-trend.is-flat { color: #6b7280; }
+.sg-grid .sg-renderer-trend-icon { display: inline-flex; }
+.sg-grid .sg-renderer-trend-icon svg { width: 10px; height: 10px; display: block; }
+.sg-grid .sg-renderer-trend-pct { font-variant-numeric: tabular-nums; }
+.sg-grid .sg-renderer-trend-spark { display: inline-flex; }

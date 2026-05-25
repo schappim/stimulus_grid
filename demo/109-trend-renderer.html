@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>109 — Trend renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>109 — Trend renderer</h1>
+  <p class="lede">Arrow + % + sparkline combined. Value should be <code>{ change, series }</code>; the arrow + colour follow the sign of <code>change</code>.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="metric" data-header-cell-width-value="220">Metric</th>
+        <th data-controller="header-cell" data-header-cell-field-value="value" data-header-cell-width-value="120">Current</th>
+        <th data-controller="header-cell" data-header-cell-field-value="trend" data-header-cell-cell-renderer-value="trend" data-header-cell-width-value="200">Trend (7d)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { metric: 'Daily active users',  value: '34,210', trend: { change: 12.4,  series: [22,24,26,27,29,31,34] } },
+      { metric: 'Weekly retention',     value: '68%',    trend: { change: -2.1,  series: [72,71,70,70,69,69,68] } },
+      { metric: 'Avg session length',   value: '6m 12s', trend: { change: 0,     series: [6.1,6.2,6.1,6.1,6.2,6.1,6.2] } },
+      { metric: 'Crash-free rate',      value: '99.62%', trend: { change: 0.18,  series: [99.4,99.4,99.5,99.5,99.6,99.6,99.6] } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

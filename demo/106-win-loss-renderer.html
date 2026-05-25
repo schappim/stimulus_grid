@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>106 — Win/loss sparkline | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>106 — Win / loss sparkline</h1>
+  <p class="lede">Tufte-style binary sparkline — bars above zero for wins, below for losses, a flat tick for draws. Accepts <code>±1</code>, <code>'W'/'L'</code>, or any boolean-ish sequence.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="team" data-header-cell-width-value="200">Team</th>
+        <th data-controller="header-cell" data-header-cell-field-value="last10" data-header-cell-cell-renderer-value="win-loss" data-header-cell-width-value="180">Last 10</th>
+        <th data-controller="header-cell" data-header-cell-field-value="record" data-header-cell-width-value="120">Record</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { team: 'Sydney Swans',     last10: [1,1,-1,1,1,1,-1,1,1,1],     record: '8-2'  },
+      { team: 'Melbourne Demons', last10: [-1,-1,1,-1,0,-1,1,-1,-1,1], record: '3-6-1' },
+      { team: 'Geelong Cats',     last10: [1,1,1,1,1,-1,1,1,-1,1],     record: '8-2'  },
+      { team: 'Hawthorn Hawks',   last10: ['L','L','L','W','L','W','L','L','W','L'], record: '3-7'  },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
