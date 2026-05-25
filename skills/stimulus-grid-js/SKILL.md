@@ -240,6 +240,7 @@ ship pre-registered:
 | `mention` | Parses `@username` and `#tag` markers inside free text into inline indigo (mention) and teal (hashtag) chips. Optional `mentionHref(name)` / `tagHref(tag)` callbacks turn the chips into `<a>` elements opening in a new tab. Marker syntax: `[@#][a-zA-Z0-9_-]+` |
 | `expand` | Click-to-expand long text with an in-cell "Read more" / "Show less" toggle. Different from `truncate` (hover tooltip) and `multi-line` (newline preserve + optional clamp). Two modes: `chars: N` clips by character count, `lines: N` CSS-clamps at N visible lines |
 | `units` | `Intl.NumberFormat({ style: 'unit' })` wrapped per cell — locale-aware distance / temperature / weight / volume / time / file-system formatting. `unit` is any CLDR identifier (kilometer / mile / celsius / fahrenheit / kilogram / pound / liter / hour / gigabyte / …). `unitDisplay` controls short / long / narrow; `decimals` mirrors the other number renderers |
+| `ip-address` | Monospace IPv4 / IPv6 with light validation. Invalid IPs strike through in red. Optional `countryField` reads a sibling 2-letter ISO code from the row and prepends a country-flag emoji (sibling to `country-flag`). v6 strings auto-shrink one font-size step so the longer form still fits in a normal-width column |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

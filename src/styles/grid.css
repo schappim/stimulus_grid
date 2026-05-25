@@ -2706,3 +2706,27 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
           line-clamp: unset;
   display: block;
 }
+
+/* IP address renderer — monospace value, optional country-flag prefix. */
+.sg-grid .sg-renderer-ip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.sg-grid .sg-renderer-ip.is-v6 { font-size: 11px; }     /* v6 strings can be long; nudge down */
+.sg-grid .sg-renderer-ip.is-invalid {
+  color: #b91c1c;
+  text-decoration: line-through;
+  text-decoration-color: rgba(185, 28, 28, 0.4);
+}
+.sg-grid .sg-renderer-ip-flag {
+  font-size: 14px;
+  line-height: 1;
+}
+.sg-grid .sg-renderer-ip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

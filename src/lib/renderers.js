@@ -3735,6 +3735,62 @@ export function units({
   };
 }
 
+/* ---------- ipAddress (IPv4 / IPv6) ---------------------------------
+ *
+ * Monospace IP address with light validation. Invalid IPs render in
+ * red. Optional `countryField` reads a 2-letter ISO code from the same
+ * row and prepends the country emoji flag (sibling to `country-flag`).
+ *
+ *   registerRenderer('client_ip', ipAddress({ countryField: 'country' }))
+ *
+ * Validation is the standard regex pair — strict enough to reject
+ * "1.2.3.4.5" and "a.b.c.d", lax enough not to choke on common IPv6
+ * shorthand like `::1` and `2001:db8::1`. */
+const IPV4_RE = /^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(25[0-5]|2[0-4]\d|[01]?\d?\d)$/;
+// IPv6 regex courtesy of OWASP's recommended pattern (simplified to
+// reject mixed v4-tail forms — the column is for ops dashboards, not
+// transport-layer correctness, so the simpler test reads cleaner).
+const IPV6_RE = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|:(:[0-9a-fA-F]{1,4}){1,7}|::)$/;
+
+function isValidIPv4(s) { return IPV4_RE.test(s); }
+function isValidIPv6(s) { return IPV6_RE.test(s); }
+
+export function ipAddress({
+  countryField = null,
+} = {}) {
+  return ({ value, row }) => {
+    if (isBlank(value)) return '';
+    const text = String(value).trim();
+    const isV4 = isValidIPv4(text);
+    const isV6 = !isV4 && isValidIPv6(text);
+    if (!isV4 && !isV6) {
+      return h('span', {
+        class: 'sg-renderer-ip is-invalid',
+        title: 'Invalid IP address',
+      }, document.createTextNode(text));
+    }
+    const wrap = h('span', {
+      class: `sg-renderer-ip ${isV6 ? 'is-v6' : 'is-v4'}`,
+      title: isV4 ? 'IPv4' : 'IPv6',
+    });
+    if (countryField && row?.[countryField]) {
+      const code = String(row[countryField]).trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(code)) {
+        const flag = String.fromCodePoint(
+          0x1F1E6 + code.charCodeAt(0) - 65,
+          0x1F1E6 + code.charCodeAt(1) - 65,
+        );
+        wrap.append(h('span', {
+          class: 'sg-renderer-ip-flag', 'aria-hidden': 'true',
+        }, document.createTextNode(flag)));
+      }
+    }
+    wrap.append(h('span', { class: 'sg-renderer-ip-text' },
+      document.createTextNode(text)));
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3790,6 +3846,7 @@ registerRenderer('timeline-steps', timelineSteps());
 registerRenderer('mention',        mention());
 registerRenderer('expand',         expand());
 registerRenderer('units',          units());
+registerRenderer('ip-address',     ipAddress());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3802,5 +3859,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, expand, units, audioAttachment,
+  mention, expand, units, ipAddress, audioAttachment,
 };

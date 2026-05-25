@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>56 — IP address renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>56 — IP address renderer</h1>
+  <p class="lede">
+    Monospace IPv4 / IPv6 with light validation. Invalid IPs strike
+    through in red. Optional <code>countryField</code> reads a sibling
+    2-letter ISO code from the row and prepends a flag — handy for
+    request-log columns where you already have a GeoIP lookup feeding
+    the data.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="actor"
+              data-header-cell-width-value="180"
+              data-header-cell-sortable-value="true">Actor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ip"
+              data-header-cell-cell-renderer-value="ip-flagged"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="300">IP</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-cell-renderer-value="country-flag"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ua"
+              data-header-cell-cell-renderer-value="truncate"
+              data-header-cell-editable-value="true">User-Agent</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Validation:</strong> the IPv4 pattern enforces 0-255 per octet,
+    so <code>256.1.2.3</code> strikes through. IPv6 accepts standard
+    colon-hex with <code>::</code> shorthand. Try editing a cell and
+    typing <code>not-an-ip</code> to see the invalid-state rendering.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('ip-flagged', renderers.ipAddress({ countryField: 'country' }));
+
+    const ROWS = [
+      { id: 1, actor: 'web/storefront',  ip: '203.0.113.42',                 country: 'AU',
+        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15' },
+      { id: 2, actor: 'api/webhooks',     ip: '198.51.100.7',                 country: 'US',
+        ua: 'webhook-deliverer/2.4 (+https://example.com/wh)' },
+      { id: 3, actor: 'ssh/bastion',      ip: '2001:0db8:85a3:0000:0000:8a2e:0370:7334', country: 'DE',
+        ua: 'OpenSSH_9.5' },
+      { id: 4, actor: 'web/admin',        ip: '::1',                          country: 'AU',
+        ua: 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0' },
+      { id: 5, actor: 'cron/sweeper',     ip: '10.0.4.18',                    country: 'AU',
+        ua: 'rake-task/sweeper' },
+      { id: 6, actor: 'rogue/scanner',    ip: '256.300.1.999',                country: 'CN',
+        ua: 'Masscan/1.4' },
+      { id: 7, actor: 'web/mobile',       ip: 'fe80::1ff:fe23:4567:890a',     country: 'JP',
+        ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
