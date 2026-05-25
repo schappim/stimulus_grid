@@ -32,6 +32,42 @@ const PICKER_INPUT_TYPES = new Set([
   'color', 'date', 'datetime-local', 'time', 'month', 'week',
 ]);
 
+// TSV escape rule — the same one Excel / Sheets / Numbers use. Cells with
+// tabs, newlines, or double-quotes wrap in "…" with embedded " doubled.
+// Bare strings pass through unwrapped (the common case — keeps copy output
+// readable when you paste into a plain text editor).
+function tsvEscape(v) {
+  const s = String(v ?? '');
+  if (s === '') return '';
+  return /[\t\n\r"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+// Inverse of tsvEscape — a state-machine TSV parser that handles quoted
+// cells with embedded \t and \n. Returns a 2-D array of strings. Empty
+// trailing lines aren't dropped — callers decide whether to keep them.
+function parseTSV(text) {
+  const rows = [];
+  let row = []; let cell = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; continue; }
+        inQuotes = false; continue;
+      }
+      cell += ch;
+    } else {
+      if (ch === '"' && cell === '') { inQuotes = true; continue; }
+      if (ch === '\t') { row.push(cell); cell = ''; continue; }
+      if (ch === '\r') { continue; }
+      if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; continue; }
+      cell += ch;
+    }
+  }
+  if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
 // Events that should retrigger a save when persistKey is set. Anything the
 // user changes through the UI or API and would expect to "stick" across
 // reloads belongs here.
