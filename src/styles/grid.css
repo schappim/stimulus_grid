@@ -2523,3 +2523,19 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   vertical-align: middle;
   border-radius: 2px;
 }
+
+/* Donut renderer — inline SVG, optional sibling label when inline:true. */
+.sg-grid .sg-renderer-donut {
+  display: inline-block;
+  vertical-align: middle;
+}
+.sg-grid .sg-renderer-donut-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-grid .sg-renderer-donut-label {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--sg-fg, #1f2937);
+}

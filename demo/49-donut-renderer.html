@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>49 — Donut renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>49 — Donut renderer</h1>
+  <p class="lede">
+    Single-percentage donut chart — the circular sibling of
+    <code>progress-bar</code>. Painted via stroke-dasharray from 12
+    o'clock clockwise so 25% lights up the top-right quadrant. Defaults
+    embed the number inside the ring; pass <code>inline: true</code> for
+    a side-by-side donut + label layout.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true" data-grid-row-height-value="40">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="goal"
+              data-header-cell-width-value="240"
+              data-header-cell-sortable-value="true">Goal</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-cell-renderer-value="donut"
+              data-header-cell-width-value="80">Donut</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-cell-renderer-value="donut-blue"
+              data-header-cell-width-value="80">Blue</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-cell-renderer-value="donut-inline"
+              data-header-cell-width-value="120">Inline label</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-cell-renderer-value="donut-large"
+              data-header-cell-width-value="160">Large</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-cell-renderer-value="percent"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="80">Raw %</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Palette:</strong> same palette tokens as <code>sparkline</code>
+    — <code>blue</code>, <code>green</code>, <code>red</code>,
+    <code>orange</code>, <code>purple</code>, <code>pink</code>,
+    <code>gray</code>. Or pass any CSS colour string.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('donut-blue',   renderers.donut({ color: 'blue' }));
+    registerRenderer('donut-inline', renderers.donut({ inline: true, color: 'orange' }));
+    registerRenderer('donut-large',  renderers.donut({ size: 36, thickness: 6, color: 'purple' }));
+
+    const ROWS = [
+      { id: 1, goal: 'OKR — Activation lift',  pct: 92 },
+      { id: 2, goal: 'OKR — Revenue $1M ARR',  pct: 67 },
+      { id: 3, goal: 'Sprint 22 burndown',     pct: 100 },
+      { id: 4, goal: 'Security audit',         pct: 14 },
+      { id: 5, goal: 'OKR — NPS > 50',         pct: 48 },
+      { id: 6, goal: 'Mobile beta',            pct: 81 },
+      { id: 7, goal: 'i18n — 12 locales',      pct: 33 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

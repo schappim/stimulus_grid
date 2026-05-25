@@ -3319,6 +3319,57 @@ export function bullet({
   };
 }
 
+/* ---------- donut (single-percentage circular chart) ---------------
+ *
+ * Sibling of `progress-bar` for circular display. A thin ring with the
+ * filled portion in an accent colour, painted via stroke-dasharray
+ * starting at 12 o'clock and going clockwise. Optional centred or
+ * adjacent label shows the percentage as text.
+ *
+ *   registerRenderer('completion', donut({ color: 'green', showValue: true }))
+ *
+ * Pass `inline: true` for a label-beside-donut layout (better when the
+ * cell is wide and you want the number prominent); the default keeps
+ * the label tucked inside the ring for compact cells. */
+export function donut({
+  size = 28,
+  thickness = 5,
+  color = 'green',
+  background = '#e5e7eb',
+  showValue = true,
+  inline = false,
+} = {}) {
+  const stroke = SPARK_COLORS[color] || color;
+  return ({ value }) => {
+    let n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    n = Math.max(0, Math.min(100, n));
+    const r = (size - thickness) / 2;
+    const cx = size / 2, cy = size / 2;
+    const circumference = 2 * Math.PI * r;
+    const offset = circumference * (1 - n / 100);
+
+    const labelInside =
+      `<text x="${cx}" y="${cy + 0.5}" text-anchor="middle" dominant-baseline="middle"`
+      + ` font-size="${(size * 0.32).toFixed(1)}" font-weight="600" fill="currentColor">${Math.round(n)}</text>`;
+    const svg =
+      `<svg class="sg-renderer-donut" viewBox="0 0 ${size} ${size}"`
+      + ` width="${size}" height="${size}" aria-hidden="true">`
+      + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${background}" stroke-width="${thickness}"/>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${thickness}"`
+      + ` stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"`
+      + ` stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>`
+      + (showValue && !inline ? labelInside : '')
+      + `</svg>`;
+    if (inline && showValue) {
+      return `<span class="sg-renderer-donut-wrap">${svg}`
+           + `<span class="sg-renderer-donut-label">${Math.round(n)}%</span>`
+           + `</span>`;
+    }
+    return svg;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3367,6 +3418,7 @@ registerRenderer('qr',             qr());
 registerRenderer('code',           code());
 registerRenderer('rating',         rating());
 registerRenderer('bullet',         bullet());
+registerRenderer('donut',          donut());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3378,5 +3430,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, rating, bullet, audioAttachment,
+  diff, geo, qr, code, rating, bullet, donut, audioAttachment,
 };
