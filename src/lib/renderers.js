@@ -9227,6 +9227,45 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- ppe-checklist -----------------------------------------
+ *
+ * Inline icon strip for required Personal Protective Equipment. Value
+ * is an array of PPE keys; items not in the canonical set fall through
+ * as their key text. Default key set:
+ *
+ *   hard-hat   ⛑      mask        😷
+ *   hi-vis     🦺      hearing     🎧
+ *   gloves     🧤      goggles     🥽
+ *   boots      🥾      harness     🪢 */
+const PPE_ICONS = {
+  'hard-hat': '⛑', 'helmet': '⛑',
+  'hi-vis':   '🦺', 'vest': '🦺',
+  'gloves':   '🧤',
+  'boots':    '🥾',
+  'goggles':  '🥽', 'glasses': '🥽', 'eye-pro': '🥽',
+  'mask':     '😷', 'respirator': '😷',
+  'hearing':  '🎧', 'ear-pro': '🎧',
+  'harness':  '🪢',
+};
+export function ppeChecklist({ icons = PPE_ICONS } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const list = Array.isArray(value) ? value
+               : typeof value === 'string' ? value.split(/\s*,\s*/).filter(Boolean)
+               : [];
+    if (!list.length) return '';
+    const wrap = h('span', { class: 'sg-renderer-ppe-checklist' });
+    for (const raw of list) {
+      const k = String(raw).toLowerCase().trim();
+      const glyph = icons[k] || raw;
+      wrap.append(h('span', {
+        class: 'sg-renderer-ppe-item', title: titleCaseStr(k.replace('-', ' ')),
+      }, document.createTextNode(String(glyph))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- toolbox-talk -------------------------------------------
  *
  * Last toolbox-talk attendance record. "Last: 14 May (12d ago)" with
@@ -10245,6 +10284,7 @@ registerRenderer('materials-pick',    materialsPick());
 registerRenderer('swms-status',       swmsStatus());
 registerRenderer('jsa-status',        jsaStatus());
 registerRenderer('toolbox-talk',      toolboxTalk());
+registerRenderer('ppe-checklist',     ppeChecklist());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10831,6 +10871,7 @@ wireBuiltin('materials-pick', clip.json);
 wireBuiltin('swms-status',    clip.text);
 wireBuiltin('jsa-status',     clip.text);
 wireBuiltin('toolbox-talk',   clip.json);
+wireBuiltin('ppe-checklist',  clip.stringList);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10868,5 +10909,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
-  swmsStatus, jsaStatus, toolboxTalk,
+  swmsStatus, jsaStatus, toolboxTalk, ppeChecklist,
 };

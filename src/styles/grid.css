@@ -4739,6 +4739,16 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-toolbox-talk-ago  { opacity: 0.75; }
 .sg-grid .sg-renderer-toolbox-talk-topic { font-style: italic; opacity: 0.85; }
 
+/* PPE checklist — inline emoji row. */
+.sg-grid .sg-renderer-ppe-checklist {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+.sg-grid .sg-renderer-ppe-item { cursor: help; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
