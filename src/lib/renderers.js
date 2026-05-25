@@ -9255,6 +9255,24 @@ export function customerType() {
   });
 }
 
+/* ---------- region-classifier -------------------------------------
+ *
+ * Metro / Regional / Remote / Very remote pill — drives travel rate
+ * multipliers and after-hours surcharges on quotes. Mirrors the ABS
+ * Remoteness Areas classification, simplified to four bands.
+ *
+ *   value: 'metro' | 'regional' | 'remote' | 'very-remote'
+ *        | 'outer-regional' | 'inner-regional' */
+export function regionClassifier() {
+  return statusPill({
+    metro: 'blue', 'inner-regional': 'green', regional: 'green',
+    'outer-regional': 'yellow', remote: 'orange', 'very-remote': 'red',
+  }, {
+    metro: 'dot', 'inner-regional': 'dot', regional: 'circle',
+    'outer-regional': 'circle', remote: 'half-circle', 'very-remote': 'alert',
+  });
+}
+
 /* ---------- council-lga -------------------------------------------
  *
  * Local Government Area badge. The jurisdiction that drives building
@@ -10817,6 +10835,7 @@ registerRenderer('customer-type',     customerType());
 registerRenderer('strata-plan',       strataPlan());
 registerRenderer('lot-plan',          lotPlan());
 registerRenderer('council-lga',       councilLga());
+registerRenderer('region-classifier', regionClassifier());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11421,6 +11440,7 @@ wireBuiltin('customer-type',  clip.text);
 wireBuiltin('strata-plan',    clip.json);
 wireBuiltin('lot-plan',       clip.json);
 wireBuiltin('council-lga',    clip.json);
+wireBuiltin('region-classifier', clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11462,5 +11482,5 @@ export const renderers = {
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
-  customerType, strataPlan, lotPlan, councilLga,
+  customerType, strataPlan, lotPlan, councilLga, regionClassifier,
 };
