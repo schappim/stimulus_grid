@@ -9227,6 +9227,42 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- site-induction ----------------------------------------
+ *
+ * Site induction record for a person × site pair. Two-stage pill:
+ * inducted ✓ + (optional) expiry colour band.
+ *
+ *   value: bool                              shorthand: inducted true / not
+ *        | { inducted, site?, expires? } */
+export function siteInduction() {
+  return ({ value }) => {
+    if (value === false || value === null || value === undefined) {
+      return h('span', { class: 'sg-pill sg-pill-red sg-renderer-site-induction' },
+        document.createTextNode('Not inducted'));
+    }
+    if (value === true) {
+      return h('span', { class: 'sg-pill sg-pill-green sg-renderer-site-induction' },
+        document.createTextNode('Inducted'));
+    }
+    if (typeof value === 'object') {
+      const wrap = h('span', { class: 'sg-renderer-site-induction-wrap' });
+      const inducted = value.inducted !== false;
+      const pill = h('span', {
+        class: `sg-pill sg-pill-${inducted ? 'green' : 'red'} sg-renderer-site-induction`,
+      }, document.createTextNode(inducted ? 'Inducted' : 'Not inducted'));
+      if (value.site) pill.append(h('span', { class: 'sg-renderer-site-induction-site' },
+        document.createTextNode(value.site)));
+      wrap.append(pill);
+      if (inducted) {
+        const exp = expiryBadge(value.expires);
+        if (exp) wrap.append(exp);
+      }
+      return wrap;
+    }
+    return String(value);
+  };
+}
+
 /* ---------- hazard-rating ------------------------------------------
  *
  * Risk-matrix score from a 5×5 likelihood × consequence grid (the de-facto
@@ -10352,6 +10388,7 @@ registerRenderer('toolbox-talk',      toolboxTalk());
 registerRenderer('ppe-checklist',     ppeChecklist());
 registerRenderer('incident-severity', incidentSeverity());
 registerRenderer('hazard-rating',     hazardRating());
+registerRenderer('site-induction',    siteInduction());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10941,6 +10978,7 @@ wireBuiltin('toolbox-talk',   clip.json);
 wireBuiltin('ppe-checklist',  clip.stringList);
 wireBuiltin('incident-severity', clip.text);
 wireBuiltin('hazard-rating',  clip.json);
+wireBuiltin('site-induction', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10979,4 +11017,5 @@ export const renderers = {
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
+  siteInduction,
 };

@@ -4774,6 +4774,15 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-hazard-rating.is-high     { background: #fed7aa; color: #7c2d12; }
 .sg-grid .sg-renderer-hazard-rating.is-extreme  { background: #7f1d1d; color: #ffffff; }
 
+/* Site induction — pill + optional site name + expiry. */
+.sg-grid .sg-renderer-site-induction { font-size: 11px; }
+.sg-grid .sg-renderer-site-induction-site { margin-left: 6px; opacity: 0.85; font-weight: 500; }
+.sg-grid .sg-renderer-site-induction-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
