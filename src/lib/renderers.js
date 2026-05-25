@@ -1403,12 +1403,70 @@ function buildEditorTile(att, anchor, ctx, onRemove, thumbSize) {
 
 // Position the popover under (or above, if no room) the anchor cell.
 function positionPopover(pop, anchor) {
-  const rect = anchor.getBoundingClientRect();
+  // Measure the popover at its natural size first (it's already in the
+  // DOM at this point — every caller appends before invoking us), then
+  // clamp position so it stays fully inside the viewport. If the popover
+  // is taller than the available space in either direction, cap its
+  // height and let it scroll internally so nothing is unreachable.
+  const PAD = 8;          // gutter from viewport edges
+  const GAP = 4;          // gap between anchor and popover
   pop.style.position = 'fixed';
-  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 360, rect.left))}px`;
-  const below = window.innerHeight - rect.bottom;
-  if (below > 280) pop.style.top = `${rect.bottom + 4}px`;
-  else             pop.style.top = `${Math.max(8, rect.top - pop.offsetHeight - 4)}px`;
+  // Reset any prior clamp (popovers are re-used across opens, but be safe).
+  pop.style.maxHeight = '';
+  pop.style.maxWidth = '';
+  pop.style.left = '0px';
+  pop.style.top  = '0px';
+
+  const popW = pop.offsetWidth;
+  const popH = pop.offsetHeight;
+  const aRect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Vertical placement — prefer below; fall through to above if below
+  // is too tight; if neither fits, pick the side with more room and let
+  // the popover scroll internally to whatever space is available.
+  const spaceBelow = vh - aRect.bottom - GAP - PAD;
+  const spaceAbove = aRect.top         - GAP - PAD;
+
+  let topPx;
+  let availH;
+  if (popH <= spaceBelow) {
+    topPx  = aRect.bottom + GAP;
+    availH = spaceBelow;
+  } else if (popH <= spaceAbove) {
+    topPx  = aRect.top - GAP - popH;
+    availH = spaceAbove;
+  } else if (spaceBelow >= spaceAbove) {
+    topPx  = aRect.bottom + GAP;
+    availH = spaceBelow;
+  } else {
+    topPx  = PAD;
+    availH = spaceAbove;
+  }
+  if (popH > availH) {
+    pop.style.maxHeight = `${Math.max(60, availH)}px`;
+    // .sg-licence-editor sets overflow:hidden; override so the cap actually
+    // produces a scrollbar instead of clipping.
+    pop.style.overflowY = 'auto';
+    pop.style.overflowX = 'hidden';
+  }
+
+  // Horizontal placement — align to anchor.left, then clamp into the
+  // viewport. If the popover is wider than the viewport altogether, cap
+  // its width too.
+  let leftPx = aRect.left;
+  const maxLeft = vw - popW - PAD;
+  if (leftPx > maxLeft) leftPx = maxLeft;
+  if (leftPx < PAD)     leftPx = PAD;
+  if (popW > vw - 2 * PAD) {
+    pop.style.maxWidth = `${vw - 2 * PAD}px`;
+    pop.style.overflowX = 'auto';
+    leftPx = PAD;
+  }
+
+  pop.style.left = `${Math.round(leftPx)}px`;
+  pop.style.top  = `${Math.round(Math.max(PAD, topPx))}px`;
 }
 
 // ----- Commit helpers -----
