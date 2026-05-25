@@ -9197,6 +9197,35 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- callout-fee -------------------------------------------
+ *
+ * Service-call / callout fee indicator. Three modes:
+ *
+ *   number       → "$120 callout" pill (orange)
+ *   'waived'     → "Waived" pill (gray)
+ *   'included'   → "Included" pill (green)
+ *   'charged'    → "Charged" pill (orange) — when no dollar amount known
+ *   { amount, status? }  → both together; status overrides colour */
+export function calloutFee({ currency = 'AUD', locale = 'en-AU' } = {}) {
+  const STATUS_COLOR = { charged: 'orange', waived: 'gray', included: 'green' };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let amount = null, status = null;
+    if (typeof value === 'number') { amount = value; status = 'charged'; }
+    else if (typeof value === 'string') status = value.toLowerCase();
+    else if (typeof value === 'object') { amount = +value.amount; status = (value.status || (amount ? 'charged' : null) || '').toLowerCase(); }
+    const color = STATUS_COLOR[status] || 'gray';
+    const pill = h('span', { class: `sg-pill sg-pill-${color} sg-renderer-callout-fee` });
+    if (amount != null && Number.isFinite(amount)) {
+      pill.append(h('span', { class: 'sg-renderer-callout-fee-amount' },
+        document.createTextNode(amount.toLocaleString(locale, { style: 'currency', currency }))));
+    }
+    pill.append(h('span', { class: 'sg-renderer-callout-fee-label' },
+      document.createTextNode(status ? titleCaseStr(status) : 'Callout')));
+    return pill;
+  };
+}
+
 /* ---------- job-photo ---------------------------------------------
  *
  * Job site photo with a Before / During / After badge in the corner.
@@ -9913,6 +9942,7 @@ registerRenderer('defect',            defect());
 registerRenderer('snag',              defect());      // alias — same shape, different vocabulary
 registerRenderer('signature',         signature());
 registerRenderer('job-photo',         jobPhoto());
+registerRenderer('callout-fee',       calloutFee());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10491,6 +10521,7 @@ wireBuiltin('defect',         clip.json);
 wireBuiltin('snag',           clip.json);
 wireBuiltin('signature',      clip.json);
 wireBuiltin('job-photo',      clip.json);
+wireBuiltin('callout-fee',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10526,5 +10557,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation, defect, signature, jobPhoto,
+  variation, defect, signature, jobPhoto, calloutFee,
 };
