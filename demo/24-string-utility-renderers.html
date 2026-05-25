@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>24 — Truncate &amp; copyable | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>24 — Truncate &amp; copyable</h1>
+  <p class="lede">
+    Two string utilities. <code>truncate</code> caps long text at the cell
+    width with an ellipsis and stashes the full value in <code>title=</code>
+    so users can hover for the rest (pass <code>{chars: 60}</code> to clip
+    by character count instead). <code>copyable</code> renders the value
+    plus a tiny copy-to-clipboard button that shows on row hover; click and
+    it briefly swaps to a check mark.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="id"
+              data-header-cell-cell-renderer-value="copyable"
+              data-header-cell-width-value="240">Order ID</th>
+          <th data-controller="header-cell" data-header-cell-field-value="api_key"
+              data-header-cell-cell-renderer-value="copyable"
+              data-header-cell-width-value="260">API key</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer_note"
+              data-header-cell-cell-renderer-value="truncate"
+              data-header-cell-width-value="320">Customer note</th>
+          <th data-controller="header-cell" data-header-cell-field-value="address"
+              data-header-cell-cell-renderer-value="truncate-60"
+              data-header-cell-width-value="280">Address</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong> hover any row — the copy buttons fade in.
+    Click one and the icon flips to a check for ~1 second. Hover any long
+    Customer note or Address cell and the full value pops up in a browser
+    tooltip. The Address column is <code>truncate({chars: 60})</code>: it
+    appends a literal <code>…</code> when the text exceeds 60 characters,
+    independent of the cell width.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('truncate-60', renderers.truncate({ chars: 60 }));
+
+    const ROWS = [
+      { id: 'ord_8f3e9c2a1d4b7f0e', api_key: 'demo_live_5142adf913b7c8e9d2a4f6b8c1e3d5f7',
+        customer_note: 'Please leave at the side door under the awning — building intercom is broken until Tuesday.',
+        address: '34/172 Sussex Street, Sydney NSW 2000, Australia (Level 17, reception desk on the right)' },
+      { id: 'ord_2b1a4f7d8c0e3b6f', api_key: 'demo_test_3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r',
+        customer_note: 'Refund processed against original card; cardholder has been notified by email.',
+        address: '101 Collins Street, Melbourne VIC 3000' },
+      { id: 'ord_5e7f1a3c9d2b4e6f', api_key: 'demo_live_9182736455647382910abcdef0123456',
+        customer_note: 'Gift wrap requested. Include the printed greeting card from order #ord_2b1a4f7d8c0e3b6f.',
+        address: '1 Eagle Street, Brisbane QLD 4000, suite 4501 — courier must call ahead' },
+      { id: 'ord_9a2c4e6f8d0b1a3c', api_key: 'demo_live_aabbccddeeff0011223344556677aabb',
+        customer_note: '',
+        address: 'PO Box 8421, Perth WA 6000' },
+      { id: 'ord_1c3e5f7a9b2d4f6e', api_key: 'demo_test_qwertyuiopasdfghjklzxcvbnm123456',
+        customer_note: 'Customer asked to confirm dispatch via SMS, not email — number on file.',
+        address: '42 King William Street, Adelaide SA 5000, level 12 (between Currie and Hindley)' },
+      { id: 'ord_3d5b7c9e0f2a4b6c', api_key: 'demo_live_zyxwvutsrqponmlkjihgfedcba654321',
+        customer_note: 'Replacement after damage in transit — destroy returned unit, no need to repackage.',
+        address: '1 Macquarie Street, Hobart TAS 7000' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

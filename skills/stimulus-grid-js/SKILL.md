@@ -200,6 +200,8 @@ ship pre-registered:
 | `number` / `compact-number` / `file-size` | `Intl.NumberFormat`-based; right-aligned tabular-nums; `compact-number` does `1.2K/3.4M/1.2B`; `file-size` does bytes → KiB/MiB/GiB (binary default) |
 | `boolean` | Visual upgrade on text `✓` — green check / muted X / dash for null; recognises `true`/`1`/`"yes"`/`"on"` |
 | `delta` | Signed % / number / currency with up/down arrow + green/red; `{ inverted: true }` for churn-style columns where positive is bad |
+| `truncate` | Single-line ellipsis at cell width, full value in `title=`; `{ chars: N }` clips by character count |
+| `copyable` | Value + tiny copy-to-clipboard button (appears on row hover); confirms with a brief green check |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

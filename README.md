@@ -262,6 +262,8 @@ without conflict.
 | `file-size` | byte counts | Bytes → `KiB` / `MiB` / `GiB` (binary by default); pass `{ binary: false }` for `KB` / `MB` / `GB` |
 | `boolean` | true / false / null | Green check / muted X / dash; recognises `true`, `1`, `"yes"`, `"on"`, etc.; `{ falseStyle: 'hidden' }` blanks false; `{ nullLabel: 'N/A' }` overrides the dash |
 | `delta` | WoW / MoM / change | Signed value with up/down arrow + green/red text; `style: 'percent'` (default) / `'number'` / `'currency'`; `{ inverted: true }` flips colours for churn/error-rate columns |
+| `truncate` | long text | Single-line ellipsis at the cell width, full value in `title=`; pass `{ chars: 60 }` to clip by character count instead |
+| `copyable` | IDs / tokens / handles | Value + tiny copy-to-clipboard button (visible on row hover); flips to a check mark briefly on copy |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

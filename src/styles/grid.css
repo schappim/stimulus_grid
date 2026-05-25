@@ -910,6 +910,50 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-delta.is-down { color: #b91c1c; }   /* red-700 */
 .sg-grid .sg-renderer-delta.is-flat { color: var(--sg-fg-muted, #6b7280); }
 
+/* Truncate — applied to the <td> directly so CSS overflow can do the
+   ellipsis. The renderer also drops the full value into title= for
+   hover-to-see-the-rest. */
+.sg-grid td.sg-renderer-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Copyable — value + a tiny copy button to the right (or left, via
+   {position: 'before'}). Button stays hidden on rest, fades in on
+   row hover so it doesn't visually clutter wide tables. */
+.sg-grid .sg-renderer-copyable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+.sg-grid .sg-renderer-copyable-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-copyable-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  color: var(--sg-fg-muted, #9ca3af);
+  cursor: pointer;
+  border-radius: 3px;
+  line-height: 0;
+  opacity: 0;
+  transition: opacity 0.08s ease, color 0.08s ease, background 0.08s ease;
+}
+.sg-grid .sg-renderer-copyable-btn svg { width: 11px; height: 11px; display: block; }
+.sg-grid tr:hover .sg-renderer-copyable-btn,
+.sg-grid .sg-renderer-copyable-btn:focus-visible { opacity: 1; }
+.sg-grid .sg-renderer-copyable-btn:hover {
+  color: var(--sg-fg, #1f2937);
+  background: var(--sg-bg-hover, #f3f4f6);
+}
+.sg-grid .sg-renderer-copyable-btn.is-copied { color: #10b981; opacity: 1; }
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

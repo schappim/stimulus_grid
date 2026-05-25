@@ -396,6 +396,88 @@ export function delta({
   };
 }
 
+/* ---------- truncate / copyable ------------------------------------- */
+
+// Long-text column with single-line ellipsis and the full value in the
+// title attribute so users can hover for the rest. `chars` clips by
+// character count; leave it null for pure CSS overflow (cell width
+// decides). Setting `chars` to a number returns a "Foo bar baz…" string
+// when the value exceeds that length.
+export function truncate({ chars = null } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    let display = text;
+    let clipped = false;
+    if (chars && text.length > chars) {
+      display = text.slice(0, chars) + '…';
+      clipped = true;
+    }
+    if (td) {
+      td.classList.add('sg-renderer-truncate');
+      td.setAttribute('title', text);
+    }
+    if (clipped) {
+      return display;
+    }
+    // Pure CSS path — let .sg-renderer-truncate cap at the cell width.
+    return text;
+  };
+}
+
+const COPY_SVG = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16h140.1L400 115.9V320c0 8.8-7.2 16-16 16zM192 384H384c35.3 0 64-28.7 64-64V115.9c0-12.7-5.1-24.9-14.1-33.9L366.1 14.1c-9-9-21.2-14.1-33.9-14.1H192c-35.3 0-64 28.7-64 64V320c0 35.3 28.7 64 64 64zM64 128c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H256c35.3 0 64-28.7 64-64V416H272v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16H96V128H64z"/></svg>';
+const COPY_OK_SVG = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>';
+
+// Value + a tiny copy-to-clipboard button. On click, copies the cell value
+// to the clipboard via navigator.clipboard.writeText and briefly swaps the
+// icon to a check mark. Falls back to a textarea-execCommand hack on
+// browsers without the Clipboard API (rare in 2026, but cheap insurance).
+// The cell's text content is unchanged — useful in cell selection / copy
+// flows that read textContent.
+export function copyable({ position = 'after' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const wrap = h('span', { class: 'sg-renderer-copyable' });
+    const label = h('span', { class: 'sg-renderer-copyable-value' }, document.createTextNode(text));
+    const btn = h('button', {
+      type: 'button',
+      class: 'sg-renderer-copyable-btn',
+      title: 'Copy',
+      'aria-label': `Copy ${text}`,
+    });
+    btn.innerHTML = COPY_SVG;
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      try {
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+        else fallbackCopy(text);
+        btn.innerHTML = COPY_OK_SVG;
+        btn.classList.add('is-copied');
+        setTimeout(() => {
+          btn.innerHTML = COPY_SVG;
+          btn.classList.remove('is-copied');
+        }, 1200);
+      } catch (err) { /* swallow — UI feedback is the failure signal */ }
+    });
+    if (position === 'before') { wrap.append(btn, label); }
+    else { wrap.append(label, btn); }
+    return wrap;
+  };
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (_) { /* swallow */ }
+  document.body.removeChild(ta);
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -675,12 +757,14 @@ registerRenderer('compact-number', compactNumber());
 registerRenderer('file-size',      fileSize());
 registerRenderer('boolean',        boolean());
 registerRenderer('delta',          delta());
+registerRenderer('truncate',       truncate());
+registerRenderer('copyable',       copyable());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
   countryFlag, abn, avatar, statusPill,
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
-  boolean,
-  delta,
+  boolean, delta,
+  truncate, copyable,
 };
