@@ -223,6 +223,7 @@ ship pre-registered:
 | `checkbox` | Interactive boolean toggle — sibling of `boolean` but live: click flips the row's value. Null / undefined / `''` renders as indeterminate. Commits via `applyTransaction` + fires `grid:cellValueChanged`. Pass `{ disabled: true }` for a read-only checkbox |
 | `switch` | Sliding on/off pill, same data semantics as `checkbox`. Null cycles to true on first click (avoids null → false → true two-click trap). Useful when the column reads better as a control affordance than as a logical flag. `renderers.switch(...)` is the builder name (alias for `switchRenderer` to avoid the reserved keyword) |
 | `markdown` | Tiny dependency-free Markdown subset: `**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, `[text](url)` (http/https/mailto only), and `-` / `1.` lists. Cell value is HTML-escaped before parsing — `<script>` survives as literal text. Pass `{ inline: true }` for a one-liner pass (no lists, no `<br>`) |
+| `json` | Collapsible pretty-print for object / array values. Collapsed form is a one-line summary (`{ a: 1, b: "foo", +2 }` / `[1, 2, 3, +5]`); expand toggles a syntax-highlighted indented block via native `<details>`. Accepts a JSON string and parses it (passes through verbatim if not valid). `maxKeys` controls how many keys/items the summary shows |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

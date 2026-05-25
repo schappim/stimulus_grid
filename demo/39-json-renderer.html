@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>39 — JSON renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>39 — JSON renderer</h1>
+  <p class="lede">
+    Audit-log payloads, API responses, webhook bodies. Collapsed cells
+    show a one-line summary of the first few keys; click the triangle to
+    expand into a syntax-highlighted indented view. Strings, numbers,
+    booleans, and nulls each get their own colour band.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true"
+       data-grid-row-height-value="36">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="event"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">Event</th>
+          <th data-controller="header-cell" data-header-cell-field-value="at"
+              data-header-cell-cell-renderer-value="datetime"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="170">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="payload"
+              data-header-cell-cell-renderer-value="json">Payload</th>
+          <th data-controller="header-cell" data-header-cell-field-value="actor"
+              data-header-cell-width-value="130">Actor</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Tip:</strong> the renderer accepts either a parsed object or
+    a JSON string — anything that doesn't parse as valid JSON falls
+    through to a plain-text render. Scalars (numbers / booleans / nulls)
+    render in their syntax-highlighted colour without the expand control.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, event: 'order.placed', at: '2026-05-25T09:14:11Z', actor: 'storefront',
+        payload: { order_id: 'ord_8721', total: 2480, currency: 'USD', items: 3,
+                   customer: { id: 'cus_44', email: 'astrid@chickcom.com' },
+                   shipping: { method: 'express', tracking: null } } },
+      { id: 2, event: 'webhook.failed', at: '2026-05-25T09:14:48Z', actor: 'webhooks',
+        payload: { endpoint_id: 'we_321', status: 502, attempt: 3,
+                   retried: true, headers: { 'x-trace-id': 'T-9928' } } },
+      { id: 3, event: 'feature_flag.toggled', at: '2026-05-25T09:18:02Z', actor: 'Priya Patel',
+        payload: { flag: 'recsys_v3', from: false, to: true, rollout: 0.35 } },
+      { id: 4, event: 'payment.captured', at: '2026-05-25T09:21:37Z', actor: 'billing',
+        payload: { intent: 'pi_44', amount_cents: 248000, fee_cents: 7672,
+                   method: 'card', last4: '4242', currency: 'USD',
+                   metadata: { invoice: 'inv_88', plan: 'pro' } } },
+      { id: 5, event: 'audit.scalar', at: '2026-05-25T09:22:00Z', actor: 'audit',
+        payload: 42 },
+      { id: 6, event: 'audit.string-json', at: '2026-05-25T09:22:11Z', actor: 'audit',
+        payload: '{"ip":"192.168.1.4","ua":"curl/8.4"}' },
+      { id: 7, event: 'audit.null', at: '2026-05-25T09:22:14Z', actor: 'audit',
+        payload: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

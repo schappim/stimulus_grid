@@ -2152,3 +2152,55 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   padding: 0;
 }
 .sg-grid .sg-renderer-markdown li { margin: 2px 0; }
+
+/* JSON renderer — collapsible <details> with a single-line summary and
+   an indented, lightly syntax-highlighted <pre> for the expanded view.
+   The summary truncates with ellipsis at cell width; expanded JSON breaks
+   out of the cell vertically (the row's .sg-has-multiline class lets the
+   table row absorb the extra height). */
+.sg-grid td.sg-renderer-json-cell {
+  vertical-align: top;
+  padding-top: 6px; padding-bottom: 6px;
+}
+.sg-grid .sg-renderer-json {
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.sg-grid .sg-renderer-json-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sg-fg, #1f2937);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-json-summary::-webkit-details-marker { display: none; }
+.sg-grid .sg-renderer-json-summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 10px;
+  color: var(--sg-fg-muted, #9ca3af);
+  transition: transform 0.12s ease;
+  font-family: system-ui, sans-serif;
+}
+.sg-grid .sg-renderer-json[open] > .sg-renderer-json-summary::before { transform: rotate(90deg); }
+.sg-grid .sg-renderer-json-pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--sg-bg-alt, #f9fafb);
+  border: 1px solid var(--sg-border, #e5e7eb);
+  border-radius: 4px;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--sg-fg, #1f2937);
+}
+.sg-grid .sg-renderer-json-scalar {
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.sg-grid .sg-json-key    { color: #075985; }   /* sky-800 — calmer than full blue */
+.sg-grid .sg-json-string { color: #15803d; }   /* green-700 */
+.sg-grid .sg-json-number { color: #be185d; }   /* pink-700 */
+.sg-grid .sg-json-bool   { color: #c2410c; }   /* orange-700 */
+.sg-grid .sg-json-null   { color: var(--sg-fg-muted, #9ca3af); font-style: italic; }

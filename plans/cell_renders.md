@@ -27,7 +27,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 - [x] **36 — `switch`** Same semantics as `checkbox` but rendered as an on/off pill switch.
 - [x] **37 — `audio-attachment`** (landed via parallel work) Howler-powered audio player popover with scrub bar, ±10s skips, volume + close.
 - [x] **38 — `markdown`** Render `**bold**`, `*italic*`, `[links](…)`, `` `code` ``, lists. Tiny dependency-free parser.
-- [ ] **39 — `json`** Pretty-print + collapsible preview for object/array values. Truncates to first N keys with a "+N more" toggle.
+- [x] **39 — `json`** Pretty-print + collapsible preview for object/array values. Truncates to first N keys with a "+N more" toggle.
 - [ ] **40 — `linked-record`** Airtable-style FK chip — resolves the value via a lookup map / function to a display name (and optional thumbnail).
 - [ ] **41 — `coloured-tags`** Per-value colour-mapped multi-select chips (Notion / Airtable convention). Sibling to `tags`.
 - [ ] **42 — `time`** HH:MM (or HH:MM:SS) — formats a time string or Date. Sibling to `date` / `datetime`.

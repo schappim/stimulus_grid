@@ -2229,7 +2229,8 @@ function openAudioPlayer(anchor, ctx) {
 
   const times = h('div', { class: 'sg-audio-times' });
   const cur = h('span', { class: 'sg-audio-time-current' }, document.createTextNode('0:00'));
-  const tot = h('span', { class: 'sg-audio-time-total' }, document.createTextNode('--:--'));
+  const tot = h('span', { class: 'sg-audio-time-total' },
+    document.createTextNode(audio.duration ? formatAudioTime(audio.duration) : '--:--'));
   times.append(cur, tot);
 
   // Transport: back-10 / play / fwd-10.
@@ -2263,8 +2264,12 @@ function openAudioPlayer(anchor, ctx) {
   }
   function paint() {
     const t = backend.seek();
-    const d = duration || backend.duration() || 0;
-    if (d > 0 && duration !== d) {
+    // Prefer the backend's reported duration once it lands (truth), but fall
+    // back to whatever the cell value supplied so the time display isn't
+    // stuck on "--:--" while the audio is still loading.
+    const backendDur = backend.duration() || 0;
+    const d = backendDur || duration || 0;
+    if (d > 0 && d !== duration) {
       duration = d;
       tot.textContent = formatAudioTime(duration);
       track.setAttribute('aria-valuemax', String(Math.floor(duration)));
@@ -2581,6 +2586,86 @@ export function markdown({ inline = false } = {}) {
   };
 }
 
+/* ---------- json (collapsible pretty-print) -------------------------
+ *
+ * Audit-log payloads, API-response columns, debug dashboards. The
+ * collapsed form is a one-line summary — `{ a: 1, b: "foo", +2 }` /
+ * `[1, 2, 3, +5]` — clickable to expand into a fully indented,
+ * lightly syntax-highlighted block. Uses native `<details>` for the
+ * disclosure UX so screen readers + keyboard nav already work.
+ *
+ *   <th data-header-cell-cell-renderer-value="json">Payload</th>
+ *
+ * Accepts an object/array directly OR a JSON string (we'll parse it).
+ * Anything that isn't valid JSON passes through as text. */
+function jsonHighlight(text) {
+  return mdEscapeHTML(text)
+    .replace(/(&quot;(?:[^&\\]|\\.)*?&quot;)\s*:/g, '<span class="sg-json-key">$1</span>:')
+    .replace(/:\s*(&quot;(?:[^&\\]|\\.)*?&quot;)/g, ': <span class="sg-json-string">$1</span>')
+    .replace(/(?<=[\s:,\[])(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)(?=[\s,\]\}\n])/g, '<span class="sg-json-number">$1</span>')
+    .replace(/(?<=[\s:,\[])(true|false)(?=[\s,\]\}\n])/g, '<span class="sg-json-bool">$1</span>')
+    .replace(/(?<=[\s:,\[])(null)(?=[\s,\]\}\n])/g, '<span class="sg-json-null">$1</span>');
+}
+
+function jsonSummary(data, maxItems) {
+  const isArr = Array.isArray(data);
+  const entries = isArr ? data : Object.entries(data);
+  const shown = entries.slice(0, maxItems);
+  const overflow = entries.length - shown.length;
+  const fmt = (v) => {
+    if (v == null) return 'null';
+    const t = typeof v;
+    if (t === 'string') return v.length > 18 ? `"${v.slice(0, 15)}…"` : `"${v}"`;
+    if (t === 'number' || t === 'boolean') return String(v);
+    if (Array.isArray(v)) return `[${v.length}]`;
+    if (t === 'object') return `{…}`;
+    return String(v);
+  };
+  const inner = isArr
+    ? shown.map(fmt).join(', ')
+    : shown.map(([k, v]) => `${k}: ${fmt(v)}`).join(', ');
+  const tail = overflow > 0 ? `, +${overflow}` : '';
+  return isArr ? `[${inner}${tail}]` : `{ ${inner}${tail} }`;
+}
+
+export function json({ maxKeys = 3, indent = 2 } = {}) {
+  return ({ value, td }) => {
+    if (value == null || value === '') return '';
+    let data = value;
+    if (typeof value === 'string') {
+      try { data = JSON.parse(value); }
+      catch { return String(value); }    // not JSON — pass through verbatim
+    }
+    if (data == null) {
+      return h('span', { class: 'sg-renderer-json-scalar sg-json-null' }, document.createTextNode('null'));
+    }
+    if (typeof data !== 'object') {
+      const t = typeof data;
+      const cls = t === 'string' ? 'sg-json-string' : t === 'number' ? 'sg-json-number' : 'sg-json-bool';
+      const txt = t === 'string' ? `"${data}"` : String(data);
+      return h('span', { class: `sg-renderer-json-scalar ${cls}` }, document.createTextNode(txt));
+    }
+    const details = document.createElement('details');
+    details.className = 'sg-renderer-json';
+    const sum = document.createElement('summary');
+    sum.className = 'sg-renderer-json-summary';
+    sum.textContent = jsonSummary(data, maxKeys);
+    const pre = document.createElement('pre');
+    pre.className = 'sg-renderer-json-pre';
+    pre.innerHTML = jsonHighlight(JSON.stringify(data, null, indent));
+    details.append(sum, pre);
+    // Clicks on the summary toggle the details; stop propagation so the
+    // grid's cell-edit / row-select handlers don't fire alongside.
+    sum.addEventListener('click', (e) => e.stopPropagation());
+    if (td) {
+      td.classList.add('sg-renderer-json-cell');
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
+    }
+    return details;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2619,6 +2704,7 @@ registerRenderer('address-au',     addressAu());
 registerRenderer('checkbox',       checkbox());
 registerRenderer('switch',         switchRenderer());
 registerRenderer('markdown',       markdown());
+registerRenderer('json',           json());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2629,5 +2715,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, switch: switchRenderer, markdown, audioAttachment,
+  checkbox, switch: switchRenderer, markdown, json, audioAttachment,
 };
