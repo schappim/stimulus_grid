@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -147,6 +147,8 @@ column on the left. Collapsed here to country subtotals:
 | `status-bar` / `status-bar-aggs` | enable the bottom status bar (default `false`) and pick which range aggregates to show (default `["count","sum","avg","min","max"]`) |
 | `pivot-mode` / `pivot-cols` | reshape into a pivot table (default `false`); `pivot-cols` is a JSON array of fields whose unique values become columns. Requires at least one `agg-funcs` entry to populate cells |
 | `side-panel` | render a right-side tool panel for drag-driven row groups / pivots / value aggregations + column visibility (default `false`) |
+| `column-groups` | JSON array of multi-row header groups: `[{"headerName":"Medals","children":["gold","silver","bronze"]}]`. Pivot mode auto-derives nested headers from `pivot-cols` + `agg-funcs`; this attribute is for non-pivot grids |
+| `pinned-bottom-row` | render a sticky bottom row holding grand totals over the currently filtered leaves, computed from `agg-funcs` (default `false`) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -172,6 +174,8 @@ Available after the `grid:ready` event. Highlights:
 - **Row grouping:** `setRowGroupColumns([...])`, `addRowGroupColumn`, `removeRowGroupColumn`, `getRowGroupColumns`, `setColumnAggFunc(field, fn)` (`sum`/`avg`/`min`/`max`/`count`/`first`/`last`), `expandAll`, `collapseAll`
 - **Pivot:** `setPivotMode(on)`, `isPivotMode()`, `setPivotColumns([...])`, `addPivotColumn`, `removePivotColumn`, `getPivotColumns`
 - **Value columns** (aggregations — shared with grouping): `setValueColumns([{field,aggFunc}])`, `addValueColumn(field, aggFunc?)`, `removeValueColumn`, `getValueColumns`
+- **Column header groups:** `setColumnGroups([{headerName, children:[field,...]}])`, `getColumnGroups()`
+- **Pinned bottom row:** `setPinnedBottomRow(on)`, `isPinnedBottomRow()`
 
 ## Events (dispatched on the grid element)
 
@@ -182,7 +186,8 @@ Available after the `grid:ready` event. Highlights:
 `grid:paginationChanged` · `grid:columnMoved/Pinned/Resized/Visible` ·
 `grid:columnRowGroupChanged` · `grid:groupToggled` ·
 `grid:columnPivotChanged` (`{pivotCols}`) · `grid:pivotModeChanged` (`{pivot}`) ·
-`grid:columnValueChanged` (`{valueCols}`).
+`grid:columnValueChanged` (`{valueCols}`) ·
+`grid:columnGroupsChanged` (`{columnGroups}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -376,6 +381,60 @@ Click the tab icon on the panel's right edge to collapse to just the tab strip.
 **Events:** `grid:pivotModeChanged` (`{pivot}`), `grid:columnPivotChanged`
 (`{pivotCols}`) and `grid:columnValueChanged` (`{valueCols}`) fire on the matching
 state changes. See **[demo 13](demo/13-pivot-side-panel.html)** for the full UX.
+
+## Column header groups (multi-row headers) & pinned bottom row
+
+Stacked column headers and an always-visible totals row, independently
+toggled. **Column header groups** wrap one or more leaf columns under a
+common parent header (`Medals` over Gold / Silver / Bronze); the grid renders
+as many rows as the deepest group nesting requires. In **pivot mode** the
+grid auto-derives nested headers from each pivot col's `pivotKeys` + the
+value field/agg — no extra config needed. The **pinned bottom row** sticks
+to the floor of the body viewport regardless of scroll position and shows
+grand totals over the currently filtered leaves, using the same `agg-funcs`
+declarations as group/pivot aggregations.
+
+![stimulus_grid with three header groups — ATHLETE (Athlete + Age), ORIGIN (Country + Sport), MEDALS (Gold + Silver + Bronze) — stacked above the leaf headers, and a pinned TOTAL row at the bottom showing the grand totals (average age 26.76, gold 162, silver 36, bronze 24) over every filtered row](docs/images/grid-header-groups.png)
+
+Declare them on the grid element:
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-agg-funcs-value='{"gold":"sum","silver":"sum","bronze":"sum","age":"avg"}'
+     data-grid-pinned-bottom-row-value="true"
+     data-grid-column-groups-value='[
+       {"headerName":"Athlete","children":["athlete","age"]},
+       {"headerName":"Origin", "children":["country","sport"]},
+       {"headerName":"Medals", "children":["gold","silver","bronze"]}
+     ]'>
+  <!-- …columns… -->
+</div>
+```
+
+| Attribute | Value |
+|---|---|
+| `column-groups` | JSON array of `{headerName, children: [field]}`. Each leaf column appears under at most one group; cols not in any group span all header rows. v1 supports one level of grouping; pivot-derived headers can be arbitrarily deep |
+| `pinned-bottom-row` | `true` renders the sticky bottom totals row (default `false`). Filtered out in pivot mode because the `(All)` totals row already serves that role at the top |
+
+…or drive at runtime:
+
+```js
+api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] }])
+api.setPinnedBottomRow(true)
+```
+
+**Auto-grouping in pivot mode.** When a pivot would otherwise produce a busy
+single-row header, header groups kick in automatically:
+
+- 1 pivot col, 1 value → flat headers (`Swimming`, `Athletics`, …)
+- 1 pivot col, *M* values → 2 rows: pivot value on top, `agg(field)` underneath
+- *N* pivot cols, 1 value → *N* rows: deepest pivot field becomes the leaf label
+- *N* pivot cols, *M* values → *N+1* rows: every pivot field + the value tier
+
+The two "Gold" sub-headers under different parent years don't collapse — runs
+only merge when the **full path** matches up to the row above. **Events:**
+`grid:columnGroupsChanged` (`{columnGroups}`). See **[demo 14](demo/14-header-groups-pinned-totals.html)** for the user-declared groups + pinned totals.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 

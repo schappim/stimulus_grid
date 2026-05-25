@@ -76,7 +76,9 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-row-group-cols-value` (JSON array) · `data-grid-agg-funcs-value` (JSON `{field:fn}`) · `data-grid-group-default-expanded-value` (`-1` all · `0` none · `N` levels) · `data-grid-group-display-type-value` (`'singleColumn'` default · `'inline'`) · `data-grid-group-reorder-columns-value` (inline mode only, default `true`) ·
 `data-grid-status-bar-value` (default `false`) · `data-grid-status-bar-aggs-value` (JSON array, default `["count","sum","avg","min","max"]`) ·
 `data-grid-pivot-mode-value` (default `false`) · `data-grid-pivot-cols-value` (JSON array of fields whose unique values become columns) ·
-`data-grid-side-panel-value` (default `false` — render the right-side drag-driven groups/pivots/values panel).
+`data-grid-side-panel-value` (default `false` — render the right-side drag-driven groups/pivots/values panel) ·
+`data-grid-column-groups-value` (JSON array of multi-row header groups: `[{headerName, children:[field,...]}]`) ·
+`data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -108,6 +110,8 @@ api.getRangeAggregates()                       // {count,sum,avg,min,max} for th
 api.setPivotMode(true); api.setPivotColumns(["sport"])          // reshape into a pivot table
 api.setValueColumns([{ field:"gold", aggFunc:"sum" }])          // cell aggregations (also drives group totals)
 api.getPivotColumns(); api.getValueColumns(); api.isPivotMode() // read pivot/value state
+api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] }])  // multi-row headers
+api.setPinnedBottomRow(true)                                    // sticky grand-totals row at the bottom
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -124,7 +128,7 @@ status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:paginationChanged` · `grid:columnMoved`/`Pinned`/`Resized`/`Visible` ·
 `grid:columnRowGroupChanged` · `grid:groupToggled` ·
 `grid:pivotModeChanged` (`{pivot}`) · `grid:columnPivotChanged` (`{pivotCols}`) ·
-`grid:columnValueChanged` (`{valueCols}`).
+`grid:columnValueChanged` (`{valueCols}`) · `grid:columnGroupsChanged` (`{columnGroups}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -292,6 +296,37 @@ Events: `grid:pivotModeChanged` · `grid:columnPivotChanged` (`{pivotCols}`) ·
 `grid:columnValueChanged` (`{valueCols}`). Sorting on the synthetic pivot
 columns is disabled in this release; filters still apply to the underlying
 leaf rows before the pivot.
+
+## Column header groups & pinned bottom row
+
+Two independent layout features. **Column header groups** stack a row of
+parent headers above the leaf headers; **pinned bottom row** glues a grand-
+totals row to the bottom of the viewport.
+
+```html
+<div data-controller="grid"
+     data-grid-agg-funcs-value='{"gold":"sum","silver":"sum","age":"avg"}'
+     data-grid-pinned-bottom-row-value="true"
+     data-grid-column-groups-value='[
+       {"headerName":"Medals","children":["gold","silver","bronze"]}
+     ]'>
+```
+
+```js
+api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] }])
+api.setPinnedBottomRow(true)
+```
+
+Pivot mode **auto-derives** nested headers from each pivot col's `pivotKeys` +
+the value field/agg — no extra config needed. The header gets one row per
+pivot field (plus one for the value tier when there are multiple value
+configs). Same-labelled sub-groups under different parents don't merge.
+
+The pinned bottom row uses `grandTotals` from the configured `agg-funcs` over
+the currently filtered leaves; it's suppressed in pivot mode because the
+`(All)` totals row already serves that role at the top. Event:
+`grid:columnGroupsChanged` (`{columnGroups}`). v1 limits user-declared
+groups to one level; pivot-derived groups can be arbitrarily deep.
 
 ## Gotchas
 

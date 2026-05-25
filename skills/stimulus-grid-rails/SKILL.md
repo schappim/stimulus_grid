@@ -127,9 +127,15 @@ subset/reorder of `count`, `sum`, `avg`, `min`, `max`),
 the grid class's `agg_funcs` declarations), `pivot_cols:` (array of fields
 whose unique values become columns), `side_panel:` (default false — render the
 right-side drag-driven panel that drives row groups / pivot columns / value
-aggregations + column visibility through the public `gridApi`). The partial
-renders the table, columns, rows, pagination nav, and the `turbo_stream_from`
-subscription. Wrap or style `.sgr-panel` to give it a height.
+aggregations + column visibility through the public `gridApi`),
+`column_groups:` (array of multi-row header group defs
+`[{ headerName:, children: [field…] }]`; pivot mode auto-derives nested
+headers from `pivot_cols` so this is for non-pivot grids),
+`pinned_bottom_row:` (default false — sticky bottom row holding grand totals
+computed from the grid class's `agg_funcs`, over the currently filtered
+leaves). The partial renders the table, columns, rows, pagination nav, and
+the `turbo_stream_from` subscription. Wrap or style `.sgr-panel` to give it
+a height.
 
 ## What you get out of the box
 

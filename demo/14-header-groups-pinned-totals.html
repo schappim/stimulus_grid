@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>14 — Column header groups &amp; pinned bottom row | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .toolbar button[aria-pressed="true"] { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .sep { width:1px; align-self:stretch; background:#e5e7eb; margin:0 4px; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff; border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>14 — Column header groups &amp; pinned bottom row</h1>
+  <p class="lede">
+    Stacked column headers — declare nested header groups with
+    <code>data-grid-column-groups-value</code> — paired with a sticky bottom
+    row that holds <strong>grand totals</strong> over every filtered leaf row.
+    Both features are independent and compose with sort, filter, pagination,
+    and virtual scrolling.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json"
+       data-grid-agg-funcs-value='{"gold":"sum","silver":"sum","bronze":"sum","age":"avg"}'
+       data-grid-pinned-bottom-row-value="true"
+       data-grid-column-groups-value='[
+         {"headerName":"Athlete","children":["athlete","age"]},
+         {"headerName":"Origin", "children":["country","sport"]},
+         {"headerName":"Medals", "children":["gold","silver","bronze"]}
+       ]'>
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="220">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="170">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="170">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <button id="preset-three" aria-pressed="true">3 groups (Athlete · Origin · Medals)</button>
+    <button id="preset-medals">Only Medals group</button>
+    <button id="preset-none">No header groups</button>
+    <span class="sep"></span>
+    <button id="toggle-pinned" aria-pressed="true">Pinned bottom row: ON</button>
+    <span id="stat" class="stat"></span>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong> filter the Country column to <em>United States</em>
+    — the grand totals at the bottom recompute over the filtered rows, not the
+    underlying 100. Click any header to sort; the totals row stays glued to the
+    bottom of the viewport regardless.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+    const presets = ['preset-three','preset-medals','preset-none'];
+    const press = (id) => presets.forEach((b) =>
+      document.getElementById(b).setAttribute('aria-pressed', String(b === id)));
+
+    const update = () => {
+      const api = grid.gridApi;
+      if (!api) return;
+      const groups = api.getColumnGroups();
+      const pinned = api.isPinnedBottomRow();
+      stat.textContent = `header groups: ${groups.length} · pinned bottom row: ${pinned ? 'on' : 'off'}`;
+    };
+
+    grid.addEventListener('grid:ready', update);
+    grid.addEventListener('grid:columnGroupsChanged', update);
+
+    document.getElementById('preset-three').onclick = () => {
+      grid.gridApi.setColumnGroups([
+        { headerName: 'Athlete', children: ['athlete','age'] },
+        { headerName: 'Origin',  children: ['country','sport'] },
+        { headerName: 'Medals',  children: ['gold','silver','bronze'] },
+      ]);
+      press('preset-three');
+    };
+    document.getElementById('preset-medals').onclick = () => {
+      grid.gridApi.setColumnGroups([
+        { headerName: 'Medals',  children: ['gold','silver','bronze'] },
+      ]);
+      press('preset-medals');
+    };
+    document.getElementById('preset-none').onclick = () => {
+      grid.gridApi.setColumnGroups([]);
+      press('preset-none');
+    };
+
+    const togglePinned = document.getElementById('toggle-pinned');
+    togglePinned.onclick = () => {
+      const next = !grid.gridApi.isPinnedBottomRow();
+      grid.gridApi.setPinnedBottomRow(next);
+      togglePinned.setAttribute('aria-pressed', String(next));
+      togglePinned.textContent = `Pinned bottom row: ${next ? 'ON' : 'OFF'}`;
+      update();
+    };
+  </script>
+</body>
+</html>
