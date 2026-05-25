@@ -8996,6 +8996,65 @@ function commitLicence(td, ctx, next) {
   }));
 }
 
+/* ---------- complianceCard (shared shape for licence/cert renderers)
+ *
+ * The shape every AU compliance card converges on: an optional state /
+ * issuer badge, a monospaced ID number, an optional class/category line,
+ * and a colour-banded expiry pill. The same four-field popover (state /
+ * number / class / expiry) that backs trade-licence is reused for every
+ * card the factory builds.
+ *
+ * Value shape (all keys optional):
+ *   { state, number, class, expires }
+ *
+ * Plain strings render as the bare ID. */
+function complianceCard({
+  prefix = null, classLabel = null, expiryLabel = 'exp', editable = true,
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-licence-cell');
+      td._sgLicence = value;
+      if (editable && !td._sgLicenceEditBound) {
+        td._sgLicenceEditBound = true;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgLicenceHandled) return;
+          e._sgLicenceHandled = true;
+          e.stopPropagation();
+          openLicenceEditor(td, ctx);
+        });
+      }
+    }
+    if (isBlank(value)) return '';
+    const wrap = h('span', { class: 'sg-renderer-compliance' });
+    if (typeof value === 'string') {
+      if (prefix) wrap.append(h('span', { class: 'sg-renderer-compliance-prefix' },
+        document.createTextNode(prefix)));
+      wrap.append(h('span', { class: 'sg-renderer-mono' }, document.createTextNode(value)));
+      return wrap;
+    }
+    if (value.state) wrap.append(stateBadge(value.state));
+    else if (prefix) wrap.append(h('span', { class: 'sg-renderer-compliance-prefix' },
+      document.createTextNode(prefix)));
+    if (value.number) wrap.append(h('span', { class: 'sg-renderer-mono' },
+      document.createTextNode(String(value.number))));
+    const cls = value.class ?? classLabel;
+    if (cls) wrap.append(h('span', { class: 'sg-renderer-compliance-class' },
+      document.createTextNode(String(cls))));
+    const exp = expiryBadge(value.expires, { label: expiryLabel });
+    if (exp) wrap.append(exp);
+    return wrap;
+  };
+}
+
+// Construction Induction Card (CIC, "White Card"). Required on every
+// site — issued by RTOs nationally so the state is the holder's, not the
+// card's. Plain string is also accepted (just the card number).
+export function whiteCard(opts = {}) {
+  return complianceCard({ prefix: 'CIC', classLabel: 'White Card', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is

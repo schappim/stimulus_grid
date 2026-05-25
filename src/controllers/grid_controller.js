@@ -1076,17 +1076,18 @@ export default class GridController extends Controller {
     });
     while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
 
-    // visible always ends in the synthetic spacer column (see _visibleCols).
-    // Its job is to soak up any leftover viewport width so real columns render
-    // at exactly their declared sizes instead of being stretched by
-    // `table-layout: fixed`'s leftover-distribution rule. When the real
-    // columns already overflow the viewport the spacer collapses to 0 width
-    // (no horizontal scrollbar artifact, no visible trailing cell). When any
-    // real column lacks an explicit width we fall back to width:100% — the
-    // browser still needs slack to absorb the auto-sized cells, so a spacer
-    // isn't useful there.
+    // `visible` includes a synthetic spacer column (see _visibleCols) sitting
+    // just before any right-pinned columns. Its job is to soak up leftover
+    // viewport width so real columns render at exactly their declared sizes
+    // instead of being stretched by `table-layout: fixed`'s leftover-
+    // distribution rule. When the real columns already overflow the viewport
+    // the spacer collapses to 0 width (no horizontal scrollbar artifact, no
+    // visible trailing cell). When any real column lacks an explicit width we
+    // fall back to width:100% — the browser still needs slack to absorb the
+    // auto-sized cells, so a spacer isn't useful there.
+    const spacerIdx = visible.findIndex((c) => c._isSpacer);
+    const spacerNode = spacerIdx >= 0 ? colgroup.children[spacerIdx] : null;
     const realCols = visible.filter((c) => !c._isSpacer);
-    const spacerNode = colgroup.lastElementChild;
     const anyAuto = realCols.some((c) => !c.width);
     if (anyAuto) {
       if (spacerNode) spacerNode.style.width = '0px';
@@ -3378,12 +3379,17 @@ export default class GridController extends Controller {
 
   _visibleCols() {
     const cols = this._visibleColsCore();
-    // Always append a synthetic spacer column at the very end. It absorbs any
-    // leftover horizontal space in the viewport so real columns render at their
-    // declared widths edge-to-edge, but is otherwise inert: empty content, not
-    // selectable, not editable, not resizable, not sortable, never persisted.
-    // Width is computed dynamically in _renderColgroup.
-    cols.push(this._spacerCol());
+    // Insert a synthetic spacer column that absorbs any leftover horizontal
+    // space in the viewport, so real columns render at their declared widths
+    // instead of being stretched by table-layout: fixed. The spacer slots in
+    // just before any right-pinned columns (so those stay flush against the
+    // viewport's right edge); otherwise it's appended at the very end. Inert:
+    // empty content, not selectable, not editable, not resizable, not sortable,
+    // never persisted. Width is computed dynamically in _renderColgroup.
+    const spacer = this._spacerCol();
+    const firstRightPin = cols.findIndex((c) => c.pinned === 'right');
+    if (firstRightPin < 0) cols.push(spacer);
+    else cols.splice(firstRightPin, 0, spacer);
     return cols;
   }
 

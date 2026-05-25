@@ -8341,16 +8341,16 @@ class At extends se {
     let n = this._table.querySelector("colgroup");
     n || (n = x("colgroup"), this._table.insertBefore(n, this._thead));
     const r = Array.from(n.children);
-    for (e.forEach((l, c) => {
-      let d = r[c];
-      d || (d = x("col"), n.appendChild(d)), d.style.width = l.width ? l.width + "px" : "";
+    for (e.forEach((c, d) => {
+      let p = r[d];
+      p || (p = x("col"), n.appendChild(p)), p.style.width = c.width ? c.width + "px" : "";
     }); n.children.length > e.length; ) n.lastElementChild.remove();
-    const i = e.filter((l) => !l._isSpacer), o = n.lastElementChild;
-    if (i.some((l) => !l.width))
+    const i = e.findIndex((c) => c._isSpacer), o = i >= 0 ? n.children[i] : null, a = e.filter((c) => !c._isSpacer);
+    if (a.some((c) => !c.width))
       o && (o.style.width = "0px"), this._table.style.width = "100%";
     else {
-      const l = i.reduce((p, f) => p + (Number(f.width) || 0), 0), c = this._viewport?.clientWidth || 0, d = c && l < c ? c - l : 0;
-      o && (o.style.width = d + "px"), this._table.style.width = l + d + "px";
+      const c = a.reduce((f, g) => f + (Number(g.width) || 0), 0), d = this._viewport?.clientWidth || 0, p = d && c < d ? d - c : 0;
+      o && (o.style.width = p + "px"), this._table.style.width = c + p + "px";
     }
   }
   _renderHeaderSingleRow(e) {
@@ -9524,8 +9524,8 @@ class At extends se {
   // Done lazily via MutationObserver on tbody (cheap because tbody is small per page).
   // ----- Helpers -----
   _visibleCols() {
-    const e = this._visibleColsCore();
-    return e.push(this._spacerCol()), e;
+    const e = this._visibleColsCore(), n = this._spacerCol(), r = e.findIndex((i) => i.pinned === "right");
+    return r < 0 ? e.push(n) : e.splice(r, 0, n), e;
   }
   _visibleColsCore() {
     const e = this.state.columnDefs.filter((l) => !l.hidden), n = this.state.group?.cols || [], r = this.masterDetailValue && !this.state.pivot?.mode && !n.length;

@@ -4363,14 +4363,22 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-licence-cell { cursor: pointer; }
 
 /* Trade-licence popover editor — 4-field grid (state / number / class /
- * expiry). Same chrome family as the address-au editor. */
+ * expiry). Same chrome family as the address-au editor.
+ *
+ * box-sizing on every input keeps width:100% honest; min-width:0 on
+ * grid items prevents grid cells inheriting their intrinsic min-content
+ * size (which makes a 1fr cell push out wider than the popover when the
+ * input has a long placeholder or value). */
 .sg-licence-editor {
   z-index: 1000;
   background: #ffffff;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  width: 340px;
+  width: 400px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  overflow: hidden;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 13px;
   color: #1f2937;
@@ -4390,8 +4398,14 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   padding: 10px 12px;
+  box-sizing: border-box;
 }
-.sg-licence-editor-field { display: flex; flex-direction: column; gap: 2px; }
+.sg-licence-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
 .sg-licence-editor-field[data-field="number"] { grid-column: span 2; }
 .sg-licence-editor-label {
   font-size: 11px;
@@ -4406,6 +4420,10 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 13px;
   color: #1f2937;
   background: #ffffff;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 .sg-licence-editor-input:focus {
   outline: none;
@@ -4418,6 +4436,7 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   gap: 8px;
   padding: 8px 12px;
   border-top: 1px solid #f3f4f6;
+  box-sizing: border-box;
 }
 .sg-licence-editor-cancel,
 .sg-licence-editor-save {
