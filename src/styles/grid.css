@@ -4959,6 +4959,16 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 11px;
 }
 
+/* Lot-plan — "Lot 12 DP 456789" cadastral identifier. */
+.sg-grid .sg-renderer-lot-plan {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-lot-plan-lot { color: #6b7280; font-weight: 500; }
+.sg-grid .sg-renderer-lot-plan-plan { color: #1f2937; font-weight: 600; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

@@ -9255,6 +9255,37 @@ export function customerType() {
   });
 }
 
+/* ---------- lot-plan ----------------------------------------------
+ *
+ * AU lot-plan cadastral identifier — "Lot 12 DP 456789" / "Lot 4 SP
+ * 4421" formatting. Pass:
+ *
+ *   { lot, dp }                  → Deposited Plan
+ *   { lot, sp }                  → Strata Plan
+ *   { lot, plan, planType }      → generic / other state schemes
+ *   'Lot 12 DP 456789'           → string passes through */
+export function lotPlan() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') return h('span', { class: 'sg-renderer-lot-plan' },
+      document.createTextNode(value));
+    const lot = value.lot;
+    const planType = value.dp ? 'DP' : value.sp ? 'SP' : value.planType || 'DP';
+    const plan = value.dp ?? value.sp ?? value.plan;
+    if (lot == null && plan == null) return '';
+    const wrap = h('span', { class: 'sg-renderer-lot-plan' });
+    if (lot != null) {
+      wrap.append(h('span', { class: 'sg-renderer-lot-plan-lot' },
+        document.createTextNode(`Lot ${lot}`)));
+    }
+    if (plan != null) {
+      wrap.append(h('span', { class: 'sg-renderer-lot-plan-plan sg-renderer-mono' },
+        document.createTextNode(`${planType} ${plan}`)));
+    }
+    return wrap;
+  };
+}
+
 // AU strata-plan identifier — "SP 12345" formatting. Strata plans are
 // the cadastral document number used to identify a strata-titled
 // development. Value: number / string / { number, unit? }.
@@ -10763,6 +10794,7 @@ registerRenderer('fuel-card',         fuelCard());
 registerRenderer('odometer',          odometer());
 registerRenderer('customer-type',     customerType());
 registerRenderer('strata-plan',       strataPlan());
+registerRenderer('lot-plan',          lotPlan());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11365,6 +11397,7 @@ wireBuiltin('fuel-card',      clip.json);
 wireBuiltin('odometer',       clip.number);
 wireBuiltin('customer-type',  clip.text);
 wireBuiltin('strata-plan',    clip.json);
+wireBuiltin('lot-plan',       clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11406,5 +11439,5 @@ export const renderers = {
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
-  customerType, strataPlan,
+  customerType, strataPlan, lotPlan,
 };
