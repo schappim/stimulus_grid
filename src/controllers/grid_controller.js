@@ -872,6 +872,12 @@ export default class GridController extends Controller {
       const tr = document.createElement('tr');
       const clone = sourceCell.cloneNode(true);
       clone.removeAttribute('style');             // drop pin offsets / inline widths
+      // Strip data-controller from the clone (and any descendants) — otherwise
+      // Stimulus mounts controllers on the cloned <th>, and the matching
+      // disconnect() when we tear down the sandbox unregisters the real
+      // column out from under the grid.
+      clone.removeAttribute('data-controller');
+      clone.querySelectorAll('[data-controller]').forEach((n) => n.removeAttribute('data-controller'));
       // <th>s clone as <th>; the measurement is the same.
       tr.appendChild(clone);
       tbody.appendChild(tr);
