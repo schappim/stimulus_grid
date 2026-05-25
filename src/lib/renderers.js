@@ -9237,6 +9237,43 @@ export function jsaStatus() {
  * Rego plates, rego currency, CTP / green-slip, service-due, fuel
  * cards, odometer readings — the fleet-management vocabulary. */
 
+/* ---------- fuel-card ---------------------------------------------
+ *
+ * Fuel-card identifier with provider badge + masked card number.
+ *
+ *   value: { provider, number }    e.g. { provider: 'Caltex StarCard', number: '7081 •••• 4421' } */
+const FUEL_CARD_BADGES = {
+  caltex:   { bg: '#dc2626', fg: '#ffffff', short: 'Caltex' },
+  ampol:    { bg: '#dc2626', fg: '#ffffff', short: 'Ampol' },
+  bp:       { bg: '#15803d', fg: '#ffffff', short: 'BP' },
+  shell:    { bg: '#facc15', fg: '#0f172a', short: 'Shell' },
+  '7-eleven': { bg: '#ea580c', fg: '#ffffff', short: '7-Eleven' },
+  united:   { bg: '#1d4ed8', fg: '#ffffff', short: 'United' },
+  liberty:  { bg: '#1e3a8a', fg: '#ffffff', short: 'Liberty' },
+  fleetcard:{ bg: '#475569', fg: '#ffffff', short: 'Fleetcard' },
+  motorpass:{ bg: '#0f172a', fg: '#ffffff', short: 'Motorpass' },
+};
+export function fuelCard() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : { number: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-fuel-card' });
+    if (v.provider) {
+      const k = String(v.provider).toLowerCase().replace(/[^a-z0-9]+/g, '');
+      // Find a badge that contains this normalised key.
+      const badgeKey = Object.keys(FUEL_CARD_BADGES).find((b) => k.startsWith(b.replace(/-/g, ''))) || null;
+      const def = badgeKey ? FUEL_CARD_BADGES[badgeKey] : { bg: '#6b7280', fg: '#ffffff', short: v.provider };
+      wrap.append(h('span', {
+        class: 'sg-renderer-fuel-card-badge',
+        style: `background:${def.bg};color:${def.fg};`,
+      }, document.createTextNode(def.short)));
+    }
+    if (v.number) wrap.append(h('span', { class: 'sg-renderer-fuel-card-number sg-renderer-mono' },
+      document.createTextNode(String(v.number))));
+    return wrap;
+  };
+}
+
 /* ---------- service-due -------------------------------------------
  *
  * Vehicle service-due indicator. Vehicle services come due on the
@@ -10662,6 +10699,7 @@ registerRenderer('rego-plate',        regoPlate());
 registerRenderer('rego-status',       regoStatus());
 registerRenderer('ctp-status',        ctpStatus());
 registerRenderer('service-due',       serviceDue());
+registerRenderer('fuel-card',         fuelCard());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11260,6 +11298,7 @@ wireBuiltin('rego-plate',     clip.json);
 wireBuiltin('rego-status',    clip.json);
 wireBuiltin('ctp-status',     clip.json);
 wireBuiltin('service-due',    clip.json);
+wireBuiltin('fuel-card',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11300,5 +11339,5 @@ export const renderers = {
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
-  regoPlate, regoStatus, ctpStatus, serviceDue,
+  regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard,
 };

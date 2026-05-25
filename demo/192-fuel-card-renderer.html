@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>192 — Fuel card | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>192 — Fuel card (provider badge + masked number)</h1>
+  <p class="lede">
+    Brand colour for the main AU networks — Caltex/Ampol red, BP green,
+    Shell yellow, 7-Eleven orange, United/Liberty blue, Fleetcard /
+    Motorpass dark — plus the masked card number alongside.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="220">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="card"
+              data-header-cell-cell-renderer-value="fuel-card"
+              data-header-cell-width-value="280">Fuel card</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, vehicle: 'HiLux #1',   card: { provider: 'Ampol StarCard',  number: '7081 •••• 4421' } },
+      { id: 2, vehicle: 'Ranger #2',  card: { provider: 'BP Plus',          number: '7088 •••• 9912' } },
+      { id: 3, vehicle: 'D-Max #3',   card: { provider: 'Shell Card',       number: '7068 •••• 1108' } },
+      { id: 4, vehicle: 'Triton #4',  card: { provider: '7-Eleven',         number: '7041 •••• 5532' } },
+      { id: 5, vehicle: 'LC79 #5',    card: { provider: 'Fleetcard',        number: '7077 •••• 0019' } },
+      { id: 6, vehicle: 'Navara #6',  card: { provider: 'Motorpass',        number: '7000 •••• 3344' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

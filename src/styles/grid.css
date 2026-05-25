@@ -4906,6 +4906,23 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-service-due.is-soon    { background: #fed7aa; color: #7c2d12; }
 .sg-grid .sg-renderer-service-due.is-overdue { background: #fecaca; color: #7f1d1d; }
 
+/* Fuel card — provider colour-badge + masked card number. */
+.sg-grid .sg-renderer-fuel-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-fuel-card-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+.sg-grid .sg-renderer-fuel-card-number { color: #1f2937; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
