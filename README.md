@@ -350,6 +350,11 @@ new value.
 | `color-swatch` | `color` | `<input type="color">` |
 | `tags` / `country-flag` / `abn` / `avatar` / `truncate` / `copyable` | _(default)_ | `<input type="text">` |
 
+Native pickers auto-open on dblclick — `color`, `date`, `datetime`,
+`time`, `month`, and `week` editors call `showPicker()` as soon as the
+input mounts, so the user goes straight from "dblclick the cell" to "the
+OS picker is up", no second click required.
+
 ## Row grouping & aggregation
 
 Group rows by one or more columns and roll up per-group aggregates — turning the

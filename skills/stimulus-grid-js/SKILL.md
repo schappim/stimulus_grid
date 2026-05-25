@@ -213,7 +213,8 @@ column and the `type` attribute picks the right native input —
 `type="tel"`, `type="number"`, `type="date"`, `type="datetime"` →
 `<input type="datetime-local">`, `type="color"` → `<input type="color">`,
 `type="boolean"` → `<select>`. On commit the cell re-renders through the
-renderer with the new value.
+renderer with the new value. Native pickers (color, date, datetime, time,
+month, week) auto-open via `showPicker()` on dblclick — no second click.
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

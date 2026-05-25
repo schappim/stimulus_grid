@@ -13,6 +13,14 @@ const DEFAULT_PAGE_SIZE = 100;
 const CHEVRON_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>';
 const FILTER_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
 
+// Input types whose value comes from a native browser picker (color picker,
+// calendar, time popover, …). When we mount an editor of one of these types,
+// we auto-trigger showPicker() so a dblclick on the cell opens the picker
+// directly instead of leaving the user to click the input a second time.
+const PICKER_INPUT_TYPES = new Set([
+  'color', 'date', 'datetime-local', 'time', 'month', 'week',
+]);
+
 // Events that should retrigger a save when persistKey is set. Anything the
 // user changes through the UI or API and would expect to "stick" across
 // reloads belongs here.
@@ -1348,7 +1356,20 @@ export default class GridController extends Controller {
         const { node, control } = this._buildEditor(col, seed);
         td.appendChild(node);
         const typed = this.state.editing.initialValue !== undefined;
-        queueMicrotask(() => { control?.focus(); if (typed) { /* cursor at end */ } else control?.select?.(); });
+        queueMicrotask(() => {
+          control?.focus();
+          if (typed) { /* cursor at end */ } else control?.select?.();
+          // Native pickers (color, date, datetime-local, time, month, week)
+          // open instantly via showPicker() — saves the second click after
+          // dblclick. The browser requires user activation, which the
+          // dblclick that triggered the edit already provides. Wrap in
+          // try/catch: older Safari throws NotSupportedError, and the
+          // browser may decline (NotAllowedError) if it considers the
+          // activation stale.
+          if (control?.type && PICKER_INPUT_TYPES.has(control.type)) {
+            try { control.showPicker?.(); } catch (_) { /* swallow */ }
+          }
+        });
       } else {
         this._renderCellContent(td, row, col);
       }
