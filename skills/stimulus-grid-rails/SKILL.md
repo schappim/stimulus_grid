@@ -346,6 +346,39 @@ Events bubble: when listening on the outer grid, scope handlers with
 `if (e.target !== grid) return` or the nested grid's `grid:ready` /
 `grid:rowDataChanged` will fire your outer handlers too.
 
+## Pivot mode (with sortable pivot columns)
+
+`pivot_mode: true` reshapes the data into a pivot table — `row_group_cols`
+form the vertical axis, unique `pivot_cols` values become columns, the grid
+class's `agg_funcs` are the value aggregations. A synthetic `(All)` totals
+row pins to the top; leaf rows are aggregated away.
+
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid: MedalsGrid.new(user: current_user),
+      rows: @medals,
+      pivot_mode: true,
+      pivot_cols: ["sport"],
+    } %>
+```
+
+```ruby
+class MedalsGrid < ApplicationGrid
+  resource :medal
+  row_group_cols ["country"]
+  agg_funcs gold: "sum"
+  column :country
+  column :sport
+  column :gold, type: :integer
+end
+```
+
+Click any pivot column header to **sort sibling group rows by that
+aggregate** (asc → desc → off; shift-click for multi-sort). The `(All)`
+totals row stays pinned at the top no matter the sort. From JS, discover
+the synthetic pivot field id via `gridApi.getPivotResultColumns()` and pass
+it to `setSortModel`. Sort persists across renders + `persist_key:` reloads.
+
 ## Endpoints (provided by the engine under the mount point)
 
 `PATCH /grids/:resource/:row_id/cells/:column` (edit) ·

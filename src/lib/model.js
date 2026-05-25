@@ -329,6 +329,8 @@ export function collectPivotKeys(rows, pivotCols) {
 // (combo × valueConfig). Each col reads its value from row.__pivotValues[field].
 // With a single value config, headers show just the combo (e.g. "Swimming");
 // with several, they include the agg + value field ("Swimming · sum(gold)").
+// Sortable: clicking a pivot column header sorts sibling group rows by that
+// agg value (handled in buildPivotModel via sortModel; see siblingComparator).
 export function buildPivotColumns(combos, valueConfigs, pivotCols) {
   if (!combos.length || !valueConfigs.length) return [];
   const cols = [];
@@ -347,7 +349,7 @@ export function buildPivotColumns(combos, valueConfigs, pivotCols) {
         headerName,
         type: 'number',
         width: 100,
-        sortable: false,   // sorting on aggregated pivot cols is a future enhancement
+        sortable: true,
         filter: null,
         resizable: false,
         _isPivot: true,
@@ -359,6 +361,45 @@ export function buildPivotColumns(combos, valueConfigs, pivotCols) {
     }
   }
   return cols;
+}
+
+// Identify a synthetic pivot field id ("__p|...") quickly without parsing.
+// Matches the encoding produced by pivotFieldId.
+export function isPivotField(colId) {
+  return typeof colId === 'string' && colId.startsWith('__p|');
+}
+
+// Comparator factory for sibling group nodes inside a pivot tree level.
+// Entries in sortModel are walked in order: pivot-field entries compare
+// the corresponding __pivotValues numerically; an entry whose colId matches
+// the row-group field at this level compares the group `value` with its
+// column type. Anything else is ignored at this level. The fallback (no
+// sort entries match, or the matched entries all tie) is alphabetic by
+// group value — the same behaviour the pivot tree had before sorting was
+// wired up. Treating ties this way keeps the visual order stable when the
+// user picks a pivot col whose agg values collide (lots of zeros, etc.).
+function makePivotSiblingComparator(sortModel, levelCol) {
+  const entries = Array.isArray(sortModel)
+    ? sortModel.filter((e) => e && e.colId && e.sort) : [];
+  return (a, b) => {
+    for (const entry of entries) {
+      const dir = entry.sort === 'desc' ? -1 : 1;
+      if (isPivotField(entry.colId)) {
+        const va = a.__pivotValues ? a.__pivotValues[entry.colId] : null;
+        const vb = b.__pivotValues ? b.__pivotValues[entry.colId] : null;
+        const cmp = defaultComparator(va, vb, 'number');
+        if (cmp !== 0) return dir * cmp;
+        continue;
+      }
+      if (levelCol && entry.colId === levelCol.field) {
+        const cmp = defaultComparator(a.value, b.value, levelCol.type);
+        if (cmp !== 0) return dir * cmp;
+        continue;
+      }
+      // Sort entry targets some other column — irrelevant at this group level.
+    }
+    return defaultComparator(a.value, b.value, levelCol?.type);
+  };
 }
 
 // Compute the __pivotValues map for a set of leaf rows: for each combo × value
@@ -392,7 +433,14 @@ function computePivotValues(leaves, combos, valueConfigs, pivotCols) {
 // group rows enriched with __pivotValues. A synthetic "(All)" row at the top
 // holds totals across every leaf. Children honour `isExpanded(groupId, level)`.
 // Without rowGroupCols, the only row is "(All)".
-export function buildPivotModel({ rows, rowGroupCols = [], pivotCols, valueConfigs, isExpanded = () => true }) {
+//
+// `sortModel` (optional) lets pivot-column entries reorder sibling group nodes
+// by their aggregate values: an entry whose colId is a synthetic pivot field
+// sorts siblings by `node.__pivotValues[colId]`; an entry matching the row-
+// group field at a level sorts that level by group value. The "(All)" totals
+// row is emitted outside the tree walk so it stays pinned at the top
+// regardless of the active sort.
+export function buildPivotModel({ rows, rowGroupCols = [], pivotCols, valueConfigs, isExpanded = () => true, sortModel = [] }) {
   const combos = collectPivotKeys(rows, pivotCols);
   const columns = buildPivotColumns(combos, valueConfigs, pivotCols);
 
@@ -422,24 +470,26 @@ export function buildPivotModel({ rows, rowGroupCols = [], pivotCols, valueConfi
       if (!buckets.has(k)) buckets.set(k, { value, rows: [] });
       buckets.get(k).rows.push(row);
     }
-    return Array.from(buckets.values())
-      .sort((a, b) => defaultComparator(a.value, b.value, col.type))
-      .map(({ value, rows: groupLeaves }) => {
-        const keyStr = value == null ? '' : String(value);
-        const groupId = parentId ? `${parentId}|${col.field}=${keyStr}` : `${col.field}=${keyStr}`;
-        return {
-          __sgGroup: true,
-          level,
-          field: col.field,
-          value,
-          groupId,
-          count: groupLeaves.length,
-          aggregates: {},
-          leaves: groupLeaves,
-          __pivotValues: computePivotValues(groupLeaves, combos, valueConfigs, pivotCols),
-          children: level + 1 < rowGroupCols.length ? build(groupLeaves, level + 1, groupId) : null,
-        };
-      });
+    // Map each bucket to a fully-built node BEFORE sorting — the comparator
+    // needs each node's __pivotValues to compare across pivot-col sorts.
+    const nodes = Array.from(buckets.values()).map(({ value, rows: groupLeaves }) => {
+      const keyStr = value == null ? '' : String(value);
+      const groupId = parentId ? `${parentId}|${col.field}=${keyStr}` : `${col.field}=${keyStr}`;
+      return {
+        __sgGroup: true,
+        level,
+        field: col.field,
+        value,
+        groupId,
+        count: groupLeaves.length,
+        aggregates: {},
+        leaves: groupLeaves,
+        __pivotValues: computePivotValues(groupLeaves, combos, valueConfigs, pivotCols),
+        children: level + 1 < rowGroupCols.length ? build(groupLeaves, level + 1, groupId) : null,
+      };
+    });
+    const siblingCmp = makePivotSiblingComparator(sortModel, col);
+    return nodes.sort(siblingCmp);
   };
 
   const tree = build(rows, 0, '');
@@ -605,6 +655,7 @@ export function buildDisplayList(state) {
       pivotCols: pivotColDefs,
       valueConfigs,
       isExpanded: state.isGroupExpanded,
+      sortModel: state.sortModel,
     });
     const paged = applyPagination(displayList, state.pagination);
     return {

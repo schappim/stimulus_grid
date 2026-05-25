@@ -174,7 +174,7 @@ Available after the `grid:ready` event. Highlights:
 - **Editing:** `startEditingCell({rowId, colId})`, `stopEditing(cancel?)`
 - **Export:** `getDataAsCsv(opts)`, `exportDataAsCsv(opts)`
 - **Row grouping:** `setRowGroupColumns([...])`, `addRowGroupColumn`, `removeRowGroupColumn`, `getRowGroupColumns`, `setColumnAggFunc(field, fn)` (`sum`/`avg`/`min`/`max`/`count`/`first`/`last`), `expandAll`, `collapseAll`
-- **Pivot:** `setPivotMode(on)`, `isPivotMode()`, `setPivotColumns([...])`, `addPivotColumn`, `removePivotColumn`, `getPivotColumns`
+- **Pivot:** `setPivotMode(on)`, `isPivotMode()`, `setPivotColumns([...])`, `addPivotColumn`, `removePivotColumn`, `getPivotColumns`, `getPivotResultColumns()` (current synthetic pivot cols — `{field, headerName, pivotKeys, valueField, aggFunc}` — useful for driving `setSortModel` against a specific pivot)
 - **Value columns** (aggregations — shared with grouping): `setValueColumns([{field,aggFunc}])`, `addValueColumn(field, aggFunc?)`, `removeValueColumn`, `getValueColumns`
 - **Column header groups:** `setColumnGroups([{headerName, children:[field,...]}])`, `getColumnGroups()`
 - **Pinned bottom row:** `setPinnedBottomRow(on)`, `isPinnedBottomRow()`
@@ -366,9 +366,26 @@ api.setColumnAggFunc("gold", "avg")           // changes the agg func for one va
 **How it renders.** With one value field, headers show the pivot combo only
 (`"Swimming"`); with multiple, they include the agg + field
 (`"Swimming · sum(gold)"`). Empty intersections render blank (not `0`),
-matching Excel/Sheets conventions. Sorting on the synthetic pivot columns is
-disabled in this release; filters still apply to the underlying leaf rows
+matching Excel/Sheets conventions. Filters apply to the underlying leaf rows
 before the pivot, so `country = "USA"` narrows the pivot to USA-only sports.
+
+**Sortable pivot columns.** Click any pivot column header to sort sibling
+group rows by that aggregate (asc → desc → off; shift-click to add to a
+multi-sort). The synthetic **(All)** totals row stays pinned at the top
+regardless. Sort is preserved across renders and round-trips through
+`persist-key`, so reloads remember which pivot you sorted by.
+
+![Pivot table with country rows × sport columns (Athletics, Cycling, Gymnastics, Swimming); Swimming column header has a descending sort indicator; USA pulled to the top with 24 in Swimming, then Australia 4, China 2, Norway 1, and Brazil + Jamaica with no swimming rows at the bottom; (All) totals row pinned above with 22/7/14/31](docs/images/grid-sortable-pivot.png)
+
+```js
+// You don't normally need this — clicks on the column header do it for you.
+// Programmatic equivalent: find the synthetic field id via
+// gridApi.getPivotResultColumns() then drive setSortModel directly.
+const swm = api.getPivotResultColumns().find(c => c.headerName === "Swimming")
+api.setSortModel([{ colId: swm.field, sort: "desc" }])
+```
+
+See **[demo 17](demo/17-sortable-pivot.html)** for a focused walk-through.
 
 **The side panel.** Mounts as an `<aside data-controller="side-panel">` inside
 `.sg-grid`. Sections (top → bottom):

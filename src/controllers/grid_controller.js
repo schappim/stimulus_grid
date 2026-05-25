@@ -146,6 +146,7 @@ export default class GridController extends Controller {
     document.removeEventListener('copy', this._onCopy);
     document.removeEventListener('mousemove', this._onRowDragMove);
     this._thead?.removeEventListener('contextmenu', this._onHeaderContextMenu);
+    this._thead?.removeEventListener('click', this._onSynthHeaderClick);
     this._closeColumnMenu();
     this._teardownPersistence();
     this._rowDrag?.ghost?.remove();
@@ -268,6 +269,12 @@ export default class GridController extends Controller {
     // for that column (pin / autosize / group / pivot / aggregate / hide).
     // Mounting once here is enough — the menu reads live state on each open.
     this._thead?.addEventListener('contextmenu', this._onHeaderContextMenu);
+    // Synthetic <th>s (group col + pivot result cols) don't carry a
+    // header-cell controller — they're built directly in _renderHeader*.
+    // Delegated click handler picks up sort clicks on any [data-synth] header
+    // that's been marked sortable (today: pivot cols). User-defined <th>s
+    // continue to sort via their own HeaderCellController#sort.
+    this._thead?.addEventListener('click', this._onSynthHeaderClick);
   }
 
   async _initialLoad() {
@@ -1850,6 +1857,19 @@ export default class GridController extends Controller {
     if (!this.state.cellSel.ranges.length) return null;
     return aggregateRange(this._cellRangeRawValues());
   }
+
+  // Delegated click handler for synthetic <th>s that don't have a
+  // HeaderCellController of their own (pivot result cols today). Mirrors the
+  // user-defined header path: bare click toggles sort, shift-click appends to
+  // a multi-sort. Resize handles / filter icons short-circuit.
+  _onSynthHeaderClick = (e) => {
+    const th = e.target.closest('th[data-synth="true"][data-sortable="true"]');
+    if (!th) return;
+    if (e.target.closest('.sg-resize-handle, .sg-filter-icon, .sg-reorder-handle')) return;
+    const field = th.getAttribute('data-field');
+    if (!field) return;
+    this.toggleSort(field, e.shiftKey === true);
+  };
 
   // ----- Right-click column menu -----
   //

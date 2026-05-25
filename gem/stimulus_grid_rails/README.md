@@ -352,6 +352,52 @@ own broadcast stream.
 | `detail_rows_key:` | master-row attribute (or method) whose value (`as_json`'d) is serialised onto the row's `<tr>` and seeded into the inner grid |
 | `detail_row_height:` | minimum detail-panel height in px (default `240`) |
 
+## Pivot mode (with sortable pivot columns)
+
+`pivot_mode: true` reshapes the data into a pivot table — `row_group_cols`
+form the vertical axis, the unique values of `pivot_cols` become columns, and
+the grid class's `agg_funcs` declarations are the value aggregations. A
+synthetic **(All)** totals row sits at the top; leaf rows are aggregated
+away.
+
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid:       MedalsGrid.new(user: current_user),
+      rows:       @medals,
+      pivot_mode: true,
+      pivot_cols: ["sport"],                  # one col per unique sport
+    } %>
+```
+
+The grid class supplies the value aggregations via `agg_funcs`:
+
+```ruby
+class MedalsGrid < ApplicationGrid
+  resource :medal
+  row_group_cols ["country"]
+  agg_funcs gold: "sum", silver: "sum", bronze: "sum"
+  column :country
+  column :sport
+  column :gold,   type: :integer
+  column :silver, type: :integer
+  column :bronze, type: :integer
+end
+```
+
+Click any pivot column header to **sort sibling group rows by that
+aggregate** (asc → desc → off; shift-click for multi-sort). The `(All)` row
+stays pinned at the top regardless of the active sort, and the sort state
+persists with `persist_key:`. From JS, discover the synthetic pivot field id
+via `gridApi.getPivotResultColumns()` and pass it to `setSortModel`. Filters
+apply to the underlying leaf rows before the pivot, so `country = "USA"`
+narrows the view to USA-only sports.
+
+| Local | Meaning |
+|---|---|
+| `pivot_mode:` | `true` to reshape; `false` (default) renders normally |
+| `pivot_cols:` | JSON-coerced array of fields whose unique values become columns |
+| `side_panel:` | `true` to render the drag-driven row groups / pivots / values tool drawer |
+
 ## Automatic broadcasts
 
 `include StimulusGridRails::Broadcastable; broadcasts_grid YourGrid` is all the

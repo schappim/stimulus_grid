@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>17 — Sortable pivot columns | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .toolbar button[aria-pressed="true"] { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .sep { width:1px; align-self:stretch; background:#e5e7eb; margin:0 4px; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff; border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>17 — Sortable pivot columns</h1>
+  <p class="lede">
+    Click any pivot column header to sort sibling group rows by that aggregate
+    — ascending, then descending, then off. Shift-click to add to a multi-sort.
+    The synthetic <strong>(All)</strong> totals row stays pinned at the top no
+    matter the sort. Try it with the country × sport pivot below: click
+    <em>Swimming</em> to surface the swimming-heaviest nations.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-group-cols-value='["country"]'
+       data-grid-pivot-cols-value='["sport"]'
+       data-grid-agg-funcs-value='{"gold":"sum"}'
+       data-grid-pivot-mode-value="true"
+       data-grid-status-bar-value="true"
+       data-grid-group-default-expanded-value="-1">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="180">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="160">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <button id="sort-swim-desc">Sort by Swimming · desc</button>
+    <button id="sort-ath-desc">Sort by Athletics · desc</button>
+    <button id="sort-country-desc">Sort by Country · desc</button>
+    <button id="clear">Clear sort</button>
+    <span class="sep"></span>
+    <span id="stat" class="stat">no sort</span>
+  </div>
+
+  <div class="tip">
+    <strong>How it works:</strong> pivot result columns are synthetic — built
+    fresh from each row's <code>__pivotValues</code>. The <code>sortModel</code>
+    can carry one of those synthetic field ids; <code>buildPivotModel</code>
+    then sorts sibling group nodes by their aggregate value at each tree level.
+    The <code>(All)</code> totals row is emitted outside the tree walk so it
+    stays put.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // Curated subset of medal counts across 6 countries × 4 sports so the
+    // pivot fits the panel without horizontal scroll. Numbers are pulled
+    // from athletes.json with a few extra rows hand-tweaked to make the
+    // sort-by-pivot-col effect read clearly (e.g. USA dominates swimming).
+    const ROWS = [
+      { id: 1,  country: 'USA',         sport: 'Swimming',   gold: 8, silver: 0, bronze: 0 },
+      { id: 2,  country: 'USA',         sport: 'Swimming',   gold: 7, silver: 0, bronze: 0 },
+      { id: 3,  country: 'USA',         sport: 'Swimming',   gold: 5, silver: 1, bronze: 1 },
+      { id: 4,  country: 'USA',         sport: 'Swimming',   gold: 4, silver: 1, bronze: 0 },
+      { id: 5,  country: 'USA',         sport: 'Athletics',  gold: 9, silver: 1, bronze: 0 },
+      { id: 6,  country: 'USA',         sport: 'Gymnastics', gold: 4, silver: 0, bronze: 1 },
+      { id: 7,  country: 'USA',         sport: 'Gymnastics', gold: 2, silver: 0, bronze: 1 },
+      { id: 8,  country: 'USA',         sport: 'Cycling',    gold: 1, silver: 0, bronze: 0 },
+      { id: 9,  country: 'Australia',   sport: 'Swimming',   gold: 3, silver: 2, bronze: 0 },
+      { id: 10, country: 'Australia',   sport: 'Swimming',   gold: 1, silver: 0, bronze: 1 },
+      { id: 11, country: 'Australia',   sport: 'Cycling',    gold: 2, silver: 0, bronze: 1 },
+      { id: 12, country: 'Australia',   sport: 'Athletics',  gold: 1, silver: 0, bronze: 0 },
+      { id: 13, country: 'China',       sport: 'Gymnastics', gold: 5, silver: 0, bronze: 1 },
+      { id: 14, country: 'China',       sport: 'Gymnastics', gold: 3, silver: 1, bronze: 0 },
+      { id: 15, country: 'China',       sport: 'Swimming',   gold: 2, silver: 1, bronze: 1 },
+      { id: 16, country: 'China',       sport: 'Cycling',    gold: 1, silver: 0, bronze: 0 },
+      { id: 17, country: 'Jamaica',     sport: 'Athletics',  gold: 4, silver: 0, bronze: 0 },
+      { id: 18, country: 'Jamaica',     sport: 'Athletics',  gold: 3, silver: 0, bronze: 0 },
+      { id: 19, country: 'Norway',      sport: 'Cycling',    gold: 3, silver: 1, bronze: 0 },
+      { id: 20, country: 'Norway',      sport: 'Athletics',  gold: 2, silver: 1, bronze: 2 },
+      { id: 21, country: 'Norway',      sport: 'Swimming',   gold: 1, silver: 0, bronze: 0 },
+      { id: 22, country: 'Brazil',      sport: 'Athletics',  gold: 3, silver: 0, bronze: 0 },
+      { id: 23, country: 'Brazil',      sport: 'Gymnastics', gold: 0, silver: 1, bronze: 1 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+    grid.addEventListener('grid:ready', () => {
+      grid.gridApi.setRowData(ROWS);
+    }, { once: true });
+
+    // Lookup helper: find the synthetic pivot field id for a given column
+    // header label ("Swimming", "Athletics", …). Pivot field ids encode the
+    // combo + value + agg, so they're easiest to discover via
+    // gridApi.getPivotResultColumns() at the moment of the click.
+    const pivotFieldFor = (label) => {
+      const cols = grid.gridApi.getPivotResultColumns();
+      return cols.find((c) => c.headerName === label)?.field;
+    };
+
+    function describeSort() {
+      const model = grid.gridApi.getSortModel?.() || [];
+      if (!model.length) return 'no sort';
+      const pivotCols = grid.gridApi.getPivotResultColumns();
+      return model.map((s) => {
+        // Friendly label for synthetic pivot fields.
+        if (s.colId.startsWith('__p|')) {
+          const m = pivotCols.find((c) => c.field === s.colId);
+          return `${m?.headerName || s.colId} ${s.sort}`;
+        }
+        return `${s.colId} ${s.sort}`;
+      }).join(', ');
+    }
+
+    grid.addEventListener('grid:sortChanged', () => { stat.textContent = describeSort(); });
+
+    document.getElementById('sort-swim-desc').onclick = () => {
+      const field = pivotFieldFor('Swimming');
+      if (field) grid.gridApi.setSortModel([{ colId: field, sort: 'desc' }]);
+    };
+    document.getElementById('sort-ath-desc').onclick = () => {
+      const field = pivotFieldFor('Athletics');
+      if (field) grid.gridApi.setSortModel([{ colId: field, sort: 'desc' }]);
+    };
+    document.getElementById('sort-country-desc').onclick = () => {
+      grid.gridApi.setSortModel([{ colId: 'country', sort: 'desc' }]);
+    };
+    document.getElementById('clear').onclick = () => {
+      grid.gridApi.setSortModel([]);
+    };
+  </script>
+</body>
+</html>

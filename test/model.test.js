@@ -16,6 +16,7 @@ import {
   buildPivotColumns,
   buildPivotModel,
   buildHeaderLayout,
+  isPivotField,
 } from '../src/lib/model.js';
 
 /* ----------------------------------------------------------------------------
@@ -729,6 +730,171 @@ describe('buildPivotModel', () => {
     // (All), Brazil, Canada, USA — 4 group rows, no leaves
     expect(out.pageRows).toHaveLength(4);
     expect(out.pageRows.every((r) => r.__sgGroup)).toBe(true);
+  });
+
+  it('marks every pivot result col sortable so headers wire up sort clicks', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    expect(out.columns.every((c) => c.sortable === true)).toBe(true);
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * Sortable pivot columns: pivot-field sort entries reorder sibling group nodes
+ * by their __pivotValues; the synthetic "(All)" totals row stays pinned at the
+ * top no matter the sort.
+ * ------------------------------------------------------------------------- */
+
+describe('isPivotField', () => {
+  it('identifies synthetic pivot field ids by their __p| prefix', () => {
+    expect(isPivotField('__p|sport=Swimming|gold:sum')).toBe(true);
+    expect(isPivotField('country')).toBe(false);
+    expect(isPivotField('')).toBe(false);
+    expect(isPivotField(null)).toBe(false);
+    expect(isPivotField(undefined)).toBe(false);
+  });
+});
+
+describe('buildPivotModel (sortable pivot columns)', () => {
+  const valueConfigs = [{ col: pivotCols.gold, aggFunc: 'sum' }];
+
+  // Helper: given a built model + a pivot-col field id, return the group rows'
+  // values in display order (excluding the "(All)" row).
+  const groupValues = (out) => out.displayList
+    .filter((r) => r.value !== '(All)')
+    .map((r) => r.value);
+
+  it('asc by a pivot column orders sibling groups by that agg value', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    const swm = out.columns.find((c) => c.headerName === 'Swimming');
+    const sorted = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      sortModel: [{ colId: swm.field, sort: 'asc' }],
+    });
+    // Swimming agg per country: Brazil null, Canada 1, USA 13 → null/Brazil first.
+    expect(groupValues(sorted)).toEqual(['Brazil', 'Canada', 'USA']);
+    // No sort = alpha by group value (default), as a regression check.
+    expect(groupValues(out)).toEqual(['Brazil', 'Canada', 'USA']);
+  });
+
+  it('desc by a pivot column reverses the order (and survives null aggs)', () => {
+    const swmCol = buildPivotColumns(
+      [{ sport: 'Swimming' }], valueConfigs, [pivotCols.sport],
+    )[0];
+    const sorted = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      sortModel: [{ colId: swmCol.field, sort: 'desc' }],
+    });
+    // USA 13 > Canada 1 > Brazil null → null sorted last under desc.
+    expect(groupValues(sorted)).toEqual(['USA', 'Canada', 'Brazil']);
+  });
+
+  it('keeps the (All) totals row pinned at index 0 regardless of sort', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    const ath = out.columns.find((c) => c.headerName === 'Athletics');
+    for (const dir of ['asc', 'desc']) {
+      const sorted = buildPivotModel({
+        rows: pivotRows, rowGroupCols: [pivotCols.country],
+        pivotCols: [pivotCols.sport], valueConfigs,
+        sortModel: [{ colId: ath.field, sort: dir }],
+      });
+      expect(sorted.displayList[0].__pivotAll).toBe(true);
+      expect(sorted.displayList[0].value).toBe('(All)');
+    }
+  });
+
+  it('applies the sort within each parent in a multi-level group tree', () => {
+    // Sort children at every level by Athletics sum desc. Each country's sport
+    // children get reordered (those with no Athletics rows fall to the end).
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country, pivotCols.sport],
+      pivotCols: [pivotCols.sport], valueConfigs,
+    });
+    const ath = out.columns.find((c) => c.headerName === 'Athletics');
+    const sorted = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country, pivotCols.sport],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      sortModel: [{ colId: ath.field, sort: 'desc' }],
+    });
+    // Top-level countries by Athletics sum: Brazil 3 > USA 2 > Canada 0.
+    const topLevel = sorted.displayList.filter((r) => r.level === 0).map((r) => r.value);
+    expect(topLevel).toEqual(['Brazil', 'USA', 'Canada']);
+    // Inside USA, sport children sorted by their own Athletics agg
+    // (Athletics has Athletics agg 2; Swimming has 0 → Athletics first).
+    const usaIdx = sorted.displayList.findIndex((r) => r.value === 'USA');
+    const usaChildren = sorted.displayList.slice(usaIdx + 1, usaIdx + 3).map((r) => r.value);
+    expect(usaChildren).toEqual(['Athletics', 'Swimming']);
+    // Sanity: the default alpha sort would have ordered USA's children
+    // ['Athletics','Swimming'] alphabetically too; check that swapping the
+    // direction changes the top-level result, which only the new code path
+    // can produce.
+    expect(topLevel).not.toEqual(['Brazil', 'Canada', 'USA']);
+  });
+
+  it('with a row-group field sort entry, sorts that level by group value desc', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      sortModel: [{ colId: 'country', sort: 'desc' }],
+    });
+    expect(groupValues(out)).toEqual(['USA', 'Canada', 'Brazil']);
+  });
+
+  it('falls back to alpha sort when sort entries target unrelated cols', () => {
+    const out = buildPivotModel({
+      rows: pivotRows, rowGroupCols: [pivotCols.country],
+      pivotCols: [pivotCols.sport], valueConfigs,
+      sortModel: [{ colId: 'totally_unrelated', sort: 'desc' }],
+    });
+    expect(groupValues(out)).toEqual(['Brazil', 'Canada', 'USA']);
+  });
+
+  it('end-to-end via buildDisplayList: pivot sort flows through state.sortModel', () => {
+    // Build once to discover the synthetic pivot field id, then sort by it.
+    const probe = buildDisplayList({
+      columnDefs: [{ field: 'country' }, { field: 'sport' }, { field: 'gold', type: 'number' }],
+      rowData: pivotRows, filterModel: {}, quickFilter: '', sortModel: [],
+      pagination: { enabled: false },
+      pivotMode: true, pivotCols: ['sport'], aggModel: { gold: 'sum' },
+      rowGroupCols: ['country'],
+    });
+    const swm = probe.pivotResultColumns.find((c) => c.headerName === 'Swimming');
+    const sorted = buildDisplayList({
+      columnDefs: [{ field: 'country' }, { field: 'sport' }, { field: 'gold', type: 'number' }],
+      rowData: pivotRows, filterModel: {}, quickFilter: '',
+      sortModel: [{ colId: swm.field, sort: 'desc' }],
+      pagination: { enabled: false },
+      pivotMode: true, pivotCols: ['sport'], aggModel: { gold: 'sum' },
+      rowGroupCols: ['country'],
+    });
+    const valuesAfterAll = sorted.pageRows.slice(1).map((r) => r.value);
+    expect(valuesAfterAll).toEqual(['USA', 'Canada', 'Brazil']);
+  });
+
+  it('a pivot-field entry in sortModel is harmless on the flat (non-pivot) path', () => {
+    // applySort skips entries whose colId isn't in columnsByField, so a stale
+    // pivot sort left over from a previous pivot-on render won't blow up the
+    // plain leaf-list view when pivot mode is then turned off.
+    const out = buildDisplayList({
+      columnDefs: [{ field: 'country' }, { field: 'sport' }, { field: 'gold', type: 'number' }],
+      rowData: pivotRows, filterModel: {}, quickFilter: '',
+      sortModel: [{ colId: '__p|sport=Swimming|gold:sum', sort: 'desc' }],
+      pagination: { enabled: false },
+      pivotMode: false, pivotCols: [], aggModel: {},
+      rowGroupCols: [],
+    });
+    // Order preserved from the input rowData.
+    expect(out.pageRows.map((r) => r.id)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
 

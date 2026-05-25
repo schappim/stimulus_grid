@@ -83,6 +83,20 @@ export function createGridApi(grid) {
     addPivotColumn(field) { grid.addPivotColumn(field); },
     removePivotColumn(field) { grid.removePivotColumn(field); },
     getPivotColumns() { return grid.getPivotColumns(); },
+    // Synthetic pivot result columns from the most recent render. Each entry
+    // is { field, headerName, pivotKeys, valueField, aggFunc } — useful for
+    // discovering the field id of a pivot col to feed to setSortModel / for
+    // building a custom column visibility UI.
+    getPivotResultColumns() {
+      const cols = grid._displayList?.pivotResultColumns || [];
+      return cols.map((c) => ({
+        field: c.field,
+        headerName: c.headerName,
+        pivotKeys: { ...(c.pivotKeys || {}) },
+        valueField: c.valueField,
+        aggFunc: c.aggFunc,
+      }));
+    },
 
     // ---- Value columns (aggregations; shared with grouping) ----
     setValueColumns(list) { grid.setValueColumns(list); },

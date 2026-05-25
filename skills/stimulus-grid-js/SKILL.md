@@ -112,6 +112,7 @@ api.getRangeAggregates()                       // {count,sum,avg,min,max} for th
 api.setPivotMode(true); api.setPivotColumns(["sport"])          // reshape into a pivot table
 api.setValueColumns([{ field:"gold", aggFunc:"sum" }])          // cell aggregations (also drives group totals)
 api.getPivotColumns(); api.getValueColumns(); api.isPivotMode() // read pivot/value state
+api.getPivotResultColumns()                                      // current synthetic pivot cols: [{field, headerName, pivotKeys, valueField, aggFunc}]
 api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] }])  // multi-row headers
 api.setPinnedBottomRow(true)                                    // sticky grand-totals row at the bottom
 api.getColumnState()                                             // JSON-serializable snapshot (cols, groups, pivot, values, sort, filter, …)
@@ -302,9 +303,21 @@ column with visibility checkbox + group/pivot/sum tags) · **Row Groups** ·
 Click the tab icon on the panel's right edge to collapse to just the tab strip.
 
 Events: `grid:pivotModeChanged` · `grid:columnPivotChanged` (`{pivotCols}`) ·
-`grid:columnValueChanged` (`{valueCols}`). Sorting on the synthetic pivot
-columns is disabled in this release; filters still apply to the underlying
+`grid:columnValueChanged` (`{valueCols}`). Filters apply to the underlying
 leaf rows before the pivot.
+
+**Sortable pivot columns.** Click any pivot column header to sort sibling
+group rows by that aggregate (asc → desc → off; shift-click appends to a
+multi-sort). The **(All)** totals row stays pinned at the top regardless.
+Sort survives renders + `persist-key` reloads. To drive it from code,
+discover the synthetic field id via `gridApi.getPivotResultColumns()`
+(returns `[{field, headerName, pivotKeys, valueField, aggFunc}, …]` for
+the current render), then feed it to `setSortModel`:
+
+```js
+const swm = api.getPivotResultColumns().find(c => c.headerName === "Swimming")
+api.setSortModel([{ colId: swm.field, sort: "desc" }])
+```
 
 ## Column header groups & pinned bottom row
 
