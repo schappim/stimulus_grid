@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>157 — Insurance Certificate of Currency | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>157 — Insurance Certificate of Currency</h1>
+  <p class="lede">
+    Public liability, professional indemnity, workers comp, tool cover —
+    the certs every site induction asks to see. Pill carries the insurer
+    name, then the policy type + cover ("PL $20m"), then the policy
+    number and expiry colour-band.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="contractor"
+              data-header-cell-width-value="200">Contractor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="type"
+              data-header-cell-width-value="120">Type</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cert"
+              data-header-cell-cell-renderer-value="insurance-cert"
+              data-header-cell-width-value="380">Certificate</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Pass <code>{ issuer, class, number, expires }</code>. The insurer
+    replaces the state badge, so the same renderer works for an Allianz
+    PL cert, a CGU workers-comp, an icare CTP, etc.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, contractor: 'Alpha Electrical',    type: 'PL',     cert: { issuer: 'Allianz', class: 'PL $20m',  number: 'PCY-2204A', expires: inDays(280) } },
+      { id: 2, contractor: 'Beta Plumbing',       type: 'PL',     cert: { issuer: 'CGU',     class: 'PL $10m',  number: 'PCY-4451B', expires: inDays(55) } },
+      { id: 3, contractor: 'Gamma Carpenters',    type: 'WC',     cert: { issuer: 'icare',   class: 'WC',       number: 'WCC-44510', expires: inDays(15) } },
+      { id: 4, contractor: 'Delta Tilers',        type: 'PI',     cert: { issuer: 'QBE',     class: 'PI $5m',   number: 'PI-99876',  expires: inDays(-8) } },
+      { id: 5, contractor: 'Epsilon Glaziers',    type: 'Tools',  cert: { issuer: 'NRMA',    class: 'Tools $50k', number: 'TC-21008' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

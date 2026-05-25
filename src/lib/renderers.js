@@ -9135,6 +9135,41 @@ export function testAndTag(opts = {}) {
   return complianceCard({ prefix: 'T&T', expiryLabel: 'next', ...opts });
 }
 
+/* ---------- insurance-cert ----------------------------------------
+ *
+ * Insurance Certificate of Currency. Shape differs from the other
+ * compliance cards — the issuing badge is the *insurer name* rather
+ * than an AU state. `class` carries the policy type (PL / PI / WC /
+ * Tools); `number` is the policy number; `issuer` is the insurer.
+ *
+ *   value: {
+ *     issuer:  'CGU',                  // insurer name
+ *     class:   'PL $20m',              // policy type + cover
+ *     number:  'PCY-22038A',           // policy number
+ *     expires: '2026-11-30',           // ISO date
+ *   } */
+export function insuranceCert() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const wrap = h('span', { class: 'sg-renderer-compliance' });
+    if (typeof value === 'string') {
+      wrap.append(h('span', { class: 'sg-renderer-compliance-prefix' },
+        document.createTextNode('Cert')));
+      wrap.append(h('span', { class: 'sg-renderer-mono' }, document.createTextNode(value)));
+      return wrap;
+    }
+    if (value.issuer) wrap.append(h('span', { class: 'sg-renderer-compliance-prefix' },
+      document.createTextNode(String(value.issuer))));
+    if (value.class) wrap.append(h('span', { class: 'sg-renderer-compliance-class' },
+      document.createTextNode(String(value.class))));
+    if (value.number) wrap.append(h('span', { class: 'sg-renderer-mono' },
+      document.createTextNode(String(value.number))));
+    const exp = expiryBadge(value.expires);
+    if (exp) wrap.append(exp);
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9294,6 +9329,7 @@ registerRenderer('asbestos-licence',  asbestosLicence());
 registerRenderer('refrigerant-licence', refrigerantLicence());
 registerRenderer('pool-safety-cert',  poolSafetyCert());
 registerRenderer('test-and-tag',      testAndTag());
+registerRenderer('insurance-cert',    insuranceCert());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9857,6 +9893,7 @@ wireBuiltin('asbestos-licence', clip.json);
 wireBuiltin('refrigerant-licence', clip.json);
 wireBuiltin('pool-safety-cert', clip.json);
 wireBuiltin('test-and-tag',   clip.json);
+wireBuiltin('insurance-cert', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9889,5 +9926,5 @@ export const renderers = {
   battery, signalBars, volumeIndicator,
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
-  poolSafetyCert, testAndTag,
+  poolSafetyCert, testAndTag, insuranceCert,
 };
