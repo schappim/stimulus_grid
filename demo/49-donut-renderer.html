@@ -72,9 +72,11 @@
     <code>orange</code>, <code>purple</code>, <code>pink</code>,
     <code>gray</code>. Or pass any CSS colour string.
     <br><br>
-    <strong>Editing:</strong> double-click any cell — donut, blue, inline,
-    large, and raw % all bind to the same <code>pct</code> field, so
-    editing one re-renders every donut on that row at once.
+    <strong>Editing:</strong> double-click any donut cell to edit its
+    value — the SVG re-renders live on commit. Each column has its own
+    field (the grid keys columns by field, so a single source field
+    can't drive multiple columns — each donut gets its own clone of the
+    percentage instead).
   </div>
 
   <script src="../dist/stimulus_grid.js"></script>
