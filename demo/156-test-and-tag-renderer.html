@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>156 — Test &amp; Tag | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>156 — Test &amp; Tag (AS/NZS 3760)</h1>
+  <p class="lede">
+    Portable electrical equipment register. <code>number</code> = tag ID,
+    <code>class</code> = colour cohort (Red Q1 / Yellow Q2 / Blue Q3 /
+    Green Q4) for spreading test dates across the year. The expiry pill
+    reads "next" instead of "exp" — when the next-due date is past it
+    flips to "expired" red.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="item"
+              data-header-cell-width-value="200">Item</th>
+          <th data-controller="header-cell" data-header-cell-field-value="location"
+              data-header-cell-width-value="160">Location</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tag"
+              data-header-cell-cell-renderer-value="test-and-tag"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="340">Tag</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, item: 'Drop saw',          location: 'Workshop',  tag: { number: 'EW-00120', class: 'Red Q1',    expires: inDays(75) } },
+      { id: 2, item: 'Extension lead 15A',location: 'Site truck',tag: { number: 'EW-00121', class: 'Yellow Q2', expires: inDays(155) } },
+      { id: 3, item: 'Cordless drill',    location: 'Van #4',    tag: { number: 'EW-00122', class: 'Blue Q3',   expires: inDays(245) } },
+      { id: 4, item: 'Welder',            location: 'Workshop',  tag: { number: 'EW-00123', class: 'Green Q4',  expires: inDays(335) } },
+      { id: 5, item: 'Pressure washer',   location: 'Van #1',    tag: { number: 'EW-00124', class: 'Red Q1',    expires: inDays(8) } },
+      { id: 6, item: 'Demo hammer',       location: 'Workshop',  tag: { number: 'EW-00125', class: 'Red Q1',    expires: inDays(-12) } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

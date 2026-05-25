@@ -9127,6 +9127,14 @@ export function poolSafetyCert(opts = {}) {
   return complianceCard({ prefix: 'PSC', classLabel: 'Pool Safety', ...opts });
 }
 
+// AS/NZS 3760 Test & Tag. Tracks the last-tested and next-due date for
+// portable electrical equipment. `class` typically carries the tag
+// colour (Red Q1 / Yellow Q2 / Blue Q3 / Green Q4) which spreads test
+// dates across the year for audit-friendly cohort batches.
+export function testAndTag(opts = {}) {
+  return complianceCard({ prefix: 'T&T', expiryLabel: 'next', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9285,6 +9293,7 @@ registerRenderer('gas-certificate',   gasCertificate());
 registerRenderer('asbestos-licence',  asbestosLicence());
 registerRenderer('refrigerant-licence', refrigerantLicence());
 registerRenderer('pool-safety-cert',  poolSafetyCert());
+registerRenderer('test-and-tag',      testAndTag());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9847,6 +9856,7 @@ wireBuiltin('gas-certificate', clip.json);
 wireBuiltin('asbestos-licence', clip.json);
 wireBuiltin('refrigerant-licence', clip.json);
 wireBuiltin('pool-safety-cert', clip.json);
+wireBuiltin('test-and-tag',   clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9879,5 +9889,5 @@ export const renderers = {
   battery, signalBars, volumeIndicator,
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
-  poolSafetyCert,
+  poolSafetyCert, testAndTag,
 };
