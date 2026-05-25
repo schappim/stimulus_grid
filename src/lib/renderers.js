@@ -9055,6 +9055,12 @@ export function whiteCard(opts = {}) {
   return complianceCard({ prefix: 'CIC', classLabel: 'White Card', ...opts });
 }
 
+// Working With Children — QLD Blue Card (issued by Blue Card Services).
+// 8-digit positive notice number with "general" / "exempt" classification.
+export function blueCard(opts = {}) {
+  return complianceCard({ prefix: 'BC', classLabel: 'Blue Card (QLD)', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9202,6 +9208,7 @@ registerRenderer('signal-bars',       signalBars());
 registerRenderer('volume',            volumeIndicator());
 registerRenderer('trade-licence',     tradeLicence());
 registerRenderer('white-card',        whiteCard());
+registerRenderer('blue-card',         blueCard());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9753,6 +9760,7 @@ wireBuiltin('split-button',   clip.text);
 wireBuiltin('row-actions',    clip.text);
 wireBuiltin('trade-licence',  clip.json);
 wireBuiltin('white-card',     clip.json);
+wireBuiltin('blue-card',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9783,5 +9791,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard,
+  tradeLicence, whiteCard, blueCard,
 };
