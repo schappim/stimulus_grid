@@ -9180,6 +9180,69 @@ export function jobStatus() {
   });
 }
 
+/* ---------- arrival-window ----------------------------------------
+ *
+ * Customer-promised arrival window — the time slot the dispatcher
+ * quoted ("between 8 and 10 in the morning"). Renders as:
+ *
+ *   8–10am Tue 27 May
+ *
+ * Colour bands:
+ *   green  — window still in the future
+ *   blue   — window currently open (we're inside it)
+ *   amber  — overdue by < 30 min
+ *   red    — overdue by ≥ 30 min, or whole window has passed
+ *
+ * Value shapes:
+ *   { start, end }              ISO datetime / Date / parseable string
+ *   [start, end]                tuple form
+ *   string                      printed as-is (no colour band) */
+export function arrivalWindow({ now = () => new Date() } = {}) {
+  const fmt12 = (d) => {
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ap = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return m === 0 ? `${h}${ap}` : `${h}:${String(m).padStart(2, '0')}${ap}`;
+  };
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let start = null, end = null;
+    if (typeof value === 'string') {
+      return h('span', { class: 'sg-renderer-arrival-window' },
+        document.createTextNode(value));
+    }
+    if (Array.isArray(value)) { [start, end] = value; }
+    else if (typeof value === 'object') { start = value.start; end = value.end; }
+    const sd = start ? new Date(start) : null;
+    const ed = end ? new Date(end) : null;
+    if (!sd || Number.isNaN(sd.valueOf())) return '';
+    const today = now();
+    const sameDay = sd.toDateString() === today.toDateString();
+    const winLabel = ed && !Number.isNaN(ed.valueOf())
+      ? `${fmt12(sd)}–${fmt12(ed)}`
+      : fmt12(sd);
+    const dateLabel = sameDay
+      ? 'today'
+      : `${DOW[sd.getDay()]} ${sd.getDate()} ${MON[sd.getMonth()]}`;
+    let cls = 'is-future';
+    const startMs = sd.getTime();
+    const endMs = ed && !Number.isNaN(ed.valueOf()) ? ed.getTime() : startMs + 60 * 60 * 1000;
+    const nowMs = today.getTime();
+    if (nowMs > endMs + 30 * 60 * 1000) cls = 'is-late';
+    else if (nowMs > endMs)             cls = 'is-overdue';
+    else if (nowMs >= startMs)          cls = 'is-open';
+    const wrap = h('span', { class: `sg-renderer-arrival-window ${cls}` });
+    wrap.append(h('span', { class: 'sg-renderer-arrival-window-time' },
+      document.createTextNode(winLabel)));
+    wrap.append(h('span', { class: 'sg-renderer-arrival-window-date' },
+      document.createTextNode(dateLabel)));
+    return wrap;
+  };
+}
+
 /* ---------- insurance-cert ----------------------------------------
  *
  * Insurance Certificate of Currency. Shape differs from the other
@@ -9379,6 +9442,7 @@ registerRenderer('gst-status',        gstStatus());
 registerRenderer('abn-status',        abnStatus());
 registerRenderer('hbcf-cert',         hbcfCert());
 registerRenderer('job-status',        jobStatus());
+registerRenderer('arrival-window',    arrivalWindow());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9947,6 +10011,7 @@ wireBuiltin('gst-status',     clip.text);
 wireBuiltin('abn-status',     clip.text);
 wireBuiltin('hbcf-cert',      clip.json);
 wireBuiltin('job-status',     clip.text);
+wireBuiltin('arrival-window', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9981,5 +10046,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
-  jobStatus,
+  jobStatus, arrivalWindow,
 };
