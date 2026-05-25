@@ -145,6 +145,101 @@ export function percent({ decimals = 0, scale = 'as-is' } = {}) {
   };
 }
 
+/* ---------- date / datetime / relative-time / duration ------------- */
+
+// Coerce a string/number/Date into a Date or null. Mirrors model.js#toDate
+// behaviour so renderers and sort/filter agree on what counts as a date.
+function toDate(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date) return Number.isNaN(v.valueOf()) ? null : v;
+  const d = new Date(v);
+  return Number.isNaN(d.valueOf()) ? null : d;
+}
+
+export function date({ locale = undefined, dateStyle = 'medium', ...opts } = {}) {
+  // Build the formatter once at registration time, not per cell — Intl
+  // formatters are cheap to use but expensive to construct.
+  const fmt = new Intl.DateTimeFormat(locale, { dateStyle, ...opts });
+  return ({ value }) => {
+    const d = toDate(value);
+    return d ? fmt.format(d) : '';
+  };
+}
+
+export function datetime({ locale = undefined, dateStyle = 'medium', timeStyle = 'short', ...opts } = {}) {
+  const fmt = new Intl.DateTimeFormat(locale, { dateStyle, timeStyle, ...opts });
+  return ({ value }) => {
+    const d = toDate(value);
+    return d ? fmt.format(d) : '';
+  };
+}
+
+// "3 days ago" / "in 2 hours". Computed at render time against Date.now(),
+// so the value moves naturally as the grid re-renders. The original date
+// goes in a title= attribute so users can hover for the exact timestamp.
+// Auto-refresh (per-cell timer) is intentionally not built in — schedule
+// it from outside if you need ticking timestamps.
+const REL_THRESHOLDS = [
+  { unit: 'second', ms: 1000,             cutoff: 60 * 1000 },
+  { unit: 'minute', ms: 60 * 1000,        cutoff: 60 * 60 * 1000 },
+  { unit: 'hour',   ms: 60 * 60 * 1000,   cutoff: 24 * 60 * 60 * 1000 },
+  { unit: 'day',    ms: 24 * 60 * 60 * 1000, cutoff: 7 * 24 * 60 * 60 * 1000 },
+  { unit: 'week',   ms: 7 * 24 * 60 * 60 * 1000, cutoff: 30 * 24 * 60 * 60 * 1000 },
+  { unit: 'month',  ms: 30 * 24 * 60 * 60 * 1000, cutoff: 365 * 24 * 60 * 60 * 1000 },
+  { unit: 'year',   ms: 365 * 24 * 60 * 60 * 1000, cutoff: Infinity },
+];
+
+export function relativeTime({ locale = undefined, numeric = 'auto', style = 'long' } = {}) {
+  const fmt = new Intl.RelativeTimeFormat(locale, { numeric, style });
+  return ({ value }) => {
+    const d = toDate(value);
+    if (!d) return '';
+    const diffMs = d.getTime() - Date.now();
+    const abs = Math.abs(diffMs);
+    const slot = REL_THRESHOLDS.find((t) => abs < t.cutoff) || REL_THRESHOLDS[REL_THRESHOLDS.length - 1];
+    const n = Math.round(diffMs / slot.ms);
+    const span = h('span', { class: 'sg-renderer-relative-time', title: d.toLocaleString() });
+    span.textContent = fmt.format(n, slot.unit);
+    return span;
+  };
+}
+
+// `unit` of the input value: 'ms' | 'sec' | 'min'. `style` controls output
+// shape: 'compact' = "2h 14m" (drops zero parts), 'clock' = "02:14:32" (or
+// "14:32" without an hours part), 'words' = "2 hours 14 minutes".
+const DURATION_UNIT_MS = { ms: 1, sec: 1000, second: 1000, min: 60000, minute: 60000, hr: 3600000, hour: 3600000 };
+
+export function duration({ unit = 'ms', style = 'compact' } = {}) {
+  const factor = DURATION_UNIT_MS[unit] ?? 1;
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const ms = Number(value) * factor;
+    if (!Number.isFinite(ms)) return String(value);
+    const sign = ms < 0 ? '-' : '';
+    const total = Math.abs(ms);
+    const hrs  = Math.floor(total / 3600000);
+    const mins = Math.floor((total % 3600000) / 60000);
+    const secs = Math.floor((total % 60000) / 1000);
+    if (style === 'clock') {
+      const pad = (n) => String(n).padStart(2, '0');
+      return sign + (hrs > 0 ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`);
+    }
+    if (style === 'words') {
+      const parts = [];
+      if (hrs)  parts.push(`${hrs} ${hrs === 1 ? 'hour' : 'hours'}`);
+      if (mins) parts.push(`${mins} ${mins === 1 ? 'minute' : 'minutes'}`);
+      if (!hrs && secs) parts.push(`${secs} ${secs === 1 ? 'second' : 'seconds'}`);
+      return sign + (parts.join(' ') || '0 seconds');
+    }
+    const parts = [];
+    if (hrs)  parts.push(`${hrs}h`);
+    if (mins) parts.push(`${mins}m`);
+    if (!hrs && secs) parts.push(`${secs}s`);
+    return sign + (parts.join(' ') || '0s');
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -415,8 +510,13 @@ registerRenderer('tags',          tags());
 registerRenderer('country-flag',  countryFlag());
 registerRenderer('abn',           abn());
 registerRenderer('avatar',        avatar());
+registerRenderer('date',          date());
+registerRenderer('datetime',      datetime());
+registerRenderer('relative-time', relativeTime());
+registerRenderer('duration',      duration());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
   countryFlag, abn, avatar, statusPill,
+  date, datetime, relativeTime, duration,
 };

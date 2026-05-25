@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>20 — Date renderers | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>20 — Date &amp; time renderers</h1>
+  <p class="lede">
+    Four pre-registered renderers built on the platform's <code>Intl.*</code>
+    APIs: <code>date</code> + <code>datetime</code> for locale-aware
+    formatting, <code>relative-time</code> for "3 days ago" / "in 2 hours"
+    with the absolute timestamp in a hover tooltip, and <code>duration</code>
+    for "2h 14m" / "00:23:45" out of seconds or milliseconds. All four
+    accept a <code>Date</code>, an ISO string, or a millisecond epoch — the
+    same shapes the grid's existing <code>type="date"</code> sort/filter
+    paths handle.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="event"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Event</th>
+          <th data-controller="header-cell" data-header-cell-field-value="started_at"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Started (date)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="started_at_dt"
+              data-header-cell-cell-renderer-value="datetime"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">Started (datetime)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last_seen"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="180">Last seen</th>
+          <th data-controller="header-cell" data-header-cell-field-value="duration_ms"
+              data-header-cell-cell-renderer-value="duration"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Run length</th>
+          <th data-controller="header-cell" data-header-cell-field-value="clock"
+              data-header-cell-cell-renderer-value="duration-clock"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Stopwatch</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Custom variants:</strong> the four renderers above are the
+    pre-registered defaults (US locale, medium date style, compact duration).
+    Register your own at any time —
+    <code>registerRenderer('date-au', renderers.date({ locale: 'en-AU',
+    dateStyle: 'full' }))</code>,
+    <code>registerRenderer('duration-clock', renderers.duration({ unit:
+    'sec', style: 'clock' }))</code>, etc. The <em>Stopwatch</em> column
+    above is one such variant.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // A clock-style duration variant (HH:MM:SS) sourced from seconds.
+    registerRenderer('duration-clock', renderers.duration({ unit: 'sec', style: 'clock' }));
+
+    // Build sample timestamps relative to "now" so the relative-time column
+    // shows a useful spread regardless of when you load the page.
+    const now = Date.now();
+    const min = 60 * 1000, hr = 60 * min, day = 24 * hr;
+    const ROWS = [
+      { id: 1, event: 'Deploy v1.4.0',         started_at: new Date(now - 6 * min).toISOString(),
+        started_at_dt: new Date(now - 6 * min).toISOString(), last_seen: new Date(now - 6 * min).toISOString(),
+        duration_ms: 137000, clock: 137 },
+      { id: 2, event: 'Nightly backup',        started_at: new Date(now - 11 * hr).toISOString(),
+        started_at_dt: new Date(now - 11 * hr).toISOString(), last_seen: new Date(now - 11 * hr).toISOString(),
+        duration_ms: 1830000, clock: 1830 },
+      { id: 3, event: 'Schema migration #43',  started_at: new Date(now - 2 * day).toISOString(),
+        started_at_dt: new Date(now - 2 * day).toISOString(), last_seen: new Date(now - 2 * day).toISOString(),
+        duration_ms: 84000, clock: 84 },
+      { id: 4, event: 'Quarterly report run',  started_at: new Date(now - 16 * day).toISOString(),
+        started_at_dt: new Date(now - 16 * day).toISOString(), last_seen: new Date(now - 16 * day).toISOString(),
+        duration_ms: 4321000, clock: 4321 },
+      { id: 5, event: 'Black Friday surge',    started_at: new Date(now - 175 * day).toISOString(),
+        started_at_dt: new Date(now - 175 * day).toISOString(), last_seen: new Date(now - 175 * day).toISOString(),
+        duration_ms: 18300000, clock: 18300 },
+      { id: 6, event: 'Founding commit',       started_at: new Date(now - 1278 * day).toISOString(),
+        started_at_dt: new Date(now - 1278 * day).toISOString(), last_seen: new Date(now - 1278 * day).toISOString(),
+        duration_ms: 9000, clock: 9 },
+      { id: 7, event: 'Scheduled maintenance', started_at: new Date(now + 3 * day).toISOString(),
+        started_at_dt: new Date(now + 3 * day).toISOString(), last_seen: new Date(now + 3 * day).toISOString(),
+        duration_ms: 0, clock: 0 },
+      { id: 8, event: 'In-flight transaction', started_at: new Date(now - 45 * 1000).toISOString(),
+        started_at_dt: new Date(now - 45 * 1000).toISOString(), last_seen: new Date(now - 45 * 1000).toISOString(),
+        duration_ms: 12, clock: 0 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

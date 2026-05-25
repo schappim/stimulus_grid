@@ -253,6 +253,10 @@ without conflict.
 | `country-flag` | 2-letter ISO codes | Emoji flag + code label |
 | `abn` | Australian Business Numbers | Checksum-validated → ABR lookup link; red on invalid |
 | `avatar` | user references | Image (or initials) + name; reads from `window.__sgUsers`, `row[avatarField]`, or a custom `lookup` function |
+| `date` | dates | `Intl.DateTimeFormat`-formatted; configurable locale + `dateStyle` |
+| `datetime` | dates with time | Date + time via `Intl.DateTimeFormat`; configurable locale / `dateStyle` / `timeStyle` |
+| `relative-time` | timestamps | "3 days ago" / "in 2 hours" via `Intl.RelativeTimeFormat`; absolute timestamp on hover |
+| `duration` | elapsed time | `2h 14m` (compact), `02:14:32` (clock), or `2 hours 14 minutes` (words) from ms / sec / min |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

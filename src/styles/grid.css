@@ -871,6 +871,13 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-invalid { color: #b91c1c; }
 .sg-grid .sg-renderer-mono { font-variant-numeric: tabular-nums; }
 
+/* Relative time — hint at the underlying timestamp via a dotted underline
+   so it's discoverable that hovering reveals the absolute date in title. */
+.sg-grid .sg-renderer-relative-time {
+  border-bottom: 1px dotted var(--sg-fg-muted, #9ca3af);
+  cursor: help;
+}
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

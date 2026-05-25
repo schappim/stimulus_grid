@@ -194,6 +194,9 @@ ship pre-registered:
 | `country-flag` | 2-letter ISO code → emoji + code |
 | `abn` | Australian Business Number; valid → ABR lookup, invalid → red |
 | `avatar` | Image (or initials) + name; reads `window.__sgUsers` by default |
+| `date` / `datetime` | `Intl.DateTimeFormat` — locale + `dateStyle` / `timeStyle` configurable |
+| `relative-time` | "3 days ago" / "in 2 hours"; absolute timestamp on hover |
+| `duration` | `2h 14m` (compact), `02:14:32` (clock), or words; ms/sec/min input |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
