@@ -9232,6 +9232,67 @@ export function jsaStatus() {
  * The cell shapes that hang off "who's working" — trade icons, skill
  * endorsements, subcontractor compliance roll-ups, crew composites. */
 
+/* ---------- crew --------------------------------------------------
+ *
+ * Team / leading hand composite. Shows leading-hand name + tiny avatar
+ * stack of members + a trade-mix line.
+ *
+ *   value: {
+ *     name:    'Crew A',
+ *     leader:  'Astrid Hale',
+ *     members: [{ name, avatar?, initials? }, …],
+ *     trades:  ['Electrician', 'Plumber', …],
+ *   } */
+export function crew({ maxAvatars = 4, avatarSize = 22 } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') return h('span', { class: 'sg-renderer-crew' },
+      document.createTextNode(value));
+    const wrap = h('span', { class: 'sg-renderer-crew' });
+    // Name + leader
+    const head = h('span', { class: 'sg-renderer-crew-head' });
+    if (value.name) head.append(h('span', { class: 'sg-renderer-crew-name' },
+      document.createTextNode(String(value.name))));
+    if (value.leader) head.append(h('span', { class: 'sg-renderer-crew-leader' },
+      document.createTextNode(`led by ${value.leader}`)));
+    wrap.append(head);
+    // Avatar stack
+    if (Array.isArray(value.members) && value.members.length) {
+      const stack = h('span', { class: 'sg-renderer-crew-stack' });
+      const visible = value.members.slice(0, maxAvatars);
+      for (const m of visible) {
+        const initials = m.initials || (m.name ? m.name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : '?');
+        const avatar = h('span', {
+          class: 'sg-renderer-crew-avatar',
+          style: `width:${avatarSize}px;height:${avatarSize}px;font-size:${Math.round(avatarSize * 0.45)}px;background:hsl(${hashName(m.name || initials) % 360},55%,55%);`,
+          title: m.name || initials,
+        });
+        if (m.avatar) {
+          avatar.append(h('img', { src: m.avatar, alt: m.name || initials,
+            style: `width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;display:block;` }));
+        } else {
+          avatar.append(document.createTextNode(initials));
+        }
+        stack.append(avatar);
+      }
+      const overflow = value.members.length - visible.length;
+      if (overflow > 0) {
+        stack.append(h('span', {
+          class: 'sg-renderer-crew-avatar is-overflow',
+          style: `width:${avatarSize}px;height:${avatarSize}px;font-size:${Math.round(avatarSize * 0.4)}px;`,
+        }, document.createTextNode(`+${overflow}`)));
+      }
+      wrap.append(stack);
+    }
+    // Trade mix
+    if (Array.isArray(value.trades) && value.trades.length) {
+      wrap.append(h('span', { class: 'sg-renderer-crew-trades' },
+        document.createTextNode(value.trades.join(' · '))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- subcontractor -----------------------------------------
  *
  * Composite "can we send this sub today?" roll-up. Combines licence /
@@ -10479,6 +10540,7 @@ registerRenderer('site-induction',    siteInduction());
 registerRenderer('trade-type',        tradeType());
 registerRenderer('skill-endorsement', skillEndorsement());
 registerRenderer('subcontractor',     subcontractor());
+registerRenderer('crew',              crew());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11072,6 +11134,7 @@ wireBuiltin('site-induction', clip.json);
 wireBuiltin('trade-type',     clip.text);
 wireBuiltin('skill-endorsement', clip.json);
 wireBuiltin('subcontractor',  clip.json);
+wireBuiltin('crew',           clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11111,5 +11174,5 @@ export const renderers = {
   retention, materialsPick,
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
-  tradeType, skillEndorsement, subcontractor,
+  tradeType, skillEndorsement, subcontractor, crew,
 };

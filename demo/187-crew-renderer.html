@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>187 — Crew | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>187 — Crew (leading hand + avatar stack + trade mix)</h1>
+  <p class="lede">
+    Team composite. Leading-hand name on the left, overlapping avatar
+    stack in the middle (auto-coloured by name hash), trade-mix caption
+    on the right.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="180">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="crew"
+              data-header-cell-cell-renderer-value="crew"
+              data-header-cell-width-value="420">Crew</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, site: 'Bondi Tower', crew: {
+        name: 'Crew A', leader: 'Astrid Hale',
+        members: [
+          { name: 'Astrid Hale'  }, { name: 'Marcus Chen' },
+          { name: 'Priya Patel' }, { name: 'Jamal Owens' },
+        ],
+        trades: ['Electrician', 'Plumber', 'Carpenter'],
+      } },
+      { id: 2, site: 'Vega Fitout', crew: {
+        name: 'Crew B', leader: 'Lena Brooks',
+        members: [
+          { name: 'Lena Brooks' }, { name: 'Tomás Vega' },
+          { name: 'Carlos Ng' },   { name: 'Eli Patel' },
+          { name: 'Mia Singh' },   { name: 'Yusuf Owens' },
+        ],
+        trades: ['Carpenter', 'Painter', 'Tiler'],
+      } },
+      { id: 3, site: 'Coogee Holdings', crew: {
+        name: 'Crew C', leader: 'Olivia Brooks',
+        members: [{ name: 'Olivia Brooks' }, { name: 'Sergio Vega' }],
+        trades: ['Roofer'],
+      } },
+      { id: 4, site: 'Manly Reno', crew: 'Solo — Marcus Chen' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

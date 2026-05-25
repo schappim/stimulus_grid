@@ -4832,6 +4832,48 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-weight: 600;
 }
 
+/* Crew — leading-hand name + avatar stack + trade-mix line. */
+.sg-grid .sg-renderer-crew {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-crew-head {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.sg-grid .sg-renderer-crew-name { font-weight: 600; color: #1f2937; }
+.sg-grid .sg-renderer-crew-leader { font-size: 10px; color: #6b7280; }
+.sg-grid .sg-renderer-crew-stack {
+  display: inline-flex;
+  align-items: center;
+}
+.sg-grid .sg-renderer-crew-stack .sg-renderer-crew-avatar + .sg-renderer-crew-avatar {
+  margin-left: -6px;
+}
+.sg-grid .sg-renderer-crew-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+.sg-grid .sg-renderer-crew-avatar.is-overflow {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+.sg-grid .sg-renderer-crew-trades {
+  font-size: 11px;
+  color: #6b7280;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
