@@ -4803,6 +4803,35 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-skill-endorsement-name { color: #1f2937; }
 .sg-grid .sg-renderer-skill-endorsement-issuer { color: #6b7280; font-size: 11px; }
 
+/* Subcontractor — compliance-roll-up pill with ✓/⚠/✗. */
+.sg-grid .sg-renderer-subcontractor {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-subcontractor-icon {
+  font-size: 13px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-subcontractor-icon.is-ok   { background: #dcfce7; color: #14532d; }
+.sg-grid .sg-renderer-subcontractor-icon.is-warn { background: #fed7aa; color: #7c2d12; }
+.sg-grid .sg-renderer-subcontractor-icon.is-fail { background: #fecaca; color: #7f1d1d; }
+.sg-grid .sg-renderer-subcontractor-name { color: #1f2937; font-weight: 500; }
+.sg-grid .sg-renderer-subcontractor-fail {
+  color: #7f1d1d;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

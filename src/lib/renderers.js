@@ -9232,6 +9232,43 @@ export function jsaStatus() {
  * The cell shapes that hang off "who's working" — trade icons, skill
  * endorsements, subcontractor compliance roll-ups, crew composites. */
 
+/* ---------- subcontractor -----------------------------------------
+ *
+ * Composite "can we send this sub today?" roll-up. Combines licence /
+ * insurance / SWMS / induction flags into a single ✓ / ⚠ / ✗ pill,
+ * with the name as primary text and the failing-thing as a caption.
+ *
+ *   value: {
+ *     name: 'Bondi Roofing Pty Ltd',
+ *     abn: '53004085616',
+ *     licence:   true,                 // OK?
+ *     insurance: true,
+ *     swms:      false,                // ← red flag
+ *     induction: true,
+ *   } */
+export function subcontractor() {
+  const FLAGS = ['licence', 'insurance', 'swms', 'induction'];
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') return h('span', { class: 'sg-renderer-subcontractor' },
+      document.createTextNode(value));
+    const failed = FLAGS.filter((k) => value[k] === false);
+    const ok = failed.length === 0;
+    const wrap = h('span', { class: 'sg-renderer-subcontractor' });
+    const icon = h('span', {
+      class: `sg-renderer-subcontractor-icon ${ok ? 'is-ok' : failed.length === 1 ? 'is-warn' : 'is-fail'}`,
+      title: ok ? 'All compliance flags OK'
+                : `Missing: ${failed.join(', ')}`,
+    }, document.createTextNode(ok ? '✓' : failed.length === 1 ? '⚠' : '✗'));
+    wrap.append(icon);
+    if (value.name) wrap.append(h('span', { class: 'sg-renderer-subcontractor-name' },
+      document.createTextNode(String(value.name))));
+    if (!ok) wrap.append(h('span', { class: 'sg-renderer-subcontractor-fail' },
+      document.createTextNode(`needs: ${failed.join(', ')}`)));
+    return wrap;
+  };
+}
+
 /* ---------- skill-endorsement -------------------------------------
  *
  * A holder × competency record with an optional expiry. Shows the skill
@@ -10441,6 +10478,7 @@ registerRenderer('hazard-rating',     hazardRating());
 registerRenderer('site-induction',    siteInduction());
 registerRenderer('trade-type',        tradeType());
 registerRenderer('skill-endorsement', skillEndorsement());
+registerRenderer('subcontractor',     subcontractor());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11033,6 +11071,7 @@ wireBuiltin('hazard-rating',  clip.json);
 wireBuiltin('site-induction', clip.json);
 wireBuiltin('trade-type',     clip.text);
 wireBuiltin('skill-endorsement', clip.json);
+wireBuiltin('subcontractor',  clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11072,5 +11111,5 @@ export const renderers = {
   retention, materialsPick,
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
-  tradeType, skillEndorsement,
+  tradeType, skillEndorsement, subcontractor,
 };
