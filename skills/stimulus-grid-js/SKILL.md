@@ -202,6 +202,7 @@ ship pre-registered:
 | `delta` | Signed % / number / currency with up/down arrow + green/red; `{ inverted: true }` for churn-style columns where positive is bad |
 | `truncate` | Single-line ellipsis at cell width, full value in `title=`; `{ chars: N }` clips by character count |
 | `copyable` | Value + tiny copy-to-clipboard button (appears on row hover); confirms with a brief green check |
+| `image` | Inline thumbnail; configurable size + `rounded`; `{ clickToZoom: true }` opens a centred overlay |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

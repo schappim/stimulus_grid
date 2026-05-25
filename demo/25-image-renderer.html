@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>25 — Image renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>25 — Image renderer</h1>
+  <p class="lede">
+    Inline thumbnails — pass the URL as the cell value; the renderer
+    handles <code>loading="lazy"</code>, sensible alt text (from
+    <code>row[altField]</code>), and rounded corners. Pass
+    <code>{ clickToZoom: true }</code> for a lightweight click-to-zoom
+    overlay (no library, closes on click / Escape). Three pre-registered
+    variants below: default 36px square thumbnails, a 56px rounded
+    avatar-style column, and a 36px click-to-zoom product thumbnail.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="64"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="product"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="240">Product</th>
+          <th data-controller="header-cell" data-header-cell-field-value="thumb_default"
+              data-header-cell-cell-renderer-value="image"
+              data-header-cell-width-value="80">Thumb</th>
+          <th data-controller="header-cell" data-header-cell-field-value="avatar_round"
+              data-header-cell-cell-renderer-value="image-avatar"
+              data-header-cell-width-value="100">Designer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="zoom_thumb"
+              data-header-cell-cell-renderer-value="image-zoom"
+              data-header-cell-width-value="100">Zoom</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="160">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="price"
+              data-header-cell-cell-renderer-value="currency"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="100">Price</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong> click any swatch in the <em>Zoom</em> column
+    — the image opens in a centred overlay; click anywhere or press
+    Escape to close. The <em>Designer</em> column is
+    <code>image({ size: 56, rounded: 'full' })</code> — circular avatars
+    sized for a comfy 64 px row height. <em>Thumb</em> is the bare
+    pre-registered default.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('image-avatar', renderers.image({ size: 56, rounded: 'full' }));
+    registerRenderer('image-zoom',   renderers.image({ size: 40, rounded: 'lg', clickToZoom: true }));
+
+    // SVG data URIs so the demo + screenshot work offline. Real apps would
+    // pass URLs to ActiveStorage variants, CDN paths, Cloudinary, etc.
+    const swatch = (bg, fg, label) =>
+      `data:image/svg+xml;utf8,` + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+           <rect width="64" height="64" fill="${bg}"/>
+           <text x="32" y="38" font-family="system-ui" font-size="22" font-weight="700"
+                 fill="${fg}" text-anchor="middle">${label}</text>
+         </svg>`);
+
+    const portrait = (bg, fg, initials) =>
+      `data:image/svg+xml;utf8,` + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+           <rect width="64" height="64" fill="${bg}"/>
+           <circle cx="32" cy="26" r="10" fill="${fg}"/>
+           <path d="M16 60 c0-10 8-16 16-16 s16 6 16 16" fill="${fg}"/>
+           <text x="32" y="14" font-family="system-ui" font-size="10" font-weight="600"
+                 fill="${fg}" text-anchor="middle" opacity="0.6">${initials}</text>
+         </svg>`);
+
+    const ROWS = [
+      { id: 1, product: 'Tea ceremony set',     thumb_default: swatch('#fef3c7', '#92400e', 'T'),
+        avatar_round: portrait('#fee2e2', '#7f1d1d', 'AH'), zoom_thumb: swatch('#fef3c7', '#92400e', 'T'),
+        sku: 'TEA-CER-04A', price: 89.00, alt: 'Tea ceremony set' },
+      { id: 2, product: 'Ceramic bowl · navy',  thumb_default: swatch('#dbeafe', '#1e3a8a', 'B'),
+        avatar_round: portrait('#fce7f3', '#831843', 'PP'), zoom_thumb: swatch('#dbeafe', '#1e3a8a', 'B'),
+        sku: 'BWL-NVY-12L', price: 38.00, alt: 'Ceramic bowl, navy' },
+      { id: 3, product: 'Linen apron',          thumb_default: swatch('#dcfce7', '#14532d', 'A'),
+        avatar_round: portrait('#dcfce7', '#14532d', 'TV'), zoom_thumb: swatch('#dcfce7', '#14532d', 'A'),
+        sku: 'APR-LIN-OAT', price: 64.00, alt: 'Linen apron' },
+      { id: 4, product: 'Walnut cutting board', thumb_default: swatch('#fde68a', '#7c2d12', 'C'),
+        avatar_round: portrait('#fef9c3', '#854d0e', 'JO'), zoom_thumb: swatch('#fde68a', '#7c2d12', 'C'),
+        sku: 'CBD-WAL-LRG', price: 124.00, alt: 'Walnut cutting board, large' },
+      { id: 5, product: 'Stoneware mug',        thumb_default: swatch('#e0e7ff', '#312e81', 'M'),
+        avatar_round: portrait('#e0e7ff', '#312e81', 'MC'), zoom_thumb: swatch('#e0e7ff', '#312e81', 'M'),
+        sku: 'MUG-STN-WHT', price: 22.00, alt: 'Stoneware mug, white' },
+      { id: 6, product: 'Brass coffee scoop',   thumb_default: swatch('#fef9c3', '#713f12', 'S'),
+        avatar_round: portrait('#fce7f3', '#831843', 'LB'), zoom_thumb: swatch('#fef9c3', '#713f12', 'S'),
+        sku: 'SCP-BRS-001', price: 14.00, alt: 'Brass coffee scoop' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -264,6 +264,7 @@ without conflict.
 | `delta` | WoW / MoM / change | Signed value with up/down arrow + green/red text; `style: 'percent'` (default) / `'number'` / `'currency'`; `{ inverted: true }` flips colours for churn/error-rate columns |
 | `truncate` | long text | Single-line ellipsis at the cell width, full value in `title=`; pass `{ chars: 60 }` to clip by character count instead |
 | `copyable` | IDs / tokens / handles | Value + tiny copy-to-clipboard button (visible on row hover); flips to a check mark briefly on copy |
+| `image` | thumbnails | Inline thumbnail (`loading="lazy"`, `decoding="async"`); `size`, `rounded: 'sm'/'lg'/'full'/'none'`, optional `clickToZoom` overlay (closes on click or Escape) |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

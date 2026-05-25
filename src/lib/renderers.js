@@ -478,6 +478,60 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
+/* ---------- image (thumbnail) --------------------------------------- */
+
+// Small inline thumbnail. The cell value is the image URL; `alt` is read
+// from `row[altField]` (default 'alt') so screen readers get meaningful
+// text. Pass `clickToZoom: true` for a lightweight click → centred
+// fullscreen overlay (close with click or Escape) — no library, no
+// portal, no React.
+export function image({
+  size = 36,
+  rounded = 'sm',                  // 'sm' = 4px, 'lg' = 8px, 'full' = circle, 'none'
+  altField = 'alt',
+  clickToZoom = false,
+} = {}) {
+  const radius = rounded === 'full' ? '999px'
+               : rounded === 'lg'   ? '8px'
+               : rounded === 'none' ? '0'
+               : '4px';
+  return ({ value, row }) => {
+    if (isBlank(value)) return '';
+    const src = String(value);
+    const alt = row?.[altField] ?? '';
+    const img = h('img', {
+      src,
+      alt,
+      class: 'sg-renderer-image',
+      width: String(size),
+      height: String(size),
+      style: `border-radius: ${radius};`,
+      loading: 'lazy',
+      decoding: 'async',
+    });
+    if (!clickToZoom) return img;
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openImageZoom(src, alt);
+    });
+    return img;
+  };
+}
+
+function openImageZoom(src, alt) {
+  const overlay = h('div', { class: 'sg-image-zoom' });
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  overlay.append(h('img', { src, alt: alt || '', class: 'sg-image-zoom-img' }));
+  document.body.appendChild(overlay);
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -759,6 +813,7 @@ registerRenderer('boolean',        boolean());
 registerRenderer('delta',          delta());
 registerRenderer('truncate',       truncate());
 registerRenderer('copyable',       copyable());
+registerRenderer('image',          image());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -766,5 +821,5 @@ export const renderers = {
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
   boolean, delta,
-  truncate, copyable,
+  truncate, copyable, image,
 };

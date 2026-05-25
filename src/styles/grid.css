@@ -954,6 +954,38 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-copyable-btn.is-copied { color: #10b981; opacity: 1; }
 
+/* Image — small inline thumbnail. Subtle border so light images still
+   have an edge against a white cell background; cursor flips to
+   zoom-in when clickToZoom is enabled. */
+.sg-grid .sg-renderer-image {
+  display: inline-block;
+  object-fit: cover;
+  border: 1px solid var(--sg-border, #e5e7eb);
+  vertical-align: middle;
+}
+
+/* Zoom overlay — opened by image({clickToZoom: true}). Click anywhere
+   or press Escape to close. Lives directly on <body>, not inside the
+   grid, so the table layout never sees it. */
+.sg-image-zoom {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: zoom-out;
+  animation: sg-image-zoom-in 0.12s ease;
+}
+.sg-image-zoom-img {
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+@keyframes sg-image-zoom-in { from { opacity: 0; } to { opacity: 1; } }
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;
