@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>170 — Signature | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>170 — Signature (customer sign-off preview)</h1>
+  <p class="lede">
+    Inline signature thumbnail — 80×32 by default, click to open full
+    image. Optional <code>signedBy</code> / <code>signedAt</code> render
+    as a two-line meta block on the right.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sig"
+              data-header-cell-cell-renderer-value="signature"
+              data-header-cell-width-value="260">Signature</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Inline SVG-as-data-URI signatures (so the demo works offline).
+    const sig = (name) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 50'>` +
+      `<path d='M5 35 q15 -25 30 -10 q20 25 40 5 q25 -25 50 0 q15 12 30 -5' ` +
+      `stroke='%23111827' stroke-width='2.4' fill='none' stroke-linecap='round'/>` +
+      `<text x='20' y='48' font-family='cursive' font-size='8' fill='%23374151'>${name}</text></svg>`
+    );
+
+    const ROWS = [
+      { id: 1, ref: 'J-1042', customer: 'Bondi Pavilion',  sig: { url: sig('Astrid H.'),  signedBy: 'Astrid Hale',  signedAt: '2026-05-24' } },
+      { id: 2, ref: 'J-1043', customer: 'Vega Studio',     sig: { url: sig('Marcus C.'),  signedBy: 'Marcus Chen',  signedAt: '2026-05-23' } },
+      { id: 3, ref: 'J-1044', customer: 'Coogee Holdings', sig: { url: sig('Priya P.'),   signedBy: 'Priya Patel',  signedAt: '2026-05-23' } },
+      { id: 4, ref: 'J-1045', customer: 'Manly Reno Co',   sig: null },
+      { id: 5, ref: 'J-1046', customer: 'Glebe Builders',  sig: { url: sig('Jamal O.'),   signedBy: 'Jamal Owens',  signedAt: '2026-05-22' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

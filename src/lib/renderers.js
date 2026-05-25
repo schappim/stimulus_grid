@@ -9197,6 +9197,48 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- signature ---------------------------------------------
+ *
+ * Customer sign-off image preview. Value: URL string, or
+ * `{ url, signedBy, signedAt }`. Renders as a compact 80×32 thumbnail
+ * with the signer's name + timestamp underneath (when supplied).
+ *
+ * Click the thumb to open the full image in a new tab (or wire your
+ * own preview behaviour via `onClick`). */
+export function signature({ width = 80, height = 32 } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return h('span', { class: 'sg-renderer-signature is-empty' },
+      document.createTextNode('— unsigned —'));
+    const v = typeof value === 'string' ? { url: value } : value;
+    if (!v.url) return '';
+    const wrap = h('span', { class: 'sg-renderer-signature' });
+    const link = h('a', {
+      class: 'sg-renderer-signature-link', href: v.url,
+      target: '_blank', rel: 'noopener noreferrer',
+      title: 'Open signature',
+    });
+    link.append(h('img', {
+      class: 'sg-renderer-signature-img', src: v.url,
+      width, height, alt: v.signedBy ? `Signed by ${v.signedBy}` : 'Signature',
+    }));
+    wrap.append(link);
+    if (v.signedBy || v.signedAt) {
+      const meta = h('span', { class: 'sg-renderer-signature-meta' });
+      if (v.signedBy) meta.append(h('span', { class: 'sg-renderer-signature-by' },
+        document.createTextNode(String(v.signedBy))));
+      if (v.signedAt) {
+        const d = new Date(v.signedAt);
+        const fmt = Number.isNaN(d.valueOf()) ? String(v.signedAt)
+          : `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
+        meta.append(h('span', { class: 'sg-renderer-signature-when' },
+          document.createTextNode(fmt)));
+      }
+      wrap.append(meta);
+    }
+    return wrap;
+  };
+}
+
 /* ---------- defect / snag -----------------------------------------
  *
  * Snag-list item. Severity pill + short description.
@@ -9645,6 +9687,7 @@ registerRenderer('progress-claim',    progressClaim());
 registerRenderer('variation',         variation());
 registerRenderer('defect',            defect());
 registerRenderer('snag',              defect());      // alias — same shape, different vocabulary
+registerRenderer('signature',         signature());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10221,6 +10264,7 @@ wireBuiltin('progress-claim', clip.json);
 wireBuiltin('variation',      clip.json);
 wireBuiltin('defect',         clip.json);
 wireBuiltin('snag',           clip.json);
+wireBuiltin('signature',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10256,5 +10300,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation, defect,
+  variation, defect, signature,
 };
