@@ -900,6 +900,25 @@ export default class GridController extends Controller {
       colNode.style.width = col.width ? col.width + 'px' : '';
     });
     while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
+
+    // When every visible column has an explicit width, set the table's own
+    // width to the sum so the columns render at exactly the declared sizes.
+    // Without this, `table-layout: fixed` + `width: 100%` distributes any
+    // leftover space (container width minus sum of declared widths) across
+    // every column proportionally — a 120 px column ends up ~155 px wide
+    // because the panel is wider than the table content needs. With width
+    // set to the sum, narrow tables sit at their natural size inside the
+    // viewport and wide ones scroll horizontally (sg-body-viewport is
+    // already overflow:auto). If any column lacks an explicit width the
+    // browser still needs the slack to absorb auto-sized cells, so we
+    // fall back to width:100% in that case.
+    const anyAuto = visible.some((c) => !c.width);
+    if (anyAuto) {
+      this._table.style.width = '100%';
+    } else {
+      const sum = visible.reduce((acc, c) => acc + (Number(c.width) || 0), 0);
+      this._table.style.width = sum + 'px';
+    }
   }
 
   _renderHeaderSingleRow(visible) {

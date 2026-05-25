@@ -2163,10 +2163,16 @@ class X extends P {
     let t = this._table.querySelector("colgroup");
     t || (t = f("colgroup"), this._table.insertBefore(t, this._thead));
     const s = Array.from(t.children);
-    for (e.forEach((i, l) => {
-      let o = s[l];
-      o || (o = f("col"), t.appendChild(o)), o.style.width = i.width ? i.width + "px" : "";
+    for (e.forEach((l, o) => {
+      let a = s[o];
+      a || (a = f("col"), t.appendChild(a)), a.style.width = l.width ? l.width + "px" : "";
     }); t.children.length > e.length; ) t.lastElementChild.remove();
+    if (e.some((l) => !l.width))
+      this._table.style.width = "100%";
+    else {
+      const l = e.reduce((o, a) => o + (Number(a.width) || 0), 0);
+      this._table.style.width = l + "px";
+    }
   }
   _renderHeaderSingleRow(e) {
     if (this._thead.children.length > 1) {
