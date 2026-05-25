@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>178 — JSA status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>178 — JSA status (Job Safety Analysis)</h1>
+  <p class="lede">
+    Lighter-weight cousin of <a href="./177-swms-status-renderer.html">
+    SWMS</a> — a pre-task hazard walkthrough done with the crew before
+    starting. Values: <em>open</em> / <em>in-progress</em> /
+    <em>completed</em> / <em>approved</em> / <em>not-required</em>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-width-value="240">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="jsa"
+              data-header-cell-cell-renderer-value="jsa-status"
+              data-header-cell-width-value="200">JSA</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, ref: 'J-1042', task: 'Wet pour — first morning',  jsa: 'approved' },
+      { id: 2, ref: 'J-1043', task: 'Roof tile lift',             jsa: 'completed' },
+      { id: 3, ref: 'J-1044', task: 'Slab cut',                   jsa: 'in-progress' },
+      { id: 4, ref: 'J-1045', task: 'Trench shoring',             jsa: 'open' },
+      { id: 5, ref: 'J-1046', task: 'Light fitting swap',         jsa: 'not-required' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

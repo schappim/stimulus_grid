@@ -9215,6 +9215,18 @@ export function swmsStatus() {
   });
 }
 
+// Job Safety Analysis state — pre-task hazard walkthrough record.
+//   value: 'completed' | 'in-progress' | 'open' | 'approved' | 'not-required'
+export function jsaStatus() {
+  return statusPill({
+    completed: 'green', approved: 'green', 'in-progress': 'blue',
+    open: 'orange', 'not-required': 'gray',
+  }, {
+    completed: 'check-circle', approved: 'check-circle', 'in-progress': 'clock',
+    open: 'alert', 'not-required': 'circle',
+  });
+}
+
 /* ---------- materials-pick ----------------------------------------
  *
  * Materials pick-list line. Value:
@@ -10199,6 +10211,7 @@ registerRenderer('invoice-status',    invoiceStatus());
 registerRenderer('retention',         retention());
 registerRenderer('materials-pick',    materialsPick());
 registerRenderer('swms-status',       swmsStatus());
+registerRenderer('jsa-status',        jsaStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10783,6 +10796,7 @@ wireBuiltin('invoice-status', clip.text);
 wireBuiltin('retention',      clip.json);
 wireBuiltin('materials-pick', clip.json);
 wireBuiltin('swms-status',    clip.text);
+wireBuiltin('jsa-status',     clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10820,5 +10834,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
-  swmsStatus,
+  swmsStatus, jsaStatus,
 };
