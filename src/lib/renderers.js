@@ -2878,6 +2878,63 @@ export function time({
   };
 }
 
+/* ---------- diff (old → new) ----------------------------------------
+ *
+ * Audit-log and change-history columns. Accepts:
+ *
+ *   { from, to }   /  { old, new }  /  { before, after }  /  { previous, current }
+ *   [from, to]
+ *   "from → to"    (also accepts `->`, `=>`, `—>` arrows)
+ *
+ *   <th data-header-cell-cell-renderer-value="diff">Change</th>
+ *
+ * One-sided diffs (null on either side) render as a single coloured
+ * value with a `+ ` / `− ` prefix — saves emitting a confusing
+ * "null → new" / "old → null". Pass `style: 'stacked'` for vertically
+ * stacked from / to rows. */
+function parseDiffValue(value) {
+  if (Array.isArray(value)) return { from: value[0], to: value[1] };
+  if (value && typeof value === 'object') {
+    return {
+      from: value.from ?? value.old    ?? value.before ?? value.previous ?? null,
+      to:   value.to   ?? value.new    ?? value.after  ?? value.current  ?? null,
+    };
+  }
+  const s = String(value);
+  const m = /^(.*?)\s*(?:→|->|=>|—>)\s*(.+)$/.exec(s);
+  if (m) return { from: m[1].trim(), to: m[2].trim() };
+  return { from: null, to: s };
+}
+
+export function diff({
+  style = 'inline',                // 'inline' | 'stacked'
+  arrow = '→',
+  showArrow = true,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const { from, to } = parseDiffValue(value);
+    const blank = (v) => v == null || v === '';
+    if (blank(from) && blank(to)) return '';
+    if (blank(from)) {
+      return h('span', { class: 'sg-renderer-diff is-added' },
+        h('span', { class: 'sg-diff-to' }, document.createTextNode(String(to))));
+    }
+    if (blank(to)) {
+      return h('span', { class: 'sg-renderer-diff is-removed' },
+        h('span', { class: 'sg-diff-from' }, document.createTextNode(String(from))));
+    }
+    const wrap = h('span', { class: `sg-renderer-diff is-${style}` });
+    wrap.append(h('span', { class: 'sg-diff-from' }, document.createTextNode(String(from))));
+    if (showArrow) {
+      wrap.append(h('span', { class: 'sg-diff-arrow', 'aria-hidden': 'true' },
+        document.createTextNode(arrow)));
+    }
+    wrap.append(h('span', { class: 'sg-diff-to' }, document.createTextNode(String(to))));
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2920,6 +2977,7 @@ registerRenderer('json',           json());
 registerRenderer('linked-record',  linkedRecord());
 registerRenderer('coloured-tags',  colouredTags());
 registerRenderer('time',           time());
+registerRenderer('diff',           diff());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2931,5 +2989,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  audioAttachment,
+  diff, audioAttachment,
 };

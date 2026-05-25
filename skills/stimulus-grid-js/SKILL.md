@@ -227,6 +227,7 @@ ship pre-registered:
 | `linked-record` | Airtable-style FK chip — value is a key, resolver returns `{ name, thumb?, color?, href? }`. Same three-step lookup chain as `avatar` (function → window map → fallback). Per-entry `color` tints the chip background; `href` (string from entry or via `href: (val,row,entry) ⇒ url`) makes it an `<a>` opening in a new tab. `multiple: true` for array-of-keys columns (one chip per key) |
 | `coloured-tags` | Sibling of `tags` with per-value colour mapping. `colorMap: { p0: 'red', p1: 'orange', … }` keys lower-cased before lookup. Palette names (`gray`/`red`/`orange`/`yellow`/`green`/`blue`/`indigo`/`purple`/`pink`) hit the `.sg-pill-*` tokens; raw CSS colours (`#hex`, etc.) tint inline with auto-readable foreground |
 | `time` | Time-of-day-only sibling to `date` / `datetime`. Accepts `"HH:MM"`, `"HH:MM:SS"`, a full ISO timestamp, a `Date`, or seconds-since-midnight. `style: '12h'` switches to AM/PM via `Intl`; `seconds: true` adds the trailing `:SS` block |
+| `diff` | Audit-log before/after. Accepts `{ from, to }` (also `{ old, new }`, `{ before, after }`, `{ previous, current }`), `[from, to]`, or a `"from → to"` string. Inline = single line, `style: 'stacked'` for two-line. One-sided changes render as a `+ added` (green) or `− removed` (red strikethrough) without the arrow |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

@@ -2058,6 +2058,12 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   position: absolute;
   top: 50%;
   left: 0%;
+  /* Without `box-sizing: border-box`, the 2px border adds to the 14px
+     width/height — the rendered thumb is 18px while the negative margins
+     assume 14px, leaving the thumb misaligned (sitting below the track
+     centreline). border-box keeps the rendered diameter at 14px so
+     margin-top:-7px / margin-left:-7px centres it exactly. */
+  box-sizing: border-box;
   width: 14px;
   height: 14px;
   margin-left: -7px;
@@ -2123,11 +2129,22 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-audio-play:hover { background: #4f46e5; transform: scale(1.03); }
 .sg-audio-play:active { transform: scale(0.97); }
-.sg-audio-play svg { width: 16px; height: 16px; }
-/* The pause icon has a wider aspect ratio than the play triangle —
-   nudge it slightly smaller so the two centre identically in the same
-   button frame. */
-.sg-audio-play[data-state="playing"] svg { width: 14px; height: 14px; }
+.sg-audio-play svg {
+  width: 16px; height: 16px;
+  /* Optical centring: a right-pointing play triangle's visual mass sits
+     on its wide left edge, with the apex extending to the right of the
+     icon's geometric centre. Centring the SVG bounding box leaves the
+     triangle looking off — every player UI ever ships a small right-ward
+     nudge to compensate. */
+  transform: translateX(1.5px);
+}
+/* The pause icon is two symmetric bars — it shouldn't carry the
+   right-nudge, and its viewBox is narrower than play's so we shrink it
+   slightly to match the play triangle's visual weight in the same button. */
+.sg-audio-play[data-state="playing"] svg {
+  width: 14px; height: 14px;
+  transform: none;
+}
 
 /* Markdown renderer — inline + lightweight block-level Markdown. Cell
    tops align with the row's other cells via the .sg-has-multiline class
@@ -2293,4 +2310,40 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+/* Diff renderer — old → new. Inline form: from (strikethrough red),
+   arrow (muted), to (green). Stacked form: from above, to below, no
+   arrow. One-sided diffs (added / removed only) get a +/− prefix. */
+.sg-grid .sg-renderer-diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sg-grid .sg-renderer-diff.is-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.sg-grid .sg-renderer-diff.is-stacked .sg-diff-arrow { display: none; }
+.sg-grid .sg-diff-from {
+  color: #b91c1c;                       /* red-700 */
+  text-decoration: line-through;
+  text-decoration-color: rgba(185, 28, 28, 0.5);
+}
+.sg-grid .sg-diff-to {
+  color: #047857;                       /* emerald-700 */
+}
+.sg-grid .sg-diff-arrow {
+  color: var(--sg-fg-muted, #9ca3af);
+  font-weight: 500;
+}
+.sg-grid .sg-renderer-diff.is-added .sg-diff-to::before {
+  content: '+ ';
+  font-weight: 600;
+}
+.sg-grid .sg-renderer-diff.is-removed .sg-diff-from::before {
+  content: '− ';
+  font-weight: 600;
 }

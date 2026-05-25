@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>43 — Diff renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>43 — Diff renderer (old → new)</h1>
+  <p class="lede">
+    Audit log columns where the cell value is the before/after pair.
+    Accepts <code>{ from, to }</code>, <code>[from, to]</code>, or a
+    plain <code>"old → new"</code> string. Inline form is one line; pass
+    <code>style: 'stacked'</code> for the vertically stacked layout.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="field"
+              data-header-cell-width-value="180"
+              data-header-cell-sortable-value="true">Field</th>
+          <th data-controller="header-cell" data-header-cell-field-value="change"
+              data-header-cell-cell-renderer-value="diff"
+              data-header-cell-width-value="300">Change (inline)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="change"
+              data-header-cell-cell-renderer-value="diff-stacked"
+              data-header-cell-width-value="220">Change (stacked)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="actor"
+              data-header-cell-width-value="160">Actor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="at"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="140">When</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>One-sided diffs:</strong> a null <code>from</code> renders as
+    a green addition prefixed with <code>+</code>; a null <code>to</code>
+    renders as a red removal prefixed with <code>−</code>. Cleaner than
+    "<code>null → new</code>" in an audit log.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('diff-stacked', renderers.diff({ style: 'stacked' }));
+
+    const now = Date.now();
+    const ago = (mins) => new Date(now - mins * 60_000).toISOString();
+
+    const ROWS = [
+      { id: 1, field: 'order.total',         change: { from: '$240.00', to: '$248.00' },
+        actor: 'Priya Patel',  at: ago(2) },
+      { id: 2, field: 'order.shipping_method', change: ['standard', 'express'],
+        actor: 'Astrid Hale',  at: ago(7) },
+      { id: 3, field: 'feature_flag.recsys_v3', change: 'false → true',
+        actor: 'Marcus Chen',  at: ago(18) },
+      { id: 4, field: 'customer.tags',       change: { from: 'enterprise,vip', to: 'enterprise,vip,beta' },
+        actor: 'Tomás Vega',   at: ago(30) },
+      { id: 5, field: 'note',                change: { from: null, to: 'Customer wants priority shipping' },
+        actor: 'Lena Brooks',  at: ago(45) },
+      { id: 6, field: 'note (deleted)',      change: { from: 'Legacy migration TODO', to: null },
+        actor: 'Jamal Owens',  at: ago(120) },
+      { id: 7, field: 'subscription.plan',   change: { previous: 'starter', current: 'pro' },
+        actor: 'Mei Tanaka',   at: ago(220) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
