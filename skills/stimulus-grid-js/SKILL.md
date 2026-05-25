@@ -332,16 +332,27 @@ the currently filtered leaves; it's suppressed in pivot mode because the
 `grid:columnGroupsChanged` (`{columnGroups}`). v1 limits user-declared
 groups to one level; pivot-derived groups can be arbitrarily deep.
 
-## Right-click column menu & persisted state
+## Right-click column menu
 
-**Right-click any leaf header** opens a popup with: Pin left/right/Unpin,
-Autosize, Group/Ungroup, Pivot/Unpivot, Aggregate (sum/avg/count/min/max
-with the active one marked `✓`) and Remove aggregation, Hide column, Show
-all columns. Items only appear when they make sense for the col + grid
-state. Synthetic cols (gutter, checkbox, auto-Group, pivot result) don't
-get the menu. Event: `grid:columnMenuOpened` (`{colId}`).
+Right-click any leaf header for a popup with pin / autosize / group /
+pivot / aggregate / hide. Always on; no setup attribute. Items appear
+only when they make sense for that col + the current grid state:
 
-`data-grid-persist-key-value` enables auto-save/restore through
+- Pin left / Pin right / Unpin
+- Autosize this column / Autosize all columns
+- Group by {col} / Ungroup {col}
+- Pivot by {col} / Remove {col} from pivot (turns pivot mode on if off)
+- Aggregate: sum / avg / count / min / max (with `✓` on the active one) +
+  Remove aggregation
+- Hide column / Show all columns
+
+Synthetic cols (gutter, checkbox, auto-Group, pivot result) don't get the
+menu. Outside-click / Escape / window resize / capture-scroll all close
+it. Event: `grid:columnMenuOpened` (`{colId}`).
+
+## Persisted column state
+
+`data-grid-persist-key-value` auto-saves and restores the layout through
 `localStorage["sgrid:" + persistKey]`:
 
 ```html
@@ -349,18 +360,18 @@ get the menu. Event: `grid:columnMenuOpened` (`{colId}`).
 ```
 
 ```js
-api.getColumnState()        // captures everything below into a JSON-safe object
-api.applyColumnState(state) // restores; fires grid:columnStateApplied
-api.clearPersistedState()   // wipes the saved blob
+api.getColumnState()        // JSON-safe snapshot of the layout
+api.applyColumnState(state) // restore; fires grid:columnStateApplied
+api.clearPersistedState()   // wipe the saved blob
 ```
 
-The serialised state covers col order/width/pinning/visibility, row groups,
-pivot mode + pivot cols, value aggregations, header groups, the pinned
-bottom row toggle, sort, filter and quick filter. Writes are debounced 200
-ms and flushed on `beforeunload` so a Cmd+R right after a change doesn't
-drop state. Subscribers re-render off one `grid:columnStateApplied` event
-instead of every granular event, so the side panel + status bar update in
-one shot.
+The snapshot covers column order / width / pinning / visibility, row
+groups, pivot mode + pivot cols, value aggregations, column header
+groups, the pinned-bottom-row toggle, sort, filter and quick filter.
+Writes are debounced 200 ms and flushed synchronously on `beforeunload`
+so a Cmd+R right after a change doesn't drop state. Subscribers re-render
+off a single `grid:columnStateApplied` event instead of every granular
+event, so the side panel + status bar update in one shot.
 
 ## Gotchas
 

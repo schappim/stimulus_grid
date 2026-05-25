@@ -439,19 +439,17 @@ The two "Gold" sub-headers under different parent years don't collapse — runs
 only merge when the **full path** matches up to the row above. **Events:**
 `grid:columnGroupsChanged` (`{columnGroups}`). See **[demo 14](demo/14-header-groups-pinned-totals.html)** for the user-declared groups + pinned totals.
 
-## Right-click column menu & persisted state
+## Right-click column menu
 
-A power-user shortcut over everything the side panel and the columns API
-already do. **Right-click any column header** for a popup with pin / autosize
-/ group / pivot / aggregate / hide. **`persist-key`** auto-saves the layout
-every time the user changes it and restores on the next page load — no app
-glue required.
+A one-click shortcut for the most common column operations — pin,
+autosize, group, pivot, aggregate, hide — without opening the side panel
+or wiring API calls. **Right-click any column header** and pick. Works
+out of the box; no setup attribute required.
 
 ![stimulus_grid right-click column menu open on the Gold header, showing Pin left/right, Autosize, Group by Gold, Pivot by Gold, Aggregate (sum/avg/count/min/max with "sum" marked active), Hide column, Show all columns; the underlying grid is grouped by country with sport / age / gold / silver / bronze and the side panel visible on the right](docs/images/grid-column-menu.png)
 
-The menu opens via the native `contextmenu` event on a leaf header. Items
-are emitted only when they make sense for that column + the current grid
-state, so the menu stays short:
+Items are emitted only when they make sense for that column + the current
+grid state, so the menu stays short:
 
 - **Pin left / Pin right / Unpin** — depending on the col's current pin
 - **Autosize this column / Autosize all columns**
@@ -467,6 +465,14 @@ Synthetic columns (row-number gutter, checkbox column, auto-Group, pivot
 result) suppress the menu — they're owned by the grid and shouldn't be
 poked through this surface. **Event:** `grid:columnMenuOpened` (`{colId}`)
 fires every time the menu opens so analytics / docs overlays can hook in.
+See **[demo 15](demo/15-context-menu-persisted-state.html)** for it in
+action.
+
+## Persisted column state
+
+Round-trip the whole grid layout through `localStorage` so user changes
+survive a page reload. Set one attribute and the grid handles the rest —
+no app glue, no per-event listeners, no reload boilerplate.
 
 ```html
 <div data-controller="grid"
@@ -476,20 +482,36 @@ fires every time the menu opens so analytics / docs overlays can hook in.
 </div>
 ```
 
-`persist-key` round-trips column order, widths, pinning, visibility, row
-groups, pivot mode + pivot cols, value aggregations, header groups,
-pinned-bottom-row, sort, filter and quick filter through
-`localStorage["sgrid:" + persistKey]`. Writes are debounced 200 ms and
-flushed synchronously on `beforeunload` (so a Cmd+R right after a change
-doesn't drop state). Subscribers re-render off a single
-`grid:columnStateApplied` event instead of every granular change event,
-so the side panel + status bar update in one shot. Drive the same flow
-manually with `gridApi.getColumnState()` / `applyColumnState(state)`,
-and reset with `clearPersistedState()` (e.g. behind a "reset layout"
-button).
+| Attribute | Value |
+|---|---|
+| `persist-key` | when non-empty, auto-save/restore the layout under `localStorage["sgrid:" + persistKey]`. Empty (default) disables persistence |
 
-See **[demo 15](demo/15-context-menu-persisted-state.html)** for both
-features wired together — right-click around, reload, watch it stick.
+The snapshot covers everything a user can change:
+
+- column order, widths, pinning, visibility
+- row groups, pivot mode + pivot cols, value aggregations
+- column header groups and the pinned-bottom-row toggle
+- sort, filter and quick filter
+
+Writes are debounced 200 ms and flushed synchronously on `beforeunload`,
+so a `Cmd+R` right after a change doesn't drop state. The grid restores
+once during initial load and broadcasts a single `grid:columnStateApplied`
+event when it does, so subscribers (the side panel, the status bar, your
+own listeners) re-render in one shot instead of reacting to every
+granular change event.
+
+Drive the same flow programmatically — useful for "save view" / "load
+view" / "reset layout" buttons:
+
+```js
+const snapshot = api.getColumnState()    // JSON-safe object you can POST to your server
+api.applyColumnState(snapshot)           // restore from anywhere — fires grid:columnStateApplied
+api.clearPersistedState()                // wipe the localStorage blob (e.g. a "reset" button)
+api.getPersistKey()                      // read back the configured key
+```
+
+See **[demo 15](demo/15-context-menu-persisted-state.html)** — change
+sort / groups / pivot / values / visibility, reload, watch it stick.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 
