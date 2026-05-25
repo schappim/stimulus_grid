@@ -52,9 +52,9 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 ## Tier 3 — AU-niche identifiers (consistent with `phone(AU)`, `abn`, `address-au`)
 
 - [x] **57 — `bsb`** Bank-State-Branch, 6 digits as `XXX-XXX`, with optional bank-name lookup.
-- [ ] **58 — `acn`** Australian Company Number, 9 digits with checksum (mod-10 weights `8,7,6,5,4,3,2,1`), formatted `XXX XXX XXX`. Links to ASIC.
-- [ ] **59 — `tfn`** Tax File Number — always masked (regulatory rule), last 3 visible. Read-only by design.
-- [ ] **60 — `medicare`** 10-digit Medicare number, optional IRN suffix, formatted `XXXX XXXXX X / N`.
+- [x] **58 — `acn`** Australian Company Number, 9 digits with checksum (mod-10 weights `8,7,6,5,4,3,2,1`), formatted `XXX XXX XXX`. Links to ASIC.
+- [x] **59 — `tfn`** Tax File Number — always masked (regulatory rule), last 3 visible. Read-only by design.
+- [x] **60 — `medicare`** 10-digit Medicare number, optional IRN suffix, formatted `XXXX XXXXX X / N`.
 
 ## Tier 4 — lower priority / niche
 

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>59 — TFN renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 440px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>59 — TFN renderer (Tax File Number — always masked)</h1>
+  <p class="lede">
+    Tax File Numbers are legally never displayed in full (ATO + Privacy
+    Act). This renderer always shows them as <code>••• ••• XYZ</code>
+    — last 3 digits visible, no exceptions, no opt-out. Use it
+    alongside <code>mask</code> for the rest of your sensitive PII.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="employee"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Employee</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tfn"
+              data-header-cell-cell-renderer-value="tfn"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">TFN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dob"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="160">DOB</th>
+          <th data-controller="header-cell" data-header-cell-field-value="phone"
+              data-header-cell-cell-renderer-value="phone-mask"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Phone (masked)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Why no <code>showFull</code> option?</strong> Regulatory
+    requirement, not a styling choice — a "show full TFN" flag would be
+    a footgun waiting to be misconfigured. If you genuinely need a
+    cleartext TFN (employer payroll system, etc.), do it through a
+    one-shot reveal flow, not a column-wide renderer setting.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('phone-mask', renderers.mask({ format: 'phone-last4' }));
+
+    const ROWS = [
+      { id: 1, employee: 'Astrid Hale',  tfn: '123456789', dob: '1989-04-12', phone: '0412345678' },
+      { id: 2, employee: 'Marcus Chen',  tfn: '987654321', dob: '1992-11-30', phone: '0298765432' },
+      { id: 3, employee: 'Priya Patel',  tfn: '12345678',  dob: '1985-06-22', phone: '1300975707' },
+      { id: 4, employee: 'Jamal Owens',  tfn: '555111222', dob: '1991-09-08', phone: '0298111111' },
+      { id: 5, employee: 'Lena Brooks',  tfn: '888999000', dob: '1995-02-17', phone: '0412000000' },
+      { id: 6, employee: '(invalid)',    tfn: '12345',     dob: '2000-01-01', phone: '0298765432' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

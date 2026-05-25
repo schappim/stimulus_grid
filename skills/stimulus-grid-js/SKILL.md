@@ -242,6 +242,9 @@ ship pre-registered:
 | `units` | `Intl.NumberFormat({ style: 'unit' })` wrapped per cell — locale-aware distance / temperature / weight / volume / time / file-system formatting. `unit` is any CLDR identifier (kilometer / mile / celsius / fahrenheit / kilogram / pound / liter / hour / gigabyte / …). `unitDisplay` controls short / long / narrow; `decimals` mirrors the other number renderers |
 | `ip-address` | Monospace IPv4 / IPv6 with light validation. Invalid IPs strike through in red. Optional `countryField` reads a sibling 2-letter ISO code from the row and prepends a country-flag emoji (sibling to `country-flag`). v6 strings auto-shrink one font-size step so the longer form still fits in a normal-width column |
 | `bsb` | Australian Bank-State-Branch — 6 digits as `XXX-XXX` with an optional bank-name annotation looked up from the first 2 digits (covers ANZ / Westpac / CBA / NAB / Macquarie / Bendigo / etc; override via `banks` option, suppress via `showBank: false`). Invalid values render red |
+| `acn` | Australian Company Number — sibling of `abn`. Validates the mod-10 checksum (weights 8-7-6-5-4-3-2-1), formats `XXX XXX XXX`, and links valid values to the ASIC search on ABR. Invalid checksum = red |
+| `tfn` | Tax File Number — ALWAYS masked (ATO + Privacy Act). 8- or 9-digit input shows as `••• ••• XYZ` with the last 3 digits visible. No `showFull` option by design — if you need cleartext, do it through a one-shot reveal flow, not a column-wide renderer setting |
+| `medicare` | Medicare card number — 10 digits with the mod-10 weighted-sum checksum (weights 1-3-7-9 repeated), formatted `XXXX XXXXX X`. Optional trailing IRN (Individual Reference Number) via `/N` or `-N` separator → `… / 1` |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

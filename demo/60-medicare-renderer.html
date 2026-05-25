@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>60 — Medicare renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 440px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>60 — Medicare renderer (AU card number + IRN)</h1>
+  <p class="lede">
+    10-digit Medicare card numbers with a mod-10 checksum, formatted
+    <code>XXXX XXXXX X</code>. An optional IRN (Individual Reference
+    Number) appended via <code>/</code> renders as <code>… / 1</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="patient"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Patient</th>
+          <th data-controller="header-cell" data-header-cell-field-value="medicare"
+              data-header-cell-cell-renderer-value="medicare"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Medicare</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dob"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="140">DOB</th>
+          <th data-controller="header-cell" data-header-cell-field-value="visited"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="160">Last visit</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Validation:</strong> the first digit must be 2-6 and the
+    weighted-sum checksum must match (weights 1-3-7-9 repeated). Try
+    editing a cell — even a single bad digit triggers the red invalid
+    rendering. Real Medicare numbers from the publicly-documented
+    test ranges (2123 / 3133 / etc.) are used as seed data.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const now = Date.now();
+    const ago = (days) => new Date(now - days * 86_400_000).toISOString();
+
+    const ROWS = [
+      { id: 1, patient: 'Astrid Hale',  medicare: '2123 45670 1 / 1', dob: '1989-04-12', visited: ago(3) },
+      { id: 2, patient: 'Marcus Chen',  medicare: '3133 45670 1',     dob: '1992-11-30', visited: ago(14) },
+      { id: 3, patient: 'Priya Patel',  medicare: '4143456701',       dob: '1985-06-22', visited: ago(60) },
+      { id: 4, patient: 'Jamal Owens',  medicare: '5153 45670 1 / 2', dob: '1991-09-08', visited: ago(120) },
+      { id: 5, patient: 'Lena Brooks',  medicare: '6163-45670-1',     dob: '1995-02-17', visited: ago(28) },
+      { id: 6, patient: '(invalid)',    medicare: '7123456701',       dob: '2000-01-01', visited: ago(200) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -3841,6 +3841,100 @@ export function bsb({
   };
 }
 
+// ACN — Australian Company Number. 9 digits with a mod-10 checksum:
+// positions 1-8 multiplied by weights [8,7,6,5,4,3,2,1], summed, then
+// (10 - sum%10) % 10 = position 9. Formatted XXX XXX XXX. Valid values
+// link to the ASIC search on the ABR site.
+function validateACN(input) {
+  const digits = String(input).replace(/\s+/g, '');
+  if (digits.length !== 9 || !/^\d{9}$/.test(digits)) return false;
+  const weights = [8, 7, 6, 5, 4, 3, 2, 1];
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += parseInt(digits[i], 10) * weights[i];
+  return parseInt(digits[8], 10) === (10 - sum % 10) % 10;
+}
+function formatACN(input) {
+  const digits = String(input).replace(/\D/g, '');
+  if (digits.length !== 9) return String(input);
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+}
+
+export function acn() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (!validateACN(value)) {
+      return h('span', {
+        class: 'sg-renderer-invalid', title: 'Invalid ACN (checksum failed)',
+      }, document.createTextNode(String(value)));
+    }
+    const digits = String(value).replace(/\s+/g, '');
+    return h('a', {
+      class: 'sg-renderer-link sg-renderer-mono',
+      href: `https://abr.business.gov.au/Search/ResultsActiveASIC?SearchText=${digits}`,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      title: 'Look up on ABR',
+    }, document.createTextNode(formatACN(value)));
+  };
+}
+
+// TFN — Tax File Number. Legally never displayed in full (Privacy Act +
+// ATO guidance) — this renderer ALWAYS masks all but the last 3 digits.
+// 9-digit (current) and 8-digit (historical) formats both supported.
+// Anything outside that range renders red.
+export function tfn() {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-mask-numeric');
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const digits = text.replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 9) {
+      return h('span', {
+        class: 'sg-renderer-invalid', title: 'Invalid TFN — must be 8 or 9 digits',
+      }, document.createTextNode(text));
+    }
+    const last3 = digits.slice(-3);
+    const maskedLen = digits.length - 3;
+    const masked = '•'.repeat(maskedLen);
+    const formatted = digits.length === 9
+      ? `${masked.slice(0, 3)} ${masked.slice(3)} ${last3}`
+      : `${masked.slice(0, 2)} ${masked.slice(2)} ${last3}`;
+    return formatted;
+  };
+}
+
+// Medicare card number — 10 digits with a mod-10 checksum (positions 1-8
+// × weights [1,3,7,9,1,3,7,9], sum mod 10 = position 9). Optional
+// trailing IRN (Individual Reference Number) digit separated by `/` or
+// `-`. Formatted XXXX XXXXX X [/ N].
+function validateMedicare(digits) {
+  if (digits.length !== 10) return false;
+  if (!/^[2-6]\d{9}$/.test(digits)) return false;
+  const weights = [1, 3, 7, 9, 1, 3, 7, 9];
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += parseInt(digits[i], 10) * weights[i];
+  return (sum % 10) === parseInt(digits[8], 10);
+}
+
+export function medicare() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const raw = String(value).trim().replace(/\s+/g, '');
+    const m = /^(\d{10})(?:[\/-]?(\d))?$/.exec(raw);
+    if (!m || !validateMedicare(m[1])) {
+      return h('span', {
+        class: 'sg-renderer-invalid',
+        title: m ? 'Invalid Medicare (checksum failed)' : 'Invalid Medicare format',
+      }, document.createTextNode(String(value)));
+    }
+    const card = m[1], irn = m[2];
+    const formatted = `${card.slice(0, 4)} ${card.slice(4, 9)} ${card.slice(9)}`
+      + (irn ? ` / ${irn}` : '');
+    return h('span', { class: 'sg-renderer-medicare sg-renderer-mono' },
+      document.createTextNode(formatted));
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3898,6 +3992,9 @@ registerRenderer('expand',         expand());
 registerRenderer('units',          units());
 registerRenderer('ip-address',     ipAddress());
 registerRenderer('bsb',            bsb());
+registerRenderer('acn',            acn());
+registerRenderer('tfn',            tfn());
+registerRenderer('medicare',       medicare());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3910,5 +4007,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, expand, units, ipAddress, bsb, audioAttachment,
+  mention, expand, units, ipAddress, bsb, acn, tfn, medicare, audioAttachment,
 };

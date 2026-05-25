@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>58 — ACN renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 440px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>58 — ACN renderer (Australian Company Number)</h1>
+  <p class="lede">
+    Sibling of <code>abn</code> for ACNs. Validates via the standard
+    mod-10 checksum (weights 8-7-6-5-4-3-2-1), formats <code>XXX XXX
+    XXX</code>, and links valid values to ASIC search via ABR. Invalid
+    rows render red.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="company"
+              data-header-cell-width-value="280"
+              data-header-cell-sortable-value="true">Company</th>
+          <th data-controller="header-cell" data-header-cell-field-value="acn"
+              data-header-cell-cell-renderer-value="acn"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">ACN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="abn"
+              data-header-cell-cell-renderer-value="abn"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">ABN</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Validity check:</strong> the renderer rejects any 9-digit
+    value whose checksum doesn't pass — try editing a cell and changing
+    a single digit to see the red invalid state.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, company: 'Chickcom Pty Ltd',    acn: '004085616', abn: '53004085616' },
+      { id: 2, company: 'Vega Studio Pty Ltd', acn: '008672179', abn: '14008672179' },
+      { id: 3, company: 'Patel Holdings',      acn: '005456209', abn: '11005456209' },
+      { id: 4, company: 'Hale & Co',           acn: '644920764', abn: '92644920764' },
+      { id: 5, company: 'Brooks Studio',       acn: '093669660', abn: '49093669660' },
+      { id: 6, company: 'Owens Consulting',    acn: '086374085', abn: '46086374085' },
+      { id: 7, company: '(invalid — dodgy)',   acn: '000000001', abn: 'INVALID' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
