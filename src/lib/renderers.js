@@ -9109,6 +9109,13 @@ export function gasCertificate(opts = {}) {
   return complianceCard({ prefix: 'Gas', classLabel: 'Type A', ...opts });
 }
 
+// Asbestos removal licence — SafeWork-issued, state-based.
+// `class` = Class A (friable) / Class B (non-friable). Class A unlocks
+// far higher-risk work and demands stricter air-monitoring.
+export function asbestosLicence(opts = {}) {
+  return complianceCard({ prefix: 'Asbestos', classLabel: 'Class B', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9264,6 +9271,7 @@ registerRenderer('coc',               coc());
 registerRenderer('qbcc-licence',      qbccLicence());
 registerRenderer('vba-licence',       vbaLicence());
 registerRenderer('gas-certificate',   gasCertificate());
+registerRenderer('asbestos-licence',  asbestosLicence());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9823,6 +9831,7 @@ wireBuiltin('coc',            clip.json);
 wireBuiltin('qbcc-licence',   clip.json);
 wireBuiltin('vba-licence',    clip.json);
 wireBuiltin('gas-certificate', clip.json);
+wireBuiltin('asbestos-licence', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9854,5 +9863,5 @@ export const renderers = {
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
-  qbccLicence, vbaLicence, gasCertificate,
+  qbccLicence, vbaLicence, gasCertificate, asbestosLicence,
 };
