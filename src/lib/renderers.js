@@ -5478,6 +5478,158 @@ function closeDateRangeEditor() {
   refocusGrid(anchor);
 }
 
+/* ---------- color-picker (swatch grid popover) ---------------------
+ *
+ * Editable sibling of `colorSwatch`. Display uses the same chip; a
+ * double-click opens a popover with a curated palette grid + a native
+ * `<input type="color">` for custom values + a hex text field.
+ *
+ *   registerRenderer('tint', renderers.colorPicker({
+ *     palette: ['#ef4444', '#f97316', '#eab308', ...],
+ *     shape: 'square',
+ *     showLabel: true,
+ *   })); */
+const DEFAULT_COLOR_PALETTE = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#6b7280',
+  '#1f2937', '#ffffff',
+];
+
+export function colorPicker({
+  palette = DEFAULT_COLOR_PALETTE,
+  shape = 'circle',
+  showLabel = false,
+  editable = true,
+  empty = '—',
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const pal = cfg.palette || palette;
+    const sp = cfg.shape ?? shape;
+    const sl = cfg.showLabel ?? showLabel;
+    const ed = cfg.editable ?? editable;
+
+    if (td) {
+      td.classList.add('sg-renderer-colorpicker-cell');
+      td._sgPickerPalette = pal;
+    }
+
+    if (ed && td && !td._sgPickerBound) {
+      td._sgPickerBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgPickerHandled) return;
+        e._sgPickerHandled = true;
+        e.stopPropagation();
+        openColorPickerEditor(td, ctx);
+      });
+    }
+
+    if (isBlank(value)) return empty;
+    const wrap = h('span', { class: 'sg-renderer-swatch' });
+    wrap.append(h('span', {
+      class: `sg-renderer-swatch-chip is-${sp}`,
+      style: `background: ${value}; ${value.toLowerCase() === '#ffffff' ? 'border: 1px solid #d1d5db;' : ''}`,
+      title: value,
+    }));
+    if (sl) {
+      wrap.append(h('span', { class: 'sg-renderer-swatch-label' }, document.createTextNode(value)));
+    }
+    return wrap;
+  };
+}
+
+let activeColorPickerEditor = null;
+
+function openColorPickerEditor(anchor, ctx) {
+  closeColorPickerEditor();
+  const palette = anchor._sgPickerPalette || DEFAULT_COLOR_PALETTE;
+  const { row, col } = ctx;
+  const currentVal = row && col?.field != null ? row[col.field] : null;
+
+  const pop = h('div', { class: 'sg-renderer-colorpicker-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit(value) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = value;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: value },
+    }));
+    closeColorPickerEditor();
+  }
+
+  const grid = h('div', { class: 'sg-renderer-colorpicker-grid' });
+  for (const c of palette) {
+    const sel = String(currentVal).toLowerCase() === String(c).toLowerCase();
+    const sw = h('button', {
+      type: 'button',
+      class: `sg-renderer-colorpicker-swatch${sel ? ' is-selected' : ''}`,
+      style: `background: ${c};`,
+      title: c,
+      'aria-label': c,
+    });
+    sw.addEventListener('click', () => commit(c));
+    grid.append(sw);
+  }
+
+  const customRow = h('div', { class: 'sg-renderer-colorpicker-custom' });
+  const native = h('input', { type: 'color', class: 'sg-renderer-colorpicker-native',
+                              value: /^#[0-9a-fA-F]{6}$/.test(currentVal || '') ? currentVal : '#3b82f6' });
+  const hex = h('input', { type: 'text', class: 'sg-renderer-colorpicker-hex',
+                           value: currentVal || '', placeholder: '#rrggbb' });
+  native.addEventListener('input', () => { hex.value = native.value; });
+  hex.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) native.value = hex.value;
+  });
+  const okBtn = h('button', { type: 'button', class: 'sg-renderer-timepicker-ok' },
+    document.createTextNode('Set'));
+  const clearBtn = h('button', { type: 'button', class: 'sg-renderer-timepicker-clear' },
+    document.createTextNode('Clear'));
+  clearBtn.addEventListener('click', () => commit(null));
+  okBtn.addEventListener('click', () => {
+    const v = /^#[0-9a-fA-F]{6}$/.test(hex.value) ? hex.value : native.value;
+    commit(v);
+  });
+
+  customRow.append(native, hex, clearBtn, okBtn);
+
+  pop.append(grid, customRow);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeColorPickerEditor(); }
+    if (e.key === 'Enter')  {
+      e.stopPropagation();
+      const v = /^#[0-9a-fA-F]{6}$/.test(hex.value) ? hex.value : native.value;
+      commit(v);
+    }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeColorPickerEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeColorPickerEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeColorPickerEditor() {
+  if (!activeColorPickerEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeColorPickerEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeColorPickerEditor = null;
+  refocusGrid(anchor);
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -5685,6 +5837,7 @@ registerRenderer('slider',            slider());
 registerRenderer('date-picker',       datePicker());
 registerRenderer('time-picker',       timePicker());
 registerRenderer('date-range',        dateRange());
+registerRenderer('color-picker',      colorPicker());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -5700,4 +5853,5 @@ export const renderers = {
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
   select, multiselect, combobox, slider, datePicker, timePicker, dateRange,
+  colorPicker,
 };

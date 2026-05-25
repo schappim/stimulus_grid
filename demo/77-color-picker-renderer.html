@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>77 — Color picker editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>77 — Color picker editor</h1>
+  <p class="lede">
+    Editable sibling to <code>colorSwatch</code>. Double-click opens a
+    curated palette grid + a native <code>&lt;input type="color"&gt;</code>
+    + hex text field for custom values.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-width-value="220">Brand</th>
+          <th data-controller="header-cell" data-header-cell-field-value="primary"
+              data-header-cell-cell-renderer-value="cp-circle"
+              data-header-cell-width-value="160">Primary</th>
+          <th data-controller="header-cell" data-header-cell-field-value="accent"
+              data-header-cell-cell-renderer-value="cp-square"
+              data-header-cell-width-value="180">Accent</th>
+          <th data-controller="header-cell" data-header-cell-field-value="muted"
+              data-header-cell-cell-renderer-value="cp-square-labeled"
+              data-header-cell-width-value="200">Muted</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Try the custom <code>#rrggbb</code> input — Enter commits the typed
+    value if it parses, otherwise falls through to the native picker's
+    current value.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('cp-circle', renderers.colorPicker());
+    registerRenderer('cp-square', renderers.colorPicker({ shape: 'square' }));
+    registerRenderer('cp-square-labeled', renderers.colorPicker({ shape: 'square', showLabel: true }));
+
+    const data = [
+      { id: 1, brand: 'Stripe',      primary: '#635bff', accent: '#0a2540', muted: '#7a73ff' },
+      { id: 2, brand: 'Vercel',      primary: '#000000', accent: '#ffffff', muted: '#666666' },
+      { id: 3, brand: 'Linear',      primary: '#5e6ad2', accent: '#222326', muted: '#9b9da9' },
+      { id: 4, brand: 'Notion',      primary: '#000000', accent: '#ec4899', muted: '#9b9a97' },
+      { id: 5, brand: 'GitHub',      primary: '#0d1117', accent: '#238636', muted: '#8b949e' },
+      { id: 6, brand: 'Anthropic',   primary: '#cc785c', accent: '#1a1a1a', muted: '#8b8b8b' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>
