@@ -35,27 +35,27 @@
               data-header-cell-width-value="240"
               data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true">Goal</th>
-          <th data-controller="header-cell" data-header-cell-field-value="pct"
+          <th data-controller="header-cell" data-header-cell-field-value="pct_green"
               data-header-cell-cell-renderer-value="donut"
               data-header-cell-type-value="number"
               data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Donut</th>
-          <th data-controller="header-cell" data-header-cell-field-value="pct"
+          <th data-controller="header-cell" data-header-cell-field-value="pct_blue"
               data-header-cell-cell-renderer-value="donut-blue"
               data-header-cell-type-value="number"
               data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Blue</th>
-          <th data-controller="header-cell" data-header-cell-field-value="pct"
+          <th data-controller="header-cell" data-header-cell-field-value="pct_inline"
               data-header-cell-cell-renderer-value="donut-inline"
               data-header-cell-type-value="number"
               data-header-cell-editable-value="true"
               data-header-cell-width-value="120">Inline label</th>
-          <th data-controller="header-cell" data-header-cell-field-value="pct"
+          <th data-controller="header-cell" data-header-cell-field-value="pct_large"
               data-header-cell-cell-renderer-value="donut-large"
               data-header-cell-type-value="number"
               data-header-cell-editable-value="true"
               data-header-cell-width-value="160">Large</th>
-          <th data-controller="header-cell" data-header-cell-field-value="pct"
+          <th data-controller="header-cell" data-header-cell-field-value="pct_raw"
               data-header-cell-cell-renderer-value="percent"
               data-header-cell-type-value="number"
               data-header-cell-editable-value="true"
@@ -86,15 +86,17 @@
     registerRenderer('donut-inline', renderers.donut({ inline: true, color: 'orange' }));
     registerRenderer('donut-large',  renderers.donut({ size: 36, thickness: 6, color: 'purple' }));
 
-    const ROWS = [
-      { id: 1, goal: 'OKR — Activation lift',  pct: 92 },
-      { id: 2, goal: 'OKR — Revenue $1M ARR',  pct: 67 },
-      { id: 3, goal: 'Sprint 22 burndown',     pct: 100 },
-      { id: 4, goal: 'Security audit',         pct: 14 },
-      { id: 5, goal: 'OKR — NPS > 50',         pct: 48 },
-      { id: 6, goal: 'Mobile beta',            pct: 81 },
-      { id: 7, goal: 'i18n — 12 locales',      pct: 33 },
-    ];
+    // Each column needs its own field — the grid keys columnDefs by field,
+    // so reusing one field across multiple columns collapses them. Five
+    // columns × five clones of the same percentage.
+    const PCT = [92, 67, 100, 14, 48, 81, 33];
+    const ROWS = ['OKR — Activation lift', 'OKR — Revenue $1M ARR',
+                  'Sprint 22 burndown', 'Security audit', 'OKR — NPS > 50',
+                  'Mobile beta', 'i18n — 12 locales'].map((goal, i) => ({
+      id: i + 1, goal,
+      pct_green: PCT[i], pct_blue: PCT[i], pct_inline: PCT[i],
+      pct_large: PCT[i], pct_raw: PCT[i],
+    }));
 
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });

@@ -2661,3 +2661,12 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid a.sg-renderer-mention:hover,
 .sg-grid a.sg-renderer-hashtag:hover { filter: brightness(0.96); text-decoration: underline; }
+
+/* Vertical breathing room for chart-style cells — the SVG sits flush
+   against the row borders otherwise. 4px top/bottom is enough to feel
+   intentional without breaking the row-height contract. */
+.sg-grid td.sg-renderer-timeline-cell,
+.sg-grid td.sg-renderer-histogram-cell {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}

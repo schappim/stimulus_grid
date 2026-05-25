@@ -3396,8 +3396,9 @@ export function histogram({
   showCount = false,
 } = {}) {
   const fill = SPARK_COLORS[color] || color;
-  return ({ value }) => {
+  return ({ value, td }) => {
     if (value == null || value === '') return '';
+    if (td) td.classList.add('sg-renderer-histogram-cell');
     let data = value, labels = binLabels;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       data = value.counts;
@@ -3530,8 +3531,9 @@ export function timelineSteps({
   color = '#2563eb',
   showLabels = false,
 } = {}) {
-  return ({ value }) => {
+  return ({ value, td }) => {
     if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-timeline-cell');
     let curIdx = -1;
     if (Number.isFinite(Number(value))) {
       curIdx = Math.max(0, Math.min(steps.length - 1, Math.floor(Number(value))));
