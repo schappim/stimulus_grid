@@ -4671,6 +4671,17 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   opacity: 0.85;
 }
 
+/* Payment terms pill + "overdue" tag. */
+.sg-grid .sg-renderer-payment-terms { font-size: 11px; }
+.sg-grid .sg-renderer-payment-terms-overdue {
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

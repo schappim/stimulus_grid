@@ -9197,6 +9197,40 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- payment-terms -----------------------------------------
+ *
+ * Invoice payment terms pill — Net 7 / Net 14 / Net 30 / EOM / COD /
+ * Prepaid. If the value carries a `dueDate`, overdue invoices flip
+ * the pill colour to red.
+ *
+ *   value: 'net 30' | 'cod' | 'eom' | …
+ *        | { terms: 'net 30', dueDate: '2026-06-15' } */
+export function paymentTerms() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let terms, dueDate = null;
+    if (typeof value === 'object') { terms = value.terms || ''; dueDate = value.dueDate || null; }
+    else terms = String(value);
+    const k = String(terms).toLowerCase().replace(/\s+/g, ' ').trim();
+    const isOverdue = dueDate ? Date.now() > new Date(dueDate).getTime() : false;
+    let color = 'gray';
+    if (isOverdue) color = 'red';
+    else if (k === 'cod' || k === 'prepaid') color = 'green';
+    else if (/^net\s+(\d+)$/.test(k)) {
+      const days = parseInt(k.split(' ')[1], 10);
+      color = days <= 7 ? 'blue' : days <= 14 ? 'indigo' : days <= 30 ? 'orange' : 'gray';
+    } else if (k === 'eom') color = 'orange';
+    const label = k === 'eom' ? 'EOM' : k === 'cod' ? 'COD' : titleCaseStr(terms);
+    const pill = h('span', { class: `sg-pill sg-pill-${color} sg-renderer-payment-terms` },
+      document.createTextNode(label));
+    if (isOverdue) {
+      pill.append(h('span', { class: 'sg-renderer-payment-terms-overdue' },
+        document.createTextNode('overdue')));
+    }
+    return pill;
+  };
+}
+
 /* ---------- callout-fee -------------------------------------------
  *
  * Service-call / callout fee indicator. Three modes:
@@ -9943,6 +9977,7 @@ registerRenderer('snag',              defect());      // alias — same shape, d
 registerRenderer('signature',         signature());
 registerRenderer('job-photo',         jobPhoto());
 registerRenderer('callout-fee',       calloutFee());
+registerRenderer('payment-terms',     paymentTerms());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10522,6 +10557,7 @@ wireBuiltin('snag',           clip.json);
 wireBuiltin('signature',      clip.json);
 wireBuiltin('job-photo',      clip.json);
 wireBuiltin('callout-fee',    clip.json);
+wireBuiltin('payment-terms',  clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10557,5 +10593,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation, defect, signature, jobPhoto, calloutFee,
+  variation, defect, signature, jobPhoto, calloutFee, paymentTerms,
 };
