@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>35 — Checkbox renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .log { margin-top: 12px; padding: 8px 12px; background: #0f172a; color: #d1d5db;
+           border-radius: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace;
+           max-height: 120px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>35 — Checkbox renderer (interactive)</h1>
+  <p class="lede">
+    Live boolean toggle — click any box to flip the row's value. Null /
+    undefined cells render as indeterminate (the "we don't know yet" state),
+    a state you can't reach by clicking. Distinct from <code>boolean</code>,
+    which is a read-only ✓ / ✗ glyph.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-width-value="280"
+              data-header-cell-sortable-value="true">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="done"
+              data-header-cell-cell-renderer-value="checkbox"
+              data-header-cell-width-value="80">Done</th>
+          <th data-controller="header-cell" data-header-cell-field-value="urgent"
+              data-header-cell-cell-renderer-value="checkbox"
+              data-header-cell-width-value="80">Urgent</th>
+          <th data-controller="header-cell" data-header-cell-field-value="assignee"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">Assignee</th>
+          <th data-controller="header-cell" data-header-cell-field-value="due"
+              data-header-cell-cell-renderer-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="130">Due</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>How it differs from <code>boolean</code>:</strong>
+    <code>boolean</code> renders ✓ / ✗ / — as static SVG.
+    <code>checkbox</code> renders a real input you can click — toggling
+    fires <code>grid:cellValueChanged</code> so you can persist via
+    <code>fetch('/tasks/:id', { method: 'PATCH', … })</code>. Wire-up below.
+  </div>
+
+  <div class="log" id="log">Click any checkbox to see the change event…</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, task: 'Draft Q3 strategy doc', assignee: 'Astrid Hale',
+        due: '2026-06-01', done: true,  urgent: false },
+      { id: 2, task: 'Review PR #482',         assignee: 'Marcus Chen',
+        due: '2026-05-26', done: false, urgent: true },
+      { id: 3, task: 'Update onboarding copy', assignee: 'Priya Patel',
+        due: '2026-05-30', done: null,  urgent: false },
+      { id: 4, task: 'Migrate to Postgres 17', assignee: 'Jamal Owens',
+        due: '2026-07-15', done: false, urgent: null },
+      { id: 5, task: 'Renew SSL cert',         assignee: 'Lena Brooks',
+        due: '2026-06-12', done: true,  urgent: false },
+      { id: 6, task: 'Customer interview — Vega Studio', assignee: 'Tomás Vega',
+        due: '2026-05-28', done: false, urgent: true },
+      { id: 7, task: 'Replace lobby coffee machine', assignee: 'Mei Tanaka',
+        due: '2026-08-01', done: null,  urgent: null },
+    ];
+
+    const grid = document.querySelector('.panel');
+    const log  = document.getElementById('log');
+
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      const { colId, rowId, oldValue, newValue } = e.detail;
+      const line = `[${new Date().toLocaleTimeString()}] row ${rowId} · ${colId}: ${oldValue} → ${newValue}`;
+      log.textContent = line + '\n' + log.textContent;
+    });
+  </script>
+</body>
+</html>

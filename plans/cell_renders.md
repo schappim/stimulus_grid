@@ -23,7 +23,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 
 ## Tier 1 — biggest gaps (most-requested missing primitives)
 
-- [ ] **35 — `checkbox`** Interactive boolean toggle (click to flip). Commits via `applyTransaction`. Distinct from the read-only `boolean` icon renderer.
+- [x] **35 — `checkbox`** Interactive boolean toggle (click to flip). Commits via `applyTransaction`. Distinct from the read-only `boolean` icon renderer.
 - [ ] **36 — `switch`** Same semantics as `checkbox` but rendered as an on/off pill switch.
 - [ ] **37 — `markdown`** Render `**bold**`, `*italic*`, `[links](…)`, `` `code` ``, lists. Tiny dependency-free parser.
 - [ ] **38 — `json`** Pretty-print + collapsible preview for object/array values. Truncates to first N keys with a "+N more" toggle.

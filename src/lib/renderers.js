@@ -1934,6 +1934,512 @@ export function statusPill(colorMap = {}, iconMap = null, opts = {}) {
   };
 }
 
+/* ---------- checkbox (interactive boolean) --------------------------
+ *
+ * The interactive sibling of `boolean`. Renders a native-styled
+ * checkbox that flips the underlying value on click; null / undefined /
+ * '' shows as indeterminate (the "we don't know yet" state). Commits
+ * via `api.applyTransaction({ update: [row] })` and dispatches
+ * `grid:cellValueChanged` so consumers can persist the change.
+ *
+ *   registerRenderer('done', checkbox());
+ *   <th data-header-cell-cell-renderer-value="done">Done</th>
+ *
+ * Pass `{ disabled: true }` for a read-only checkbox (still indicates
+ * state, but click is a no-op). For a fully read-only ✓/✗ glyph, use
+ * `boolean` instead. */
+export function checkbox({
+  truthy = defaultIsTruthy,
+  disabled = false,
+} = {}) {
+  return (ctx) => {
+    const { value, row, col, api, td } = ctx;
+    if (td) td.classList.add('sg-renderer-checkbox-cell');
+    const wrap = h('span', { class: 'sg-renderer-checkbox' });
+    const input = h('input', {
+      type: 'checkbox',
+      class: 'sg-renderer-checkbox-input',
+      disabled: disabled ? '' : null,
+      'aria-label': col?.field || 'toggle',
+    });
+    if (value == null || value === '') {
+      input.indeterminate = true;
+    } else {
+      input.checked = truthy(value);
+    }
+    // Stop the click from bubbling to the cell's selection/edit handlers —
+    // a checkbox click means "toggle me", not "begin editing this cell".
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('change', (e) => {
+      if (disabled) { e.preventDefault(); return; }
+      const next = input.checked;
+      const oldValue = row && col?.field != null ? row[col.field] : null;
+      if (row && col?.field != null) row[col.field] = next;
+      if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+      const grid = td?.closest('[data-controller~="grid"]');
+      if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+        bubbles: true,
+        detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+      }));
+    });
+    wrap.append(input);
+    return wrap;
+  };
+}
+
+/* ---------- audio attachment (player popover) -----------------------
+ *
+ * Single-file audio attachment with a popover player. Cell renders as a
+ * compact play-circle icon (optionally with the filename next to it);
+ * double-click opens a centred-on-the-cell popover with play/pause,
+ * a draggable scrub bar, current / total time, and ±10s skip buttons.
+ *
+ *   <th data-header-cell-cell-renderer-value="audio-attachment">Recording</th>
+ *
+ * Value shapes accepted (normalised by `normaliseAudio` below):
+ *
+ *   "https://…/call.mp3"             // plain URL string
+ *   { url, filename?, byte_size?, duration? }
+ *
+ * Howler.js integration is opt-in by presence: if `window.Howl` is
+ * defined when the player opens, we delegate playback / scrubbing /
+ * duration to it (gives consistent cross-browser behaviour, codec
+ * fallbacks, and the `playing()` / `seek()` getters). Otherwise we use
+ * a plain HTMLAudioElement — same scrub/play semantics, no dependency.
+ *
+ * The renderer doesn't preload audio on cell render — only when the
+ * popover opens. That keeps a grid of 100 phone calls from issuing 100
+ * range requests on page load. */
+
+const AUDIO_ICON_PLAY_CIRCLE = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c7.6-4.2 16.8-4.1 24.3 .5l144 88c7.1 4.4 11.5 12.1 11.5 20.5s-4.4 16.1-11.5 20.5l-144 88c-7.4 4.5-16.7 4.7-24.3 .5s-12.3-12.2-12.3-20.9V168c0-8.7 4.7-16.7 12.3-20.9z"/></svg>';
+const AUDIO_PLAY_SVG = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>';
+const AUDIO_PAUSE_SVG = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112V400c0 26.5 21.5 48 48 48H80c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H48zm192 0c-26.5 0-48 21.5-48 48V400c0 26.5 21.5 48 48 48h32c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H240z"/></svg>';
+const AUDIO_BACK10_SVG  = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M125.7 160H176c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32s32 14.3 32 32v51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/></svg>';
+const AUDIO_FWD10_SVG   = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M386.3 160H336c-17.7 0-32 14.3-32 32s14.3 32 32 32H464c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z"/></svg>';
+const AUDIO_X_SVG = ATTACH_X;
+const AUDIO_VOLUME_SVG = '<svg viewBox="0 0 640 512" aria-hidden="true"><path fill="currentColor" d="M533.6 32.5C598.5 85.2 640 165.8 640 256s-41.5 170.7-106.4 223.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C557.5 398.2 592 331.2 592 256s-34.5-142.2-88.7-186.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM473.1 107c43.2 35.2 70.9 88.9 70.9 149s-27.7 113.8-70.9 149c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C475.3 341.3 496 301.1 496 256s-20.7-85.3-53.2-111.8c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zm-60.5 74.5C434.1 199.1 448 225.9 448 256s-13.9 56.9-35.4 74.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C393.1 284.4 400 271 400 256s-6.9-28.4-17.7-37.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM301.1 34.8C312.6 40 320 51.4 320 64V448c0 12.6-7.4 24-18.9 29.2s-25 3.1-34.4-5.3L131.8 352H64c-35.3 0-64-28.7-64-64V224c0-35.3 28.7-64 64-64h67.8L266.7 40.1c9.4-8.4 22.9-10.4 34.4-5.3z"/></svg>';
+
+const AUDIO_EXT_RE = /\.(mp3|wav|m4a|aac|ogg|opus|flac|webm)(\?.*)?$/i;
+
+function normaliseAudio(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') {
+    const url = value.trim();
+    if (!url) return null;
+    const m = url.split('/').pop()?.match(/^[^?#]+/)?.[0] || '';
+    return { url, filename: m || 'audio', byte_size: null, duration: null };
+  }
+  if (typeof value !== 'object') return null;
+  const url = value.url || value.src || value.href;
+  if (!url) return null;
+  return {
+    url: String(url),
+    filename: value.filename || value.name || (String(url).split('/').pop()?.split('?')[0] || 'audio'),
+    byte_size: value.byte_size ?? value.byteSize ?? value.size ?? null,
+    duration: Number.isFinite(value.duration) ? Number(value.duration) : null,
+    content_type: value.content_type || value.contentType || value.mime_type || '',
+  };
+}
+
+function formatAudioTime(sec) {
+  if (!Number.isFinite(sec) || sec < 0) sec = 0;
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+export function audioAttachment({
+  showFilename = true,
+  iconOnly = false,
+  empty = '',
+  preferHowler = true,
+  skipSeconds = 10,
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const audio = normaliseAudio(value);
+    if (td) {
+      td.classList.add('sg-renderer-audio-cell');
+      td._sgAudio = audio;
+      td._sgAudioOpts = { preferHowler, skipSeconds };
+    }
+    if (!audio) return empty ? document.createTextNode(empty) : '';
+
+    if (td && !td._sgAudioDblBound) {
+      td._sgAudioDblBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgAudioHandled) return;
+        e._sgAudioHandled = true;
+        e.stopPropagation();
+        e.preventDefault();
+        openAudioPlayer(td, ctx);
+      });
+    }
+
+    const wrap = h('div', { class: 'sg-renderer-audio' });
+    const btn = h('button', {
+      type: 'button',
+      class: 'sg-audio-icon',
+      title: `${audio.filename}${audio.byte_size != null ? ' · ' + formatBytes(audio.byte_size) : ''} — double-click to play`,
+      'aria-label': `Play ${audio.filename}`,
+      'data-sg-audio': 'open',
+    });
+    btn.innerHTML = AUDIO_ICON_PLAY_CIRCLE;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAudioPlayer(td, ctx);
+    });
+    btn.addEventListener('dblclick', (e) => {
+      // Mark as handled so the cell-level dblclick listener doesn't
+      // open the player a second time on the same gesture.
+      e._sgAudioHandled = true;
+      e.stopPropagation();
+    });
+    wrap.append(btn);
+
+    if (showFilename && !iconOnly) {
+      const label = h('span', { class: 'sg-audio-name' },
+        document.createTextNode(audio.filename));
+      wrap.append(label);
+      if (audio.duration != null) {
+        wrap.append(h('span', { class: 'sg-audio-duration' },
+          document.createTextNode(formatAudioTime(audio.duration))));
+      }
+    }
+    return wrap;
+  };
+}
+
+// ----- Player abstraction (Howler if available, else <audio>) -----
+//
+// Both backends expose the same tiny surface: load, play, pause, seek
+// (getter/setter), duration, on/off, isPlaying, destroy. The popover
+// code below only talks through this interface — swapping backends is
+// just a `new`.
+
+function createAudioBackend(url, { preferHowler } = {}) {
+  if (preferHowler && typeof window !== 'undefined' && window.Howl) {
+    return new HowlerBackend(url);
+  }
+  return new NativeAudioBackend(url);
+}
+
+class NativeAudioBackend {
+  constructor(url) {
+    this.audio = new Audio();
+    this.audio.preload = 'metadata';
+    this.audio.src = url;
+    this._evMap = { load: 'loadedmetadata', end: 'ended', play: 'play', pause: 'pause', error: 'error' };
+    this._handlers = new Map();
+  }
+  play() { return this.audio.play(); }
+  pause() { this.audio.pause(); }
+  seek(s) {
+    if (s == null) return this.audio.currentTime || 0;
+    this.audio.currentTime = Math.max(0, s);
+  }
+  duration() {
+    const d = this.audio.duration;
+    return Number.isFinite(d) ? d : 0;
+  }
+  isPlaying() { return !this.audio.paused && !this.audio.ended; }
+  on(event, fn) {
+    const ev = this._evMap[event] || event;
+    this.audio.addEventListener(ev, fn);
+    this._handlers.set(fn, [ev, fn]);
+  }
+  off(event, fn) {
+    const pair = this._handlers.get(fn);
+    if (pair) this.audio.removeEventListener(pair[0], pair[1]);
+    this._handlers.delete(fn);
+  }
+  destroy() {
+    try { this.audio.pause(); } catch (_) { /* */ }
+    this.audio.src = '';
+    this._handlers.clear();
+  }
+  backendName() { return 'native'; }
+}
+
+class HowlerBackend {
+  constructor(url) {
+    // html5:true is what unlocks scrubbing on long files (Web Audio API
+    // route loads the whole buffer upfront — fine for SFX, bad for a
+    // 20-minute phone call).
+    this.howl = new window.Howl({ src: [url], html5: true, preload: true });
+  }
+  play() { this.howl.play(); }
+  pause() { this.howl.pause(); }
+  seek(s) {
+    if (s == null) {
+      const v = this.howl.seek();
+      return typeof v === 'number' ? v : 0;
+    }
+    this.howl.seek(Math.max(0, s));
+  }
+  duration() { return this.howl.duration() || 0; }
+  isPlaying() { return this.howl.playing(); }
+  on(event, fn) { this.howl.on(event, fn); }
+  off(event, fn) { this.howl.off(event, fn); }
+  destroy() { try { this.howl.unload(); } catch (_) { /* */ } }
+  backendName() { return 'howler'; }
+}
+
+// ----- Player popover -----
+
+let activeAudioPlayer = null;
+
+function openAudioPlayer(anchor, ctx) {
+  closeAudioPlayer();
+  const audio = anchor._sgAudio || normaliseAudio(ctx.value);
+  if (!audio) return;
+  const opts = anchor._sgAudioOpts || { preferHowler: true, skipSeconds: 10 };
+  const backend = createAudioBackend(audio.url, opts);
+
+  const pop = h('div', { class: 'sg-audio-player', role: 'dialog', 'aria-label': 'Audio player' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  // Header — filename + meta + close.
+  const header = h('div', { class: 'sg-audio-player-header' });
+  const name = h('div', { class: 'sg-audio-player-name', title: audio.filename },
+    document.createTextNode(audio.filename));
+  const meta = h('div', { class: 'sg-audio-player-meta' });
+  const metaParts = [];
+  if (audio.byte_size != null) metaParts.push(formatBytes(audio.byte_size));
+  if (backend.backendName() === 'howler') metaParts.push('howler.js');
+  meta.textContent = metaParts.join(' · ');
+  const close = h('button', { type: 'button', class: 'sg-audio-player-close',
+                              'aria-label': 'Close player' });
+  close.innerHTML = AUDIO_X_SVG;
+  close.addEventListener('click', closeAudioPlayer);
+  header.append(name, meta, close);
+
+  // Scrubber: track + fill + thumb. Click anywhere on the track to seek;
+  // pointerdown on the thumb (or anywhere) starts a drag that follows the
+  // pointer until release.
+  const track = h('div', { class: 'sg-audio-track', role: 'slider',
+                            'aria-label': 'Seek', tabindex: '0',
+                            'aria-valuemin': '0', 'aria-valuemax': '0', 'aria-valuenow': '0' });
+  const fill  = h('div', { class: 'sg-audio-track-fill' });
+  const thumb = h('div', { class: 'sg-audio-track-thumb' });
+  track.append(fill, thumb);
+
+  const times = h('div', { class: 'sg-audio-times' });
+  const cur = h('span', { class: 'sg-audio-time-current' }, document.createTextNode('0:00'));
+  const tot = h('span', { class: 'sg-audio-time-total' }, document.createTextNode('--:--'));
+  times.append(cur, tot);
+
+  // Transport: back-10 / play / fwd-10.
+  const transport = h('div', { class: 'sg-audio-transport' });
+  const back = h('button', { type: 'button', class: 'sg-audio-btn sg-audio-skip',
+                              title: `Back ${opts.skipSeconds}s`,
+                              'aria-label': `Back ${opts.skipSeconds} seconds` });
+  back.innerHTML = AUDIO_BACK10_SVG;
+  const play = h('button', { type: 'button', class: 'sg-audio-btn sg-audio-play',
+                              title: 'Play / pause (Space)',
+                              'aria-label': 'Play', 'data-state': 'paused' });
+  play.innerHTML = AUDIO_PLAY_SVG;
+  const fwd = h('button', { type: 'button', class: 'sg-audio-btn sg-audio-skip',
+                             title: `Forward ${opts.skipSeconds}s`,
+                             'aria-label': `Forward ${opts.skipSeconds} seconds` });
+  fwd.innerHTML = AUDIO_FWD10_SVG;
+  transport.append(back, play, fwd);
+
+  pop.append(header, track, times, transport);
+
+  // ----- State + rendering loop -----
+
+  let duration = audio.duration ?? 0;
+  let dragging = false;
+  let rafHandle = null;
+
+  function setPercent(pct) {
+    const p = Math.max(0, Math.min(100, pct));
+    fill.style.width = p + '%';
+    thumb.style.left = p + '%';
+  }
+  function paint() {
+    const t = backend.seek();
+    const d = duration || backend.duration() || 0;
+    if (d > 0 && duration !== d) {
+      duration = d;
+      tot.textContent = formatAudioTime(duration);
+      track.setAttribute('aria-valuemax', String(Math.floor(duration)));
+    }
+    if (!dragging) {
+      const pct = duration > 0 ? (t / duration) * 100 : 0;
+      setPercent(pct);
+      cur.textContent = formatAudioTime(t);
+      track.setAttribute('aria-valuenow', String(Math.floor(t)));
+    }
+  }
+  function tick() {
+    paint();
+    if (backend.isPlaying()) rafHandle = requestAnimationFrame(tick);
+    else rafHandle = null;
+  }
+  function startTick() {
+    if (rafHandle == null) rafHandle = requestAnimationFrame(tick);
+  }
+  function stopTick() {
+    if (rafHandle != null) cancelAnimationFrame(rafHandle);
+    rafHandle = null;
+  }
+
+  // ----- Backend events -----
+
+  const onLoad = () => { duration = backend.duration(); paint(); };
+  const onPlay = () => {
+    play.dataset.state = 'playing';
+    play.innerHTML = AUDIO_PAUSE_SVG;
+    play.setAttribute('aria-label', 'Pause');
+    startTick();
+  };
+  const onPause = () => {
+    play.dataset.state = 'paused';
+    play.innerHTML = AUDIO_PLAY_SVG;
+    play.setAttribute('aria-label', 'Play');
+    stopTick();
+    paint();
+  };
+  const onEnd = () => {
+    play.dataset.state = 'paused';
+    play.innerHTML = AUDIO_PLAY_SVG;
+    play.setAttribute('aria-label', 'Play');
+    stopTick();
+    // Reset the scrubber to start so a second click on play replays.
+    backend.seek(0);
+    paint();
+  };
+  backend.on('load', onLoad);
+  backend.on('play', onPlay);
+  backend.on('pause', onPause);
+  backend.on('end', onEnd);
+
+  // ----- Controls -----
+
+  play.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (backend.isPlaying()) backend.pause();
+    else backend.play();
+  });
+  back.addEventListener('click', (e) => {
+    e.stopPropagation();
+    backend.seek(Math.max(0, backend.seek() - opts.skipSeconds));
+    paint();
+  });
+  fwd.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const d = backend.duration();
+    backend.seek(Math.min(d || Infinity, backend.seek() + opts.skipSeconds));
+    paint();
+  });
+
+  // Scrubbing — click track or drag the thumb. We use pointer events so
+  // a single handler covers mouse + touch + pen.
+  function seekFromPointer(e) {
+    const rect = track.getBoundingClientRect();
+    const x = (e.clientX ?? 0) - rect.left;
+    const pct = Math.max(0, Math.min(1, x / rect.width));
+    const d = backend.duration() || duration;
+    if (!d) return;
+    const t = pct * d;
+    backend.seek(t);
+    setPercent(pct * 100);
+    cur.textContent = formatAudioTime(t);
+  }
+  track.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    track.setPointerCapture?.(e.pointerId);
+    track.classList.add('is-dragging');
+    seekFromPointer(e);
+  });
+  track.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    seekFromPointer(e);
+  });
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    track.classList.remove('is-dragging');
+    try { track.releasePointerCapture?.(e.pointerId); } catch (_) { /* */ }
+  };
+  track.addEventListener('pointerup', endDrag);
+  track.addEventListener('pointercancel', endDrag);
+
+  // Keyboard on the focused track: arrow keys + Home/End scrub.
+  track.addEventListener('keydown', (e) => {
+    const d = backend.duration() || duration;
+    if (!d) return;
+    const step = e.shiftKey ? 30 : 5;
+    let next = null;
+    if (e.key === 'ArrowLeft')      next = Math.max(0, backend.seek() - step);
+    else if (e.key === 'ArrowRight') next = Math.min(d, backend.seek() + step);
+    else if (e.key === 'Home')       next = 0;
+    else if (e.key === 'End')        next = d;
+    if (next != null) {
+      e.preventDefault();
+      backend.seek(next);
+      paint();
+    }
+  });
+
+  // ----- Lifecycle: keyboard + outside click + close -----
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeAudioPlayer(); }
+    else if (e.key === ' ' || e.code === 'Space') {
+      // Space toggles play, but only when the popover (or descendants)
+      // has focus — otherwise it would steal the page's space scroll.
+      if (pop.contains(document.activeElement)) {
+        e.preventDefault();
+        if (backend.isPlaying()) backend.pause(); else backend.play();
+      }
+    }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeAudioPlayer();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+
+  // Some browsers fire 'loadedmetadata' before we wire the listener (cached
+  // audio). Paint immediately so the popover isn't blank during that race.
+  paint();
+  play.focus();
+
+  activeAudioPlayer = {
+    pop, backend, onKey, onDocClick,
+    cleanup: () => {
+      stopTick();
+      try {
+        backend.off('load', onLoad);
+        backend.off('play', onPlay);
+        backend.off('pause', onPause);
+        backend.off('end', onEnd);
+      } catch (_) { /* */ }
+      backend.destroy();
+    },
+  };
+}
+
+function closeAudioPlayer() {
+  if (!activeAudioPlayer) return;
+  const { pop, onKey, onDocClick, cleanup } = activeAudioPlayer;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  cleanup();
+  pop.remove();
+  activeAudioPlayer = null;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -1969,6 +2475,8 @@ registerRenderer('highlight',      highlight());
 registerRenderer('multi-line',     multiLine());
 registerRenderer('attachments',    attachments());
 registerRenderer('address-au',     addressAu());
+registerRenderer('checkbox',       checkbox());
+registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -1978,4 +2486,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
+  checkbox, audioAttachment,
 };

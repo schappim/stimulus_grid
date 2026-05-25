@@ -1831,3 +1831,49 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   color: #fff;
 }
 .sg-address-au-editor-save:hover { background: #1d4ed8; }
+
+/* Checkbox renderer — interactive boolean. Custom-painted instead of the
+   native UA control so it matches the grid's accent + border-radius. The
+   indeterminate state (null value) renders as a small horizontal bar; the
+   checked state paints the accent fill + a CSS-only tick. */
+.sg-grid td.sg-renderer-checkbox-cell { text-align: center; vertical-align: middle; }
+.sg-grid .sg-renderer-checkbox {
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.sg-grid .sg-renderer-checkbox-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--sg-border-strong, #d1d5db);
+  border-radius: 3px;
+  background: var(--sg-bg, #fff);
+  cursor: pointer;
+  position: relative;
+  margin: 0;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.sg-grid .sg-renderer-checkbox-input:hover { border-color: var(--sg-accent, #2563eb); }
+.sg-grid .sg-renderer-checkbox-input:checked,
+.sg-grid .sg-renderer-checkbox-input:indeterminate {
+  background-color: var(--sg-accent, #2563eb);
+  border-color: var(--sg-accent, #2563eb);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+/* Checkmark glyph as inline-SVG data URL — same recipe Bootstrap 5 /
+   Tailwind Forms use. The viewBox is normalised to 16×16 so the path is
+   geometrically centred regardless of the actual box size; the path
+   coordinates run from a left-down stroke at (4,8) → (7,11) → (12,5)
+   which produces an optically balanced tick. CSS-rotation math would
+   need per-pixel fudging at this small a size, so we just embed a
+   precise vector glyph. */
+.sg-grid .sg-renderer-checkbox-input:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5 7 11.5l5-7'/%3E%3C/svg%3E");
+}
+.sg-grid .sg-renderer-checkbox-input:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='%23fff' stroke-width='2' stroke-linecap='round' d='M4 8h8'/%3E%3C/svg%3E");
+}
+.sg-grid .sg-renderer-checkbox-input:disabled {
+  cursor: not-allowed; opacity: 0.5;
+}
