@@ -9232,6 +9232,28 @@ export function jsaStatus() {
  * The cell shapes that hang off "who's working" — trade icons, skill
  * endorsements, subcontractor compliance roll-ups, crew composites. */
 
+/* ---------- skill-endorsement -------------------------------------
+ *
+ * A holder × competency record with an optional expiry. Shows the skill
+ * name and (if dated) an "exp 11/2027" pill in expiry colour.
+ *
+ *   value: 'Solar PV install'
+ *        | { skill: 'Solar PV install', expires: '2027-11-30', issuer?: 'CEC' } */
+export function skillEndorsement() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : { skill: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-skill-endorsement' });
+    if (v.skill) wrap.append(h('span', { class: 'sg-renderer-skill-endorsement-name' },
+      document.createTextNode(String(v.skill))));
+    if (v.issuer) wrap.append(h('span', { class: 'sg-renderer-skill-endorsement-issuer' },
+      document.createTextNode(`(${v.issuer})`)));
+    const exp = expiryBadge(v.expires);
+    if (exp) wrap.append(exp);
+    return wrap;
+  };
+}
+
 // Trade-type pill with category icon. The 12 common AU site trades are
 // pre-mapped; anything else falls through as a plain text pill.
 const TRADE_ICONS = {
@@ -10418,6 +10440,7 @@ registerRenderer('incident-severity', incidentSeverity());
 registerRenderer('hazard-rating',     hazardRating());
 registerRenderer('site-induction',    siteInduction());
 registerRenderer('trade-type',        tradeType());
+registerRenderer('skill-endorsement', skillEndorsement());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11009,6 +11032,7 @@ wireBuiltin('incident-severity', clip.text);
 wireBuiltin('hazard-rating',  clip.json);
 wireBuiltin('site-induction', clip.json);
 wireBuiltin('trade-type',     clip.text);
+wireBuiltin('skill-endorsement', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11048,5 +11072,5 @@ export const renderers = {
   retention, materialsPick,
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
-  tradeType,
+  tradeType, skillEndorsement,
 };
