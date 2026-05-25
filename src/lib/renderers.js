@@ -9197,6 +9197,24 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- AU FSM safety / WHS renderers ---------------------------
+ *
+ * SWMS / JSA / toolbox talks / PPE / incidents / hazards / inductions —
+ * the documentation that has to be in order before any tradie sets foot
+ * on a high-risk site. */
+
+// Safe Work Method Statement status. Required for every HRCW activity.
+//   value: 'signed' | 'pending' | 'expired' | 'missing' | 'not-required'
+export function swmsStatus() {
+  return statusPill({
+    signed: 'green', pending: 'orange', expired: 'red',
+    missing: 'red', 'not-required': 'gray',
+  }, {
+    signed: 'check-circle', pending: 'clock', expired: 'alert',
+    missing: 'x-circle', 'not-required': 'circle',
+  });
+}
+
 /* ---------- materials-pick ----------------------------------------
  *
  * Materials pick-list line. Value:
@@ -10180,6 +10198,7 @@ registerRenderer('payment-terms',     paymentTerms());
 registerRenderer('invoice-status',    invoiceStatus());
 registerRenderer('retention',         retention());
 registerRenderer('materials-pick',    materialsPick());
+registerRenderer('swms-status',       swmsStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10763,6 +10782,7 @@ wireBuiltin('payment-terms',  clip.json);
 wireBuiltin('invoice-status', clip.text);
 wireBuiltin('retention',      clip.json);
 wireBuiltin('materials-pick', clip.json);
+wireBuiltin('swms-status',    clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10800,4 +10820,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
+  swmsStatus,
 };
