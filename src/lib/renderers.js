@@ -6028,6 +6028,111 @@ export function rowActions({
   };
 }
 
+/* ---------- drag-handle (row reorder grip) -------------------------
+ *
+ * Six-dot grip icon. The grid's existing row-drag implementation lives
+ * on the gutter; this is a standalone primitive for grids that prefer
+ * an in-column handle. Sets `cursor: grab` on the cell; dispatches a
+ * `grid:rowDragStart` event with the row id on mousedown so consumers
+ * can wire up reorder behaviour. */
+const SG_DRAG_HANDLE_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+  '<circle cx="6" cy="3" r="1.2" fill="currentColor"/>' +
+  '<circle cx="10" cy="3" r="1.2" fill="currentColor"/>' +
+  '<circle cx="6" cy="8" r="1.2" fill="currentColor"/>' +
+  '<circle cx="10" cy="8" r="1.2" fill="currentColor"/>' +
+  '<circle cx="6" cy="13" r="1.2" fill="currentColor"/>' +
+  '<circle cx="10" cy="13" r="1.2" fill="currentColor"/>' +
+  '</svg>';
+
+export function dragHandle({ label = 'Drag to reorder' } = {}) {
+  return (ctx) => {
+    const { td } = ctx;
+    if (td) td.classList.add('sg-renderer-draghandle-cell');
+    const btn = h('span', {
+      class: 'sg-renderer-draghandle',
+      title: label,
+      'aria-label': label,
+      role: 'button',
+      tabindex: 0,
+      draggable: 'true',
+    }, SG_DRAG_HANDLE_SVG);
+    btn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      const grid = td?.closest('[data-controller~="grid"]');
+      if (grid) grid.dispatchEvent(new CustomEvent('grid:rowDragStart', {
+        bubbles: true,
+        detail: { rowId: ctx.row?.id ?? ctx.row?._sg_id, row: ctx.row, event: e },
+      }));
+    });
+    return btn;
+  };
+}
+
+/* ---------- row-number (sequential 1..N) ---------------------------
+ *
+ * Render the row's 1-based index. Sources the number from `row._sg_idx`
+ * when present (the grid's renderer pipeline sets this on every cell
+ * call), falling back to walking the DOM for the row's nth-of-type
+ * position so it works in any grid even without that hint.
+ *
+ *   registerRenderer('row-number', renderers.rowNumber());
+ *   <th data-header-cell-cell-renderer-value="row-number" ...>#</th>
+ */
+export function rowNumber({ startAt = 1, padTo = 0 } = {}) {
+  return (ctx) => {
+    const { td, row } = ctx;
+    let n = (row && typeof row._sg_idx === 'number') ? row._sg_idx + 1 : null;
+    if (n == null && td) {
+      const tr = td.closest('tr');
+      const body = tr?.parentElement;
+      if (tr && body) {
+        const rows = Array.from(body.querySelectorAll('tr'));
+        const idx = rows.indexOf(tr);
+        if (idx >= 0) n = idx + 1;
+      }
+    }
+    if (n == null) n = startAt;
+    if (td) td.classList.add('sg-renderer-rownumber-cell');
+    const txt = padTo > 0 ? String(n).padStart(padTo, '0') : String(n);
+    return h('span', { class: 'sg-renderer-rownumber' }, document.createTextNode(txt));
+  };
+}
+
+/* ---------- expand-toggle (master/detail caret) --------------------
+ *
+ * Standalone chevron renderer. Clicks dispatch `grid:rowToggleExpand`
+ * with the row id; expanded/collapsed state is stored on the row as
+ * `row._sg_expanded` (truthy = expanded). Mirrors the existing
+ * master/detail caret behaviour but as a portable column primitive
+ * — use it for tree views, nested lists, "show more" cells. */
+export function expandToggle() {
+  return (ctx) => {
+    const { td, row } = ctx;
+    if (td) td.classList.add('sg-renderer-expandtoggle-cell');
+    const expanded = !!(row && row._sg_expanded);
+    const btn = h('button', {
+      type: 'button',
+      class: `sg-renderer-expandtoggle${expanded ? ' is-open' : ''}`,
+      'aria-label': expanded ? 'Collapse row' : 'Expand row',
+      'aria-expanded': expanded ? 'true' : 'false',
+    }, SG_CHEVRON_SVG);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = !expanded;
+      if (row) row._sg_expanded = next;
+      btn.classList.toggle('is-open', next);
+      btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+      btn.setAttribute('aria-label', next ? 'Collapse row' : 'Expand row');
+      const grid = td?.closest('[data-controller~="grid"]');
+      if (grid) grid.dispatchEvent(new CustomEvent('grid:rowToggleExpand', {
+        bubbles: true,
+        detail: { rowId: row?.id ?? row?._sg_id, row, expanded: next },
+      }));
+    });
+    return btn;
+  };
+}
+
 /* ---------- slider (inline range input) ----------------------------
  *
  * Cell renders as a horizontal range track with a value bubble at the
@@ -6241,6 +6346,9 @@ registerRenderer('action-button',     actionButton());
 registerRenderer('menu',              menu());
 registerRenderer('split-button',      splitButton());
 registerRenderer('row-actions',       rowActions());
+registerRenderer('drag-handle',       dragHandle());
+registerRenderer('row-number',        rowNumber());
+registerRenderer('expand-toggle',     expandToggle());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -6770,7 +6878,9 @@ wireBuiltin('date-range',     {
   parse: (text) => {
     const s = String(text ?? '').trim();
     if (s === '') return null;
-    const parts = s.split(/\s*\/\s*|\s*[–-]\s*/);
+    // Split on "/" OR an en-dash OR a space-padded hyphen. We mustn't
+    // split on a bare "-" — that lives inside ISO dates ("2026-06-01").
+    const parts = s.split(/\s*\/\s*|\s*[–]\s*|\s+-\s+/);
     if (parts.length < 2) return undefined;
     const [start, end] = parts;
     const check = (p) => p === '' || !Number.isNaN(new Date(p).valueOf());
@@ -6805,4 +6915,5 @@ export const renderers = {
   select, multiselect, combobox, slider, datePicker, timePicker, dateRange,
   colorPicker, textarea,
   actionButton, menu, splitButton, rowActions,
+  dragHandle, rowNumber, expandToggle,
 };

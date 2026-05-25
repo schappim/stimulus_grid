@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>84 — Row number renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>84 — Row number renderer</h1>
+  <p class="lede">
+    Sequential 1..N indicator. The grid's gutter offers the same thing
+    with selection click semantics; this is the in-column primitive for
+    grids that want the number to live with the data. Use
+    <code>padTo</code> for "001 / 002 / …" formatting.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="_n"
+              data-header-cell-cell-renderer-value="row-number"
+              data-header-cell-width-value="48">#</th>
+          <th data-controller="header-cell" data-header-cell-field-value="_n3"
+              data-header-cell-cell-renderer-value="rn-padded"
+              data-header-cell-width-value="60">No.</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="city"
+              data-header-cell-width-value="180">City</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ltv"
+              data-header-cell-type-value="number"
+              data-header-cell-cell-renderer-value="currency"
+              data-header-cell-width-value="120">LTV</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('rn-padded', renderers.rowNumber({ padTo: 3 }));
+
+    const data = Array.from({ length: 20 }, (_, i) => ({
+      id: 1000 + i,
+      customer: ['Astrid Hale', 'Marcus Chen', 'Priya Patel', 'Jamal Owens', 'Lena Brooks', 'Tomás Vega', 'Ines Wu', 'Caleb Nash', 'Petra Hjort', 'Hassan Reza'][i % 10],
+      city: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Auckland', 'Wellington', 'London', 'Berlin', 'Tokyo', 'New York'][i % 10],
+      ltv: 1000 + i * 137,
+    }));
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

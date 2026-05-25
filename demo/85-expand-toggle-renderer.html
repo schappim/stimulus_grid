@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>85 — Expand toggle renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>85 — Expand toggle renderer</h1>
+  <p class="lede">
+    Standalone chevron. Click rotates 90°; row's
+    <code>_sg_expanded</code> flag flips and a
+    <code>grid:rowToggleExpand</code> event fires for consumers to wire
+    nested-row expand, "show more" cells, or tree-data toggles.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="_chev"
+              data-header-cell-cell-renderer-value="expand-toggle"
+              data-header-cell-width-value="40"></th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="300">Topic</th>
+          <th data-controller="header-cell" data-header-cell-field-value="comments"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Comments</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Click a chevron to fire grid:rowToggleExpand.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const data = [
+      { id: 1, title: 'Postgres connection limit during launch', comments: 12 },
+      { id: 2, title: 'SSL renewal failed silently last night',  comments: 4  },
+      { id: 3, title: 'Mobile app crash on TestFlight build 224', comments: 28 },
+      { id: 4, title: 'Slack integration token rotation',         comments: 7  },
+      { id: 5, title: 'Vendor SOC2 audit findings to action',     comments: 16 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    const log = document.getElementById('log');
+    grid.addEventListener('grid:rowToggleExpand', (e) => {
+      log.textContent = `▶ row ${e.detail.rowId} is now ${e.detail.expanded ? 'EXPANDED' : 'collapsed'} ("${e.detail.row.title}")`;
+    });
+  </script>
+</body>
+</html>

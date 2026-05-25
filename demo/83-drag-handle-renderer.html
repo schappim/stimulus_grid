@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>83 — Drag handle renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>83 — Drag handle renderer</h1>
+  <p class="lede">
+    Six-dot grip icon for grids that prefer an in-column reorder
+    handle over the gutter-based row-drag. Dispatches
+    <code>grid:rowDragStart</code> with the row id on mousedown — wire
+    up the actual reorder semantics in consumer code.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="_grip"
+              data-header-cell-cell-renderer-value="drag-handle"
+              data-header-cell-width-value="30"></th>
+          <th data-controller="header-cell" data-header-cell-field-value="rank"
+              data-header-cell-width-value="60">Rank</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="320">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="votes"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="100">Votes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Mousedown a grip to fire grid:rowDragStart.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const data = [
+      { id: 1, rank: 1, title: 'Investigate webhook lag during peak traffic', votes: 42 },
+      { id: 2, rank: 2, title: 'Migrate billing tables to Postgres 16',         votes: 31 },
+      { id: 3, rank: 3, title: 'Rate-limit signup API by IP',                    votes: 27 },
+      { id: 4, rank: 4, title: 'Redesign empty states across dashboard',         votes: 18 },
+      { id: 5, rank: 5, title: 'Add CSV export to audit logs',                   votes: 14 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    const log = document.getElementById('log');
+    grid.addEventListener('grid:rowDragStart', (e) => {
+      log.textContent = `▶ drag start on row ${e.detail.rowId} ("${e.detail.row.title}")`;
+    });
+  </script>
+</body>
+</html>

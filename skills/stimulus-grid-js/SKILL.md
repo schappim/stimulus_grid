@@ -337,6 +337,7 @@ Keyboard:
 - **Enter** edits the active cell; **type a character** starts editing seeded with it
 - **Delete/Backspace** clears the selected editable cells; **Esc** clears the selection
 - **Cmd/Ctrl+C** copies the active range as TSV
+- **Cmd/Ctrl+V** pastes TSV anchored at the active cell (a single value tiles across the selection — Sheets convention)
 
 Row selection: add a **row-number gutter** column —
 `<th data-controller="header-cell" data-header-cell-row-number-value="true" data-header-cell-pinned-value="left">` —
@@ -351,6 +352,44 @@ fill (`data-cell-range`); row selection = **green** fill (`data-selected`).
 `getCellSelectionRowIds()` → row ids in the range; `grid:cellSelectionChanged`
 fires on change. Set `cell-selection-value="false"` to restore plain-click row
 selection (for row-selection-centric grids).
+
+### Copy / paste — renderer round-trip contract
+
+Every built-in cell renderer ships a `copyValue(ctx)` / `parseValue(text, ctx)`
+pair on its registered function instance, so structured values
+(addresses, JSON, attachments, dates, selects, multi-selects, …)
+round-trip through `Cmd/Ctrl+C` → `Cmd/Ctrl+V` without losing their
+shape — even across grids, or out to Excel/Sheets and back.
+
+- **`copyValue`** returns the string written to the clipboard. Defaults
+  to the model's formatted display.
+- **`parseValue`** turns a pasted text cell into the value to commit.
+  Return `undefined` to *reject* that cell — the grid skips it and
+  reports it in the new `grid:pasteRejected` event so apps can toast.
+
+Each commit fires `grid:cellValueChanged` (with `source: 'paste'` in
+the detail) — same path the inline editor uses, so persistence wiring
+on the server stays unchanged.
+
+Custom renderers can opt in via the re-exported `withClipboard` helper:
+
+```js
+import { renderers, registerRenderer, withClipboard } from '@ninjaai/stimulus_grid';
+
+registerRenderer('eur', withClipboard(renderers.currency({ currency: 'EUR' }), {
+  copy:  ({ value }) => value == null ? '' : String(value),
+  parse: (text) => {
+    const n = Number(String(text).replace(/[€\s,]/g, ''));
+    return Number.isFinite(n) ? n : undefined;
+  },
+}));
+```
+
+Renderers that read their config from `cellRendererConfig` at render
+time (select / multiselect / combobox) do the same on paste — pasting
+labels matches case-insensitively against the column's option list and
+rejects unknown values, so users can paste display labels OR persisted
+values interchangeably.
 
 ## Server-side row model
 

@@ -3649,3 +3649,48 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-rowactions-btn:hover { background: #f3f4f6; color: #1f2937; }
 .sg-grid .sg-renderer-rowactions-btn.is-danger:hover { background: #fef2f2; color: #b91c1c; }
+
+/* ----- drag-handle ------------------------------------------------- */
+.sg-grid .sg-renderer-draghandle-cell { text-align: center; cursor: grab; }
+.sg-grid .sg-renderer-draghandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  cursor: grab;
+}
+.sg-grid .sg-renderer-draghandle:hover { color: #4b5563; }
+.sg-grid .sg-renderer-draghandle:active { cursor: grabbing; }
+.sg-grid .sg-renderer-draghandle svg { width: 12px; height: 12px; display: block; }
+
+/* ----- row-number -------------------------------------------------- */
+.sg-grid .sg-renderer-rownumber-cell {
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-size: 11px;
+  padding-right: 8px;
+}
+
+/* ----- expand-toggle ----------------------------------------------- */
+.sg-grid .sg-renderer-expandtoggle-cell { text-align: center; }
+.sg-grid .sg-renderer-expandtoggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: #6b7280;
+  padding: 0;
+  transition: transform 0.12s ease-out;
+}
+.sg-grid .sg-renderer-expandtoggle:hover { background: #f3f4f6; color: #1f2937; }
+.sg-grid .sg-renderer-expandtoggle svg { width: 10px; height: 10px; display: block; }
+.sg-grid .sg-renderer-expandtoggle.is-open { transform: rotate(90deg); }
