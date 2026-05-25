@@ -14,6 +14,9 @@
     pivot_mode:    true|false (default false) — reshape data into a pivot table
     pivot_cols:    array of fields whose unique values become columns
     side_panel:    true|false (default false) — drag-driven groups/pivots/values panel
+    column_groups: array of multi-row header groups, e.g.
+                   [{ headerName: "Medals", children: ["gold","silver","bronze"] }]
+    pinned_bottom_row: true|false (default false) — sticky grand totals row
 %>
 <%
   resource     = grid.class.resource_name
@@ -56,6 +59,14 @@
   # the grid; the JS controller wires up DnD against the public gridApi.
   side_panel = local_assigns.fetch(:side_panel, false)
 
+  # Multi-row column header groups + a sticky bottom row with grand totals.
+  # `column_groups` accepts `[{ headerName:, children: [field…] }]` (one level);
+  # pivot mode auto-derives nested headers, so this is for non-pivot grids.
+  # `pinned_bottom_row` reuses the grid class's `agg_funcs` to populate the
+  # sticky totals over the currently filtered leaves.
+  column_groups     = local_assigns.fetch(:column_groups, nil)
+  pinned_bottom_row = local_assigns.fetch(:pinned_bottom_row, false)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -78,6 +89,8 @@
      data-grid-pivot-mode-value="<%= pivot_mode %>"
      <% if pivot_cols %>data-grid-pivot-cols-value="<%= pivot_cols.to_json %>"<% end %>
      data-grid-side-panel-value="<%= side_panel %>"
+     <% if column_groups %>data-grid-column-groups-value="<%= column_groups.to_json %>"<% end %>
+     data-grid-pinned-bottom-row-value="<%= pinned_bottom_row %>"
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"
