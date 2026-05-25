@@ -2258,3 +2258,23 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Coloured-tags renderer — per-value coloured chips, sibling to `tags`.
+   Reuses the .sg-pill-* palette tokens defined at the top of the renderer
+   stylesheet so the chips match every other pill in the grid. */
+.sg-grid .sg-renderer-coloured-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.sg-grid .sg-renderer-coloured-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}

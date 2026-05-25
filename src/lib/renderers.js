@@ -2748,6 +2748,63 @@ function buildLinkedRecordChip(value, row, entry, { showThumb, href, fallback })
   return chip;
 }
 
+/* ---------- colouredTags (per-value tint, multi-select) -------------
+ *
+ * `tags` paints every chip the same neutral colour. This sibling does
+ * what Notion / Airtable do — each value can opt into a colour from the
+ * grid's palette (gray | red | orange | yellow | green | blue | indigo |
+ * purple | pink, plus per-value override via raw CSS colour). Unknown
+ * values fall back to `defaultColor`.
+ *
+ *   registerRenderer('priority', colouredTags({
+ *     colorMap: { p0: 'red', p1: 'orange', p2: 'yellow', p3: 'green', p4: 'gray' },
+ *   }))
+ *
+ * Same CSV / array input contract as `tags`. */
+export function colouredTags({
+  separator = ',',
+  colorMap = {},
+  defaultColor = 'gray',
+} = {}) {
+  // Lower-case the colour-map keys once so per-cell lookups don't repeat
+  // the work — input data may be sloppy ("VIP" / "vip" / "Vip" all match).
+  const cmap = {};
+  for (const [k, v] of Object.entries(colorMap)) cmap[String(k).toLowerCase()] = v;
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const list = Array.isArray(value) ? value : String(value).split(separator);
+    const wrap = h('div', { class: 'sg-renderer-coloured-tags' });
+    for (const t of list) {
+      const text = String(t).trim();
+      if (!text) continue;
+      const colour = cmap[text.toLowerCase()] || defaultColor;
+      // Palette name → sg-pill-* class; raw CSS colour (#hex, oklch(), …)
+      // sets the background inline (with a contrast-aware foreground).
+      const chip = h('span', { class: 'sg-renderer-coloured-tag' },
+        document.createTextNode(text));
+      if (/^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/.test(colour)) {
+        chip.classList.add(`sg-pill-${colour}`);
+      } else {
+        chip.style.background = colour;
+        chip.style.color = readableForeground(colour);
+      }
+      wrap.append(chip);
+    }
+    return wrap;
+  };
+}
+
+// Pick black or white text for a given background colour. Only honours
+// #hex inputs (named colours / oklch / rgb() we can't introspect without
+// a canvas; in those cases we just leave the existing colour and hope
+// the user's palette is sensible — the named-colour path above is the
+// recommended option).
+function readableForeground(bg) {
+  const rgb = hexToRgb(bg);
+  if (!rgb) return 'inherit';
+  return isLightRgb(rgb) ? '#1f2937' : '#ffffff';
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2788,6 +2845,7 @@ registerRenderer('switch',         switchRenderer());
 registerRenderer('markdown',       markdown());
 registerRenderer('json',           json());
 registerRenderer('linked-record',  linkedRecord());
+registerRenderer('coloured-tags',  colouredTags());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2798,5 +2856,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, switch: switchRenderer, markdown, json, linkedRecord, audioAttachment,
+  checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, audioAttachment,
 };

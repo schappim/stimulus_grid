@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>41 — Coloured tags renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>41 — Coloured tags renderer</h1>
+  <p class="lede">
+    Sibling of <code>tags</code>: every chip can opt into a colour from
+    the grid's palette via a per-value <code>colorMap</code>. Mirrors how
+    Notion / Airtable colour multi-select fields. Unknown values fall
+    back to <code>defaultColor</code>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-width-value="260"
+              data-header-cell-sortable-value="true">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="priority"
+              data-header-cell-cell-renderer-value="priority"
+              data-header-cell-width-value="110">Priority</th>
+          <th data-controller="header-cell" data-header-cell-field-value="labels"
+              data-header-cell-cell-renderer-value="labels"
+              data-header-cell-width-value="320">Labels</th>
+          <th data-controller="header-cell" data-header-cell-field-value="size"
+              data-header-cell-cell-renderer-value="size"
+              data-header-cell-width-value="100">T-shirt</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Palette:</strong>
+    <code>gray</code> · <code>red</code> · <code>orange</code> ·
+    <code>yellow</code> · <code>green</code> · <code>blue</code> ·
+    <code>indigo</code> · <code>purple</code> · <code>pink</code>.
+    Or pass any CSS colour as the map value — the chip auto-picks a
+    readable text colour from the background's luminance.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('priority', renderers.colouredTags({
+      colorMap: { p0: 'red', p1: 'orange', p2: 'yellow', p3: 'green', p4: 'gray' },
+    }));
+    registerRenderer('labels', renderers.colouredTags({
+      colorMap: {
+        bug:         'red',
+        feature:     'green',
+        chore:       'gray',
+        design:      'purple',
+        backend:     'indigo',
+        frontend:    'blue',
+        docs:        'yellow',
+        'good-first-issue': 'pink',
+      },
+    }));
+    registerRenderer('size', renderers.colouredTags({
+      colorMap: { XS: 'green', S: 'green', M: 'yellow', L: 'orange', XL: 'red' },
+    }));
+
+    const ROWS = [
+      { id: 1, task: 'Migrate to Postgres 17',     priority: 'p1', size: 'L',
+        labels: 'chore,backend' },
+      { id: 2, task: 'Recsys v3 canary',           priority: 'p2', size: 'XL',
+        labels: 'feature,backend' },
+      { id: 3, task: 'Fix totals rounding bug',    priority: 'p0', size: 'S',
+        labels: 'bug,frontend,good-first-issue' },
+      { id: 4, task: 'Refresh marketing copy',     priority: 'p3', size: 'M',
+        labels: 'docs,design' },
+      { id: 5, task: 'iOS push notifications',     priority: 'p2', size: 'L',
+        labels: 'feature,frontend' },
+      { id: 6, task: 'Cleanup old feature flags',  priority: 'p4', size: 'XS',
+        labels: 'chore' },
+      { id: 7, task: 'Webhook delivery dashboards',priority: 'p1', size: 'L',
+        labels: 'feature,backend,frontend' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

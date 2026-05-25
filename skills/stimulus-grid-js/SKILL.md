@@ -225,6 +225,7 @@ ship pre-registered:
 | `markdown` | Tiny dependency-free Markdown subset: `**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, `[text](url)` (http/https/mailto only), and `-` / `1.` lists. Cell value is HTML-escaped before parsing — `<script>` survives as literal text. Pass `{ inline: true }` for a one-liner pass (no lists, no `<br>`) |
 | `json` | Collapsible pretty-print for object / array values. Collapsed form is a one-line summary (`{ a: 1, b: "foo", +2 }` / `[1, 2, 3, +5]`); expand toggles a syntax-highlighted indented block via native `<details>`. Accepts a JSON string and parses it (passes through verbatim if not valid). `maxKeys` controls how many keys/items the summary shows |
 | `linked-record` | Airtable-style FK chip — value is a key, resolver returns `{ name, thumb?, color?, href? }`. Same three-step lookup chain as `avatar` (function → window map → fallback). Per-entry `color` tints the chip background; `href` (string from entry or via `href: (val,row,entry) ⇒ url`) makes it an `<a>` opening in a new tab. `multiple: true` for array-of-keys columns (one chip per key) |
+| `coloured-tags` | Sibling of `tags` with per-value colour mapping. `colorMap: { p0: 'red', p1: 'orange', … }` keys lower-cased before lookup. Palette names (`gray`/`red`/`orange`/`yellow`/`green`/`blue`/`indigo`/`purple`/`pink`) hit the `.sg-pill-*` tokens; raw CSS colours (`#hex`, etc.) tint inline with auto-readable foreground |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the
