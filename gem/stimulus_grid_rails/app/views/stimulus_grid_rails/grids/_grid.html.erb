@@ -19,6 +19,12 @@
     pinned_bottom_row: true|false (default false) — sticky grand totals row
     persist_key:   string (default ""); when set, the grid auto-saves/restores
                    its layout to localStorage["sgrid:<persist_key>"]
+    master_detail: true|false (default false) — enable expandable detail rows
+    detail_template: id of a <template> cloned into each detail panel
+    detail_rows_key: master-row field holding the array of nested rows; the
+                     inner [data-controller="grid"] in the template is
+                     auto-seeded from row.send(detail_rows_key)
+    detail_row_height: minimum panel height in px (default 240)
 %>
 <%
   resource     = grid.class.resource_name
@@ -74,6 +80,16 @@
   # Leave blank to opt out (default).
   persist_key = local_assigns.fetch(:persist_key, "")
 
+  # Master/detail rows: click the chevron next to a master row to expand a
+  # detail panel beneath it. `detail_template` is the id of a <template>
+  # cloned per expansion; `detail_rows_key` is the row attribute holding
+  # the nested rows array (auto-seeds an inner [data-controller="grid"]
+  # inside the template).
+  master_detail     = local_assigns.fetch(:master_detail, false)
+  detail_template   = local_assigns.fetch(:detail_template, nil)
+  detail_rows_key   = local_assigns.fetch(:detail_rows_key, nil)
+  detail_row_height = local_assigns.fetch(:detail_row_height, nil)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -99,6 +115,10 @@
      <% if column_groups %>data-grid-column-groups-value="<%= column_groups.to_json %>"<% end %>
      data-grid-pinned-bottom-row-value="<%= pinned_bottom_row %>"
      data-grid-persist-key-value="<%= persist_key %>"
+     data-grid-master-detail-value="<%= master_detail %>"
+     <% if detail_template %>data-grid-detail-template-value="<%= detail_template %>"<% end %>
+     <% if detail_rows_key %>data-grid-detail-rows-key-value="<%= detail_rows_key %>"<% end %>
+     <% if detail_row_height %>data-grid-detail-row-height-value="<%= detail_row_height %>"<% end %>
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"
@@ -127,7 +147,8 @@
     </thead>
     <tbody>
       <% rows.each do |row| %>
-        <%= render partial: "stimulus_grid_rails/grids/row", locals: { grid: grid, row: row } %>
+        <%= render partial: "stimulus_grid_rails/grids/row",
+                   locals: { grid: grid, row: row, detail_rows_key: detail_rows_key } %>
       <% end %>
     </tbody>
   </table>

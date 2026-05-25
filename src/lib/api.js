@@ -98,6 +98,16 @@ export function createGridApi(grid) {
     setPinnedBottomRow(on) { grid.setPinnedBottomRow(on); },
     isPinnedBottomRow() { return grid.isPinnedBottomRow(); },
 
+    // ---- Master/detail ----
+    setMasterDetail(on) { grid.setMasterDetail(on); },
+    isMasterDetail() { return grid.isMasterDetail(); },
+    expandDetailRow(rowId) { grid.expandDetailRow(rowId); },
+    collapseDetailRow(rowId) { grid.collapseDetailRow(rowId); },
+    toggleDetailRow(rowId) { grid.toggleDetailRow(rowId); },
+    expandAllDetails() { grid.expandAllDetails(); },
+    collapseAllDetails() { grid.collapseAllDetails(); },
+    getDetailExpandedRowIds() { return grid.getDetailExpandedRowIds(); },
+
     // ---- Column state + persistence ----
     getColumnState() { return grid.getColumnState(); },
     applyColumnState(state) { grid.applyColumnState(state); },

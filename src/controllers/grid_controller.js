@@ -55,6 +55,10 @@ export default class GridController extends Controller {
     columnGroups:        { type: Array,   default: [] },                               // multi-row headers: [{headerName, children:[field,...]}]
     pinnedBottomRow:     { type: Boolean, default: false },                            // sticky bottom row with grand totals (from aggFuncs)
     persistKey:          { type: String,  default: '' },                                // when non-empty, auto-save/restore state to localStorage under sgrid:<key>
+    masterDetail:        { type: Boolean, default: false },                            // enable expandable detail rows under each master row
+    detailTemplate:      { type: String,  default: '' },                                // id of a <template> cloned into each expanded detail row
+    detailRowsKey:       { type: String,  default: '' },                                // master-row field holding the array of nested detail rows
+    detailRowHeight:     { type: Number,  default: 240 },                              // CSS pixel height for the detail-row shell
   };
 
   initialize() {
@@ -84,6 +88,13 @@ export default class GridController extends Controller {
     // Explicit per-group expand/collapse overrides (groupId -> bool); groups not
     // present here fall back to state.group.defaultExpanded by level.
     this._groupExpanded = new Map();
+    // Master/detail: which master row ids currently show a detail panel
+    // beneath them. Stringified ids so it survives the Number/String coercion
+    // we apply on data-row-id parsing.
+    this._detailExpanded = new Set();
+    // gridApi handle per mounted nested detail grid, keyed by master row id.
+    // Lets us cleanly tear them down on collapse / data refresh.
+    this._detailGrids = new Map();
   }
 
   connect() {
@@ -160,6 +171,14 @@ export default class GridController extends Controller {
           const colId = td.getAttribute('data-cell-col-id-value') || td.getAttribute('data-col-id');
           if (colId) row[colId] = td.textContent.trim();
         });
+        // Master/detail: server-rendered rows can carry their nested rows as a
+        // JSON string in data-row-detail-rows-value. The Rails partial uses
+        // this to feed an inner grid without re-fetching from JS.
+        const detailRows = tr.getAttribute('data-row-detail-rows-value');
+        if (detailRows && this.detailRowsKeyValue) {
+          try { row[this.detailRowsKeyValue] = JSON.parse(detailRows); }
+          catch (e) { /* leave row[detailRowsKey] unset */ }
+        }
         return row;
       });
       existingTbody.innerHTML = '';
@@ -741,7 +760,7 @@ export default class GridController extends Controller {
     // Use the underlying columnDefs so CSV always exports the real data columns,
     // including any grouped columns hidden by the auto group column.
     const cols = this.state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
-    const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup);
+    const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup && !r.__sgDetail);
     const escape = (s) => /[",\n\r]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
     const lines = [cols.map((c) => escape(c.headerName || c.field)).join(columnSeparator)];
     for (const r of rows) {
@@ -1106,13 +1125,16 @@ export default class GridController extends Controller {
   _renderBody() {
     if (!this._tbody) return;
     const cols = this._visibleCols();
-    const allRows = this._displayList.pageRows;
+    const allRows = this._withDetailRows(this._displayList.pageRows);
     this._selKeys = this._computeCellSelKeys();   // cell range highlight lookup
 
     // Decide whether to virtualise. Virtualisation is auto-on whenever the
     // current display list exceeds the threshold, regardless of pagination —
     // a page size larger than the viewport still benefits from windowing.
-    const virtual = this.virtualValue || allRows.length > 200;
+    // Master/detail forces it off: detail rows are template-driven and have
+    // variable heights the uniform-row windowing can't predict.
+    const virtual = !this.masterDetailValue
+      && (this.virtualValue || allRows.length > 200);
 
     let windowed = allRows;
     let firstIdx = 0;
@@ -1186,13 +1208,19 @@ export default class GridController extends Controller {
 
   _buildRow(row, cols, existing, rowNum) {
     if (row.__sgGroup) return this._buildGroupRow(row, cols, existing);
+    if (row.__sgDetail) return this._buildDetailRow(row, cols, existing);
     const id = String(this._rowId(row));
     let tr = existing.get(id);
     if (!tr) tr = el('tr');
     tr.dataset.rowId = id;
     tr.classList.remove('sg-spacer');
     const selected = this.state.selection.has(this._rowId(row));
-    setAttrs(tr, { 'data-selected': selected ? 'true' : null });
+    const expanded = this.masterDetailValue && this._isDetailExpanded(id);
+    setAttrs(tr, {
+      'data-selected': selected ? 'true' : null,
+      'data-detail-expanded': expanded ? 'true' : null,
+    });
+    if (this.masterDetailValue) tr.classList.add('sg-master-row');
     this._renderRow(tr, row, cols, rowNum);
     return tr;
   }
@@ -1252,6 +1280,26 @@ export default class GridController extends Controller {
         td.classList.add('sg-group-leaf-cell');
         td.removeAttribute('data-cell-active');
         td.removeAttribute('data-cell-range');
+        tr.appendChild(td);
+        continue;
+      }
+      if (col._isMasterExpand) {
+        // Master/detail gutter cell: clicking the caret toggles the detail
+        // panel for this row. The chevron is a span (not a button) so it
+        // can sit on top of the cell-selection layer without consuming
+        // pointer events meant for the row click.
+        td.classList.add('sg-master-expand-cell');
+        td.setAttribute('data-master-expand', 'true');
+        td.removeAttribute('data-cell-active');
+        td.removeAttribute('data-cell-range');
+        const expanded = this._isDetailExpanded(this._rowId(row));
+        const caret = el('span', {
+          class: 'sg-master-expand-caret',
+          'data-expanded': expanded ? 'true' : 'false',
+          'aria-hidden': 'true',
+        });
+        caret.innerHTML = CHEVRON_SVG;
+        td.appendChild(caret);
         tr.appendChild(td);
         continue;
       }
@@ -1787,10 +1835,10 @@ export default class GridController extends Controller {
       if (!rect) continue;
       for (let r = rect.r0; r <= rect.r1; r++) {
         const row = rect.rows[r];
-        if (!row || row.__sgGroup) continue;
+        if (!row || row.__sgGroup || row.__sgDetail) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
-          if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol) continue;
+          if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand) continue;
           out.push(getValue(row, col));
         }
       }
@@ -1974,6 +2022,18 @@ export default class GridController extends Controller {
       this.toggleGroup(tr.dataset.rowId.replace(/^__g:/, ''), Number(tr.dataset.groupLevel) || 0);
       return;
     }
+    // Detail row itself: swallow clicks so they don't trigger row/cell
+    // selection on the master. The nested grid (if any) handles its own
+    // interactions.
+    if (tr.classList.contains('sg-detail-row')) return;
+    // Master-detail expand chevron: toggle and stop here so the row's click
+    // semantics (selection / range / etc) aren't also fired.
+    const expandTd = e.target.closest?.('td[data-master-expand="true"]');
+    if (expandTd) {
+      const rowId = this._coerceRowId(tr.dataset.rowId);
+      this.toggleDetailRow(rowId);
+      return;
+    }
     // Clicks inside an active editor must not trigger selection. Selection
     // toggles render the row, which rebuilds the cell and destroys the live
     // <input>, so the user can't position their cursor in the editor.
@@ -2028,7 +2088,7 @@ export default class GridController extends Controller {
   _cellAt(target) {
     const td = target.closest?.('td');
     const tr = target.closest?.('tr');
-    if (!td || !tr || tr.dataset.group === 'true' || td.classList.contains('sg-checkbox-cell') || td.classList.contains('sg-group-leaf-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
+    if (!td || !tr || tr.dataset.group === 'true' || tr.classList.contains('sg-detail-row') || td.classList.contains('sg-checkbox-cell') || td.classList.contains('sg-group-leaf-cell') || td.classList.contains('sg-master-expand-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
     return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
   }
@@ -2328,7 +2388,7 @@ export default class GridController extends Controller {
   // ----- Keyboard navigation (Numbers/Sheets-style) -----
 
   _navCols() {
-    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol);
+    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand);
   }
 
   _onGridKeydown = (e) => {
@@ -2388,7 +2448,7 @@ export default class GridController extends Controller {
     if (!rows.length || !cols.length) return;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
     const active = this._activeCell();
-    const firstLeaf = () => rows.findIndex((r) => !r.__sgGroup);
+    const firstLeaf = () => rows.findIndex((r) => !r.__sgGroup && !r.__sgDetail);
     let ri = active ? rows.findIndex((r) => this._rowId(r) === active.rowId) : firstLeaf();
     let ci = active ? cols.findIndex((c) => c.field === active.colId) : 0;
     if (ri < 0) ri = firstLeaf();
@@ -2403,12 +2463,12 @@ export default class GridController extends Controller {
       let nr = clamp(ri + dr, 0, rows.length - 1);
       // Step over group header rows when moving vertically.
       if (dr !== 0) {
-        while (rows[nr] && rows[nr].__sgGroup) {
+        while (rows[nr] && (rows[nr].__sgGroup || rows[nr].__sgDetail)) {
           const next = nr + dr;
           if (next < 0 || next >= rows.length) break;
           nr = next;
         }
-        if (!rows[nr] || rows[nr].__sgGroup) return;
+        if (!rows[nr] || rows[nr].__sgGroup || rows[nr].__sgDetail) return;
       }
       const nc = clamp(ci + dc, 0, cols.length - 1);
       this._setSingleCellSel({ rowId: this._rowId(rows[nr]), colId: cols[nc].field });
@@ -2441,7 +2501,7 @@ export default class GridController extends Controller {
       if (!rect) continue;
       for (let r = rect.r0; r <= rect.r1; r++) {
         const row = rect.rows[r];
-        if (!row || row.__sgGroup) continue;
+        if (!row || row.__sgGroup || row.__sgDetail) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
           if (!col || !col.editable || col._isCheckbox || col._isRowNumber) continue;
@@ -2524,6 +2584,15 @@ export default class GridController extends Controller {
     const visible = this.state.columnDefs.filter((c) => !c.hidden);
     const groupFields = this.state.group?.cols || [];
 
+    // Master/detail: prepend a 32px synthetic column that hosts the expand/
+    // collapse chevron. Pinned left so it sticks during horizontal scroll, and
+    // suppressed entirely in pivot/grouped views (where the leaf rows we'd
+    // expand from have been aggregated away). The chevron is rendered in
+    // _renderRow under col._isMasterExpand.
+    const wantsMasterDetailGutter = this.masterDetailValue
+      && !this.state.pivot?.mode
+      && !groupFields.length;
+
     // Pivot mode: replace the data columns entirely with the synthetic pivot
     // result columns from the last buildDisplayList call. The group column on
     // the left holds the indented row-group hierarchy + counts; if there are
@@ -2545,7 +2614,9 @@ export default class GridController extends Controller {
       return [groupCol, ...this._displayList.pivotResultColumns];
     }
 
-    if (!groupFields.length) return visible;
+    if (!groupFields.length) {
+      return wantsMasterDetailGutter ? [this._masterExpandCol(), ...visible] : visible;
+    }
     const mode = this.state.group.displayType || 'singleColumn';
     if (mode === 'singleColumn') {
       // Auto group column on the left holds the indented hierarchy + group counts.
@@ -2569,6 +2640,231 @@ export default class GridController extends Controller {
     const grouped = groupFields.map((f) => visible.find((c) => c.field === f)).filter(Boolean);
     const groupedSet = new Set(grouped);
     return [...grouped, ...visible.filter((c) => !groupedSet.has(c))];
+  }
+
+  // Synthetic gutter col for the master-detail expand chevron. Returned by
+  // _visibleCols when masterDetail is on; rendered specially in _renderRow.
+  _masterExpandCol() {
+    return {
+      field: '__masterExpand',
+      headerName: '',
+      _isMasterExpand: true,
+      width: 32,
+      pinned: 'left',
+      sortable: false,
+      filter: null,
+      resizable: false,
+    };
+  }
+
+  // ----- Master/detail rows -----
+
+  _isDetailExpanded(rowId) { return this._detailExpanded.has(String(rowId)); }
+
+  // Splice a synthetic `__sgDetail` row in directly after each expanded master
+  // in the page rows. Done after buildDisplayList so detail expansion stays
+  // a UI concern — the model.js pipeline doesn't need to know about it.
+  _withDetailRows(pageRows) {
+    if (!this.masterDetailValue || !this._detailExpanded.size) return pageRows;
+    // Suppress in pivot / grouped views — leaves we'd hang details off of
+    // have been aggregated away there.
+    if (this.state.pivot?.mode || (this.state.group.cols || []).length) return pageRows;
+    const out = [];
+    for (const row of pageRows) {
+      out.push(row);
+      if (row.__sgGroup || row.__sgDetail) continue;
+      const id = this._rowId(row);
+      if (this._isDetailExpanded(id)) {
+        out.push({ __sgDetail: true, master: row, masterId: id });
+      }
+    }
+    return out;
+  }
+
+  toggleDetailRow(rowId) {
+    if (!this.masterDetailValue) return;
+    if (this._isDetailExpanded(rowId)) this.collapseDetailRow(rowId);
+    else this.expandDetailRow(rowId);
+  }
+
+  expandDetailRow(rowId) {
+    if (!this.masterDetailValue) return;
+    const key = String(rowId);
+    if (this._detailExpanded.has(key)) return;
+    this._detailExpanded.add(key);
+    this.scheduleRender('cells');
+    const masterRow = this.state.rowData.find((r) => String(this._rowId(r)) === key);
+    emit(this.element, 'grid:detailRowExpanded', { rowId, masterRow });
+  }
+
+  collapseDetailRow(rowId) {
+    if (!this.masterDetailValue) return;
+    const key = String(rowId);
+    if (!this._detailExpanded.has(key)) return;
+    this._detailExpanded.delete(key);
+    // Drop any nested-grid api reference — its host <tr> is about to be removed
+    // and a fresh expand should re-mount cleanly.
+    this._detailGrids.delete(key);
+    this.scheduleRender('cells');
+    const masterRow = this.state.rowData.find((r) => String(this._rowId(r)) === key);
+    emit(this.element, 'grid:detailRowCollapsed', { rowId, masterRow });
+  }
+
+  expandAllDetails() {
+    if (!this.masterDetailValue) return;
+    for (const r of this.state.rowData) this._detailExpanded.add(String(this._rowId(r)));
+    this.scheduleRender('cells');
+  }
+
+  collapseAllDetails() {
+    if (!this.masterDetailValue) return;
+    this._detailExpanded.clear();
+    this._detailGrids.clear();
+    this.scheduleRender('cells');
+  }
+
+  getDetailExpandedRowIds() { return Array.from(this._detailExpanded); }
+
+  setMasterDetail(on) {
+    const next = !!on;
+    if (this.masterDetailValue === next) return;
+    this.masterDetailValue = next;
+    if (!next) {
+      this._detailExpanded.clear();
+      this._detailGrids.clear();
+    }
+    this.scheduleRender('columns');
+  }
+  isMasterDetail() { return !!this.masterDetailValue; }
+
+  // Build the detail <tr>: one cell spanning the full visible width, holding a
+  // padded shell that hosts either a cloned <template> or a default summary
+  // pulled from the master row.
+  _buildDetailRow(row, cols, existing) {
+    const id = `__d:${row.masterId}`;
+    let tr = existing.get(id);
+    const masterKey = String(row.masterId);
+    let shouldMount = true;
+    if (tr) {
+      // Reuse the existing <tr> when its master id matches — the nested grid
+      // inside stays mounted, no re-init churn. Otherwise rebuild from scratch.
+      const existingMaster = tr.getAttribute('data-master-id');
+      if (existingMaster === masterKey) {
+        tr.classList.remove('sg-spacer');
+        return tr;
+      }
+      tr = null;
+    }
+    if (!tr) tr = el('tr');
+    tr.className = 'sg-detail-row';
+    tr.dataset.rowId = id;
+    tr.setAttribute('data-master-id', masterKey);
+    tr.innerHTML = '';
+
+    const td = el('td', { colspan: String(cols.length || 1), class: 'sg-detail-cell' });
+    const shell = el('div', { class: 'sg-detail-shell' });
+    shell.style.minHeight = `${this.detailRowHeightValue}px`;
+    td.appendChild(shell);
+    tr.appendChild(td);
+
+    this._populateDetailShell(shell, row.master, row.masterId);
+    return tr;
+  }
+
+  // Fill the detail shell. Strategy: if the grid has a detail-template value
+  // pointing at an existing <template>, clone its content and run a tiny
+  // data-bind pass keyed off the master row. Otherwise render a minimal
+  // fallback so the panel still appears (handy when the user is wiring up
+  // their first detail panel and hasn't authored a template yet).
+  _populateDetailShell(shell, masterRow, rowId) {
+    const tplId = this.detailTemplateValue;
+    let mounted;
+    if (tplId) {
+      const tpl = document.getElementById(tplId);
+      if (tpl && tpl.tagName === 'TEMPLATE') {
+        const frag = tpl.content.cloneNode(true);
+        this._applyDetailBindings(frag, masterRow);
+        shell.appendChild(frag);
+        mounted = shell;
+      }
+    }
+    if (!mounted) {
+      // Fallback panel: a short summary of the master row's data + a hint to
+      // wire a template. Keeps the demo / first-touch experience friendly.
+      const summary = el('div', { class: 'sg-detail-fallback' });
+      const fields = Object.keys(masterRow || {})
+        .filter((k) => !k.startsWith('_') && !k.startsWith('__'))
+        .slice(0, 6);
+      for (const f of fields) {
+        summary.append(
+          el('span', { class: 'sg-detail-fallback-label' }, `${f}: `),
+          el('span', { class: 'sg-detail-fallback-value' }, String(masterRow[f] ?? '')),
+          el('span', { class: 'sg-detail-fallback-sep' }, '  ·  '),
+        );
+      }
+      summary.lastElementChild?.remove();
+      shell.appendChild(summary);
+    }
+    // Nested grid auto-mount: any [data-controller~="grid"] inside the shell
+    // gets its rowData seeded from master[detailRowsKey] BEFORE Stimulus boots
+    // it on next microtask, so the inner grid mounts with the right rows.
+    const nested = shell.querySelector('[data-controller~="grid"]');
+    if (nested) this._seedNestedGrid(nested, masterRow, rowId);
+    // Fire after the DOM is in the document tree — caller appends shell, so
+    // queueMicrotask runs after the new tbody children are attached and the
+    // nested grid (if any) has had a chance to set up its gridApi.
+    queueMicrotask(() => {
+      emit(this.element, 'grid:detailRowMounted', {
+        rowId, masterRow, detailEl: shell,
+        nestedGridApi: nested?.gridApi || null,
+      });
+    });
+  }
+
+  // Walk the cloned template for [data-detail-bind="<field>"] (textContent),
+  // [data-detail-bind-attr="<attr>:<field>"] (attribute), and [data-detail-if="<field>"]
+  // (drop the node when falsy). Tiny, on purpose — anything richer belongs in
+  // the consumer's own JS via grid:detailRowMounted.
+  _applyDetailBindings(root, master) {
+    if (!master) return;
+    const nodes = root.querySelectorAll('[data-detail-bind], [data-detail-bind-attr], [data-detail-if]');
+    nodes.forEach((n) => {
+      if (n.hasAttribute('data-detail-if')) {
+        const f = n.getAttribute('data-detail-if');
+        if (!master[f]) { n.remove(); return; }
+      }
+      if (n.hasAttribute('data-detail-bind')) {
+        const f = n.getAttribute('data-detail-bind');
+        n.textContent = master[f] == null ? '' : String(master[f]);
+      }
+      if (n.hasAttribute('data-detail-bind-attr')) {
+        const spec = n.getAttribute('data-detail-bind-attr');
+        const [attr, f] = spec.split(':');
+        if (attr && f) n.setAttribute(attr, master[f] == null ? '' : String(master[f]));
+      }
+    });
+  }
+
+  // Seed a nested grid with the master row's detail rows before its controller
+  // boots, so its first render shows the right data without an extra round
+  // through scheduleRender. Cache the inner gridApi once it appears so the
+  // outer grid can refresh it later if the master data is updated.
+  _seedNestedGrid(nested, masterRow, rowId) {
+    const key = this.detailRowsKeyValue;
+    if (key) {
+      const rows = masterRow?.[key];
+      if (Array.isArray(rows)) {
+        try {
+          nested.setAttribute('data-grid-row-data-value', JSON.stringify(rows));
+        } catch { /* unserializable rows — caller can rebind via the event */ }
+      }
+    }
+    // Stimulus initialisation runs in a microtask; resolve the api one tick
+    // later. If the consumer needs to push data later, they can read
+    // gridApi off the detail-row element directly.
+    queueMicrotask(() => {
+      if (nested.gridApi) this._detailGrids.set(String(rowId), nested.gridApi);
+    });
   }
 
   _pinOffsets() {

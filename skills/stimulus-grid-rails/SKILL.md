@@ -135,7 +135,12 @@ headers from `pivot_cols` so this is for non-pivot grids),
 computed from the grid class's `agg_funcs`, over the currently filtered
 leaves), `persist_key:` (default `""`; when set, the grid auto-saves/restores
 column order/width/pin/visibility + groups/pivot/values + sort/filter to
-`localStorage["sgrid:" + persistKey]`). Right-click any column header to
+`localStorage["sgrid:" + persistKey]`),
+`master_detail:` (default false — expandable detail rows; see below),
+`detail_template:` (id of a `<template>` cloned into each detail panel),
+`detail_rows_key:` (master-row attribute/method whose value, `as_json`'d,
+seeds the inner grid inside the template), `detail_row_height:` (min panel
+height in px, default `240`). Right-click any column header to
 open a quick-actions menu (pin / autosize / group / pivot / aggregate /
 hide) — no extra setup required. The partial renders the table, columns,
 rows, pagination nav, and the `turbo_stream_from` subscription. Wrap or
@@ -262,6 +267,84 @@ on the grid endpoints too. Combined with:
 
 …one tenant never sees another tenant's data or broadcasts. Without ActsAsTenant
 the tenant scoping is a no-op and `scope` defaults to `model_class.all`.
+
+## Master/detail rows
+
+Expand a master row to reveal a detail panel beneath it — typically a nested
+grid of related rows (orders → line items). The nested rows ride along on the
+master row's `<tr>` as `data-row-detail-rows-value` (JSON-serialised), so the
+client doesn't refetch on expand. Eager-load the association on the server.
+
+```ruby
+# app/controllers/orders_controller.rb
+class OrdersController < ApplicationController
+  def index
+    @grid = OrderGrid.new(user: current_user)
+    @rows = Order.includes(:line_items).order(:id)
+  end
+end
+```
+
+```erb
+<%# app/views/orders/index.html.erb %>
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid: @grid, rows: @rows,
+      master_detail:    true,
+      detail_template:  "order-detail-tpl",
+      detail_rows_key:  "line_items",        # matches Order#line_items
+      detail_row_height: 280,
+    } %>
+
+<template id="order-detail-tpl">
+  <div class="order-detail">
+    <header>
+      Order #<span data-detail-bind="id"></span> ·
+      <span data-detail-bind="customer"></span> ·
+      <span data-detail-bind="status" data-detail-bind-attr="data-status:status"></span>
+    </header>
+    <%# Inner grid — auto-seeded from master.line_items via detail_rows_key. %>
+    <div data-controller="grid"
+         data-grid-row-height-value="28"
+         data-grid-pinned-bottom-row-value="true"
+         data-grid-agg-funcs-value='{"qty":"sum","line_total":"sum"}'>
+      <table>
+        <thead>
+          <tr>
+            <th data-controller="header-cell" data-header-cell-field-value="sku"      data-header-cell-width-value="120">SKU</th>
+            <th data-controller="header-cell" data-header-cell-field-value="product"  data-header-cell-width-value="280">Product</th>
+            <th data-controller="header-cell" data-header-cell-field-value="qty"        data-header-cell-type-value="number" data-header-cell-width-value="80">Qty</th>
+            <th data-controller="header-cell" data-header-cell-field-value="unit_price" data-header-cell-type-value="number" data-header-cell-width-value="110">Unit price</th>
+            <th data-controller="header-cell" data-header-cell-field-value="line_total" data-header-cell-type-value="number" data-header-cell-width-value="120">Line total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+```
+
+Trim the JSON payload by overriding `as_json` on the nested model:
+
+```ruby
+class LineItem < ApplicationRecord
+  belongs_to :order
+  def as_json(_opts = {})
+    super(only: %i[id sku product qty unit_price line_total])
+  end
+end
+```
+
+The outer Order grid still gets every live-edit Rails capability (validation,
+optimistic updates, broadcasts, undo/redo). The inner line-items grid is
+client-side over the embedded array. If you need the inner grid editable too,
+declare a second `LineItemGrid` and render its own
+`stimulus_grid_rails/grids/grid` partial inside the template — it gets its
+own broadcast stream.
+
+Events bubble: when listening on the outer grid, scope handlers with
+`if (e.target !== grid) return` or the nested grid's `grid:ready` /
+`grid:rowDataChanged` will fire your outer handlers too.
 
 ## Endpoints (provided by the engine under the mount point)
 

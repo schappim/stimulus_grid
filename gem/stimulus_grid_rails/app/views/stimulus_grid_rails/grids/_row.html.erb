@@ -2,9 +2,24 @@
   One row. Cell editability and editor metadata flow from the column
   registry. We emit data-editable only for columns the user can actually
   edit — Stimulus refuses to enter edit mode otherwise (RAILS.md §17).
+
+  Master/detail (when the grid was rendered with master_detail: true and a
+  detail_rows_key matching a row attribute / method): we serialise that
+  attribute into data-row-detail-rows-value on the <tr>. The JS controller
+  reads it on expand and feeds the nested grid inside the detail template.
+  Falls back to nothing when the row doesn't respond to the key.
+%>
+<%
+  detail_key = local_assigns[:detail_rows_key]
+  detail_rows = if detail_key && row.respond_to?(detail_key)
+                  Array(row.public_send(detail_key)).map do |r|
+                    r.respond_to?(:as_json) ? r.as_json : r
+                  end
+                end
 %>
 <tr data-row-id="<%= grid.row_id(row) %>"
-    <% if row.respond_to?(:lock_version) %>data-lock-version="<%= row.lock_version %>"<% end %>>
+    <% if row.respond_to?(:lock_version) %>data-lock-version="<%= row.lock_version %>"<% end %>
+    <% if detail_rows %>data-row-detail-rows-value="<%= detail_rows.to_json %>"<% end %>>
   <% grid.columns.each do |col| %>
     <%
       attrs = col.client_data_attrs(row, local_assigns[:current_user])

@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -150,6 +150,7 @@ column on the left. Collapsed here to country subtotals:
 | `column-groups` | JSON array of multi-row header groups: `[{"headerName":"Medals","children":["gold","silver","bronze"]}]`. Pivot mode auto-derives nested headers from `pivot-cols` + `agg-funcs`; this attribute is for non-pivot grids |
 | `pinned-bottom-row` | render a sticky bottom row holding grand totals over the currently filtered leaves, computed from `agg-funcs` (default `false`) |
 | `persist-key` | when non-empty, auto-save/restore column order, widths, pinning, visibility, row groups, pivot, value aggregations, header groups, sort, filter and pinned-bottom-row toggle to `localStorage["sgrid:" + persistKey]` |
+| `master-detail` / `detail-template` / `detail-rows-key` / `detail-row-height` | enable expandable detail rows beneath each master row. `detail-template` is the id of a `<template>` cloned into each detail panel; `detail-rows-key` is the master-row field holding the nested rows array (auto-seeds an inner `[data-controller="grid"]` inside the template). `detail-row-height` is the panel's minimum pixel height (default `240`) |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -178,6 +179,7 @@ Available after the `grid:ready` event. Highlights:
 - **Column header groups:** `setColumnGroups([{headerName, children:[field,...]}])`, `getColumnGroups()`
 - **Pinned bottom row:** `setPinnedBottomRow(on)`, `isPinnedBottomRow()`
 - **Column state:** `getColumnState()` returns a JSON-serializable snapshot (cols + groups + pivot + values + sort + filter + pinnedBottomRow); `applyColumnState(state)` restores it; with `persist-key` set, `clearPersistedState()` wipes the saved blob and `getPersistKey()` reads back the key
+- **Master/detail:** `setMasterDetail(on)`, `isMasterDetail()`, `expandDetailRow(rowId)`, `collapseDetailRow(rowId)`, `toggleDetailRow(rowId)`, `expandAllDetails()`, `collapseAllDetails()`, `getDetailExpandedRowIds()`
 
 ## Events (dispatched on the grid element)
 
@@ -190,7 +192,9 @@ Available after the `grid:ready` event. Highlights:
 `grid:columnPivotChanged` (`{pivotCols}`) · `grid:pivotModeChanged` (`{pivot}`) ·
 `grid:columnValueChanged` (`{valueCols}`) ·
 `grid:columnGroupsChanged` (`{columnGroups}`) ·
-`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`).
+`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`) ·
+`grid:detailRowExpanded` / `grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
+`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -512,6 +516,96 @@ api.getPersistKey()                      // read back the configured key
 
 See **[demo 15](demo/15-context-menu-persisted-state.html)** — change
 sort / groups / pivot / values / visibility, reload, watch it stick.
+
+## Master/detail rows
+
+Expand any row to reveal a detail panel beneath it — a header strip, a
+nested `stimulus_grid` of related rows, or arbitrary HTML cloned from a
+`<template>`. The canonical use case is **orders → line items**: the master
+row shows the order summary, the chevron opens a detail panel with the
+line items grid and a header strip pulled from the master.
+
+![stimulus_grid master/detail — an outer Orders grid with order #1005 expanded to reveal a header strip (status pill, customer, total) above a nested grid of three line items with a pinned bottom-totals row](docs/images/grid-master-detail.png)
+
+Enable it on the grid element and point at a `<template>` for the detail
+shell:
+
+```html
+<div data-controller="grid"
+     data-grid-master-detail-value="true"
+     data-grid-detail-template-value="order-detail-tpl"
+     data-grid-detail-rows-key-value="lineItems"
+     data-grid-detail-row-height-value="280">
+  <table>
+    <thead><tr><!-- order columns… --></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<template id="order-detail-tpl">
+  <div class="order-detail">
+    <header class="order-detail-head">
+      <strong>Order #<span data-detail-bind="id"></span></strong>
+      <span class="status"
+            data-detail-bind="status"
+            data-detail-bind-attr="data-status:status"></span>
+      <span class="customer" data-detail-bind="customer"></span>
+    </header>
+    <!-- Inner grid is auto-seeded from master.lineItems (detail-rows-key). -->
+    <div data-controller="grid"
+         data-grid-row-height-value="28"
+         data-grid-pinned-bottom-row-value="true"
+         data-grid-agg-funcs-value='{"qty":"sum","lineTotal":"sum"}'>
+      <table>
+        <thead><tr><!-- line-item columns… --></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+```
+
+| Attribute | Value |
+|---|---|
+| `master-detail` | `true` to enable the expand chevron + detail row pipeline (default `false`) |
+| `detail-template` | id of a `<template>` cloned into each detail panel; supports `[data-detail-bind="<field>"]` (text), `[data-detail-bind-attr="<attr>:<field>"]` (attribute), `[data-detail-if="<field>"]` (drop the node when the field is falsy) |
+| `detail-rows-key` | master-row field holding the array of nested rows; if the template contains a `[data-controller~="grid"]` child, its `data-grid-row-data-value` is seeded from `master[detailRowsKey]` before Stimulus boots it |
+| `detail-row-height` | minimum pixel height for the detail shell (default `240`) |
+
+**Behaviour.** The grid prepends a 32 px pinned-left gutter column with an
+expand chevron; clicking it toggles the detail panel for that row.
+Expanded state lives in memory on the grid (not in `localStorage` — detail
+expansion is session-scoped, not layout). Detail rows are display-only:
+they don't participate in selection, CSV export, range aggregates, or
+keyboard navigation. Suppressed in pivot / grouped views (the leaves they'd
+hang off have been aggregated away) and incompatible with the uniform-row
+virtualisation, so the grid switches to non-virtual rendering whenever
+master/detail is enabled — best fit is dozens-to-hundreds of master rows.
+
+**Drive it programmatically:**
+
+```js
+api.setMasterDetail(true)
+api.expandDetailRow(orderId)               // emits grid:detailRowExpanded
+api.toggleDetailRow(orderId)               // expand ↔ collapse
+api.collapseAllDetails()                   // close everything
+api.getDetailExpandedRowIds()              // → [1001, 1005, …]
+```
+
+**Events.** `grid:detailRowExpanded` / `grid:detailRowCollapsed`
+(`{rowId, masterRow}`) fire on toggle. `grid:detailRowMounted`
+(`{rowId, masterRow, detailEl, nestedGridApi}`) fires once after the
+template clones into the DOM and the inner grid (if any) has its
+`gridApi` hooked up — handy for adding columns or chrome imperatively.
+
+> All grid events bubble. If you're listening on the *outer* grid and
+> nest another grid inside the detail shell, scope your handler with
+> `if (e.target !== grid) return` so the inner grid's `grid:ready` /
+> `grid:rowDataChanged` don't trigger your outer logic.
+
+See **[demo 16](demo/16-master-detail.html)** for the full orders ↔
+line-items example with `expand all` / `collapse all` controls and a
+status read-out.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 

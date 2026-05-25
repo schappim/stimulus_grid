@@ -735,3 +735,86 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   cursor: pointer;
 }
 .sg-grid .sg-chip-agg:hover { background: #1d4ed8; }
+
+/* ----- Master/detail rows -----
+   Expand-chevron gutter cell on the left, a master row, a "detail" <tr> with
+   one colspanning <td> holding the rendered template shell. The chevron is a
+   span (not a button) so the cell's data-master-expand="true" can capture
+   the click without competing focus targets. */
+.sg-grid .sg-master-expand-cell,
+.sg-grid th.sg-master-expand-cell {
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  background: var(--sg-bg);
+}
+.sg-grid tbody tr:nth-child(even) td.sg-master-expand-cell { background: var(--sg-bg-alt); }
+.sg-grid tbody tr.sg-master-row[data-detail-expanded="true"] td.sg-master-expand-cell {
+  background: var(--sg-bg-hover);
+}
+.sg-grid .sg-master-expand-caret {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  color: var(--sg-icon-accent);
+  vertical-align: -1px;
+  transition: transform 0.12s ease;
+}
+.sg-grid .sg-master-expand-caret svg { width: 100%; height: 100%; display: block; }
+.sg-grid .sg-master-expand-caret[data-expanded="true"] { transform: rotate(90deg); }
+
+.sg-grid tbody tr.sg-master-row[data-detail-expanded="true"] td {
+  border-bottom-color: var(--sg-border-strong);
+}
+.sg-grid tbody tr.sg-master-row[data-detail-expanded="true"] {
+  background: var(--sg-bg-hover);
+}
+
+/* The detail row itself: one cell spans the whole grid; the shell inside
+   carries the padded background + accent rail. */
+.sg-grid tbody tr.sg-detail-row,
+.sg-grid tbody tr.sg-detail-row:hover { background: var(--sg-bg-alt); }
+.sg-grid tbody tr.sg-detail-row td.sg-detail-cell {
+  padding: 0;
+  border-right: none;
+  border-bottom: 1px solid var(--sg-border-strong);
+  background: var(--sg-bg-alt);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  height: auto;
+}
+.sg-grid .sg-detail-shell {
+  padding: 14px 18px;
+  background: var(--sg-bg-alt);
+  border-left: 3px solid var(--sg-accent);
+  box-sizing: border-box;
+  /* Let nested grids reach the available width even when the outer table is
+     wider than the viewport. */
+  min-width: 100%;
+  position: sticky;
+  left: 0;
+}
+/* A nested .sg-grid inside the shell should look subordinate, not equal. */
+.sg-grid .sg-detail-shell .sg-grid {
+  border-color: var(--sg-border-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Default fallback summary — shown when no <template> was supplied. Inline
+   key/value pairs separated by mid-dots, so the demo / first-touch experience
+   surfaces SOMETHING visible without requiring template wiring. */
+.sg-grid .sg-detail-fallback {
+  font-size: 12px;
+  color: var(--sg-fg);
+  line-height: 1.6;
+}
+.sg-grid .sg-detail-fallback-label {
+  color: var(--sg-fg-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.sg-grid .sg-detail-fallback-value { font-weight: 500; }
+.sg-grid .sg-detail-fallback-sep { color: var(--sg-border-strong); }

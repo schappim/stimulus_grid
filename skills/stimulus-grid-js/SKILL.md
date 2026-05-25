@@ -79,7 +79,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-side-panel-value` (default `false` — render the right-side drag-driven groups/pivots/values panel) ·
 `data-grid-column-groups-value` (JSON array of multi-row header groups: `[{headerName, children:[field,...]}]`) ·
 `data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`) ·
-`data-grid-persist-key-value` (default `""`; when set, the grid auto-saves/restores its layout to `localStorage["sgrid:" + persistKey]`).
+`data-grid-persist-key-value` (default `""`; when set, the grid auto-saves/restores its layout to `localStorage["sgrid:" + persistKey]`) ·
+`data-grid-master-detail-value` (default `false` — enable expandable detail rows) · `data-grid-detail-template-value` (id of a `<template>` cloned into each detail panel) · `data-grid-detail-rows-key-value` (master-row field holding nested rows; auto-seeds an inner `[data-controller="grid"]` inside the template) · `data-grid-detail-row-height-value` (minimum panel height in px, default `240`).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -115,6 +116,8 @@ api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] 
 api.setPinnedBottomRow(true)                                    // sticky grand-totals row at the bottom
 api.getColumnState()                                             // JSON-serializable snapshot (cols, groups, pivot, values, sort, filter, …)
 api.applyColumnState(state); api.clearPersistedState()           // restore + wipe the localStorage blob
+api.setMasterDetail(true); api.expandDetailRow(rowId)             // toggle detail panels per master row
+api.toggleDetailRow(rowId); api.collapseAllDetails(); api.getDetailExpandedRowIds()
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -132,7 +135,9 @@ status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:columnRowGroupChanged` · `grid:groupToggled` ·
 `grid:pivotModeChanged` (`{pivot}`) · `grid:columnPivotChanged` (`{pivotCols}`) ·
 `grid:columnValueChanged` (`{valueCols}`) · `grid:columnGroupsChanged` (`{columnGroups}`) ·
-`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`).
+`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`) ·
+`grid:detailRowExpanded`/`grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
+`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -372,6 +377,50 @@ Writes are debounced 200 ms and flushed synchronously on `beforeunload`
 so a Cmd+R right after a change doesn't drop state. Subscribers re-render
 off a single `grid:columnStateApplied` event instead of every granular
 event, so the side panel + status bar update in one shot.
+
+## Master/detail rows
+
+Expand a master row to reveal a detail panel beneath it — typically a
+nested grid of related rows (orders → line items), but any HTML cloned
+from a `<template>` works.
+
+```html
+<div data-controller="grid"
+     data-grid-master-detail-value="true"
+     data-grid-detail-template-value="order-detail-tpl"
+     data-grid-detail-rows-key-value="lineItems"
+     data-grid-detail-row-height-value="280">
+  <table><thead><tr><!-- master columns --></tr></thead><tbody></tbody></table>
+</div>
+
+<template id="order-detail-tpl">
+  <div class="detail">
+    <header>
+      Order #<span data-detail-bind="id"></span> ·
+      <span data-detail-bind="customer"></span> ·
+      <span data-detail-bind="status" data-detail-bind-attr="data-status:status"></span>
+    </header>
+    <!-- Inner grid is auto-seeded from master.lineItems (detail-rows-key). -->
+    <div data-controller="grid" data-grid-row-height-value="28">
+      <table><thead><tr><!-- line-item columns --></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</template>
+```
+
+- Template supports `[data-detail-bind="<field>"]` (text), `[data-detail-bind-attr="<attr>:<field>"]` (attribute), and `[data-detail-if="<field>"]` (drop the node when falsy).
+- A `[data-controller~="grid"]` inside the template gets its `data-grid-row-data-value` seeded from `master[detailRowsKey]` before Stimulus boots it. The mounted nested `gridApi` arrives on the `grid:detailRowMounted` event.
+- A 32 px pinned-left gutter column is prepended for the expand chevron; click it to toggle.
+- Detail rows are display-only (no selection, CSV, range aggs, or keyboard nav).
+- Suppressed in pivot / grouped views; the grid switches to non-virtual rendering whenever master/detail is on, so this is best for dozens-to-hundreds of master rows.
+- All grid events bubble — when listening on the outer grid, scope nested-grid handlers with `if (e.target !== grid) return` or the outer `grid:ready` handler will fire from the inner grid's mount too.
+
+```js
+api.setMasterDetail(true)
+api.expandDetailRow(orderId); api.toggleDetailRow(orderId)
+api.expandAllDetails(); api.collapseAllDetails()
+api.getDetailExpandedRowIds()
+```
 
 ## Gotchas
 

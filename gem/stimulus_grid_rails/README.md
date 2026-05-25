@@ -245,6 +245,113 @@ def new_row_defaults = { athlete: "New athlete", sport: "Swimming", age: 20, gol
 Create/delete broadcast automatically (see below) — the gem's controllers just
 persist; the model's commit callbacks broadcast.
 
+## Master/detail rows
+
+Expand any master row to reveal a detail panel beneath it — a header strip and a
+nested grid of related rows, cloned from a `<template>`. The canonical Rails use
+case is **orders → line items**: the master row shows the order summary; the
+detail panel shows the order's line items in their own grid.
+
+Three pieces wire it up.
+
+**1. Eager-load the nested association in the controller** so each master row
+arrives at the partial with its detail rows attached. Each line-item gets
+serialised into `<tr data-row-detail-rows-value="…">`, so no extra HTTP round
+trip happens when the user expands a row.
+
+```ruby
+# app/controllers/orders_controller.rb
+class OrdersController < ApplicationController
+  def index
+    @grid  = OrderGrid.new(user: current_user)
+    @rows  = Order.includes(:line_items).order(:id)
+  end
+end
+```
+
+**2. Pass `master_detail` + the template id + the master attribute holding the
+nested rows** to the grid partial. The row partial auto-serialises that
+attribute into `data-row-detail-rows-value` so the client picks it up at boot.
+
+```erb
+<%# app/views/orders/index.html.erb %>
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid:             @grid,
+      rows:             @rows,
+      master_detail:    true,
+      detail_template:  "order-detail-tpl",
+      detail_rows_key:  "line_items",      # matches Order#line_items as_json
+      detail_row_height: 280,
+      page_size:        25,
+    } %>
+
+<template id="order-detail-tpl">
+  <div class="order-detail">
+    <header class="order-detail-head">
+      <strong>Order #<span data-detail-bind="id"></span></strong>
+      <span class="status"
+            data-detail-bind="status"
+            data-detail-bind-attr="data-status:status"></span>
+      <span class="customer" data-detail-bind="customer"></span>
+    </header>
+
+    <%# Inner grid — auto-seeded from master.line_items via detail_rows_key. %>
+    <div data-controller="grid"
+         data-grid-row-height-value="28"
+         data-grid-pinned-bottom-row-value="true"
+         data-grid-agg-funcs-value='{"qty":"sum","line_total":"sum"}'>
+      <table>
+        <thead>
+          <tr>
+            <th data-controller="header-cell" data-header-cell-field-value="sku"
+                data-header-cell-sortable-value="true" data-header-cell-width-value="120">SKU</th>
+            <th data-controller="header-cell" data-header-cell-field-value="product"
+                data-header-cell-sortable-value="true" data-header-cell-width-value="280">Product</th>
+            <th data-controller="header-cell" data-header-cell-field-value="qty"
+                data-header-cell-type-value="number" data-header-cell-width-value="80">Qty</th>
+            <th data-controller="header-cell" data-header-cell-field-value="unit_price"
+                data-header-cell-type-value="number" data-header-cell-width-value="110">Unit price</th>
+            <th data-controller="header-cell" data-header-cell-field-value="line_total"
+                data-header-cell-type-value="number" data-header-cell-width-value="120">Line total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+```
+
+**3. (Optional) trim the JSON payload** by overriding `Order#as_json` or the
+line-item serializer so only the fields the inner grid needs ride along with
+the master row. `LineItem#as_json(only: %i[id sku product qty unit_price line_total])`
+is usually enough.
+
+```ruby
+class LineItem < ApplicationRecord
+  belongs_to :order
+  def as_json(_opts = {})
+    super(only: %i[id sku product qty unit_price line_total])
+  end
+end
+```
+
+The outer Order grid keeps every Rails capability — server-side filter, live
+multi-user cell edits, undo/redo, optimistic updates. The inner line-items
+grid is client-side over the pre-serialised array; if you want it editable
+too, declare a second `LineItemGrid` and render its own
+`stimulus_grid_rails/grids/grid` partial inside the template — it'll get its
+own broadcast stream.
+
+**Local | meaning**
+
+| Local | Meaning |
+|---|---|
+| `master_detail:` | `true` to enable the expand chevron + detail panel (default `false`) |
+| `detail_template:` | id of a `<template>` cloned into each detail panel |
+| `detail_rows_key:` | master-row attribute (or method) whose value (`as_json`'d) is serialised onto the row's `<tr>` and seeded into the inner grid |
+| `detail_row_height:` | minimum detail-panel height in px (default `240`) |
+
 ## Automatic broadcasts
 
 `include StimulusGridRails::Broadcastable; broadcasts_grid YourGrid` is all the

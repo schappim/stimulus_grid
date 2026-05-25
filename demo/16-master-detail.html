@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>16 — Master/detail rows | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 620px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .sep { width:1px; align-self:stretch; background:#e5e7eb; margin:0 4px; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff; border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Layout inside the detail shell — header strip + nested grid below. */
+    .order-detail-head {
+      display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px;
+      font-size: 13px; color: #1f2937;
+    }
+    .order-detail-head .label { color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .order-detail-head strong { font-size: 15px; }
+    .order-detail-head .status {
+      padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+      background: #fef3c7; color: #92400e;
+    }
+    .order-detail-head .status[data-status="Shipped"]   { background:#d1fae5; color:#065f46; }
+    .order-detail-head .status[data-status="Delivered"] { background:#dbeafe; color:#1e40af; }
+    .order-detail-head .status[data-status="Cancelled"] { background:#fee2e2; color:#991b1b; }
+    .order-detail-head .pad { flex: 1; }
+    .order-detail-head .total { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .line-items {
+      height: 220px;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>16 — Master/detail rows</h1>
+  <p class="lede">
+    Click the chevron next to any order to expand a detail panel beneath the
+    row, showing the order's status, customer + total in a header strip and a
+    <em>nested grid</em> of its line items. Enabled with
+    <code>data-grid-master-detail-value="true"</code>, a
+    <code>data-grid-detail-template-value</code> pointing at a
+    <code>&lt;template&gt;</code>, and
+    <code>data-grid-detail-rows-key-value="lineItems"</code> to feed the inner
+    grid from each master row.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-master-detail-value="true"
+       data-grid-detail-template-value="order-detail-tpl"
+       data-grid-detail-rows-key-value="lineItems"
+       data-grid-detail-row-height-value="280"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="id"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Order #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="120">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="itemCount"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="90">Items</th>
+          <th data-controller="header-cell" data-header-cell-field-value="total"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- The detail template. Cloned per expanded master; [data-detail-bind="<field>"]
+       fills in textContent from the master row, [data-detail-bind-attr="attr:field"]
+       sets an attribute. The inner [data-controller="grid"] is auto-seeded from
+       master.lineItems (the detail-rows-key value above). -->
+  <template id="order-detail-tpl">
+    <div class="order-detail">
+      <div class="order-detail-head">
+        <span class="label">Order</span>
+        <strong>#<span data-detail-bind="id"></span></strong>
+        <span class="status" data-detail-bind="status" data-detail-bind-attr="data-status:status"></span>
+        <span class="label">·  Customer</span>
+        <strong data-detail-bind="customer"></strong>
+        <span class="pad"></span>
+        <span class="label">Total</span>
+        <span class="total">$<span data-detail-bind="total"></span></span>
+      </div>
+      <div class="line-items"
+           data-controller="grid"
+           data-grid-row-height-value="28"
+           data-grid-pinned-bottom-row-value="true"
+           data-grid-agg-funcs-value='{"qty":"sum","lineTotal":"sum"}'>
+        <table>
+          <thead>
+            <tr>
+              <th data-controller="header-cell" data-header-cell-field-value="sku"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="120">SKU</th>
+              <th data-controller="header-cell" data-header-cell-field-value="product"
+                  data-header-cell-sortable-value="true" data-header-cell-width-value="280">Product</th>
+              <th data-controller="header-cell" data-header-cell-field-value="qty"
+                  data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+                  data-header-cell-width-value="80">Qty</th>
+              <th data-controller="header-cell" data-header-cell-field-value="unitPrice"
+                  data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+                  data-header-cell-width-value="110">Unit price</th>
+              <th data-controller="header-cell" data-header-cell-field-value="lineTotal"
+                  data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+                  data-header-cell-width-value="120">Line total</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <div class="toolbar">
+    <button id="expand-all">Expand all</button>
+    <button id="collapse-all">Collapse all</button>
+    <span class="sep"></span>
+    <span id="stat" class="stat"></span>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong> expand order <em>#1003</em> to see the cancelled
+    line items, sort the outer grid by <em>Total</em> descending, then expand
+    the top order. The inner grid keeps its own sort/filter/pinned-totals
+    state independently of the outer grid.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // Sample dataset: 8 orders, each with a small list of line items. Inline
+    // rather than fetched so the demo runs from file:// too.
+    const orders = [
+      {
+        id: 1001, customer: 'Acme Robotics', date: '2026-04-12', status: 'Delivered',
+        lineItems: [
+          { sku: 'BOLT-M6',  product: 'M6 bolt, stainless (100 pack)', qty: 4, unitPrice:  9.50, lineTotal:  38.00 },
+          { sku: 'NUT-M6',   product: 'M6 hex nut (200 pack)',         qty: 2, unitPrice:  6.20, lineTotal:  12.40 },
+          { sku: 'WSH-M6',   product: 'M6 flat washer (500 pack)',     qty: 1, unitPrice: 11.80, lineTotal:  11.80 },
+        ],
+      },
+      {
+        id: 1002, customer: 'Skyline Optics', date: '2026-04-14', status: 'Shipped',
+        lineItems: [
+          { sku: 'LNS-50',   product: '50mm objective lens',           qty: 1, unitPrice: 240.00, lineTotal: 240.00 },
+          { sku: 'TUBE-180', product: 'Aluminium tube · 180mm',         qty: 2, unitPrice:  62.00, lineTotal: 124.00 },
+        ],
+      },
+      {
+        id: 1003, customer: 'Northwind Foods', date: '2026-04-15', status: 'Cancelled',
+        lineItems: [
+          { sku: 'OLV-EX',   product: 'Olive oil, extra virgin · 1L',   qty: 12, unitPrice:  9.00, lineTotal: 108.00 },
+          { sku: 'VIN-BAL',  product: 'Balsamic vinegar · 500ml',       qty:  6, unitPrice:  7.40, lineTotal:  44.40 },
+          { sku: 'SALT-FL',  product: 'Fleur de sel · 250g',            qty:  4, unitPrice: 11.00, lineTotal:  44.00 },
+        ],
+      },
+      {
+        id: 1004, customer: 'Pioneer Cycles', date: '2026-04-18', status: 'Pending',
+        lineItems: [
+          { sku: 'CHN-11',   product: '11-speed chain · 116L',          qty: 3, unitPrice: 32.00, lineTotal:  96.00 },
+          { sku: 'CST-1142', product: '11-42T cassette',                qty: 3, unitPrice: 78.00, lineTotal: 234.00 },
+        ],
+      },
+      {
+        id: 1005, customer: 'Acme Robotics', date: '2026-04-21', status: 'Shipped',
+        lineItems: [
+          { sku: 'MOT-NEMA17', product: 'Stepper motor · NEMA 17',      qty: 6, unitPrice: 14.80, lineTotal:  88.80 },
+          { sku: 'DRV-A4988',  product: 'A4988 stepper driver',          qty: 6, unitPrice:  4.20, lineTotal:  25.20 },
+          { sku: 'PSU-12V',    product: '12V 5A power supply',           qty: 1, unitPrice: 24.50, lineTotal:  24.50 },
+        ],
+      },
+      {
+        id: 1006, customer: 'Bayside Marine', date: '2026-04-25', status: 'Delivered',
+        lineItems: [
+          { sku: 'ROPE-12',   product: 'Braided rope · 12mm · 50m',     qty: 2, unitPrice: 110.00, lineTotal: 220.00 },
+          { sku: 'CLT-15',    product: 'Stainless cleat · 150mm',       qty: 4, unitPrice:  18.00, lineTotal:  72.00 },
+        ],
+      },
+      {
+        id: 1007, customer: 'Skyline Optics', date: '2026-04-28', status: 'Pending',
+        lineItems: [
+          { sku: 'MOUNT-AZ',  product: 'Alt-azimuth mount',             qty: 1, unitPrice: 480.00, lineTotal: 480.00 },
+        ],
+      },
+      {
+        id: 1008, customer: 'Northwind Foods', date: '2026-04-30', status: 'Shipped',
+        lineItems: [
+          { sku: 'COFF-ESP',  product: 'Espresso beans · 1kg',          qty: 10, unitPrice: 28.00, lineTotal: 280.00 },
+          { sku: 'TEA-MAT',   product: 'Matcha tea · 100g',             qty:  4, unitPrice: 22.00, lineTotal:  88.00 },
+          { sku: 'CHOC-DK',   product: 'Dark chocolate · 70% · 200g',   qty: 12, unitPrice:  6.50, lineTotal:  78.00 },
+        ],
+      },
+    ];
+    // Roll up totals + item counts so the master rows reflect their detail.
+    // Also stamp each line item with a synthetic id — the nested grid keys its
+    // DOM rows by getRowIdValue (default 'id'), so two rows with the same key
+    // would collapse into one. Real apps would use the line-item PK.
+    orders.forEach((o) => {
+      o.itemCount = o.lineItems.reduce((s, l) => s + l.qty, 0);
+      o.total     = o.lineItems.reduce((s, l) => s + l.lineTotal, 0).toFixed(2);
+      o.lineItems.forEach((l, i) => { l.id = `${o.id}-${i + 1}`; });
+    });
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+    const setStat = () => {
+      const n = grid.gridApi?.getDetailExpandedRowIds().length || 0;
+      stat.textContent = n ? `${n} detail panel${n === 1 ? '' : 's'} open` : 'No detail panels open';
+    };
+
+    // Scope event listeners to the OUTER grid: every grid event bubbles, so a
+    // nested grid inside a detail panel would also fire grid:ready on this
+    // element. Without the target check, we'd overwrite the nested grid's
+    // line items with the outer orders list on every expansion.
+    grid.addEventListener('grid:ready', (e) => {
+      if (e.target !== grid) return;
+      e.detail.api.setRowData(orders);
+      setStat();
+    });
+    grid.addEventListener('grid:detailRowExpanded',  setStat);
+    grid.addEventListener('grid:detailRowCollapsed', setStat);
+    // Fired once per nested grid mount — handy for adding columns or chrome
+    // imperatively. We use it just to log how many line items each panel got.
+    grid.addEventListener('grid:detailRowMounted', (e) => {
+      if (!e.detail.nestedGridApi) return;
+      console.log('detail mounted for order', e.detail.rowId,
+        '— line items:', e.detail.nestedGridApi.getRowData().length);
+    });
+
+    document.getElementById('expand-all').onclick   = () => grid.gridApi.expandAllDetails();
+    document.getElementById('collapse-all').onclick = () => grid.gridApi.collapseAllDetails();
+  </script>
+</body>
+</html>
