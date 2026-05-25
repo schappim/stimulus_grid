@@ -4250,6 +4250,27 @@ function buildSelectPill(opt, palette) {
 
 const SG_PALETTE_RE = /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/;
 
+// Merge column-level renderer config (from server-side Rails column DSL
+// or HTML data-attrs) on top of the registration-time defaults. Lets a
+// single `registerRenderer('select', renderers.select())` call serve any
+// number of columns that supply their own options via the column def.
+function resolveSelectConfig(ctx, defaults) {
+  const cfg = ctx?.col?.cellRendererConfig || null;
+  // Rails columns of type :enum surface a JSON array under
+  // `data-enum-values` even without an explicit renderer config — read
+  // it via the standard col path if the renderer ever needs it. Here we
+  // pick up either the explicit `options` list or fall back to enum_values.
+  const enumValues = ctx?.col?.enumValues || null;
+  return {
+    options:     defaults.options.length ? defaults.options : (cfg?.options || enumValues || []),
+    placeholder: cfg?.placeholder ?? defaults.placeholder,
+    clearable:   cfg?.clearable   ?? defaults.clearable,
+    colorMap:    cfg?.colorMap    ?? defaults.colorMap,
+    editable:    cfg?.editable    ?? defaults.editable,
+    separator:   cfg?.separator   ?? defaults.separator,
+  };
+}
+
 export function select({
   options = [],
   placeholder = 'Select…',
@@ -4257,21 +4278,33 @@ export function select({
   clearable = false,
   colorMap = null,
 } = {}) {
-  const opts = normaliseSelectOptions(options);
+  const baseOpts = normaliseSelectOptions(options);
   if (colorMap && typeof colorMap === 'object') {
-    for (const o of opts) {
+    for (const o of baseOpts) {
       if (!o.color && Object.prototype.hasOwnProperty.call(colorMap, o.value)) o.color = colorMap[o.value];
     }
   }
   return (ctx) => {
     const { value, td } = ctx;
+    // Per-cell config resolution lets a single registered renderer power
+    // many columns whose options come from the server's column DSL.
+    const cfg = resolveSelectConfig(ctx, { options: baseOpts, placeholder, clearable, colorMap, editable });
+    let opts = baseOpts;
+    if (baseOpts.length === 0 && cfg.options.length) {
+      opts = normaliseSelectOptions(cfg.options);
+      if (cfg.colorMap && typeof cfg.colorMap === 'object') {
+        for (const o of opts) {
+          if (!o.color && Object.prototype.hasOwnProperty.call(cfg.colorMap, o.value)) o.color = cfg.colorMap[o.value];
+        }
+      }
+    }
     if (td) {
       td.classList.add('sg-renderer-select-cell');
       td._sgSelectOpts = opts;
-      td._sgSelectClearable = clearable;
+      td._sgSelectClearable = cfg.clearable;
     }
 
-    if (editable && td && !td._sgSelectEditBound) {
+    if (cfg.editable && td && !td._sgSelectEditBound) {
       td._sgSelectEditBound = true;
       td.addEventListener('dblclick', (e) => {
         if (e._sgSelectHandled) return;
@@ -4285,7 +4318,7 @@ export function select({
     if (!current) {
       if (isBlank(value)) {
         return h('span', { class: 'sg-renderer-select-placeholder' },
-          document.createTextNode(placeholder));
+          document.createTextNode(cfg.placeholder));
       }
       // Value not in options — show raw text faintly so user knows it's out of list.
       const tag = h('span', { class: 'sg-renderer-select-bare' }, document.createTextNode(String(value)));
@@ -4391,21 +4424,31 @@ export function multiselect({
   editable = true,
   colorMap = null,
 } = {}) {
-  const opts = normaliseSelectOptions(options);
+  const baseOpts = normaliseSelectOptions(options);
   if (colorMap && typeof colorMap === 'object') {
-    for (const o of opts) {
+    for (const o of baseOpts) {
       if (!o.color && Object.prototype.hasOwnProperty.call(colorMap, o.value)) o.color = colorMap[o.value];
     }
   }
   return (ctx) => {
     const { value, td } = ctx;
+    const cfg = resolveSelectConfig(ctx, { options: baseOpts, placeholder, colorMap, editable, separator });
+    let opts = baseOpts;
+    if (baseOpts.length === 0 && cfg.options.length) {
+      opts = normaliseSelectOptions(cfg.options);
+      if (cfg.colorMap && typeof cfg.colorMap === 'object') {
+        for (const o of opts) {
+          if (!o.color && Object.prototype.hasOwnProperty.call(cfg.colorMap, o.value)) o.color = cfg.colorMap[o.value];
+        }
+      }
+    }
     if (td) {
       td.classList.add('sg-renderer-multiselect-cell');
       td._sgMultiOpts = opts;
-      td._sgMultiSep = separator;
+      td._sgMultiSep = cfg.separator;
     }
 
-    if (editable && td && !td._sgMultiEditBound) {
+    if (cfg.editable && td && !td._sgMultiEditBound) {
       td._sgMultiEditBound = true;
       td.addEventListener('dblclick', (e) => {
         if (e._sgMultiHandled) return;
@@ -4418,7 +4461,7 @@ export function multiselect({
     const list = normaliseMultiselectValue(value);
     if (!list.length) {
       return h('span', { class: 'sg-renderer-multiselect-placeholder' },
-        document.createTextNode(placeholder));
+        document.createTextNode(cfg.placeholder));
     }
     const wrap = h('div', { class: 'sg-renderer-multiselect' });
     for (const v of list) {

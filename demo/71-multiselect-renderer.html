@@ -26,6 +26,13 @@
     the renderer preserves whichever shape the cell started with.
   </p>
 
+  <p class="tip">
+    Rails wiring: declare <code>column :skills, type: :multi_enum,
+    enum_values: %w[Ruby Rails JS …]</code> and the gem auto-selects this
+    renderer. Or pass <code>cell_renderer_config: { options: [...],
+    colorMap: {...} }</code> for richer config.
+  </p>
+
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
     <table>
       <thead>

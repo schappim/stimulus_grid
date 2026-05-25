@@ -17,6 +17,16 @@ export default class HeaderCellController extends Controller {
     resizable:    { type: Boolean, default: true },
     cellRenderer: { type: String, default: '' },
     cellEditor:   { type: String, default: '' },
+    // JSON config for the cell renderer (options, colorMap, etc.). Lets
+    // server-side column declarations (the Rails gem) configure built-in
+    // renderers like `select` / `multiselect` without a separate JS
+    // registerRenderer() call per column. Renderers read it as
+    // `col.cellRendererConfig` (parsed object) inside their ctx.
+    cellRendererConfig: { type: String, default: '' },
+    // Server-side enum_values surface for select / multiselect / combobox.
+    // JSON array of strings or { value, label, color } objects. Renderers
+    // fall back to this when cellRendererConfig.options is not set.
+    enumValues: { type: String, default: '' },
     checkbox:     { type: Boolean, default: false },
     rowNumber:    { type: Boolean, default: false },   // gutter: shows 1-based row number, click selects row
     // Per-column opt-out for drag-to-attach. Defaults to undefined (inherits
@@ -53,6 +63,23 @@ export default class HeaderCellController extends Controller {
     let acceptFiles;
     if (this.acceptFilesValue === 'true') acceptFiles = true;
     else if (this.acceptFilesValue === 'false') acceptFiles = false;
+    // Parse the renderer-config JSON once at registration time so renderers
+    // can read it cheaply per cell. Malformed JSON is logged and ignored
+    // rather than throwing — the rest of the column should still render.
+    let cellRendererConfig = null;
+    if (this.cellRendererConfigValue) {
+      try { cellRendererConfig = JSON.parse(this.cellRendererConfigValue); }
+      catch (e) {
+        console.warn(`[stimulus_grid] invalid cellRendererConfig JSON for ${this.fieldValue}:`, e);
+      }
+    }
+    let enumValues = null;
+    if (this.enumValuesValue) {
+      try { enumValues = JSON.parse(this.enumValuesValue); }
+      catch (e) {
+        console.warn(`[stimulus_grid] invalid enumValues JSON for ${this.fieldValue}:`, e);
+      }
+    }
     return {
       field:        this.fieldValue,
       headerName:   this.headerNameValue || this.fieldValue,
@@ -68,6 +95,8 @@ export default class HeaderCellController extends Controller {
       resizable:    this.resizableValue,
       cellRenderer: this.cellRendererValue || null,
       cellEditor:   this.cellEditorValue || null,
+      cellRendererConfig,
+      enumValues,
       _isCheckbox:  this.checkboxValue,
       _isRowNumber: this.rowNumberValue,
       acceptFiles,

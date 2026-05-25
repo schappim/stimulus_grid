@@ -26,6 +26,11 @@
     Set <code>clearable: true</code> for a "(none)" row at the top.
   </p>
 
+  <h2 style="margin-top:24px;font-size:16px;color:#374151;">JS-configured columns</h2>
+  <p style="color:#6b7280;font-size:13px;margin-top:4px;">
+    Options come from <code>renderers.select({ options })</code> registered in JS.
+  </p>
+
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
     <table>
       <thead>
@@ -49,11 +54,48 @@
     </table>
   </div>
 
+  <h2 style="margin-top:32px;font-size:16px;color:#374151;">Rails-style: zero JS option config</h2>
+  <p style="color:#6b7280;font-size:13px;margin-top:4px;">
+    The same <code>select</code> renderer reads its options from
+    <code>data-header-cell-cell-renderer-config-value</code> JSON, exactly
+    as the Rails gem emits it via <code>column :priority, type: :enum,
+    enum_values: …</code>. No per-column JS — the column declaration
+    in the server's Grid class is the only source of truth.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ticket"
+              data-header-cell-width-value="120">Ticket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="260">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="select"
+              data-header-cell-cell-renderer-config-value='{"options":["Backlog","In progress","In review","Done"],"colorMap":{"Backlog":"gray","In progress":"blue","In review":"purple","Done":"green"}}'
+              data-header-cell-width-value="160">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="priority"
+              data-header-cell-cell-renderer-value="select"
+              data-header-cell-cell-renderer-config-value='{"clearable":true,"options":[{"value":"p0","label":"P0 — Critical","color":"red"},{"value":"p1","label":"P1 — High","color":"orange"},{"value":"p2","label":"P2 — Medium","color":"yellow"},{"value":"p3","label":"P3 — Low","color":"green"}]}'
+              data-header-cell-width-value="160">Priority</th>
+          <th data-controller="header-cell" data-header-cell-field-value="team"
+              data-header-cell-cell-renderer-value="select"
+              data-header-cell-enum-values-value='["Platform","Growth","Billing","Mobile","Data","Design"]'
+              data-header-cell-width-value="180">Team</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <div class="tip">
     Double-click any cell in the <code>Status</code>, <code>Priority</code>, or
-    <code>Team</code> columns. The picker commits via the same
+    <code>Team</code> columns of either grid. The picker commits via the same
     <code>grid:cellValueChanged</code> event the inline editor uses, so any
-    persistence wired up to the grid keeps working.
+    persistence wired up to the grid keeps working. In Rails, declare
+    <code>column :priority, type: :enum, enum_values: [...]</code> and the gem
+    auto-wires the renderer, options, and editor.
   </div>
 
   <script src="../dist/stimulus_grid.js"></script>
@@ -102,11 +144,9 @@
       { id: 8, ticket: 'ENG-108', title: 'Mark legacy 2017 cohort as soft-deleted',         status: 'Won’t fix', priority: null, team: null    },
     ];
 
-    const grid = document.querySelector('.panel');
-    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
-
-    grid.addEventListener('grid:cellValueChanged', (e) => {
-      console.log('cell change:', e.detail);
+    document.querySelectorAll('.panel').forEach((grid) => {
+      grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+      grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
     });
   </script>
 </body>

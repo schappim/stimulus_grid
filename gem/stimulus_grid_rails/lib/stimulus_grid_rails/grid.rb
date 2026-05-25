@@ -201,6 +201,11 @@ module StimulusGridRails
       when :date    then v.respond_to?(:to_date) ? v.to_date.iso8601 : v.to_s
       when :datetime then v.respond_to?(:iso8601) ? v.iso8601 : v.to_s
       when :boolean then v ? "✓" : ""
+      when :multi_enum
+        # The JS multiselect renderer reads an Array from the row data;
+        # stash JSON in data-cell-value so it gets a real Array instead
+        # of trying to parse text content.
+        JSON.generate(Array(v))
       when :attachments
         # The JS attachments renderer expects an array of file objects on the
         # row's data, not innerHTML. Stash the JSON in data-value so the
@@ -220,6 +225,7 @@ module StimulusGridRails
       when :boolean        then !!v
       when :date           then v.respond_to?(:to_date) ? v.to_date.iso8601 : v
       when :datetime       then v.respond_to?(:iso8601) ? v.iso8601 : v
+      when :multi_enum     then Array(v).map(&:to_s)
       when :attachments    then attachments_payload_for_value(v)
       else v
       end

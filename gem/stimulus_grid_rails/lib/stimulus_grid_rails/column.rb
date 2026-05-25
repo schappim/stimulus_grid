@@ -6,17 +6,18 @@ module StimulusGridRails
   # Created via the `column` DSL inside an ApplicationGrid subclass; not
   # instantiated directly. See StimulusGridRails::Grid for usage.
   class Column
-    TYPES = %i[string text integer bigint decimal money boolean enum date datetime reference attachments].freeze
+    TYPES = %i[string text integer bigint decimal money boolean enum multi_enum date datetime reference attachments].freeze
 
     attr_reader :name, :type, :editor, :editor_config, :enum_values, :concurrency,
                 :depends_on, :validators, :header, :width, :pinned, :cell_renderer,
-                :cell_editor
+                :cell_editor, :cell_renderer_config
 
     def initialize(name, type:, editable: false, editor: nil, editor_config: {},
                    enum_values: nil, concurrency: :last_write_wins,
                    computed: false, depends_on: [], validate: nil,
                    header: nil, width: nil, pinned: nil, cell_renderer: nil,
-                   cell_editor: nil, sortable: true, filterable: true, searchable: nil)
+                   cell_editor: nil, cell_renderer_config: nil,
+                   sortable: true, filterable: true, searchable: nil)
       raise ArgumentError, "Unknown column type #{type.inspect}" unless TYPES.include?(type)
       @name          = name.to_sym
       @type          = type
@@ -31,12 +32,17 @@ module StimulusGridRails
       @header        = header || name.to_s.humanize
       @width         = width
       @pinned        = pinned
-      @cell_renderer = cell_renderer
+      # Auto-wire the rich JS renderer for enum-shaped columns: a single
+      # `column :priority, type: :enum, enum_values: [...]` declaration gives
+      # the user a tinted-pill popover-edit cell with no JS glue. Explicit
+      # cell_renderer override still wins.
+      @cell_renderer = cell_renderer || default_cell_renderer_for(type)
       @cell_editor   = cell_editor
+      @cell_renderer_config = cell_renderer_config
       @sortable      = sortable
       @filterable    = filterable
       # Global search defaults to text-ish columns; numeric/date/boolean opt in.
-      @searchable    = searchable.nil? ? %i[string text enum reference].include?(type) : searchable
+      @searchable    = searchable.nil? ? %i[string text enum multi_enum reference].include?(type) : searchable
     end
 
     # Per-row, per-user editable check. RAILS.md §17 — server re-evaluates on
@@ -61,6 +67,15 @@ module StimulusGridRails
     def coerce(raw)
       case @type
       when :string, :text, :enum, :reference then [raw.to_s, nil]
+      when :multi_enum
+        # Accept an array (from JSON), a CSV string, or a single value.
+        # Normalise to an array of trimmed strings so DB serialization
+        # stays predictable regardless of how the client sent it.
+        case raw
+        when Array then [raw.compact.map { |v| v.to_s.strip }.reject(&:empty?), nil]
+        when nil   then [[], nil]
+        else            [raw.to_s.split(",").map(&:strip).reject(&:empty?), nil]
+        end
       when :integer, :bigint
         Integer(raw.to_s, 10).then { |i| [i, nil] }
       when :decimal, :money
@@ -139,6 +154,10 @@ module StimulusGridRails
     end
 
     # Serialized into the column's <th> so header_cell_controller picks it up.
+    # `cell_renderer_config` and `enum_values` are encoded as JSON strings;
+    # the JS controller parses them at column registration time and exposes
+    # the resulting objects on the column def as `col.cellRendererConfig`
+    # and `col.enumValues` for renderers to read.
     def header_data_attrs
       {
         "data-controller" => "header-cell",
@@ -151,6 +170,8 @@ module StimulusGridRails
         "data-header-cell-width-value" => @width,
         "data-header-cell-cell-renderer-value" => @cell_renderer,
         "data-header-cell-cell-editor-value" => @cell_editor,
+        "data-header-cell-cell-renderer-config-value" => (@cell_renderer_config ? JSON.generate(@cell_renderer_config) : nil),
+        "data-header-cell-enum-values-value" => (@enum_values ? JSON.generate(@enum_values) : nil),
       }.compact
     end
 
@@ -212,10 +233,23 @@ module StimulusGridRails
       when :integer, :bigint, :decimal, :money then "number"
       when :boolean                   then "checkbox"
       when :enum                      then "select"
+      when :multi_enum                then "select"      # base editor; the JS multiselect popover supersedes
       when :date                      then "date"
       when :datetime                  then "datetime-local"
       when :attachments               then "attachments"  # handled in-renderer popover
       else "text"
+      end
+    end
+
+    # Default JS cellRenderer for types that have a rich renderer wired up.
+    # Lets `column :priority, type: :enum, enum_values: [...]` just work —
+    # no `cell_renderer: "select"` line needed in the Grid declaration.
+    def default_cell_renderer_for(t)
+      case t
+      when :enum         then "select"
+      when :multi_enum   then "multiselect"
+      when :boolean      then "checkbox"
+      when :attachments  then "attachments"
       end
     end
 
@@ -224,6 +258,7 @@ module StimulusGridRails
       when :integer, :bigint, :decimal, :money then "number"
       when :date, :datetime           then "date"
       when :boolean                   then "boolean"
+      when :enum, :multi_enum         then "text"        # filter on label text
       else "text"
       end
     end

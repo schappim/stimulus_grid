@@ -28,7 +28,7 @@
       # Attachment / structured columns: stash the JSON in data-cell-value so
       # the client picks up a real Array instead of trying to parse textContent.
       # The cell renders empty until the JS renderer mounts.
-      if col.type == :attachments
+      if col.type == :attachments || col.type == :multi_enum
         attrs["data-cell-value"] = cell
         cell = ""
       end
