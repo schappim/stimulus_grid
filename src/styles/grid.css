@@ -3870,3 +3870,66 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-cron-human { color: #1f2937; }
 .sg-grid .sg-renderer-cron-expr { font-size: 10.5px; }
+
+/* ----- spinner / error / sync / stale / fresh -------------------- */
+.sg-grid .sg-renderer-spinner {
+  display: inline-block;
+  border: 2px solid;
+  border-radius: 50%;
+  animation: sg-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+@keyframes sg-spin {
+  to { transform: rotate(360deg); }
+}
+.sg-grid .sg-renderer-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #b91c1c;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-error-icon svg { width: 12px; height: 12px; display: block; }
+.sg-grid .sg-renderer-error-msg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.sg-grid .sg-renderer-error-retry {
+  appearance: none;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.sg-grid .sg-renderer-error-retry:hover { background: #fee2e2; }
+.sg-grid .sg-renderer-sync-icon {
+  display: inline-block;
+}
+.sg-grid .sg-renderer-sync-icon.is-spinning {
+  animation: sg-spin 1s linear infinite;
+}
+.sg-grid .sg-renderer-stale.is-stale {
+  color: var(--sg-fg-muted, #9ca3af);
+}
+.sg-grid .sg-renderer-stale-tag {
+  margin-left: 6px;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #fef3c7;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.sg-grid .sg-renderer-fresh.is-fresh {
+  background: #fef9c3;
+  padding: 1px 4px;
+  border-radius: 3px;
+  transition: background 1.5s ease-out;
+}

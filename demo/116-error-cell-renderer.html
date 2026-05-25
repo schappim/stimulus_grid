@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>116 — Error cell renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    #log { margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;
+           font-family: ui-monospace, monospace; font-size: 12px; color: #374151; min-height: 40px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>116 — Error cell renderer</h1>
+  <p class="lede">Red error pill. Value can be a string, an Error instance, or an object <code>{ message, retry }</code> — the retry function shows a Retry button.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="job" data-header-cell-width-value="240">Job</th>
+        <th data-controller="header-cell" data-header-cell-field-value="error" data-header-cell-cell-renderer-value="error" data-header-cell-width-value="380">Last error</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="log">Click a Retry button.</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const log = document.getElementById('log');
+    const mkRetry = (job) => () => { log.textContent = `▶ retry ${job}`; };
+
+    const data = [
+      { id: 1, job: 'Backfill cohort 2017', error: { message: 'Connection reset after 4 retries', retry: mkRetry('backfill-2017') } },
+      { id: 2, job: 'Sync to warehouse',    error: 'No primary key on table customers' },
+      { id: 3, job: 'Generate audit PDF',   error: new Error('Out of memory') },
+      { id: 4, job: 'Healthy job',          error: null },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

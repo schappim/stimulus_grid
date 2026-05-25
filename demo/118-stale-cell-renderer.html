@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>118 — Stale cell renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>118 — Stale cell renderer</h1>
+  <p class="lede">Muted value + "stale" tag when a sibling timestamp field is older than the threshold. Demo uses 30 minutes against <code>row.updated_at</code>.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="metric" data-header-cell-width-value="200">Metric</th>
+        <th data-controller="header-cell" data-header-cell-field-value="value" data-header-cell-cell-renderer-value="stale-30" data-header-cell-width-value="220">Value</th>
+        <th data-controller="header-cell" data-header-cell-field-value="updated_at" data-header-cell-cell-renderer-value="relative-time" data-header-cell-width-value="180">Updated</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('stale-30', renderers.staleCell({ timestampField: 'updated_at', threshold: 30 * 60 * 1000 }));
+
+    const now = Date.now();
+    const data = [
+      { metric: 'orders_per_hour',      value: '12.4',  updated_at: new Date(now - 2 * 60 * 1000) },
+      { metric: 'p95_latency',          value: '184ms', updated_at: new Date(now - 25 * 60 * 1000) },
+      { metric: 'queue_depth',          value: '422',   updated_at: new Date(now - 90 * 60 * 1000) },
+      { metric: 'paid_conversion_rate', value: '3.1%',  updated_at: new Date(now - 6 * 3600 * 1000) },
+      { metric: 'cache_hit_ratio',      value: '0.91',  updated_at: new Date(now - 5 * 1000) },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

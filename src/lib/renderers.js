@@ -6332,6 +6332,171 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- spinner (async loading indicator) ----------------------
+ *
+ * Renders an inline CSS spinner when the cell value matches the loading
+ * sentinel (null / '' / 'loading' / '…'); otherwise renders the value
+ * verbatim. Sibling to loadingShimmer but a compact dot/spinner glyph
+ * instead of a full-width skeleton block. */
+export function spinner({
+  size = 12,
+  color = '#9ca3af',
+  label = 'Loading',
+} = {}) {
+  return ({ value }) => {
+    if (value != null && value !== '' && value !== 'loading' && value !== '…') {
+      return String(value);
+    }
+    return h('span', {
+      class: 'sg-renderer-spinner',
+      style: `width: ${size}px; height: ${size}px; border-color: ${color}; border-top-color: transparent;`,
+      'aria-label': label,
+      role: 'progressbar',
+    });
+  };
+}
+
+/* ---------- error-cell (error pill) -------------------------------
+ *
+ * Renders the value as an error chip — red icon + message + retry
+ * affordance. Value can be a string (the message), Error instance, or
+ * { message, retry: () => ... }.
+ *
+ *   <th data-header-cell-cell-renderer-value="error">Status</th>
+ */
+const ERROR_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 3a.75.75 0 00-.75.75v3.5a.75.75 0 001.5 0V5.25A.75.75 0 008 4.5zm0 6.5a1 1 0 100 2 1 1 0 000-2z"/></svg>';
+
+export function errorCell({
+  icon = ERROR_ICON,
+  retryLabel = 'Retry',
+} = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-error-cell');
+    let message, retry = null;
+    if (value instanceof Error) message = value.message;
+    else if (typeof value === 'object') { message = value.message || String(value); retry = value.retry; }
+    else message = String(value);
+
+    const wrap = h('span', { class: 'sg-renderer-error', title: message });
+    const ico = h('span', { class: 'sg-renderer-error-icon', 'aria-hidden': 'true' });
+    ico.innerHTML = icon;
+    wrap.append(ico);
+    wrap.append(h('span', { class: 'sg-renderer-error-msg' }, document.createTextNode(message)));
+    if (typeof retry === 'function') {
+      const btn = h('button', { type: 'button', class: 'sg-renderer-error-retry' },
+        document.createTextNode(retryLabel));
+      btn.addEventListener('click', (e) => { e.stopPropagation(); retry(ctx.row, ctx); });
+      wrap.append(btn);
+    }
+    return wrap;
+  };
+}
+
+/* ---------- sync-status (live sync pill) ---------------------------
+ *
+ * Display the current sync state of a row/record: synced, syncing,
+ * conflict, error, offline. */
+const SYNC_STATES = {
+  synced:   { color: 'green', icon: '✓', label: 'Synced' },
+  syncing:  { color: 'blue',  icon: '↻', label: 'Syncing', spin: true },
+  pending:  { color: 'orange', icon: '◔', label: 'Pending' },
+  error:    { color: 'red',   icon: '✕', label: 'Sync error' },
+  conflict: { color: 'orange', icon: '⚡', label: 'Conflict' },
+  offline:  { color: 'gray',  icon: '⌧', label: 'Offline' },
+};
+
+export function syncStatus({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-sync-cell');
+    const state = String(value).toLowerCase();
+    const def = SYNC_STATES[state] || { color: 'gray', icon: '·', label: String(value) };
+    const pill = h('span', { class: `sg-pill sg-pill-${def.color}`, title: def.label });
+    pill.append(h('span', {
+      class: `sg-renderer-sync-icon${def.spin ? ' is-spinning' : ''}`,
+      'aria-hidden': 'true',
+    }, document.createTextNode(def.icon)));
+    pill.append(h('span', { class: 'sg-pill-label' }, document.createTextNode(def.label)));
+    return pill;
+  };
+}
+
+/* ---------- stale-cell (muted value + 'stale' tag) ----------------
+ *
+ * Pair with a sibling timestamp column: if the value is older than
+ * `threshold` ms (relative to now or `row.as_of`), render it muted and
+ * append a "stale" tag.
+ *
+ *   registerRenderer('stale', renderers.staleCell({
+ *     timestampField: 'updated_at',
+ *     threshold: 30 * 60 * 1000,    // 30 min
+ *   })); */
+export function staleCell({
+  timestampField = 'updated_at',
+  threshold = 60 * 60 * 1000,     // 1 hour
+  inner = null,                    // wrap value via this child renderer
+} = {}) {
+  return (ctx) => {
+    const { row, value, td } = ctx;
+    if (td) td.classList.add('sg-renderer-stale-cell');
+    const ts = row && timestampField ? toDate(row[timestampField]) : null;
+    const isStale = ts ? (Date.now() - ts.getTime()) > threshold : false;
+    const wrap = h('span', { class: `sg-renderer-stale${isStale ? ' is-stale' : ''}` });
+    if (typeof inner === 'function') {
+      const res = inner(ctx);
+      if (res != null) {
+        if (typeof res === 'string') wrap.innerHTML = res;
+        else if (res instanceof Node) wrap.append(res);
+        else wrap.append(document.createTextNode(String(res)));
+      }
+    } else {
+      wrap.append(document.createTextNode(value == null ? '' : String(value)));
+    }
+    if (isStale) {
+      wrap.append(h('span', { class: 'sg-renderer-stale-tag', title: ts ? `Last updated ${ts.toLocaleString()}` : 'stale' },
+        document.createTextNode('stale')));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- fresh-cell (just-updated highlight) -------------------
+ *
+ * Inverse of stale-cell. Adds a brief yellow highlight when the row's
+ * timestamp field is within `freshFor` ms of now. The highlight is
+ * applied as a CSS class that fades the background out via transition;
+ * removing the class after `freshFor` ms means subsequent renders are
+ * unhighlighted. */
+export function freshCell({
+  timestampField = 'updated_at',
+  freshFor = 5 * 1000,
+  inner = null,
+} = {}) {
+  return (ctx) => {
+    const { row, value, td } = ctx;
+    if (td) td.classList.add('sg-renderer-fresh-cell');
+    const ts = row && timestampField ? toDate(row[timestampField]) : null;
+    const fresh = ts ? (Date.now() - ts.getTime()) < freshFor : false;
+    const wrap = h('span', { class: `sg-renderer-fresh${fresh ? ' is-fresh' : ''}` });
+    if (typeof inner === 'function') {
+      const res = inner(ctx);
+      if (res != null) {
+        if (typeof res === 'string') wrap.innerHTML = res;
+        else if (res instanceof Node) wrap.append(res);
+        else wrap.append(document.createTextNode(String(res)));
+      }
+    } else {
+      wrap.append(document.createTextNode(value == null ? '' : String(value)));
+    }
+    if (fresh && td) {
+      setTimeout(() => wrap.classList.remove('is-fresh'), freshFor);
+    }
+    return wrap;
+  };
+}
+
 /* ---------- countdown (live-ticking remaining time) ----------------
  *
  * Live "T-minus" ticker against a target time. The cell schedules a
@@ -7509,6 +7674,11 @@ registerRenderer('age',               age());
 registerRenderer('fiscal-period',     fiscalPeriod());
 registerRenderer('timezone',          timezone());
 registerRenderer('cron',              cron());
+registerRenderer('spinner',           spinner());
+registerRenderer('error',             errorCell());
+registerRenderer('sync-status',       syncStatus());
+registerRenderer('stale',             staleCell());
+registerRenderer('fresh',             freshCell());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -8082,4 +8252,5 @@ export const renderers = {
   postalCode, addressUs, addressGeneric, barcode,
   gauge, winLoss, miniBarChart, miniLineChart, trend,
   countdown, age, fiscalPeriod, timezone, cron,
+  spinner, errorCell, syncStatus, staleCell, freshCell,
 };

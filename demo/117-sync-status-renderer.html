@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>117 — Sync status renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>117 — Sync status renderer</h1>
+  <p class="lede">Sync state pill: synced / syncing / pending / conflict / error / offline.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="device" data-header-cell-width-value="200">Device</th>
+        <th data-controller="header-cell" data-header-cell-field-value="state" data-header-cell-cell-renderer-value="sync-status" data-header-cell-width-value="160">Status</th>
+        <th data-controller="header-cell" data-header-cell-field-value="last_sync" data-header-cell-cell-renderer-value="relative-time" data-header-cell-width-value="160">Last sync</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const now = Date.now();
+    const data = [
+      { device: 'astrid-mbp',     state: 'synced',   last_sync: new Date(now - 30 * 1000) },
+      { device: 'office-ap',       state: 'syncing',  last_sync: new Date(now - 5 * 1000)  },
+      { device: 'lab-pi-3',        state: 'pending',  last_sync: new Date(now - 5 * 60 * 1000) },
+      { device: 'rogue-device',    state: 'conflict', last_sync: new Date(now - 15 * 60 * 1000) },
+      { device: 'broken-camera',   state: 'error',    last_sync: new Date(now - 2 * 86400 * 1000) },
+      { device: 'cottage-thermo',  state: 'offline',  last_sync: new Date(now - 14 * 86400 * 1000) },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
