@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>149 — COC renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>149 — COC (NSW / SA / WA Certificate of Compliance — Electrical)</h1>
+  <p class="lede">
+    Non-VIC equivalent of <a href="./148-coes-renderer.html">COES</a> —
+    each state has its own scheme: NSW eCOC, SA CoC-EW, WA Notice of
+    Completion. State badge surfaces which scheme.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="160">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="contractor"
+              data-header-cell-width-value="180">Contractor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="coc"
+              data-header-cell-cell-renderer-value="coc"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="340">COC</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, job: 'J-2026-0042', contractor: 'Alpha Elec',  coc: { state: 'NSW', number: 'eCOC-993210', class: 'Domestic', expires: inDays(2400) } },
+      { id: 2, job: 'J-2026-0050', contractor: 'Bay Sparkies',coc: { state: 'NSW', number: 'eCOC-218776', class: 'Commercial', expires: inDays(60) } },
+      { id: 3, job: 'J-2026-0061', contractor: 'Adelaide Powr',coc: { state: 'SA',  number: 'EW-991210', expires: inDays(20) } },
+      { id: 4, job: 'J-2026-0070', contractor: 'Perth Charge', coc: { state: 'WA',  number: 'NOC-44510', expires: inDays(-7) } },
+      { id: 5, job: 'J-2026-0083', contractor: 'Tas Lights',   coc: { state: 'TAS', number: 'COC-21008' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

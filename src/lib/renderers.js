@@ -9081,6 +9081,13 @@ export function coes(opts = {}) {
   return complianceCard({ prefix: 'COES', classLabel: 'Electrical Safety', ...opts });
 }
 
+// NSW / SA / WA Certificate of Compliance — Electrical Work. The non-VIC
+// equivalent of COES. Format and lodgement scheme varies per state, but
+// the cell shape is identical (state badge + cert number + expiry).
+export function coc(opts = {}) {
+  return complianceCard({ prefix: 'COC', classLabel: 'Compliance', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9232,6 +9239,7 @@ registerRenderer('blue-card',         blueCard());
 registerRenderer('wwcc',              wwcc());
 registerRenderer('high-risk-licence', highRiskLicence());
 registerRenderer('coes',              coes());
+registerRenderer('coc',               coc());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9787,6 +9795,7 @@ wireBuiltin('blue-card',      clip.json);
 wireBuiltin('wwcc',           clip.json);
 wireBuiltin('high-risk-licence', clip.json);
 wireBuiltin('coes',           clip.json);
+wireBuiltin('coc',            clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9817,5 +9826,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes,
+  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
 };
