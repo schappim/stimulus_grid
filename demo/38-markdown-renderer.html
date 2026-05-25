@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>38 — Markdown renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>38 — Markdown renderer</h1>
+  <p class="lede">
+    Inline + block-level Markdown for description and notes columns. The
+    parser is a tiny regex pass — no library, no bundle bloat — covering
+    bold / italic / inline code / strikethrough / links / bullet + ordered
+    lists. Cell values are HTML-escaped before parsing, so user-supplied
+    <code>&lt;script&gt;</code> always renders as literal text.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true"
+       data-grid-row-height-value="110">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-cell-renderer-value="markdown"
+              data-header-cell-width-value="280">Title (inline md)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="notes"
+              data-header-cell-cell-renderer-value="markdown">Notes (block md)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="author"
+              data-header-cell-width-value="140">Author</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Supported subset:</strong>
+    <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>,
+    <code>~~strike~~</code>, <code>[link](https://…)</code>, and
+    <code>- bullet</code> / <code>1. ordered</code> lists. Pass
+    <code>{ inline: true }</code> for headlines / chip text where lists
+    and line-breaks aren't wanted.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, title: 'Migrate to **Postgres 17**',
+        notes: "Bumps default `work_mem`.\n- Drop the `pg_stat_statements` ext\n- Re-run `ANALYZE` after upgrade\n- Watch for *deprecated* JSON ops in [the changelog](https://www.postgresql.org/docs/17/release-17.html)",
+        author: 'Astrid Hale' },
+      { id: 2, title: '`recsys_v3` rollout — *canary 35%*',
+        notes: "Compared to v2 we see:\n1. **+12%** click-through\n2. **-4%** dwell time\n3. ~~Higher~~ Roughly equal infra cost",
+        author: 'Priya Patel' },
+      { id: 3, title: 'Customer call — **Vega Studio**',
+        notes: 'Tomás wants:\n- An `/api/v3/orders` endpoint that supports webhooks\n- *Multi-currency* invoices\n- A clearer error when a webhook URL [4xxs](https://example.com/docs)',
+        author: 'Marcus Chen' },
+      { id: 4, title: 'Replace lobby coffee machine',
+        notes: '~~Order more pods~~ — going for a real espresso machine. Vendor shortlist:\n- **Rocket Appartamento** (~$2.5k)\n- *La Marzocco Linea Mini* ($6.4k, overkill)\n- ECM Synchronika ($3.6k)',
+        author: 'Mei Tanaka' },
+      { id: 5, title: 'XSS sanity check: <script>alert(1)</script>',
+        notes: 'The cell renders the literal text — no script executes, no markup leaks. The escape happens **before** the markdown pass, so `<` becomes `&lt;` before the regex even sees the string.',
+        author: 'Lena Brooks' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -280,6 +280,7 @@ without conflict.
 | `multi-line` | notes / descriptions / commit messages | Preserves `\n` newlines via `white-space: pre-line`; pass `{ lines: N }` for `-webkit-line-clamp` truncation with the full value in `title=`. Pair with a taller `data-grid-row-height-value` (~64 for 2 lines, 84 for 3) |
 | `attachments` | files on a record (Active Storage / S3 / arbitrary) | Airtable-style strip of thumbs for images + kind-tinted icons for PDFs/docs/audio/video/zips; click an image to open a keyboard-navigable lightbox carousel; click a non-image to open in a new tab; collapses to `+N` past `maxThumbs`. Pass `{ editable: true }` to enable a popover editor (dblclick or `+` button) with drag-drop, paste, and per-file × remove; supply `onUpload(files, ctx)` / `onRemove(att, ctx)` to wire it to your server (Rails Active Storage, S3 presigned, etc.). Falls back to `URL.createObjectURL` when no callbacks are given |
 | `address-au` | Australian street addresses | One-line formatted display — `12 Smith Street, Bondi NSW 2026` — with the state shown as a colour-coded badge (NSW sky, VIC navy, QLD maroon, WA gold, SA red, TAS forest, ACT ochre, NT ochre). Value shape: `{ address1, address2, address3, suburb, state, postcode, country }`. Dblclick a cell to open a multi-field popover editor with all seven fields laid out for AU conventions (state dropdown, 4-digit postcode, the third address line revealed only when needed). Commits via `applyTransaction` and fires `grid:cellValueChanged`. Pass `{ editable: false }` for display-only |
+| `audio-attachment` | call recordings / voice notes / podcasts | Compact play-circle icon (+ optional filename / duration) in-cell; dblclick (or single-click) opens an anchored popover with play/pause, draggable scrub bar, current / total time, and ±10s skip buttons. Keyboard: ←/→ seek 5s (Shift = 30s), Home/End jump, Space toggles play. Value shape: a URL string, or `{ url, filename?, byte_size?, duration? }`. Uses [howler.js](https://howlerjs.com/) when `window.Howl` is defined (richer codec fallbacks + cross-browser consistency); otherwise falls back to native `<audio>` — same UI either way. Only one player is active at a time — opening a second cell closes the first. No audio is preloaded on cell render — the request fires only when the popover opens |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
@@ -391,6 +392,71 @@ grid.addEventListener('grid:cellValueChanged', (e) => {
 
 Set `{ editable: false }` for a display-only column. See
 **[demo 34](demo/34-address-au-renderer.html)** for a working example.
+
+### Media renderers (`audio-attachment`)
+
+`audio-attachment` is the audio counterpart of `attachments` — for the
+single-file case where the cell is a recording (sales calls, voice
+notes, podcast episodes) rather than an arbitrary file strip. The cell
+renders as a compact play-circle icon with the filename next to it;
+double-click (or single-click) the icon and a popover opens directly
+under the cell with a play/pause toggle, a draggable scrub bar,
+current / total time, and ±10s skip buttons. Only one player is active
+at a time — opening a second cell closes the first.
+
+Value shape:
+
+```js
+"https://cdn.example.com/calls/2026-05-22-chen.mp3"
+// or
+{
+  url: 'https://cdn.example.com/calls/2026-05-22-chen.mp3',
+  filename: 'call-chen-2026-05-22.mp3',  // shown in cell + popover header
+  byte_size: 3_280_000,                  // optional — shown in popover
+  duration: 204,                         // optional — populates the time
+                                         //   display before audio metadata loads
+}
+```
+
+**howler.js integration is opt-in by presence.** If `window.Howl` is
+defined when the popover opens, the renderer delegates playback /
+scrub / duration to a `Howl` instance (cross-browser consistency,
+codec fallbacks, the `playing()` / `seek()` getters); otherwise it
+uses a plain `new Audio()` — same player UI either way. To enable
+Howler, drop in the CDN script tag before `stimulus_grid.js`:
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<script src="/path/dist/stimulus_grid.js"></script>
+```
+
+No audio is preloaded on cell render — the network request fires only
+when the popover opens. A grid of 100 phone calls won't issue 100
+range requests on page load.
+
+Keyboard inside the popover: **Space** toggles play, **←/→** scrub 5s
+(Shift = 30s), **Home/End** jump to start / end, **Esc** closes.
+
+```html
+<th data-controller="header-cell"
+    data-header-cell-field-value="recording"
+    data-header-cell-cell-renderer-value="audio-attachment">Recording</th>
+```
+
+For custom variants:
+
+```js
+registerRenderer('voicemail',
+  renderers.audioAttachment({
+    iconOnly: true,        // hide the filename, render the icon only
+    skipSeconds: 15,       // ±15s instead of the default 10
+  })
+)
+```
+
+See **[demo 37](demo/37-audio-attachment-renderer.html)** for a CRM
+call-log example paired with `datetime`, `duration`, and `relative-time`
+columns from the date-renderers demo.
 
 ### Editing renderer cells
 
@@ -1071,8 +1137,9 @@ custom renderers, 10k-row virtual scroll, everything-together, live filtering,
 row grouping with aggregation, the status bar, pivot mode, header groups,
 the right-click column menu, persisted column state, master/detail, tree
 data, the built-in renderer library, attachments, the invoice / quote
-layout (separators + merged cells), and Australian addresses with a
-multi-field popover editor.
+layout (separators + merged cells), Australian addresses with a multi-field
+popover editor, and audio attachments with a Howler-powered scrubbing
+player.
 
 ## Build
 

@@ -2118,3 +2118,37 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
    nudge it slightly smaller so the two centre identically in the same
    button frame. */
 .sg-audio-play[data-state="playing"] svg { width: 14px; height: 14px; }
+
+/* Markdown renderer — inline + lightweight block-level Markdown. Cell
+   tops align with the row's other cells via the .sg-has-multiline class
+   the renderer adds to the parent TR (same trick as `multi-line`). */
+.sg-grid td.sg-renderer-markdown-cell {
+  vertical-align: top;
+  padding-top: 6px; padding-bottom: 6px;
+}
+.sg-grid .sg-renderer-markdown {
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+.sg-grid .sg-renderer-markdown.is-inline { display: inline; }
+.sg-grid .sg-renderer-markdown strong { font-weight: 600; }
+.sg-grid .sg-renderer-markdown em { font-style: italic; }
+.sg-grid .sg-renderer-markdown del { color: var(--sg-fg-muted, #9ca3af); }
+.sg-grid .sg-renderer-markdown code {
+  background: var(--sg-bg-alt, #f3f4f6);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #be185d;       /* pink-700 — a calm contrast against the cell bg */
+}
+.sg-grid .sg-renderer-markdown a {
+  color: var(--sg-icon-accent);
+  text-decoration: none;
+}
+.sg-grid .sg-renderer-markdown a:hover { text-decoration: underline; }
+.sg-grid .sg-renderer-markdown ul,
+.sg-grid .sg-renderer-markdown ol {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+}
+.sg-grid .sg-renderer-markdown li { margin: 2px 0; }

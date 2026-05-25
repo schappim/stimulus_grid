@@ -25,44 +25,45 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 
 - [x] **35 — `checkbox`** Interactive boolean toggle (click to flip). Commits via `applyTransaction`. Distinct from the read-only `boolean` icon renderer.
 - [x] **36 — `switch`** Same semantics as `checkbox` but rendered as an on/off pill switch.
-- [ ] **37 — `markdown`** Render `**bold**`, `*italic*`, `[links](…)`, `` `code` ``, lists. Tiny dependency-free parser.
-- [ ] **38 — `json`** Pretty-print + collapsible preview for object/array values. Truncates to first N keys with a "+N more" toggle.
-- [ ] **39 — `linked-record`** Airtable-style FK chip — resolves the value via a lookup map / function to a display name (and optional thumbnail).
-- [ ] **40 — `coloured-tags`** Per-value colour-mapped multi-select chips (Notion / Airtable convention). Sibling to `tags`.
-- [ ] **41 — `time`** HH:MM (or HH:MM:SS) — formats a time string or Date. Sibling to `date` / `datetime`.
-- [ ] **42 — `diff`** `old → new` before/after rendering. For audit-log columns; configurable arrow / colour.
-- [ ] **43 — `geo`** Lat-lng pair → small "View on Maps" link + DMS / decimal display + optional static-thumb hook.
-- [ ] **44 — `qr`** Inline SVG QR code from the cell value. Pure JS (Reed-Solomon + matrix).
-- [ ] **45 — `code`** Monospace code snippet with optional language hint + copy button. No syntax-highlighter dep.
+- [x] **37 — `audio-attachment`** (landed via parallel work) Howler-powered audio player popover with scrub bar, ±10s skips, volume + close.
+- [x] **38 — `markdown`** Render `**bold**`, `*italic*`, `[links](…)`, `` `code` ``, lists. Tiny dependency-free parser.
+- [ ] **39 — `json`** Pretty-print + collapsible preview for object/array values. Truncates to first N keys with a "+N more" toggle.
+- [ ] **40 — `linked-record`** Airtable-style FK chip — resolves the value via a lookup map / function to a display name (and optional thumbnail).
+- [ ] **41 — `coloured-tags`** Per-value colour-mapped multi-select chips (Notion / Airtable convention). Sibling to `tags`.
+- [ ] **42 — `time`** HH:MM (or HH:MM:SS) — formats a time string or Date. Sibling to `date` / `datetime`.
+- [ ] **43 — `diff`** `old → new` before/after rendering. For audit-log columns; configurable arrow / colour.
+- [ ] **44 — `geo`** Lat-lng pair → small "View on Maps" link + DMS / decimal display + optional static-thumb hook.
+- [ ] **45 — `qr`** Inline SVG QR code from the cell value. Pure JS (Reed-Solomon + matrix).
+- [ ] **46 — `code`** Monospace code snippet with optional language hint + copy button. No syntax-highlighter dep.
 
 ## Tier 2 — refinements / variants
 
-- [ ] **46 — `rating` (configurable icon)** Hearts / thumbs / smiley / NPS bands. Same engine as `star-rating` but with a swappable glyph + colour band map.
-- [ ] **47 — `bullet`** Bullet-chart range bar — value on a min-max axis with optional target band marker.
-- [ ] **48 — `donut`** Single-percentage donut chart (sibling to `progress-bar`).
-- [ ] **49 — `histogram`** Frequency bars from an array (sibling to `sparkline`).
-- [ ] **50 — `rag`** Pure red / amber / green dot — no label. Risk-dashboard primitive.
-- [ ] **51 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
-- [ ] **52 — `mention`** Parses `@user` and `#tag` inside long text into styled chips.
-- [ ] **53 — `expand`** Click-to-expand long text in-place (vs `truncate`'s clip-with-hover-tooltip).
-- [ ] **54 — `units`** Distance / temperature / weight formatter ("12 km", "23 °C", "1.4 kg"). Locale-aware unit conversion.
-- [ ] **55 — `ip-address`** IPv4 / IPv6 validation + monospace formatting + optional country flag from the cell value.
+- [ ] **47 — `rating` (configurable icon)** Hearts / thumbs / smiley / NPS bands. Same engine as `star-rating` but with a swappable glyph + colour band map.
+- [ ] **48 — `bullet`** Bullet-chart range bar — value on a min-max axis with optional target band marker.
+- [ ] **49 — `donut`** Single-percentage donut chart (sibling to `progress-bar`).
+- [ ] **50 — `histogram`** Frequency bars from an array (sibling to `sparkline`).
+- [ ] **51 — `rag`** Pure red / amber / green dot — no label. Risk-dashboard primitive.
+- [ ] **52 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
+- [ ] **53 — `mention`** Parses `@user` and `#tag` inside long text into styled chips.
+- [ ] **54 — `expand`** Click-to-expand long text in-place (vs `truncate`'s clip-with-hover-tooltip).
+- [ ] **55 — `units`** Distance / temperature / weight formatter ("12 km", "23 °C", "1.4 kg"). Locale-aware unit conversion.
+- [ ] **56 — `ip-address`** IPv4 / IPv6 validation + monospace formatting + optional country flag from the cell value.
 
 ## Tier 3 — AU-niche identifiers (consistent with `phone(AU)`, `abn`, `address-au`)
 
-- [ ] **56 — `bsb`** Bank-State-Branch, 6 digits as `XXX-XXX`, with optional bank-name lookup.
-- [ ] **57 — `acn`** Australian Company Number, 9 digits with checksum (mod-10 weights `8,7,6,5,4,3,2,1`), formatted `XXX XXX XXX`. Links to ASIC.
-- [ ] **58 — `tfn`** Tax File Number — always masked (regulatory rule), last 3 visible. Read-only by design.
-- [ ] **59 — `medicare`** 10-digit Medicare number, optional IRN suffix, formatted `XXXX XXXXX X / N`.
+- [ ] **57 — `bsb`** Bank-State-Branch, 6 digits as `XXX-XXX`, with optional bank-name lookup.
+- [ ] **58 — `acn`** Australian Company Number, 9 digits with checksum (mod-10 weights `8,7,6,5,4,3,2,1`), formatted `XXX XXX XXX`. Links to ASIC.
+- [ ] **59 — `tfn`** Tax File Number — always masked (regulatory rule), last 3 visible. Read-only by design.
+- [ ] **60 — `medicare`** 10-digit Medicare number, optional IRN suffix, formatted `XXXX XXXXX X / N`.
 
 ## Tier 4 — lower priority / niche
 
-- [ ] **60 — `audio`** Inline `<audio controls>` player from a URL.
-- [ ] **61 — `video`** Inline `<video controls>` player from a URL.
-- [ ] **62 — `reactions`** 👍 3 ❤️ 1 strip from an object/array of emoji counts.
-- [ ] **63 — `comment-count`** Value + small "💬 N" badge.
-- [ ] **64 — `ordinal`** "1st / 2nd / 3rd" for ranking columns. Locale-aware where possible.
-- [ ] **65 — `plural`** Count + plural-sensitive label ("0 items / 1 item / 2 items"), driven by `Intl.PluralRules`.
-- [ ] **66 — `empty`** Explicit styleable null/blank renderer with a configurable placeholder.
-- [ ] **67 — `credit-card`** Luhn-validated + brand-detected (Visa/MC/Amex/Discover/JCB) formatted card display.
-- [ ] **68 — `loading-shimmer`** Placeholder shimmer cell for async-loaded rows.
+- [ ] **61 — `audio`** Inline `<audio controls>` player from a URL (lightweight sibling to `audio-attachment`).
+- [ ] **62 — `video`** Inline `<video controls>` player from a URL.
+- [ ] **63 — `reactions`** 👍 3 ❤️ 1 strip from an object/array of emoji counts.
+- [ ] **64 — `comment-count`** Value + small "💬 N" badge.
+- [ ] **65 — `ordinal`** "1st / 2nd / 3rd" for ranking columns. Locale-aware where possible.
+- [ ] **66 — `plural`** Count + plural-sensitive label ("0 items / 1 item / 2 items"), driven by `Intl.PluralRules`.
+- [ ] **67 — `empty`** Explicit styleable null/blank renderer with a configurable placeholder.
+- [ ] **68 — `credit-card`** Luhn-validated + brand-detected (Visa/MC/Amex/Discover/JCB) formatted card display.
+- [ ] **69 — `loading-shimmer`** Placeholder shimmer cell for async-loaded rows.

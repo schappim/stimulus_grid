@@ -2485,6 +2485,102 @@ export function switchRenderer({
   };
 }
 
+/* ---------- markdown (inline subset) -------------------------------
+ *
+ * A tiny, dependency-free Markdown subset for cells holding descriptions,
+ * comments, or release-note blurbs. Inline marks: `**bold**`, `*italic*`,
+ * `` `code` ``, `~~strike~~`, `[text](url)` for http/https/mailto only
+ * (other schemes are dropped to neutralise `javascript:` injection).
+ * Block level: `- ` and `* ` bulleted lists, `1. ` ordered lists.
+ *
+ *   <th data-header-cell-cell-renderer-value="markdown">Notes</th>
+ *
+ * For single-line headings, captions, or one-liner notes pass
+ * `{ inline: true }` to skip the block parse (no lists, no <br>s).
+ *
+ * Safety: we escape the raw value to HTML entities *first*, then run
+ * the regex transforms — so user `<script>` literally becomes `&lt;script&gt;`
+ * and the markdown transforms only ever emit a whitelisted tag set. */
+const MD_LINK_SAFE_RE = /^(https?:\/\/|mailto:)/i;
+
+function mdEscapeHTML(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function mdInline(escaped) {
+  let out = escaped;
+  // Inline code — backticks. Pull these out first so their contents
+  // aren't re-parsed for bold/italic/etc.
+  out = out.replace(/`([^`\n]+)`/g, (_, body) => `<code>${body}</code>`);
+  // Links — whitelist http/https/mailto only.
+  out = out.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (m, text, url) => {
+    return MD_LINK_SAFE_RE.test(url)
+      ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`
+      : m;     // leave unrecognised schemes verbatim — never emit a link
+  });
+  // Bold — ** or __
+  out = out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+  // Italic — * or _ (require a non-alnum boundary so "snake_case" survives).
+  out = out.replace(/(^|[\s(])\*([^*\n]+?)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
+  out = out.replace(/(^|[\s(])_([^_\n]+?)_(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
+  // Strikethrough.
+  out = out.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  return out;
+}
+
+function mdBlock(escaped) {
+  const lines = escaped.split('\n');
+  const out = [];
+  let list = null;                              // 'ul' | 'ol' | null
+  let buf = [];
+  const flush = () => {
+    if (!list) return;
+    out.push(`<${list}>${buf.map((b) => `<li>${mdInline(b)}</li>`).join('')}</${list}>`);
+    list = null; buf = [];
+  };
+  for (const line of lines) {
+    const ulM = /^\s*[-*]\s+(.+)$/.exec(line);
+    const olM = /^\s*\d+\.\s+(.+)$/.exec(line);
+    if (ulM) {
+      if (list && list !== 'ul') flush();
+      list = 'ul'; buf.push(ulM[1]);
+    } else if (olM) {
+      if (list && list !== 'ol') flush();
+      list = 'ol'; buf.push(olM[1]);
+    } else {
+      flush();
+      if (line.trim() === '') out.push('');
+      else out.push(mdInline(line));
+    }
+  }
+  flush();
+  // Join non-list runs with <br>; blank lines collapse to a single break
+  // so a "paragraph gap" reads as one extra newline visually, not two.
+  return out.join('<br>').replace(/(<br>){2,}/g, '<br><br>');
+}
+
+export function markdown({ inline = false } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const escaped = mdEscapeHTML(value);
+    const html = inline ? mdInline(escaped) : mdBlock(escaped);
+    if (td) {
+      td.classList.add('sg-renderer-markdown-cell');
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
+    }
+    const wrap = h('div', { class: `sg-renderer-markdown${inline ? ' is-inline' : ''}` });
+    wrap.innerHTML = html;
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2522,6 +2618,7 @@ registerRenderer('attachments',    attachments());
 registerRenderer('address-au',     addressAu());
 registerRenderer('checkbox',       checkbox());
 registerRenderer('switch',         switchRenderer());
+registerRenderer('markdown',       markdown());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2532,5 +2629,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, switch: switchRenderer, audioAttachment,
+  checkbox, switch: switchRenderer, markdown, audioAttachment,
 };
