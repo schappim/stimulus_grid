@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>22 — Boolean renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>22 — Boolean renderer</h1>
+  <p class="lede">
+    A visual upgrade on the plain text <code>✓</code> the
+    <code>type="boolean"</code> path renders. Green-filled check for true,
+    muted X for false (keeps the grid calm — opt into red via your own
+    variant if you want it), and a dash for null / undefined / blank.
+    Recognises the common truthy strings (<code>true</code>, <code>"yes"</code>,
+    <code>"1"</code>, <code>"on"</code>) so DB columns of mixed truthy
+    representations don't need preprocessing.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="feature"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="220">Feature</th>
+          <th data-controller="header-cell" data-header-cell-field-value="enabled"
+              data-header-cell-cell-renderer-value="boolean"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="100">Enabled</th>
+          <th data-controller="header-cell" data-header-cell-field-value="beta"
+              data-header-cell-cell-renderer-value="boolean"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="80">Beta</th>
+          <th data-controller="header-cell" data-header-cell-field-value="enterprise_only"
+              data-header-cell-cell-renderer-value="bool-hide-false"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="140">Enterprise only</th>
+          <th data-controller="header-cell" data-header-cell-field-value="default_value"
+              data-header-cell-cell-renderer-value="bool-na"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="140">Default</th>
+          <th data-controller="header-cell" data-header-cell-field-value="notes"
+              data-header-cell-width-value="340">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Custom variants:</strong> the <em>Enterprise only</em> column
+    is <code>boolean({ falseStyle: 'hidden' })</code> — false renders as
+    nothing instead of a muted X, perfect for "true is the noteworthy
+    case" columns. The <em>Default</em> column is
+    <code>boolean({ nullLabel: 'N/A' })</code>. Pass <code>truthy: (v) =>
+    v === 'ACTIVE'</code> for column-specific truthiness.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('bool-hide-false', renderers.boolean({ falseStyle: 'hidden' }));
+    registerRenderer('bool-na',         renderers.boolean({ nullLabel: 'N/A' }));
+
+    // Deliberately mixed truthy/falsy shapes to exercise the recogniser.
+    const ROWS = [
+      { id: 1, feature: 'Auto-save',           enabled: true,    beta: false,    enterprise_only: false,    default_value: true,
+        notes: 'Boolean (true / false)' },
+      { id: 2, feature: 'Multi-region writes', enabled: 'yes',   beta: 'no',     enterprise_only: true,     default_value: 'no',
+        notes: 'String shapes — "yes" / "no"' },
+      { id: 3, feature: 'Audit log',           enabled: 1,       beta: 0,        enterprise_only: 0,        default_value: 1,
+        notes: 'Numeric 1 / 0 — common in SQL' },
+      { id: 4, feature: 'Custom domains',      enabled: 'true',  beta: 'false',  enterprise_only: 'true',   default_value: null,
+        notes: 'String literals "true" / "false"' },
+      { id: 5, feature: 'SCIM provisioning',   enabled: 'on',    beta: 'off',    enterprise_only: 'on',     default_value: null,
+        notes: 'On / off settings' },
+      { id: 6, feature: 'Snapshot scheduling', enabled: null,    beta: undefined, enterprise_only: null,    default_value: null,
+        notes: 'Null + undefined — shown as the dash glyph (or "N/A" in the Default col)' },
+      { id: 7, feature: 'Voice transcription', enabled: false,   beta: true,     enterprise_only: false,    default_value: false,
+        notes: 'False shown as muted X (or hidden in the Enterprise col)' },
+      { id: 8, feature: 'GPU acceleration',    enabled: true,    beta: true,     enterprise_only: true,     default_value: false,
+        notes: 'All-true row' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

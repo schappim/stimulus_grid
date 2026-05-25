@@ -303,6 +303,48 @@ export function fileSize({ binary = true, decimals = 1, locale = undefined } = {
   };
 }
 
+/* ---------- boolean ------------------------------------------------- */
+
+// Treats any "truthy-looking" value as true: literal true, 1, "1", "y",
+// "yes", "t", "true", "on" (case-insensitive). Everything else that isn't
+// blank (null / undefined / "") counts as false. Pass `truthy` to override
+// — e.g. truthy: (v) => v === 'ACTIVE' for column-specific semantics.
+const BOOL_TRUTHY = new Set(['1', 'true', 't', 'yes', 'y', 'on']);
+function defaultIsTruthy(v) {
+  if (v === true || v === 1) return true;
+  if (v == null || v === '' || v === false || v === 0) return false;
+  return BOOL_TRUTHY.has(String(v).toLowerCase());
+}
+
+const BOOL_CHECK_SVG = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335.1 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>';
+const BOOL_X_SVG     = '<svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>';
+
+// Visual boolean: filled green check / hollow red X, with a dash for
+// null/undefined. Drops the text-only ✓ that the type='boolean'
+// formatValue path uses. Pass `nullLabel` to override the dash (e.g.
+// 'N/A', '—'); pass `falseStyle: 'hidden'` if a false cell should just
+// be blank instead of showing the red X.
+export function boolean({
+  truthy = defaultIsTruthy,
+  nullLabel = '—',
+  falseStyle = 'icon',                  // 'icon' | 'hidden'
+} = {}) {
+  return ({ value }) => {
+    if (value == null || value === '') {
+      return h('span', { class: 'sg-renderer-bool-null' }, document.createTextNode(nullLabel));
+    }
+    if (truthy(value)) {
+      const node = h('span', { class: 'sg-renderer-bool is-true', 'aria-label': 'true' });
+      node.innerHTML = BOOL_CHECK_SVG;
+      return node;
+    }
+    if (falseStyle === 'hidden') return '';
+    const node = h('span', { class: 'sg-renderer-bool is-false', 'aria-label': 'false' });
+    node.innerHTML = BOOL_X_SVG;
+    return node;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -580,10 +622,12 @@ registerRenderer('duration',      duration());
 registerRenderer('number',         number());
 registerRenderer('compact-number', compactNumber());
 registerRenderer('file-size',      fileSize());
+registerRenderer('boolean',        boolean());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
   countryFlag, abn, avatar, statusPill,
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
+  boolean,
 };

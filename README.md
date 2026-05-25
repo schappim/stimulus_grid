@@ -260,6 +260,7 @@ without conflict.
 | `number` | plain numbers | `Intl.NumberFormat`-formatted (comma-grouped); right-aligned, tabular-nums |
 | `compact-number` | big numbers | `1.2K` / `3.4M` / `1.2B` (or `1.2 million` with `compactDisplay: 'long'`) |
 | `file-size` | byte counts | Bytes → `KiB` / `MiB` / `GiB` (binary by default); pass `{ binary: false }` for `KB` / `MB` / `GB` |
+| `boolean` | true / false / null | Green check / muted X / dash; recognises `true`, `1`, `"yes"`, `"on"`, etc.; `{ falseStyle: 'hidden' }` blanks false; `{ nullLabel: 'N/A' }` overrides the dash |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

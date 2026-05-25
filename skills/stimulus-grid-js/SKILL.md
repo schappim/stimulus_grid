@@ -198,6 +198,7 @@ ship pre-registered:
 | `relative-time` | "3 days ago" / "in 2 hours"; absolute timestamp on hover |
 | `duration` | `2h 14m` (compact), `02:14:32` (clock), or words; ms/sec/min input |
 | `number` / `compact-number` / `file-size` | `Intl.NumberFormat`-based; right-aligned tabular-nums; `compact-number` does `1.2K/3.4M/1.2B`; `file-size` does bytes → KiB/MiB/GiB (binary default) |
+| `boolean` | Visual upgrade on text `✓` — green check / muted X / dash for null; recognises `true`/`1`/`"yes"`/`"on"` |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

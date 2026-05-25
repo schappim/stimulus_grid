@@ -878,6 +878,19 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   cursor: help;
 }
 
+/* Boolean — filled green check / red X / muted dash for null. Uses
+   currentColor so the same SVG glyph drives both states. */
+.sg-grid .sg-renderer-bool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+}
+.sg-grid .sg-renderer-bool svg { width: 14px; height: 14px; display: block; }
+.sg-grid .sg-renderer-bool.is-true  { color: #10b981; }    /* emerald */
+.sg-grid .sg-renderer-bool.is-false { color: #d1d5db; }    /* muted grey — keeps the table calm */
+.sg-grid .sg-renderer-bool-null { color: var(--sg-fg-muted, #9ca3af); }
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;
