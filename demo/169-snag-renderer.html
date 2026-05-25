@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>169 — Snag | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>169 — Snag (PC inspection list)</h1>
+  <p class="lede">
+    Alias of <a href="./168-defect-renderer.html">defect</a> for teams
+    that use UK / commercial-builder vocabulary ("snag list" instead of
+    "defect list"). Same renderer, same shape, different name.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Snag #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="room"
+              data-header-cell-width-value="180">Room</th>
+          <th data-controller="header-cell" data-header-cell-field-value="snag"
+              data-header-cell-cell-renderer-value="snag"
+              data-header-cell-width-value="380">Snag</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, ref: 'S-001', room: 'Lounge',     snag: { severity: 'minor',    title: 'Power point cover loose', status: 'open' } },
+      { id: 2, ref: 'S-002', room: 'Kitchen',    snag: { severity: 'major',    title: 'Dishwasher waste hose not silicone-sealed', status: 'wip' } },
+      { id: 3, ref: 'S-003', room: 'Ensuite',    snag: { severity: 'critical', title: 'Shower waterproofing flagged by inspector', status: 'open' } },
+      { id: 4, ref: 'S-004', room: 'Hallway',    snag: { severity: 'cosmetic', title: 'Cornice gap to be no-more-gaps caulked', status: 'closed' } },
+      { id: 5, ref: 'S-005', room: 'Laundry',    snag: { severity: 'minor',    title: 'Stop valve handle missing', status: 'closed' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

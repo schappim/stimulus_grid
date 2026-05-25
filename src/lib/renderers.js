@@ -9644,6 +9644,7 @@ registerRenderer('technician-slot',   technicianSlot());
 registerRenderer('progress-claim',    progressClaim());
 registerRenderer('variation',         variation());
 registerRenderer('defect',            defect());
+registerRenderer('snag',              defect());      // alias — same shape, different vocabulary
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10219,6 +10220,7 @@ wireBuiltin('technician-slot', clip.json);
 wireBuiltin('progress-claim', clip.json);
 wireBuiltin('variation',      clip.json);
 wireBuiltin('defect',         clip.json);
+wireBuiltin('snag',           clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
