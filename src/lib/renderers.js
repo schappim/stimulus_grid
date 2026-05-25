@@ -9232,6 +9232,34 @@ export function jsaStatus() {
  * The cell shapes that hang off "who's working" — trade icons, skill
  * endorsements, subcontractor compliance roll-ups, crew composites. */
 
+/* ---------- AU FSM fleet / vehicle renderers ----------------------
+ *
+ * Rego plates, rego currency, CTP / green-slip, service-due, fuel
+ * cards, odometer readings — the fleet-management vocabulary. */
+
+// AU vehicle registration plate with state-coloured background. The
+// palette mimics each state's current general-issue plate (NSW
+// yellow/black, VIC blue/white, QLD maroon/white, etc.). Value:
+//   string                  → unknown state, neutral plate
+//   { state, plate }        → coloured to match the state */
+export function regoPlate() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let state = '', plate = '';
+    if (typeof value === 'string') plate = value;
+    else if (typeof value === 'object') { state = (value.state || '').toUpperCase(); plate = value.plate || ''; }
+    const c = AU_REGO_PLATE[state] || { bg: '#f3f4f6', fg: '#1f2937', border: '#9ca3af' };
+    const wrap = h('span', {
+      class: 'sg-renderer-rego-plate',
+      style: `background:${c.bg};color:${c.fg};border-color:${c.border};`,
+      title: state ? `${state} plate` : 'Plate',
+    });
+    wrap.append(h('span', { class: 'sg-renderer-rego-plate-text' },
+      document.createTextNode(String(plate).toUpperCase())));
+    return wrap;
+  };
+}
+
 /* ---------- crew --------------------------------------------------
  *
  * Team / leading hand composite. Shows leading-hand name + tiny avatar
@@ -10541,6 +10569,7 @@ registerRenderer('trade-type',        tradeType());
 registerRenderer('skill-endorsement', skillEndorsement());
 registerRenderer('subcontractor',     subcontractor());
 registerRenderer('crew',              crew());
+registerRenderer('rego-plate',        regoPlate());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11135,6 +11164,7 @@ wireBuiltin('trade-type',     clip.text);
 wireBuiltin('skill-endorsement', clip.json);
 wireBuiltin('subcontractor',  clip.json);
 wireBuiltin('crew',           clip.json);
+wireBuiltin('rego-plate',     clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11175,4 +11205,5 @@ export const renderers = {
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
+  regoPlate,
 };
