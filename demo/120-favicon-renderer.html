@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>120 — Favicon URL renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>120 — Favicon URL renderer</h1>
+  <p class="lede">
+    Sibling to <code>url</code> with a small favicon image next to the
+    host. Defaults to Google's s2 service; pass <code>faviconUrl: (host)
+    =&gt; ...</code> to point at your own proxy.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="title" data-header-cell-width-value="200">Tool</th>
+        <th data-controller="header-cell" data-header-cell-field-value="url" data-header-cell-cell-renderer-value="favicon" data-header-cell-width-value="320">URL</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { title: 'GitHub', url: 'https://github.com/' },
+      { title: 'Hacker News', url: 'https://news.ycombinator.com/' },
+      { title: 'MDN', url: 'https://developer.mozilla.org/' },
+      { title: 'Stripe Docs', url: 'https://stripe.com/docs' },
+      { title: 'Notion', url: 'https://notion.so/' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

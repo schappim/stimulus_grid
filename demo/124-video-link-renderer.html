@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>124 — Video link (YouTube / Vimeo) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>124 — Video link renderer</h1>
+  <p class="lede">Thumbnail + title + optional duration for a YouTube or Vimeo URL. YouTube thumbnails fetched from <code>i.ytimg.com</code>; Vimeo falls back to a provider badge.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="url" data-header-cell-cell-renderer-value="video-link" data-header-cell-width-value="380">Video</th>
+        <th data-controller="header-cell" data-header-cell-field-value="title" data-header-cell-width-value="240">Title (source)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Rick Astley — Never Gonna Give You Up', duration: '3:33' },
+      { url: 'https://youtu.be/aqz-KE-bpKQ',                 title: 'Big Buck Bunny',                       duration: '10:34' },
+      { url: 'https://vimeo.com/76979871',                   title: 'The Mountain — Sean Stiegemeier',     duration: '2:36' },
+      { url: 'https://example.com/no-video',                 title: 'Not a video',                          duration: '' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

@@ -6332,6 +6332,212 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- favicon (URL + Google s2 favicon thumbnail) ------------
+ *
+ * Sibling to `url`. Renders a small favicon next to the link text. Uses
+ * Google's public s2 service by default — pass `faviconUrl: (host) =>
+ * ...` to point at your own proxy. */
+export function favicon({
+  newTab = true,
+  size = 14,
+  faviconUrl = (host) => `https://www.google.com/s2/favicons?domain=${host}&sz=64`,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    let parsed;
+    try { parsed = new URL(text); } catch { return document.createTextNode(text); }
+    const wrap = h('a', {
+      class: 'sg-renderer-link sg-renderer-favicon',
+      href: text,
+      target: newTab ? '_blank' : null,
+      rel: newTab ? 'noopener noreferrer' : null,
+      title: text,
+    });
+    wrap.append(h('img', {
+      src: faviconUrl(parsed.hostname),
+      alt: '', width: size, height: size, loading: 'lazy', decoding: 'async',
+      class: 'sg-renderer-favicon-img',
+    }));
+    wrap.append(h('span', { class: 'sg-renderer-favicon-host' },
+      document.createTextNode(parsed.hostname + (parsed.pathname !== '/' ? parsed.pathname : ''))));
+    return wrap;
+  };
+}
+
+/* ---------- domain (host-only extract) ------------------------------
+ *
+ * Show just the hostname (with `www.` optionally stripped). Linkable. */
+export function domain({
+  stripWww = true,
+  link = true,
+  newTab = true,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    let parsed;
+    try { parsed = new URL(/^https?:/.test(text) ? text : `http://${text}`); }
+    catch { return document.createTextNode(text); }
+    let host = parsed.hostname;
+    if (stripWww) host = host.replace(/^www\./, '');
+    if (!link) return host;
+    return h('a', {
+      class: 'sg-renderer-link',
+      href: parsed.toString(),
+      target: newTab ? '_blank' : null,
+      rel: newTab ? 'noopener noreferrer' : null,
+      title: text,
+    }, document.createTextNode(host));
+  };
+}
+
+/* ---------- social-link (auto-detect twitter / linkedin / github / etc) */
+const SOCIAL_HOSTS = {
+  'twitter.com':    { name: 'Twitter',   icon: '𝕏' },
+  'x.com':          { name: 'X',         icon: '𝕏' },
+  'linkedin.com':   { name: 'LinkedIn',  icon: 'in' },
+  'github.com':     { name: 'GitHub',    icon: '⌥' },
+  'youtube.com':    { name: 'YouTube',   icon: '▶' },
+  'instagram.com':  { name: 'Instagram', icon: '📷' },
+  'mastodon.social':{ name: 'Mastodon',  icon: '🐘' },
+  'bsky.app':       { name: 'Bluesky',   icon: '☁' },
+  'threads.net':    { name: 'Threads',   icon: '@' },
+  'tiktok.com':     { name: 'TikTok',    icon: '♪' },
+  'reddit.com':     { name: 'Reddit',    icon: 'r' },
+  'medium.com':     { name: 'Medium',    icon: 'M' },
+  'substack.com':   { name: 'Substack',  icon: 'S' },
+};
+
+export function socialLink({} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    let parsed;
+    try { parsed = new URL(/^https?:/.test(text) ? text : `https://${text}`); }
+    catch { return document.createTextNode(text); }
+    const host = parsed.hostname.replace(/^www\./, '');
+    const def = SOCIAL_HOSTS[host] || Object.entries(SOCIAL_HOSTS).find(([k]) => host.endsWith(`.${k}`))?.[1];
+    const label = parsed.pathname.replace(/^\//, '').split('/')[0] || host;
+    const linkText = def ? `@${label}` : (parsed.hostname + parsed.pathname);
+    const wrap = h('a', {
+      class: 'sg-renderer-link sg-renderer-social',
+      href: parsed.toString(),
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      title: `${def?.name || host} — ${text}`,
+    });
+    if (def) wrap.append(h('span', { class: 'sg-renderer-social-icon', 'aria-hidden': 'true' },
+      document.createTextNode(def.icon)));
+    wrap.append(h('span', { class: 'sg-renderer-social-label' },
+      document.createTextNode(linkText)));
+    return wrap;
+  };
+}
+
+/* ---------- tracking-number (courier-aware) ------------------------
+ *
+ * Renders a tracking number with carrier badge + a deep-link to the
+ * carrier's tracking page. Pattern-matches AusPost / USPS / FedEx /
+ * UPS / DHL / Royal Mail; pass `carrier` explicitly when the format
+ * isn't unique enough. */
+const CARRIERS = {
+  auspost:    { name: 'AusPost', re: /^([A-Z]{2}\d{9,12}AU|[A-Z0-9]{12,14})$/, track: (n) => `https://auspost.com.au/mypost/track/#/details/${n}` },
+  usps:       { name: 'USPS',    re: /^(94|93|92|94|95)\d{20,22}$/,           track: (n) => `https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${n}` },
+  fedex:      { name: 'FedEx',   re: /^(\d{12}|\d{15}|\d{20})$/,              track: (n) => `https://www.fedex.com/fedextrack/?tracknumbers=${n}` },
+  ups:        { name: 'UPS',     re: /^1Z[A-Z0-9]{16}$/i,                      track: (n) => `https://www.ups.com/track?tracknum=${n}` },
+  dhl:        { name: 'DHL',     re: /^\d{10,11}$/,                            track: (n) => `https://www.dhl.com/au-en/home/tracking/tracking-express.html?submit=1&tracking-id=${n}` },
+  royalmail:  { name: 'Royal Mail', re: /^[A-Z]{2}\d{9}GB$/,                   track: (n) => `https://www.royalmail.com/track-your-item#/tracking-results/${n}` },
+};
+
+export function trackingNumber({
+  carrier = null,
+} = {}) {
+  return ({ value, row, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-tracking-cell');
+    const num = String(value).trim().toUpperCase();
+    const carrierKey = (carrier || (row && row.carrier))?.toString().toLowerCase();
+    let def = carrierKey ? CARRIERS[carrierKey] : null;
+    if (!def) {
+      for (const c of Object.values(CARRIERS)) {
+        if (c.re.test(num)) { def = c; break; }
+      }
+    }
+    const wrap = h('span', { class: 'sg-renderer-tracking' });
+    if (def) {
+      wrap.append(h('span', { class: 'sg-pill sg-pill-gray sg-renderer-tracking-carrier' },
+        document.createTextNode(def.name)));
+      wrap.append(h('a', {
+        class: 'sg-renderer-link sg-renderer-uuid-mono',
+        href: def.track(num), target: '_blank', rel: 'noopener noreferrer',
+      }, document.createTextNode(num)));
+    } else {
+      wrap.append(h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(num)));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- youtube / vimeo (thumb + duration) ---------------------
+ *
+ * Renders a small thumbnail + title for a YouTube or Vimeo URL. Title
+ * comes from `row.title` when present; otherwise the video id. */
+function parseVideoUrl(text) {
+  try {
+    const u = new URL(text);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const v = u.searchParams.get('v');
+      if (v) return { provider: 'youtube', id: v };
+    }
+    if (host === 'youtu.be') {
+      const v = u.pathname.slice(1);
+      if (v) return { provider: 'youtube', id: v };
+    }
+    if (host === 'vimeo.com') {
+      const v = u.pathname.replace(/^\//, '').split('/')[0];
+      if (/^\d+$/.test(v)) return { provider: 'vimeo', id: v };
+    }
+    return null;
+  } catch { return null; }
+}
+
+export function videoLink({} = {}) {
+  return ({ value, row, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-videolink-cell');
+    const parsed = parseVideoUrl(String(value));
+    if (!parsed) return h('a', { class: 'sg-renderer-link', href: String(value), target: '_blank', rel: 'noopener noreferrer' },
+      document.createTextNode(String(value)));
+    const wrap = h('a', {
+      class: 'sg-renderer-link sg-renderer-videolink',
+      href: String(value), target: '_blank', rel: 'noopener noreferrer',
+    });
+    const thumbSrc = parsed.provider === 'youtube'
+      ? `https://i.ytimg.com/vi/${parsed.id}/default.jpg`
+      : null;
+    if (thumbSrc) {
+      wrap.append(h('img', {
+        src: thumbSrc, alt: '',
+        class: 'sg-renderer-videolink-thumb',
+        loading: 'lazy', decoding: 'async',
+      }));
+    } else {
+      wrap.append(h('span', { class: 'sg-pill sg-pill-blue sg-renderer-videolink-provider' },
+        document.createTextNode(parsed.provider === 'vimeo' ? 'Vimeo' : 'YouTube')));
+    }
+    const title = (row?.title) || parsed.id;
+    wrap.append(h('span', { class: 'sg-renderer-videolink-title' },
+      document.createTextNode(title)));
+    if (row?.duration) {
+      wrap.append(h('span', { class: 'sg-renderer-videolink-duration' },
+        document.createTextNode(String(row.duration))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- spinner (async loading indicator) ----------------------
  *
  * Renders an inline CSS spinner when the cell value matches the loading
@@ -7679,6 +7885,11 @@ registerRenderer('error',             errorCell());
 registerRenderer('sync-status',       syncStatus());
 registerRenderer('stale',             staleCell());
 registerRenderer('fresh',             freshCell());
+registerRenderer('favicon',           favicon());
+registerRenderer('domain',            domain());
+registerRenderer('social-link',       socialLink());
+registerRenderer('tracking-number',   trackingNumber());
+registerRenderer('video-link',        videoLink());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -8253,4 +8464,5 @@ export const renderers = {
   gauge, winLoss, miniBarChart, miniLineChart, trend,
   countdown, age, fiscalPeriod, timezone, cron,
   spinner, errorCell, syncStatus, staleCell, freshCell,
+  favicon, domain, socialLink, trackingNumber, videoLink,
 };

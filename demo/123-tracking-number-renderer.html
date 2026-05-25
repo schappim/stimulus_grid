@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>123 — Tracking number renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>123 — Tracking number renderer</h1>
+  <p class="lede">Carrier-aware. Auto-detects AusPost / USPS / FedEx / UPS / DHL / Royal Mail by pattern; explicit <code>carrier</code> on the row wins. Linkable to each carrier's tracking page.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="order" data-header-cell-width-value="120">Order</th>
+        <th data-controller="header-cell" data-header-cell-field-value="tracking" data-header-cell-cell-renderer-value="tracking-number" data-header-cell-width-value="360">Tracking</th>
+        <th data-controller="header-cell" data-header-cell-field-value="carrier" data-header-cell-width-value="120">Carrier (hint)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { order: 'OR-1001', tracking: '1Z9999AA0123456784', carrier: '' },
+      { order: 'OR-1002', tracking: '9400110200881234567890', carrier: '' },
+      { order: 'OR-1003', tracking: 'AA123456789AU',          carrier: '' },
+      { order: 'OR-1004', tracking: '1234567890',             carrier: 'dhl' },
+      { order: 'OR-1005', tracking: 'unrecognised-12345',     carrier: '' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
