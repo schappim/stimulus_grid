@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>61 — Audio renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>61 — Audio renderer (inline native player)</h1>
+  <p class="lede">
+    Lightweight sibling of <code>audio-attachment</code> — drops the
+    URL into a native <code>&lt;audio controls&gt;</code> element and
+    lets the browser handle playback, scrub, codec fallback, and
+    accessibility hooks. <code>preload: 'none'</code> by default so a
+    grid of 100 recording URLs doesn't fire 100 range requests on
+    initial render.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true" data-grid-row-height-value="44">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="call"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Call</th>
+          <th data-controller="header-cell" data-header-cell-field-value="recording"
+              data-header-cell-cell-renderer-value="audio">Recording</th>
+          <th data-controller="header-cell" data-header-cell-field-value="duration"
+              data-header-cell-cell-renderer-value="duration"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Duration</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>When to reach for this vs <code>audio-attachment</code>:</strong>
+    audio = a row of small media players in a table cell, no extra
+    chrome. audio-attachment = popover player with Howler.js scrubbing,
+    ±10s skip buttons, and metadata display. Choose based on whether
+    the column is "audio is the data" or "audio is one of many fields".
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Publicly-hosted short audio samples from the BBC's free Sound Effects archive
+    // (used here as demo fixtures only; replace with your own URLs in production).
+    const SAMPLE = 'https://upload.wikimedia.org/wikipedia/commons/4/4f/Bird_singing.ogg';
+    const SAMPLE2 = 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Example.ogg';
+    const ROWS = [
+      { id: 1, call: 'Astrid → support',   recording: SAMPLE,  duration: 72_000 },
+      { id: 2, call: 'Marcus → sales',     recording: SAMPLE2, duration: 184_000 },
+      { id: 3, call: 'Priya → onboarding', recording: SAMPLE,  duration: 320_000 },
+      { id: 4, call: 'Jamal → renewals',   recording: SAMPLE2, duration: 95_000 },
+      { id: 5, call: 'Lena → CSAT',        recording: SAMPLE,  duration: 41_000 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

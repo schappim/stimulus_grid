@@ -245,6 +245,15 @@ ship pre-registered:
 | `acn` | Australian Company Number — sibling of `abn`. Validates the mod-10 checksum (weights 8-7-6-5-4-3-2-1), formats `XXX XXX XXX`, and links valid values to the ASIC search on ABR. Invalid checksum = red |
 | `tfn` | Tax File Number — ALWAYS masked (ATO + Privacy Act). 8- or 9-digit input shows as `••• ••• XYZ` with the last 3 digits visible. No `showFull` option by design — if you need cleartext, do it through a one-shot reveal flow, not a column-wide renderer setting |
 | `medicare` | Medicare card number — 10 digits with the mod-10 weighted-sum checksum (weights 1-3-7-9 repeated), formatted `XXXX XXXXX X`. Optional trailing IRN (Individual Reference Number) via `/N` or `-N` separator → `… / 1` |
+| `audio` | Native inline `<audio controls>` player from a URL. Simpler sibling of `audio-attachment` (no popover, no Howler, no scrub buttons). `preload: 'none'` default so a grid of 100 URLs doesn't issue 100 range requests on render |
+| `video` | Native inline `<video controls>` player. `width` sizes the element; `preload: 'metadata'` default so the cell sizes correctly without streaming bytes |
+| `reactions` | Slack / Linear-style emoji + count strip. Cell value is an object (`{ '👍': 3, '❤️': 1 }`) or array of pairs. Zero-count entries dropped automatically; sorted by count desc (`sort: 'order'` to keep input order) |
+| `comment-count` | Title + small "💬 N" discussion-thread badge. Cell value can be a plain number (badge only), `{ value, count }` (both), or any string (value alone). `icon` is configurable for theming |
+| `ordinal` | English ordinal suffix via `Intl.PluralRules({ type: 'ordinal' })` — 1st / 2nd / 3rd / 21st / 22nd / 111th. Non-English locales fall back to the bare number (ordinal indicators vary too much to generalise) |
+| `plural` | Count + plural-sensitive noun via `Intl.PluralRules` (cardinal). `one` / `other` labels with optional `zero` ("no items" vs "0 items"). Locale-aware for languages with richer plural rules |
+| `empty` | Styleable placeholder for null / undefined / empty / "N/A" / "null" / "-" — useful when a column needs to advertise "intentionally blank" vs render-skipped. Non-empty values pass through verbatim |
+| `credit-card` | Luhn-validated + brand-detected (Visa / Mastercard / Amex / Discover / JCB / Diners) card display. Defaults to PCI-friendly MASKED form (last 4 visible); `mask: false` only for one-shot reveal flows. Brand tag pre-pended in the issuer's brand colour |
+| `loading-shimmer` | Animated placeholder for async-loaded rows. Treats null / `''` / `'loading'` / `'…'` as the sentinel; anything else renders verbatim. `width` / `height` control the placeholder rectangle |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

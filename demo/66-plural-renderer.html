@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>66 — Plural renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>66 — Plural renderer</h1>
+  <p class="lede">
+    Count + plural-sensitive noun via <code>Intl.PluralRules</code>.
+    The <code>zero</code> option lets you provide a separate label for
+    "no items" — often reads better than "0 items".
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="prs"
+              data-header-cell-cell-renderer-value="plural-pr"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Open PRs</th>
+          <th data-controller="header-cell" data-header-cell-field-value="issues"
+              data-header-cell-cell-renderer-value="plural-issue"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Issues</th>
+          <th data-controller="header-cell" data-header-cell-field-value="contribs"
+              data-header-cell-cell-renderer-value="plural-contrib"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="160">Contributors</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Try editing a cell to <code>0</code> — the renderer swaps to the
+    <code>zero</code> label ("no PRs", "no issues") instead of
+    "0 PRs". Same for switching between 1 and N — the suffix flips
+    cleanly.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('plural-pr',      renderers.plural({ one: 'PR',          other: 'PRs',          zero: 'no PRs' }));
+    registerRenderer('plural-issue',   renderers.plural({ one: 'issue',       other: 'issues',       zero: 'no issues' }));
+    registerRenderer('plural-contrib', renderers.plural({ one: 'contributor', other: 'contributors', zero: 'no contributors' }));
+
+    const ROWS = [
+      { id: 1, project: 'stimulus_grid',  prs: 12, issues: 28, contribs: 4 },
+      { id: 2, project: 'Storefront v3',  prs: 1,  issues: 3,  contribs: 8 },
+      { id: 3, project: 'Pricing engine', prs: 0,  issues: 1,  contribs: 1 },
+      { id: 4, project: 'Mobile app',     prs: 4,  issues: 14, contribs: 7 },
+      { id: 5, project: 'Onboarding',     prs: 1,  issues: 0,  contribs: 3 },
+      { id: 6, project: 'Analytics',      prs: 7,  issues: 42, contribs: 11 },
+      { id: 7, project: 'i18n rollout',   prs: 0,  issues: 0,  contribs: 0 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

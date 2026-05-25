@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>62 — Video renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 520px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>62 — Video renderer (inline native player)</h1>
+  <p class="lede">
+    Drop a URL into a native <code>&lt;video controls&gt;</code>
+    element. <code>preload: 'metadata'</code> by default so the cell
+    sizes correctly without streaming full bytes on render.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="140"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ticket"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">Bug ticket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="repro"
+              data-header-cell-cell-renderer-value="video"
+              data-header-cell-width-value="260">Repro</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-cell-renderer-value="multi-line">Title</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Replace the demo URLs with your own recording-host links — the
+    renderer is provider-agnostic (S3 / CloudFront / your-own-tile-server
+    / blob storage / etc.) as long as the browser can fetch + decode.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SAMPLE = 'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/b3/Big_Buck_Bunny_Trailer_400p.ogv/Big_Buck_Bunny_Trailer_400p.ogv.360p.vp9.webm';
+    const ROWS = [
+      { id: 1, ticket: 'BUG-1284', repro: SAMPLE, title: 'Order totals miss the discount on multi-currency carts' },
+      { id: 2, ticket: 'BUG-1290', repro: SAMPLE, title: 'Dashboard charts flicker when switching tabs' },
+      { id: 3, ticket: 'BUG-1304', repro: SAMPLE, title: 'PDF export drops the header on landscape pages' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

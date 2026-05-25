@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>63 — Reactions renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 440px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>63 — Reactions renderer (Slack / Linear style)</h1>
+  <p class="lede">
+    Strip of emoji + count chips. Accepts either an object
+    (<code>{ '👍': 3, '❤️': 1 }</code>) or an array
+    (<code>[['👍', 3], ['❤️', 1]]</code>). Zero-count entries are
+    dropped automatically.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="240"
+              data-header-cell-sortable-value="true">Message</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reactions"
+              data-header-cell-cell-renderer-value="reactions"
+              data-header-cell-width-value="320">Reactions</th>
+          <th data-controller="header-cell" data-header-cell-field-value="author"
+              data-header-cell-width-value="180">Author</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Sorted by count desc by default — pass <code>sort: 'order'</code>
+    on the renderer to preserve the input order (e.g. when chronology
+    matters: first reaction → leftmost chip).
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, title: 'Postgres 17 GA',                 author: 'Astrid', reactions: { '🎉': 12, '🚀': 8, '🦦': 1 } },
+      { id: 2, title: 'Quarterly review notes',         author: 'Marcus', reactions: { '👀': 5, '👍': 3 } },
+      { id: 3, title: 'Friday post-mortem',             author: 'Priya',  reactions: { '🔥': 18, '😬': 7, '🙏': 4, '🍕': 2 } },
+      { id: 4, title: 'New office layout draft',        author: 'Jamal',  reactions: [['❤️', 4], ['🌱', 3], ['🤔', 2]] },
+      { id: 5, title: 'Coffee club survey',             author: 'Lena',   reactions: { '☕': 22, '🥐': 6, '🥱': 1 } },
+      { id: 6, title: 'Customer call — Vega Studio',    author: 'Tomás',  reactions: { '🙏': 9, '👍': 4 } },
+      { id: 7, title: 'No reactions yet',               author: 'Mei',    reactions: {} },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

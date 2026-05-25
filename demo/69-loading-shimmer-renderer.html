@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>69 — Loading shimmer renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .ctrls { margin-top: 12px; }
+    button {
+      appearance: none; border: 1px solid #d1d5db; background: #fff; color: #1f2937;
+      padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+    }
+    button:hover { background: #f3f4f6; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>69 — Loading shimmer renderer</h1>
+  <p class="lede">
+    Animated placeholder for cells whose value hasn't loaded yet. Treats
+    null / empty / <code>'loading'</code> / <code>'…'</code> as the
+    sentinel; anything else renders normally. Pair with server-side row
+    models or async hydration.
+  </p>
+
+  <div class="ctrls">
+    <button id="reload">Simulate reload (re-shimmer for 1.4s)</button>
+  </div>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-cell-renderer-value="loading-shimmer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-cell-renderer-value="loading-shimmer-90"
+              data-header-cell-width-value="240">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ltv"
+              data-header-cell-cell-renderer-value="loading-shimmer-60"
+              data-header-cell-width-value="120">LTV</th>
+          <th data-controller="header-cell" data-header-cell-field-value="updated"
+              data-header-cell-cell-renderer-value="loading-shimmer"
+              data-header-cell-width-value="160">Updated</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Use the button above to flip every row's values to <code>null</code>
+    (re-shimmer) and then back to real data after 1.4 seconds. In a
+    real app you'd flip the sentinels when a request is in-flight and
+    drop them when the response lands.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('loading-shimmer-90', renderers.loadingShimmer({ width: '90%' }));
+    registerRenderer('loading-shimmer-60', renderers.loadingShimmer({ width: '60%' }));
+
+    const REAL = [
+      { id: 1, customer: 'Astrid Hale', email: 'astrid@chickcom.com', ltv: '$24,830', updated: '2 min ago' },
+      { id: 2, customer: 'Marcus Chen', email: 'marcus@example.com',  ltv: '$1,820',  updated: '5 min ago' },
+      { id: 3, customer: 'Priya Patel', email: 'priya@example.org',   ltv: '$9,210',  updated: '8 min ago' },
+      { id: 4, customer: 'Jamal Owens', email: 'jamal@studio.io',     ltv: '$480',    updated: '12 min ago' },
+      { id: 5, customer: 'Lena Brooks', email: 'lena@studio.io',      ltv: '$5,600',  updated: '14 min ago' },
+      { id: 6, customer: 'Tomás Vega',  email: 'tomas@example.es',    ltv: '$14,320', updated: '19 min ago' },
+    ];
+    const SHIMMER = REAL.map((r) => ({ id: r.id }));
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(REAL), { once: true });
+    document.getElementById('reload').addEventListener('click', () => {
+      grid.gridApi.setRowData(SHIMMER);
+      setTimeout(() => grid.gridApi.setRowData(REAL), 1400);
+    });
+  </script>
+</body>
+</html>

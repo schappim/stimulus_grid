@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>68 — Credit card renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>68 — Credit card renderer</h1>
+  <p class="lede">
+    Luhn-validated, brand-detected card number display.
+    Defaults to PCI-friendly masked form (last 4 visible). Detects Visa
+    / Mastercard / Amex / Discover / JCB / Diners by IIN prefix and
+    length.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180"
+              data-header-cell-sortable-value="true">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="card"
+              data-header-cell-cell-renderer-value="credit-card"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Card</th>
+          <th data-controller="header-cell" data-header-cell-field-value="exp"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Exp</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last_charge"
+              data-header-cell-cell-renderer-value="aud"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="140">Last charge</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Why default to masked?</strong> PCI-DSS § 3.3 — Primary
+    Account Numbers must be masked when displayed; only the first 6
+    and last 4 digits are reproducible without a clear business need.
+    The default here only shows the last 4. Pass <code>mask: false</code>
+    only when the column is a one-shot reveal flow.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('aud', renderers.currency({ currency: 'AUD', locale: 'en-AU' }));
+
+    const ROWS = [
+      // Test card numbers from the official Stripe + Adyen docs — they pass
+      // Luhn but are guaranteed never to be billable.
+      { id: 1, customer: 'Astrid Hale',  card: '4242 4242 4242 4242', exp: '12/27', last_charge: 248.00 },
+      { id: 2, customer: 'Marcus Chen',  card: '5555 5555 5555 4444', exp: '03/28', last_charge: 88.50 },
+      { id: 3, customer: 'Priya Patel',  card: '3782 822463 10005',    exp: '08/26', last_charge: 1480.99 },
+      { id: 4, customer: 'Jamal Owens',  card: '6011 1111 1111 1117', exp: '11/27', last_charge: 14.00 },
+      { id: 5, customer: 'Lena Brooks',  card: '3530 1113 3330 0000', exp: '02/29', last_charge: 320.00 },
+      { id: 6, customer: 'Tomás Vega',   card: '3056 9309 0259 04',   exp: '06/28', last_charge: 96.75 },
+      { id: 7, customer: '(invalid card)', card: '4242 4242 4242 4243', exp: '01/30', last_charge: 0 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>64 — Comment count renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 440px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>64 — Comment count renderer</h1>
+  <p class="lede">
+    Title + discussion-thread length badge ("💬 N"). Accepts a plain
+    number (renders just the badge), an object
+    <code>{ value, count }</code> (renders both), or any other value
+    (renders the value alone, no badge).
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="topic"
+              data-header-cell-cell-renderer-value="comment-count">Topic</th>
+          <th data-controller="header-cell" data-header-cell-field-value="thread_count"
+              data-header-cell-cell-renderer-value="comment-count"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="100">Threads</th>
+          <th data-controller="header-cell" data-header-cell-field-value="updated"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="140">Updated</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    The Topic column uses the object form — title text + a comment
+    count. The Threads column passes a plain number — just the badge.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const now = Date.now();
+    const ago = (h) => new Date(now - h * 3_600_000).toISOString();
+    const ROWS = [
+      { id: 1, topic: { value: 'Postgres 17 release notes', count: 18 }, thread_count: 18, updated: ago(2) },
+      { id: 2, topic: { value: 'Multi-currency invoicing RFC', count: 7 }, thread_count: 7, updated: ago(8) },
+      { id: 3, topic: { value: 'Webhook delivery dashboards', count: 0 }, thread_count: 0, updated: ago(48) },
+      { id: 4, topic: { value: 'Q3 roadmap', count: 31 }, thread_count: 31, updated: ago(72) },
+      { id: 5, topic: { value: 'Coffee club survey', count: 4 }, thread_count: 4, updated: ago(120) },
+      { id: 6, topic: { value: 'PR triage SOP', count: 12 }, thread_count: 12, updated: ago(240) },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

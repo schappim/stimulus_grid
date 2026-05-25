@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>65 — Ordinal renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>65 — Ordinal renderer (1st / 2nd / 3rd / …)</h1>
+  <p class="lede">
+    English ordinal suffix via <code>Intl.PluralRules({ type:
+    'ordinal' })</code>. Other locales fall back to the bare number
+    (ordinal indicators vary too much to encode generically).
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-width-value="220"
+              data-header-cell-sortable-value="true">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rank"
+              data-header-cell-cell-renderer-value="ordinal"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Rank</th>
+          <th data-controller="header-cell" data-header-cell-field-value="time"
+              data-header-cell-cell-renderer-value="duration"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="140">Time</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-cell-renderer-value="country-flag"
+              data-header-cell-width-value="100">Country</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    The suffixes follow the standard 1st / 2nd / 3rd / Nth English rule
+    via the platform's <code>Intl.PluralRules</code> ordinal selector —
+    so 21st, 22nd, 23rd, 111th, etc. all come out right without a
+    bespoke switch.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, athlete: 'Mariana Pajón',  rank: 1,  time: 2740, country: 'CO' },
+      { id: 2, athlete: 'Bethany Shriever', rank: 2, time: 2742, country: 'GB' },
+      { id: 3, athlete: 'Alise Willoughby', rank: 3, time: 2755, country: 'US' },
+      { id: 4, athlete: 'Saya Sakakibara',  rank: 21, time: 2790, country: 'AU' },
+      { id: 5, athlete: 'Felicia Stancil',  rank: 22, time: 2810, country: 'US' },
+      { id: 6, athlete: 'Manon Veenstra',   rank: 23, time: 2820, country: 'NL' },
+      { id: 7, athlete: 'Joi Cunningham',   rank: 111, time: 3100, country: 'CA' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

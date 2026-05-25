@@ -3935,6 +3935,267 @@ export function medicare() {
   };
 }
 
+/* ---------- audio / video (inline native players) -------------------
+ *
+ * Simpler sibling to `audio-attachment` (popover w/ scrub bar + Howler
+ * integration): just drop the value's URL into a native `<audio>` /
+ * `<video>` element with controls. The browser handles playback, fmt
+ * detection, codec fallback, accessibility hooks, etc. — no JS state.
+ *
+ *   <th data-header-cell-cell-renderer-value="audio">Voicemail</th>
+ *
+ * `preload` defaults to 'none' (audio) / 'metadata' (video) so a grid
+ * of 100 media URLs doesn't fire 100 range requests on render. */
+export function audio({ preload = 'none' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    return h('audio', {
+      class: 'sg-renderer-audio',
+      controls: '',
+      preload,
+      src: String(value).trim(),
+    });
+  };
+}
+
+export function video({ width = 200, preload = 'metadata' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    return h('video', {
+      class: 'sg-renderer-video',
+      controls: '',
+      preload,
+      src: String(value).trim(),
+      width: String(width),
+    });
+  };
+}
+
+/* ---------- reactions (emoji + count strip) -------------------------
+ *
+ * Slack / Notion / Linear-style reactions row. Value can be an object
+ * `{ '👍': 3, '❤️': 1 }` or an array of `{ emoji, count }` or
+ * `[emoji, count]` tuples. Zero / negative counts are dropped. By
+ * default sorted by count desc — pass `sort: 'order'` to keep the
+ * input order. */
+export function reactions({ sort = 'count' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let entries = [];
+    if (Array.isArray(value)) {
+      entries = value.map((e) => Array.isArray(e) ? e
+        : [e.emoji ?? e.name ?? '?', e.count ?? e.n ?? 0]);
+    } else if (typeof value === 'object') {
+      entries = Object.entries(value);
+    } else { return ''; }
+    entries = entries.filter(([, n]) => Number.isFinite(Number(n)) && Number(n) > 0);
+    if (sort === 'count') entries.sort((a, b) => Number(b[1]) - Number(a[1]));
+    if (entries.length === 0) return '';
+    const wrap = h('span', { class: 'sg-renderer-reactions' });
+    for (const [emoji, count] of entries) {
+      const chip = h('span', { class: 'sg-reaction', title: `${count} ${emoji}` });
+      chip.append(h('span', { class: 'sg-reaction-emoji' }, document.createTextNode(String(emoji))));
+      chip.append(h('span', { class: 'sg-reaction-count' }, document.createTextNode(String(count))));
+      wrap.append(chip);
+    }
+    return wrap;
+  };
+}
+
+/* ---------- commentCount (value + 💬 N badge) -----------------------
+ *
+ * Title / description columns paired with a discussion-thread length.
+ * Cell value can be:
+ *   - a plain number → renders just "💬 N"
+ *   - an object `{ value, count }` → renders the value + adjacent badge
+ *
+ * `icon` defaults to 💬; pass any emoji / SVG string for theming. */
+export function commentCount({ icon = '💬' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let text = '', count = null;
+    if (typeof value === 'object') {
+      text = value.value ?? value.text ?? '';
+      count = value.count ?? value.comments ?? null;
+    } else if (Number.isFinite(Number(value)) && typeof value !== 'string') {
+      count = Number(value);
+    } else {
+      text = String(value);
+    }
+    const wrap = h('span', { class: 'sg-renderer-comment-count' });
+    if (text) {
+      wrap.append(h('span', { class: 'sg-cc-value' }, document.createTextNode(String(text))));
+    }
+    if (count != null && Number(count) > 0) {
+      const badge = h('span', {
+        class: 'sg-cc-badge',
+        title: `${count} comment${Number(count) === 1 ? '' : 's'}`,
+      });
+      badge.append(h('span', { class: 'sg-cc-icon', 'aria-hidden': 'true' },
+        document.createTextNode(icon)));
+      badge.append(h('span', { class: 'sg-cc-num' }, document.createTextNode(String(count))));
+      wrap.append(badge);
+    }
+    return wrap;
+  };
+}
+
+/* ---------- ordinal (1st / 2nd / 3rd) -------------------------------
+ *
+ * `Intl.PluralRules({ type: 'ordinal' })` + an English suffix table.
+ * Defaults to the browser locale; pass `locale: 'en-US'` (or any
+ * en-* tag) to lock in English suffixes. Non-English locales fall
+ * back to the bare number (ordinal indicators vary widely — `1°`,
+ * `1ª`, `1er`, `1ère`, … — so we don't try to encode them generically). */
+export function ordinal({ locale = undefined } = {}) {
+  // Resolve once at registration time so subsequent rows are cheap.
+  const resolved = new Intl.Locale(locale || Intl.NumberFormat().resolvedOptions().locale);
+  const isEnglish = resolved.language === 'en';
+  const pr = isEnglish ? new Intl.PluralRules(locale, { type: 'ordinal' }) : null;
+  const SUFFIX = { one: 'st', two: 'nd', few: 'rd', other: 'th' };
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isInteger(n)) return String(value);
+    if (!isEnglish) return String(n);
+    return `${n}${SUFFIX[pr.select(n)]}`;
+  };
+}
+
+/* ---------- plural (count + plural-sensitive label) -----------------
+ *
+ * Count + noun via `Intl.PluralRules`. The default cardinal mapping
+ * is English-style binary (one / other) — pass `zero` for an explicit
+ * zero label ("0 items" reads fine but "no items" sometimes reads
+ * better), and use locale-specific pluralisation via the `locale`
+ * option for languages with richer plural rules (Russian, Arabic, …). */
+export function plural({
+  one = 'item',
+  other = 'items',
+  zero = null,
+  locale = undefined,
+} = {}) {
+  const pr = new Intl.PluralRules(locale);
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    if (n === 0 && zero) return `${n} ${zero}`;
+    return pr.select(n) === 'one' ? `${n} ${one}` : `${n} ${other}`;
+  };
+}
+
+/* ---------- empty (explicit blank placeholder) ----------------------
+ *
+ * The grid normally renders blank cells as empty TDs. This wraps non-
+ * empty values verbatim AND turns null / '' / 'N/A' / 'NULL' into a
+ * styleable placeholder span — useful when a column needs to advertise
+ * "this is intentionally blank" vs "there's no data yet". */
+const EMPTY_TOKENS = new Set(['', 'null', 'nil', 'none', 'n/a', 'na', '-', '—']);
+
+export function empty({
+  placeholder = '—',
+  emptyOnTokens = true,
+} = {}) {
+  return ({ value }) => {
+    const isEmpty = value == null
+      || (typeof value === 'string'
+          && (value === '' || (emptyOnTokens && EMPTY_TOKENS.has(value.trim().toLowerCase()))));
+    if (isEmpty) {
+      return h('span', { class: 'sg-renderer-empty', title: 'Empty' },
+        document.createTextNode(placeholder));
+    }
+    return String(value);
+  };
+}
+
+/* ---------- creditCard (Luhn + brand + masked display) --------------
+ *
+ * Display credit-card numbers with brand detection (Visa / MC / Amex /
+ * Discover / JCB / Diners) and Luhn validation. Defaults to MASKED
+ * display (last 4 visible) — pass `mask: false` only when the cell is
+ * genuinely supposed to be reading the full PAN, which is almost
+ * never in a UI.
+ *
+ * Brand is determined by the IIN prefix and length. Invalid numbers
+ * (failed Luhn, wrong length) render with a red strike-through. */
+function luhnCheck(digits) {
+  let sum = 0, alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = parseInt(digits[i], 10);
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function detectCardBrand(d) {
+  if (/^4\d{12}(\d{3,6})?$/.test(d)) return 'visa';                  // 13/16/19
+  if (/^(5[1-5]\d{14}|2(2[2-9]|[3-6]\d|7[01]|720)\d{12})$/.test(d)) return 'mastercard';
+  if (/^3[47]\d{13}$/.test(d)) return 'amex';
+  if (/^(6011\d{12,15}|65\d{14,17}|64[4-9]\d{13}|622(12[6-9]|1[3-9]\d|[2-8]\d{2}|9([01]\d|2[0-5]))\d{10,13})$/.test(d)) return 'discover';
+  if (/^35(2[89]|[3-8]\d)\d{12}$/.test(d)) return 'jcb';
+  if (/^3(0[0-5]|[68]\d|9\d)\d{11}$/.test(d)) return 'diners';
+  return null;
+}
+
+export function creditCard({ mask = true } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const digits = String(value).replace(/\D/g, '');
+    const lenOk = digits.length >= 13 && digits.length <= 19;
+    const valid = lenOk && luhnCheck(digits);
+    const brand = lenOk ? detectCardBrand(digits) : null;
+    const wrap = h('span', { class: `sg-renderer-card${valid ? '' : ' is-invalid'}` });
+    if (brand) {
+      wrap.append(h('span', {
+        class: `sg-renderer-card-brand is-${brand}`,
+        title: brand[0].toUpperCase() + brand.slice(1),
+      }, document.createTextNode(brand === 'mastercard' ? 'MC' : brand.toUpperCase())));
+    }
+    let display;
+    if (!lenOk) {
+      display = String(value);
+    } else {
+      const shown = mask ? '•'.repeat(digits.length - 4) + digits.slice(-4) : digits;
+      // Amex / Diners group 4-6-5; everything else 4-4-4-4 (or 4-4-4-4-4 for 19-digit).
+      if (brand === 'amex' || brand === 'diners') {
+        display = `${shown.slice(0, 4)} ${shown.slice(4, 10)} ${shown.slice(10)}`;
+      } else {
+        display = shown.match(/.{1,4}/g).join(' ');
+      }
+    }
+    wrap.append(h('span', { class: 'sg-renderer-card-num sg-renderer-mono' },
+      document.createTextNode(display)));
+    return wrap;
+  };
+}
+
+/* ---------- loadingShimmer (async placeholder) ----------------------
+ *
+ * Animated shimmer placeholder for cells whose value hasn't loaded
+ * yet. Treats null / undefined / '' / 'loading' as the "still
+ * fetching" sentinel; anything else renders verbatim. Pair it with
+ * server-side row models or async data hydration. */
+export function loadingShimmer({
+  width = '70%',
+  height = '12px',
+} = {}) {
+  return ({ value }) => {
+    if (value != null && value !== '' && value !== 'loading' && value !== '…') {
+      return String(value);
+    }
+    return h('span', {
+      class: 'sg-renderer-shimmer',
+      style: `width: ${width}; height: ${height};`,
+      'aria-label': 'Loading',
+    });
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3995,6 +4256,15 @@ registerRenderer('bsb',            bsb());
 registerRenderer('acn',            acn());
 registerRenderer('tfn',            tfn());
 registerRenderer('medicare',       medicare());
+registerRenderer('audio',          audio());
+registerRenderer('video',          video());
+registerRenderer('reactions',      reactions());
+registerRenderer('comment-count',  commentCount());
+registerRenderer('ordinal',        ordinal());
+registerRenderer('plural',         plural());
+registerRenderer('empty',          empty());
+registerRenderer('credit-card',    creditCard());
+registerRenderer('loading-shimmer', loadingShimmer());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -4007,5 +4277,7 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, expand, units, ipAddress, bsb, acn, tfn, medicare, audioAttachment,
+  mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
+  audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
+  loadingShimmer, audioAttachment,
 };

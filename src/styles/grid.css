@@ -2742,3 +2742,126 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 11px;
   font-weight: 500;
 }
+
+/* Audio / video — native controls, sized down to fit inside a cell. */
+.sg-grid .sg-renderer-audio {
+  display: block;
+  height: 28px;
+  max-width: 100%;
+}
+.sg-grid .sg-renderer-video {
+  display: block;
+  max-width: 100%;
+  border-radius: 3px;
+  background: #000;
+}
+
+/* Reactions — chip strip, one per emoji + count. */
+.sg-grid .sg-renderer-reactions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.sg-grid .sg-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--sg-bg-alt, #f3f4f6);
+  border: 1px solid var(--sg-border, #e5e7eb);
+  border-radius: 999px;
+  padding: 1px 7px 1px 5px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sg-grid .sg-reaction-emoji { font-size: 13px; line-height: 1; }
+.sg-grid .sg-reaction-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sg-fg, #1f2937);
+}
+
+/* Comment count badge — small grey pill alongside the value. */
+.sg-grid .sg-renderer-comment-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sg-grid .sg-cc-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-grid .sg-cc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--sg-fg-muted, #6b7280);
+  background: var(--sg-bg-alt, #f3f4f6);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.sg-grid .sg-cc-icon { font-size: 12px; }
+
+/* Empty placeholder — muted, italic, narrow letter-spacing. */
+.sg-grid .sg-renderer-empty {
+  color: var(--sg-fg-muted, #9ca3af);
+  font-style: italic;
+}
+
+/* Credit card — small brand tag + grouped digits. Right-aligned via
+   the standard sg-renderer-mono helper so columns of card numbers
+   stack at the digit boundary. */
+.sg-grid .sg-renderer-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
+.sg-grid .sg-renderer-card.is-invalid .sg-renderer-card-num {
+  color: #b91c1c;
+  text-decoration: line-through;
+  text-decoration-color: rgba(185, 28, 28, 0.4);
+}
+.sg-grid .sg-renderer-card-brand {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: #1f2937;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--sg-font);
+}
+.sg-grid .sg-renderer-card-brand.is-visa       { background: #1a1f71; }
+.sg-grid .sg-renderer-card-brand.is-mastercard { background: #eb001b; }
+.sg-grid .sg-renderer-card-brand.is-amex       { background: #006fcf; }
+.sg-grid .sg-renderer-card-brand.is-discover   { background: #ff6000; }
+.sg-grid .sg-renderer-card-brand.is-jcb        { background: #0e4c96; }
+.sg-grid .sg-renderer-card-brand.is-diners     { background: #0079be; }
+.sg-grid .sg-renderer-card-num { font-variant-numeric: tabular-nums; }
+
+/* Loading shimmer — animated horizontal gradient sweep. The cell
+   reserves its full width via `width: 70%` inline so the row layout
+   doesn't jump when real data arrives. */
+.sg-grid .sg-renderer-shimmer {
+  display: inline-block;
+  border-radius: 3px;
+  background:
+    linear-gradient(90deg,
+      rgba(229, 231, 235, 0.6) 0%,
+      rgba(229, 231, 235, 0.9) 50%,
+      rgba(229, 231, 235, 0.6) 100%);
+  background-size: 200% 100%;
+  animation: sg-shimmer 1.4s linear infinite;
+}
+@keyframes sg-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

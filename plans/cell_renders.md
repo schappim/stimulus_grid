@@ -58,12 +58,12 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 
 ## Tier 4 — lower priority / niche
 
-- [ ] **61 — `audio`** Inline `<audio controls>` player from a URL (lightweight sibling to `audio-attachment`).
-- [ ] **62 — `video`** Inline `<video controls>` player from a URL.
-- [ ] **63 — `reactions`** 👍 3 ❤️ 1 strip from an object/array of emoji counts.
-- [ ] **64 — `comment-count`** Value + small "💬 N" badge.
-- [ ] **65 — `ordinal`** "1st / 2nd / 3rd" for ranking columns. Locale-aware where possible.
-- [ ] **66 — `plural`** Count + plural-sensitive label ("0 items / 1 item / 2 items"), driven by `Intl.PluralRules`.
-- [ ] **67 — `empty`** Explicit styleable null/blank renderer with a configurable placeholder.
-- [ ] **68 — `credit-card`** Luhn-validated + brand-detected (Visa/MC/Amex/Discover/JCB) formatted card display.
-- [ ] **69 — `loading-shimmer`** Placeholder shimmer cell for async-loaded rows.
+- [x] **61 — `audio`** Inline `<audio controls>` player from a URL (lightweight sibling to `audio-attachment`).
+- [x] **62 — `video`** Inline `<video controls>` player from a URL.
+- [x] **63 — `reactions`** 👍 3 ❤️ 1 strip from an object/array of emoji counts.
+- [x] **64 — `comment-count`** Value + small "💬 N" badge.
+- [x] **65 — `ordinal`** "1st / 2nd / 3rd" for ranking columns. Locale-aware where possible.
+- [x] **66 — `plural`** Count + plural-sensitive label ("0 items / 1 item / 2 items"), driven by `Intl.PluralRules`.
+- [x] **67 — `empty`** Explicit styleable null/blank renderer with a configurable placeholder.
+- [x] **68 — `credit-card`** Luhn-validated + brand-detected (Visa/MC/Amex/Discover/JCB) formatted card display.
+- [x] **69 — `loading-shimmer`** Placeholder shimmer cell for async-loaded rows.
