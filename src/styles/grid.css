@@ -2170,22 +2170,28 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: var(--sg-fg, #1f2937);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-json-summary::-webkit-details-marker { display: none; }
+.sg-grid .sg-renderer-json-chevron {
+  display: inline-flex;
+  width: 10px; height: 10px;
+  color: var(--sg-icon-accent);
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+.sg-grid .sg-renderer-json-chevron svg { width: 10px; height: 10px; display: block; }
+.sg-grid .sg-renderer-json[open] > .sg-renderer-json-summary > .sg-renderer-json-chevron {
+  transform: rotate(90deg);
+}
+.sg-grid .sg-renderer-json-summary-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sg-grid .sg-renderer-json-summary::-webkit-details-marker { display: none; }
-.sg-grid .sg-renderer-json-summary::before {
-  content: '▸';
-  display: inline-block;
-  width: 10px;
-  color: var(--sg-fg-muted, #9ca3af);
-  transition: transform 0.12s ease;
-  font-family: system-ui, sans-serif;
-}
-.sg-grid .sg-renderer-json[open] > .sg-renderer-json-summary::before { transform: rotate(90deg); }
 .sg-grid .sg-renderer-json-pre {
   margin: 6px 0 0;
   padding: 8px 10px;

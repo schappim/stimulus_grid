@@ -19,6 +19,12 @@
  * "fulfillment", "shipping-method", …) and reference that name from your
  * `<th>` markup. */
 
+// Shared right-facing chevron — the same glyph the sort header, tree
+// expand control, and master/detail caret use. Keeping it inline here
+// (vs importing from grid_controller.js) avoids a controller→lib cycle
+// and lets renderers run in isolation in tests.
+const SG_CHEVRON_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.1 297.4z"/></svg>';
+
 const REGISTRY = new Map();
 
 export function registerRenderer(name, fn) {
@@ -2649,7 +2655,13 @@ export function json({ maxKeys = 3, indent = 2 } = {}) {
     details.className = 'sg-renderer-json';
     const sum = document.createElement('summary');
     sum.className = 'sg-renderer-json-summary';
-    sum.textContent = jsonSummary(data, maxKeys);
+    // Use the project chevron (same glyph the sort + tree + master/detail
+    // headers use). CSS rotates it 90° when the <details> is open.
+    const chev = h('span', { class: 'sg-renderer-json-chevron', 'aria-hidden': 'true' });
+    chev.innerHTML = SG_CHEVRON_SVG;
+    sum.append(chev);
+    sum.append(h('span', { class: 'sg-renderer-json-summary-text' },
+      document.createTextNode(jsonSummary(data, maxKeys))));
     const pre = document.createElement('pre');
     pre.className = 'sg-renderer-json-pre';
     pre.innerHTML = jsonHighlight(JSON.stringify(data, null, indent));
