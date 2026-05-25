@@ -8787,6 +8787,33 @@ const AU_REGO_PLATE = {
   ACT: { bg: '#1f2937', fg: '#facc15', border: '#facc15' },
 };
 
+// Preset plate-style variants, in addition to the state defaults above.
+// Mirrors the personalised / premium / vanity / bright-lights families
+// that NSW (and friends) issue. The renderer chooses a style's palette
+// over the state default when `value.style` is set.
+const AU_REGO_PLATE_STYLES = {
+  standard:             { label: 'Standard',              uses: 'state' },
+  personalised:         { label: 'Personalised',          bg: '#0f172a', fg: '#ffffff', border: '#0f172a' },
+  'personalised-plus':  { label: 'Personalised Plus',     bg: '#facc15', fg: '#0f172a', border: '#0f172a' },
+  'personalised-red':   { label: 'Personalised (red)',    bg: '#ffffff', fg: '#b91c1c', border: '#b91c1c' },
+  'premium-white':      { label: 'Premium',               bg: '#ffffff', fg: '#0f172a', border: '#0f172a' },
+  'premium-slimline':   { label: 'Premium Slimline',      bg: '#ffffff', fg: '#0f172a', border: '#0f172a', slim: true },
+  'premium-red':        { label: 'Premium (red)',         bg: '#ffffff', fg: '#b91c1c', border: '#b91c1c' },
+  'vanity-silver':      { label: 'Vanity (silver)',       bg: '#0f172a', fg: '#cbd5e1', border: '#0f172a' },
+  'vanity-white':       { label: 'Vanity (white)',        bg: '#0f172a', fg: '#ffffff', border: '#0f172a' },
+  'bright-lights':      { label: 'Bright Lights',         bg: '#0f172a', fg: '#ffffff', border: '#ffffff' },
+  'bright-lights-red':  { label: 'Bright Lights (red)',   bg: '#0f172a', fg: '#dc2626', border: '#dc2626' },
+  'bright-lights-blue': { label: 'Bright Lights (blue)',  bg: '#0f172a', fg: '#60a5fa', border: '#60a5fa' },
+  'bright-lights-slim': { label: 'Bright Lights Slimline',bg: '#0f172a', fg: '#dc2626', border: '#dc2626', slim: true },
+};
+
+function pickPlateColors(state, style) {
+  if (style && AU_REGO_PLATE_STYLES[style] && AU_REGO_PLATE_STYLES[style].bg) {
+    return AU_REGO_PLATE_STYLES[style];
+  }
+  return AU_REGO_PLATE[state] || { bg: '#f3f4f6', fg: '#1f2937', border: '#9ca3af' };
+}
+
 function stateBadge(state, palette = AU_STATE_BADGE) {
   const k = String(state || '').toUpperCase();
   if (!k) return null;
@@ -9754,30 +9781,48 @@ export function regoPlate({ editable = true } = {}) {
           { name: 'state', label: 'State', type: 'select',
             options: AU_STATES.map((s) => ({ value: s, label: `${s} — ${AU_STATE_NAMES[s]}` })) },
           { name: 'plate', label: 'Plate', type: 'text', mono: true, placeholder: 'CAB 42K' },
+          { name: 'style', label: 'Plate style', type: 'plate-style', span: 2,
+            options: Object.entries(AU_REGO_PLATE_STYLES).map(([k, v]) =>
+              ({ value: k, label: v.label, swatch: v })),
+            sampleField: 'plate' },
         ],
         toEditState: (v) => {
-          if (typeof v === 'string') return { state: '', plate: v };
+          if (typeof v === 'string') return { state: '', plate: v, style: 'standard' };
           if (v && typeof v === 'object') return {
-            state: (v.state || '').toUpperCase(), plate: v.plate || '',
+            state: (v.state || '').toUpperCase(),
+            plate: v.plate || '',
+            style: v.style || 'standard',
           };
-          return { state: '', plate: '' };
+          return { state: '', plate: '', style: 'standard' };
         },
         fromEditState: (raw) => {
-          if (!raw.state && !raw.plate) return null;
-          if (!raw.state) return raw.plate.trim();
-          return { state: raw.state, plate: raw.plate.trim() };
+          const hasStyle = raw.style && raw.style !== 'standard';
+          if (!raw.state && !raw.plate && !hasStyle) return null;
+          if (!raw.state && !hasStyle) return raw.plate.trim();
+          const next = {};
+          if (raw.state)  next.state = raw.state;
+          if (raw.plate)  next.plate = raw.plate.trim();
+          if (hasStyle)   next.style = raw.style;
+          return next;
         },
       }));
     }
     if (isBlank(value)) return '';
-    let state = '', plate = '';
+    let state = '', plate = '', style = '';
     if (typeof value === 'string') plate = value;
-    else if (typeof value === 'object') { state = (value.state || '').toUpperCase(); plate = value.plate || ''; }
-    const c = AU_REGO_PLATE[state] || { bg: '#f3f4f6', fg: '#1f2937', border: '#9ca3af' };
+    else if (typeof value === 'object') {
+      state = (value.state || '').toUpperCase();
+      plate = value.plate || '';
+      style = value.style || '';
+    }
+    const c = pickPlateColors(state, style);
+    const cls = 'sg-renderer-rego-plate' + (c.slim ? ' is-slim' : '');
     const wrap = h('span', {
-      class: 'sg-renderer-rego-plate',
+      class: cls,
       style: `background:${c.bg};color:${c.fg};border-color:${c.border};`,
-      title: state ? `${state} plate` : 'Plate',
+      title: state
+        ? `${state} plate${style && style !== 'standard' ? ` · ${style}` : ''}`
+        : 'Plate',
     });
     wrap.append(h('span', { class: 'sg-renderer-rego-plate-text' },
       document.createTextNode(String(plate).toUpperCase())));
@@ -11101,6 +11146,44 @@ function buildEditorField(f, value) {
     }
     return wrap;
   }
+  if (f.type === 'plate-style') {
+    // Visual swatch grid — click a mini plate-preview to pick a style.
+    // The wrapper's `data-value` is the truth for readEditorField.
+    const wrap = h('div', { class: 'sg-plate-style-picker', 'data-name': f.name });
+    wrap.dataset.value = value == null ? '' : String(value);
+    for (const opt of (f.options || [])) {
+      const o = (opt && typeof opt === 'object') ? opt : { value: opt, label: opt };
+      const sw = o.swatch || {};
+      const isOn = String(wrap.dataset.value) === String(o.value);
+      const btn = h('button', {
+        type: 'button',
+        class: 'sg-plate-style-swatch' + (isOn ? ' is-current' : ''),
+        title: o.label,
+      });
+      btn.dataset.value = String(o.value);
+      // The plate-preview chip uses the variant's own bg/fg/border (or a
+      // light "standard" placeholder when the variant defers to the state
+      // default — which can't be previewed without knowing the state).
+      const previewStyle = sw.bg
+        ? `background:${sw.bg};color:${sw.fg};border-color:${sw.border};`
+        : 'background:repeating-linear-gradient(45deg,#f3f4f6 0 6px,#e5e7eb 6px 12px);color:#1f2937;border-color:#9ca3af;';
+      btn.append(h('span', {
+        class: 'sg-plate-style-swatch-preview' + (sw.slim ? ' is-slim' : ''),
+        style: previewStyle,
+      }, document.createTextNode('AB · 12')));
+      btn.append(h('span', { class: 'sg-plate-style-swatch-label' },
+        document.createTextNode(o.label)));
+      btn.addEventListener('click', () => {
+        for (const el of wrap.querySelectorAll('.sg-plate-style-swatch')) {
+          el.classList.remove('is-current');
+        }
+        btn.classList.add('is-current');
+        wrap.dataset.value = btn.dataset.value;
+      });
+      wrap.append(btn);
+    }
+    return wrap;
+  }
   if (f.type === 'textarea') {
     const ta = h('textarea', { name: f.name, class: cls,
       rows: String(f.rows || 2),
@@ -11132,6 +11215,7 @@ function readEditorField(f, input) {
   if (f.type === 'boolean')     return !!input.querySelector?.('input[type=checkbox]')?.checked
                                     || (!!input.checked);
   if (f.type === 'textarea')    return input.value;
+  if (f.type === 'plate-style') return input.dataset.value || '';
   if (f.type === 'number') {
     const v = input.value.trim();
     if (v === '') return null;
@@ -11776,8 +11860,11 @@ export function insuranceCert({ editable = true } = {}) {
  *     attachments: [{ filename }, …],   // optional
  *     count:       3,                    // optional — conversation length badge (>=2)
  *     unread:      true,                 // optional — bolds sender + adds dot
- *     highlighted: true,                 // optional — solid blue selected look
  *   }
+ *
+ * The "selected mail" blue treatment (white text on solid #2563eb) is
+ * applied automatically when the cell is the active/focused cell, part
+ * of a range selection, or its row is selected — not via a data flag.
  *
  * Time formats relative to "today": same-day → "3:19 pm", same-year →
  * "23 May", else → "23 May 2024". Strings that don't parse as an ISO
@@ -11851,7 +11938,6 @@ export function emailThread({ locale = 'en-AU' } = {}) {
     }
     const cls = ['sg-renderer-email-thread'];
     if (v.unread) cls.push('is-unread');
-    if (v.highlighted) cls.push('is-highlighted');
     const wrap = h('div', { class: cls.join(' ') });
     const head = h('div', { class: 'sg-renderer-email-thread-row' });
     const fromSpan = h('span', { class: 'sg-renderer-email-thread-from' },

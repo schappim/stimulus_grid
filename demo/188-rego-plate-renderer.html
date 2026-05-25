@@ -23,7 +23,12 @@
     Australian vehicle plate styled to match each state's current
     general-issue palette (NSW yellow/black, VIC blue/white, QLD
     maroon/white, SA dark/yellow, WA black/ochre, TAS green/white, NT
-    ochre, ACT black/yellow). Pass <code>{ state, plate }</code>.
+    ochre, ACT black/yellow). Pass <code>{ state, plate, style? }</code>.
+    Double-click a plate to open the editor — alongside state and plate
+    text there's a visual swatch grid for the
+    <em>Personalised / Premium / Vanity / Bright Lights</em>
+    families (each rendered with its true plate colours so you pick by
+    sight rather than name).
   </p>
 
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
@@ -34,7 +39,9 @@
               data-header-cell-width-value="240">Vehicle</th>
           <th data-controller="header-cell" data-header-cell-field-value="plate"
               data-header-cell-cell-renderer-value="rego-plate"
-              data-header-cell-width-value="180">Plate</th>
+              data-header-cell-width-value="200">Plate</th>
+          <th data-controller="header-cell" data-header-cell-field-value="style"
+              data-header-cell-width-value="180">Style</th>
           <th data-controller="header-cell" data-header-cell-field-value="driver"
               data-header-cell-width-value="180">Driver</th>
         </tr>
@@ -43,18 +50,28 @@
     </table>
   </div>
 
+  <p class="tip">
+    💡 Double-click a plate cell to change state, number, or style.
+    The plate-style picker shows mini-plate swatches in each variant's
+    actual colours.
+  </p>
+
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
     const ROWS = [
-      { id: 1, vehicle: '2024 Toyota HiLux',         plate: { state: 'NSW', plate: 'ABK 42T' }, driver: 'Astrid Hale' },
-      { id: 2, vehicle: '2022 Ford Ranger Wildtrak', plate: { state: 'VIC', plate: '1AB 2CD' }, driver: 'Marcus Chen' },
-      { id: 3, vehicle: '2023 Isuzu D-Max',          plate: { state: 'QLD', plate: '321 ABC' }, driver: 'Priya Patel' },
-      { id: 4, vehicle: '2021 Mitsubishi Triton',    plate: { state: 'SA',  plate: 'S 123 AAB' }, driver: 'Jamal Owens' },
-      { id: 5, vehicle: '2024 Toyota LandCruiser',   plate: { state: 'WA',  plate: '1ABC 234' }, driver: 'Lena Brooks' },
-      { id: 6, vehicle: '2020 Nissan Navara',        plate: { state: 'TAS', plate: 'F 122 OW' }, driver: 'Tomás Vega' },
-      { id: 7, vehicle: '2024 Volkswagen Amarok',    plate: { state: 'NT',  plate: 'CC 32 NT' }, driver: 'Sergio Vega' },
-      { id: 8, vehicle: '2022 Subaru Forester',      plate: { state: 'ACT', plate: 'YBE 91X' }, driver: 'Eli Patel' },
+      { id: 1, vehicle: '2024 Toyota HiLux',         plate: { state: 'NSW', plate: 'ABK 42T' },                              style: 'Standard',                driver: 'Astrid Hale' },
+      { id: 2, vehicle: '2022 Ford Ranger Wildtrak', plate: { state: 'VIC', plate: 'KD 868',     style: 'personalised' },    style: 'Personalised',            driver: 'Marcus Chen' },
+      { id: 3, vehicle: '2023 Isuzu D-Max',          plate: { state: 'NSW', plate: 'IRIE',       style: 'personalised-plus' },style: 'Personalised Plus',       driver: 'Priya Patel' },
+      { id: 4, vehicle: '2021 Mitsubishi Triton',    plate: { state: 'NSW', plate: 'IPLAYA',     style: 'personalised-red' },style: 'Personalised (red)',      driver: 'Jamal Owens' },
+      { id: 5, vehicle: '2024 Toyota LandCruiser',   plate: { state: 'NSW', plate: 'AAD 39Z',    style: 'premium-white' },   style: 'Premium',                 driver: 'Lena Brooks' },
+      { id: 6, vehicle: '2020 Nissan Navara',        plate: { state: 'NSW', plate: 'ACD 72P',    style: 'premium-slimline' },style: 'Premium Slimline',        driver: 'Tomás Vega' },
+      { id: 7, vehicle: '2024 Volkswagen Amarok',    plate: { state: 'NSW', plate: 'CBB 65J',    style: 'premium-red' },     style: 'Premium (red)',           driver: 'Sergio Vega' },
+      { id: 8, vehicle: '2022 Subaru Forester',      plate: { state: 'NSW', plate: 'GB 41 BA',   style: 'vanity-silver' },   style: 'Vanity (silver)',         driver: 'Eli Patel' },
+      { id: 9, vehicle: '2023 Mazda BT-50',          plate: { state: 'NSW', plate: 'MSE 25',     style: 'vanity-white' },    style: 'Vanity (white)',          driver: 'Hana Wells' },
+      { id:10, vehicle: '2024 Ford Everest',         plate: { state: 'NSW', plate: 'DTI 98F',    style: 'bright-lights' },   style: 'Bright Lights',           driver: 'Oscar Webb' },
+      { id:11, vehicle: '2024 Toyota Prado',         plate: { state: 'NSW', plate: 'EH 747',     style: 'bright-lights-slim' },style: 'Bright Lights Slimline', driver: 'Maya Cole' },
+      { id:12, vehicle: '2023 Hyundai Staria',       plate: { state: 'NSW', plate: '95 JSB',     style: 'bright-lights-blue' },style: 'Bright Lights (blue)',  driver: 'Noah Park' },
     ];
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });

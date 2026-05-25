@@ -4887,6 +4887,11 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   line-height: 1.3;
 }
 .sg-grid .sg-renderer-rego-plate-text { font-variant-numeric: tabular-nums; }
+.sg-grid .sg-renderer-rego-plate.is-slim {
+  padding: 1px 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
 
 /* Service due — km left + days left, coloured by closer-to-due. */
 .sg-grid .sg-renderer-service-due {
@@ -5051,39 +5056,47 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   margin-left: 6px;
   font-variant-numeric: tabular-nums;
 }
-/* Highlighted — Apple Mail / Gmail "this thread is selected" look: solid
- * blue cell with white text on every part. Bleeds into the row's padding
- * by negative-margin trick on the cell so the highlight goes edge-to-edge. */
-.sg-grid td.sg-renderer-email-thread-cell:has(.sg-renderer-email-thread.is-highlighted) {
+/* Selected mail — Apple Mail / Gmail "this thread is the active one"
+ * look: solid blue cell with white text on every part. Bleeds edge-to-edge
+ * by zeroing the td padding while the wrapper re-pads. Triggers on the
+ * grid's focus & selection signals (active cell, focused cell, range,
+ * or selected row) — no data flag. */
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]),
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell {
   padding: 0;
 }
-.sg-grid .sg-renderer-email-thread.is-highlighted {
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .sg-renderer-email-thread,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .sg-renderer-email-thread {
   background: #2563eb;
   color: #ffffff;
   padding: 6px 8px;
   margin: 0;
 }
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-from,
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-subject {
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) :is(.sg-renderer-email-thread-from, .sg-renderer-email-thread-subject),
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell :is(.sg-renderer-email-thread-from, .sg-renderer-email-thread-subject) {
   color: #ffffff;
 }
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-time {
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .sg-renderer-email-thread-time,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .sg-renderer-email-thread-time {
   color: rgba(255, 255, 255, 0.92);
 }
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-preview {
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .sg-renderer-email-thread-preview,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .sg-renderer-email-thread-preview {
   color: rgba(255, 255, 255, 0.78);
 }
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-count {
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .sg-renderer-email-thread-count,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .sg-renderer-email-thread-count {
   color: rgba(255, 255, 255, 0.72);
 }
-/* When highlighted + unread, the dot would clash with the blue background —
- * swap to white so it stays visible. */
-.sg-grid .sg-renderer-email-thread.is-highlighted.is-unread .sg-renderer-email-thread-from::before {
+/* Selected + unread — swap the dot to white so it stays visible. */
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .is-unread .sg-renderer-email-thread-from::before,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .is-unread .sg-renderer-email-thread-from::before {
   background: #ffffff;
 }
-/* Attachment chips on a highlighted cell — translucent white pill that
- * reads against the blue without losing the file-type accent colour. */
-.sg-grid .sg-renderer-email-thread.is-highlighted .sg-renderer-email-thread-attachment {
+/* Attachment chips on a selected cell — translucent white pill so the
+ * file-type accent isn't lost on the blue background. */
+.sg-grid td.sg-renderer-email-thread-cell:is([data-cell-active="true"], [data-focused="true"], [data-cell-range="true"]) .sg-renderer-email-thread-attachment,
+.sg-grid tr[data-selected="true"] td.sg-renderer-email-thread-cell .sg-renderer-email-thread-attachment {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.28);
   color: #ffffff;
@@ -5331,3 +5344,54 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   flex-shrink: 0;
 }
 .sg-select-editor-label { flex: 1; }
+
+/* Plate-style picker — visual swatch grid that lets the user pick a
+ * personalised / premium / vanity / bright-lights variant in the
+ * rego-plate editor. Each cell is a clickable mini plate preview. */
+.sg-plate-style-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  padding: 4px 0;
+  min-width: 0;
+}
+.sg-plate-style-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.sg-plate-style-swatch:hover { background: #f9fafb; border-color: #e5e7eb; }
+.sg-plate-style-swatch.is-current { background: #eff6ff; border-color: #2563eb; }
+.sg-plate-style-swatch-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1.5px solid;
+  font-family: 'Inter','SF Pro Text',system-ui,sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  min-height: 20px;
+  min-width: 60px;
+  text-align: center;
+}
+.sg-plate-style-swatch-preview.is-slim {
+  padding: 1px 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.sg-plate-style-swatch-label {
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.2;
+}
