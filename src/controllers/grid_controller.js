@@ -898,7 +898,7 @@ export default class GridController extends Controller {
   sizeColumnsToFit() {
     const total = this._viewport?.clientWidth || this.element.clientWidth || 0;
     if (!total) return;
-    const visible = this._visibleCols();
+    const visible = this._visibleCols().filter((c) => !c._isSpacer);
     const sumWidth = visible.reduce((s, c) => s + (c.width || 150), 0);
     if (sumWidth === 0) return;
     const ratio = total / sumWidth;
@@ -1466,6 +1466,10 @@ export default class GridController extends Controller {
     const totals = this._displayList.grandTotals || {};
     let labelPlaced = false;
     for (const col of cols) {
+      if (col._isSpacer) {
+        tr.appendChild(el('td', { class: 'sg-spacer-cell', 'aria-hidden': 'true' }));
+        continue;
+      }
       const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
@@ -1536,11 +1540,15 @@ export default class GridController extends Controller {
     // Visible (non-gutter / non-checkbox / non-group-col) columns get the
     // label+value content; structural columns stay blank so the gutter and
     // checkbox column don't collapse the row.
-    const isStructural = (c) => c._isCheckbox || c._isRowNumber || c._isGroupCol || c._isMasterExpand;
+    const isStructural = (c) => c._isCheckbox || c._isRowNumber || c._isGroupCol || c._isMasterExpand || c._isSpacer;
     const dataCols = cols.filter((c) => !isStructural(c));
     const dataSpan = dataCols.length || cols.length || 1;
 
     for (const col of cols) {
+      if (col._isSpacer) {
+        tr.appendChild(el('td', { class: 'sg-spacer-cell', 'aria-hidden': 'true' }));
+        continue;
+      }
       if (isStructural(col)) {
         // Keep the gutter / checkbox / group cell present so widths line up
         // with normal rows, but make it visually inert.
@@ -2334,7 +2342,7 @@ export default class GridController extends Controller {
         if (!row || row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
-          if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand) continue;
+          if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand || col._isSpacer) continue;
           out.push(getValue(row, col));
         }
       }
@@ -2372,7 +2380,7 @@ export default class GridController extends Controller {
     if (!th) return;
     const field = th.getAttribute('data-field') || th.getAttribute('data-header-cell-field-value');
     const col = this._colByField(field);
-    if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isPivot) return;
+    if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isPivot || col._isSpacer) return;
     e.preventDefault();
     this._showColumnMenu(col, e.clientX, e.clientY);
   };
@@ -2689,6 +2697,9 @@ export default class GridController extends Controller {
     if (e.target.closest('td[data-editing="true"]')) return;
     const rowId = this._coerceRowId(tr.dataset.rowId);
     const td = e.target.closest('td');
+    // Trailing spacer cell is inert — swallow the click without selection or
+    // event emission so it behaves like dead space.
+    if (td?.classList.contains('sg-spacer-cell')) return;
     if (e.target.matches('input[type="checkbox"]')) {
       this.toggleRowSelection(rowId, 'toggle');
       return;
@@ -2744,6 +2755,7 @@ export default class GridController extends Controller {
       || td.classList.contains('sg-checkbox-cell')
       || td.classList.contains('sg-group-leaf-cell')
       || td.classList.contains('sg-master-expand-cell')
+      || td.classList.contains('sg-spacer-cell')
       || td.dataset.gutter === 'true'
       || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
@@ -3013,7 +3025,7 @@ export default class GridController extends Controller {
         if (ci >= cols.length) break;
         const col = cols[ci];
         if (!col) continue;
-        if (!col.editable || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand) {
+        if (!col.editable || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand || col._isSpacer) {
           rejected.push({ rowId: this._rowId(row), colId: col.field || '', reason: 'not-editable' });
           continue;
         }
@@ -3171,7 +3183,7 @@ export default class GridController extends Controller {
   // ----- Keyboard navigation (Numbers/Sheets-style) -----
 
   _navCols() {
-    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand);
+    return this._visibleCols().filter((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand && !c._isSpacer);
   }
 
   _onGridKeydown = (e) => {
@@ -3288,7 +3300,7 @@ export default class GridController extends Controller {
         if (!row || row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
-          if (!col || !col.editable || col._isCheckbox || col._isRowNumber) continue;
+          if (!col || !col.editable || col._isCheckbox || col._isRowNumber || col._isSpacer) continue;
           const oldValue = row[col.field];
           if (oldValue === '' || oldValue == null) continue;
           row[col.field] = '';
@@ -3644,7 +3656,7 @@ export default class GridController extends Controller {
     const explicit = this.state.tree?.displayField;
     if (explicit) return explicit;
     const visible = this._visibleCols();
-    const first = visible.find((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand);
+    const first = visible.find((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand && !c._isSpacer);
     return first?.field || null;
   }
 

@@ -158,6 +158,23 @@
   -webkit-user-select: none;
 }
 .sg-grid tbody td:last-child { border-right: none; }
+
+/* Trailing spacer column — a synthetic, always-last column whose width is set
+   to the viewport's leftover space so real columns render at their declared
+   widths without being stretched by table-layout: fixed. The cell itself is
+   inert: no border, no padding, no hover, no selection, no cursor change. */
+.sg-grid thead th.sg-spacer-header,
+.sg-grid tbody td.sg-spacer-cell {
+  padding: 0;
+  border-right: none;
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+.sg-grid tbody td.sg-spacer-cell {
+  border-bottom-color: transparent;
+}
+
 /* …but the editor's input/textarea must allow text selection. */
 .sg-grid tbody td[data-editing="true"] input,
 .sg-grid tbody td[data-editing="true"] textarea {
@@ -4343,3 +4360,81 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-expiry.is-warning { background: #fef3c7; color: #713f12; }
 .sg-grid .sg-renderer-expiry.is-soon    { background: #fed7aa; color: #7c2d12; }
 .sg-grid .sg-renderer-expiry.is-expired { background: #fecaca; color: #7f1d1d; }
+.sg-grid .sg-renderer-licence-cell { cursor: pointer; }
+
+/* Trade-licence popover editor — 4-field grid (state / number / class /
+ * expiry). Same chrome family as the address-au editor. */
+.sg-licence-editor {
+  z-index: 1000;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  width: 340px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+}
+.sg-licence-editor-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-weight: 600;
+  font-size: 12px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sg-licence-editor-form { display: block; }
+.sg-licence-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.sg-licence-editor-field { display: flex; flex-direction: column; gap: 2px; }
+.sg-licence-editor-field[data-field="number"] { grid-column: span 2; }
+.sg-licence-editor-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.sg-licence-editor-input {
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 13px;
+  color: #1f2937;
+  background: #ffffff;
+}
+.sg-licence-editor-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.18);
+}
+.sg-licence-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid #f3f4f6;
+}
+.sg-licence-editor-cancel,
+.sg-licence-editor-save {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.sg-licence-editor-cancel {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+.sg-licence-editor-save {
+  background: #2563eb;
+  color: #ffffff;
+}
+.sg-licence-editor-save:hover { background: #1d4ed8; }

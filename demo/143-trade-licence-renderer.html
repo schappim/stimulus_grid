@@ -27,6 +27,11 @@
     optional trade class, and a traffic-light expiry pill (green /
     yellow / orange / red).
   </p>
+  <p class="lede">
+    <strong>Double-click the licence cell</strong> to open the four-field
+    popover editor (state / number / class / expiry). Commits via
+    <code>grid:cellValueChanged</code> — open DevTools and watch.
+  </p>
 
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
     <table>
@@ -38,6 +43,7 @@
               data-header-cell-width-value="120">Trade</th>
           <th data-controller="header-cell" data-header-cell-field-value="licence"
               data-header-cell-cell-renderer-value="trade-licence"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="340">Contractor licence</th>
         </tr>
       </thead>
@@ -82,6 +88,7 @@
 
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('licence change:', e.detail));
   </script>
 </body>
 </html>

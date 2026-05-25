@@ -8849,9 +8849,26 @@ function expiryBadge(when, { label = 'exp' } = {}) {
  *   }
  *
  * A plain string is rendered as the licence number alone (no state or
- * expiry colouring). */
-export function tradeLicence({} = {}) {
-  return ({ value }) => {
+ * expiry colouring). When `editable` (default true) is on, double-click
+ * opens a four-field popover (state / number / class / expiry) that
+ * commits via `grid:cellValueChanged` — same contract as the inline
+ * editor and the address-au editor. */
+export function tradeLicence({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-licence-cell');
+      td._sgLicence = value;
+      if (editable && !td._sgLicenceEditBound) {
+        td._sgLicenceEditBound = true;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgLicenceHandled) return;
+          e._sgLicenceHandled = true;
+          e.stopPropagation();
+          openLicenceEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
     if (typeof value === 'string') {
       return h('span', { class: 'sg-renderer-compliance' },
@@ -8867,6 +8884,116 @@ export function tradeLicence({} = {}) {
     if (exp) wrap.append(exp);
     return wrap;
   };
+}
+
+let activeLicenceEditor = null;
+function closeLicenceEditor() {
+  if (!activeLicenceEditor) return;
+  const { pop, onKey, onDocClick } = activeLicenceEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeLicenceEditor = null;
+}
+
+function openLicenceEditor(anchor, ctx) {
+  closeLicenceEditor();
+  const raw = anchor._sgLicence;
+  const start = (raw && typeof raw === 'object')
+    ? { state: raw.state || '', number: raw.number ?? '', class: raw.class ?? '', expires: raw.expires || '' }
+    : { state: '', number: typeof raw === 'string' ? raw : '', class: '', expires: '' };
+
+  const pop = h('div', { class: 'sg-licence-editor', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const header = h('div', { class: 'sg-licence-editor-header' },
+    document.createTextNode('Edit licence'));
+
+  const form = h('form', { class: 'sg-licence-editor-form', novalidate: 'novalidate' });
+  const grid = h('div', { class: 'sg-licence-editor-grid' });
+
+  function field(label, name, child) {
+    const w = h('label', { class: 'sg-licence-editor-field', 'data-field': name });
+    w.append(h('span', { class: 'sg-licence-editor-label' }, document.createTextNode(label)));
+    w.append(child);
+    return w;
+  }
+
+  const stateSel = h('select', { name: 'state', class: 'sg-licence-editor-input' });
+  stateSel.append(h('option', { value: '' }, document.createTextNode('—')));
+  for (const s of AU_STATES) {
+    stateSel.append(h('option', { value: s, selected: start.state === s ? '' : null },
+      document.createTextNode(`${s} — ${AU_STATE_NAMES[s]}`)));
+  }
+  const numberInput = h('input', { type: 'text', name: 'number',
+    class: 'sg-licence-editor-input sg-renderer-mono',
+    value: start.number, placeholder: 'EC234567C' });
+  const classInput = h('input', { type: 'text', name: 'class',
+    class: 'sg-licence-editor-input',
+    value: start.class, placeholder: 'Electrical' });
+  const expiresInput = h('input', { type: 'date', name: 'expires',
+    class: 'sg-licence-editor-input',
+    value: start.expires ? String(start.expires).slice(0, 10) : '' });
+
+  grid.append(
+    field('State', 'state', stateSel),
+    field('Licence #', 'number', numberInput),
+    field('Class', 'class', classInput),
+    field('Expires', 'expires', expiresInput),
+  );
+
+  const footer = h('div', { class: 'sg-licence-editor-footer' });
+  const cancel = h('button', { type: 'button', class: 'sg-licence-editor-cancel' },
+    document.createTextNode('Cancel'));
+  const save = h('button', { type: 'submit', class: 'sg-licence-editor-save' },
+    document.createTextNode('Save'));
+  footer.append(cancel, save);
+
+  form.append(grid, footer);
+  pop.append(header, form);
+
+  function commit() {
+    const next = {
+      state:   stateSel.value || '',
+      number:  numberInput.value.trim(),
+      class:   classInput.value.trim(),
+      expires: expiresInput.value || '',
+    };
+    const allEmpty = !next.state && !next.number && !next.class && !next.expires;
+    commitLicence(anchor, ctx, allEmpty ? null : next);
+    closeLicenceEditor();
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); commit(); });
+  cancel.addEventListener('click', () => closeLicenceEditor());
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeLicenceEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeLicenceEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  numberInput.focus();
+  numberInput.select();
+  activeLicenceEditor = { pop, onKey, onDocClick };
+}
+
+function commitLicence(td, ctx, next) {
+  const { row, col, api } = ctx;
+  const oldValue = row && col?.field != null ? row[col.field] : null;
+  if (row && col?.field != null) row[col.field] = next;
+  td._sgLicence = next;
+  if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+  const grid = td.closest('[data-controller~="grid"]');
+  if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+    bubbles: true,
+    detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+  }));
 }
 
 // Pre-register every parameter-less built-in under its plain name so users can
