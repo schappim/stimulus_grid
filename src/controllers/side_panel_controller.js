@@ -39,6 +39,7 @@ export default class SidePanelController extends Controller {
       'grid:columnRowGroupChanged', 'grid:columnPivotChanged',
       'grid:columnValueChanged',   'grid:pivotModeChanged',
       'grid:columnVisible',        'grid:rowDataChanged',
+      'grid:columnStateApplied',
     ]) this.grid?.addEventListener(ev, this._gridListener);
   }
 
@@ -48,6 +49,7 @@ export default class SidePanelController extends Controller {
       'grid:columnRowGroupChanged', 'grid:columnPivotChanged',
       'grid:columnValueChanged',   'grid:pivotModeChanged',
       'grid:columnVisible',        'grid:rowDataChanged',
+      'grid:columnStateApplied',
     ]) this.grid.removeEventListener(ev, this._gridListener);
   }
 

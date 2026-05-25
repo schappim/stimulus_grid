@@ -12,6 +12,16 @@ const DEFAULT_PAGE_SIZE = 100;
 const CHEVRON_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/></svg>';
 const FILTER_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M64 157.7C64 141.3 77.3 128 93.7 128L546.4 128C562.8 128 576.1 141.3 576.1 157.7C576.1 165.6 573 173.1 567.4 178.7L400 345.9L400 546.3C400 562.7 386.7 576 370.3 576C362.4 576 354.9 572.9 349.3 567.3L247 465C242.5 460.5 240 454.4 240 448L240 345.9L72.7 178.6C67.1 173.1 64 165.5 64 157.7zM137.9 176L281 319C285.5 323.5 288 329.6 288 336L288 438.1L352 502.1L352 336C352 329.6 354.5 323.5 359 319L502 176L137.9 176z"/></svg>';
 
+// Events that should retrigger a save when persistKey is set. Anything the
+// user changes through the UI or API and would expect to "stick" across
+// reloads belongs here.
+const PERSIST_EVENTS = [
+  'grid:columnMoved', 'grid:columnPinned', 'grid:columnResized', 'grid:columnVisible',
+  'grid:columnRowGroupChanged', 'grid:columnPivotChanged', 'grid:pivotModeChanged',
+  'grid:columnValueChanged', 'grid:columnGroupsChanged',
+  'grid:sortChanged', 'grid:filterChanged',
+];
+
 export default class GridController extends Controller {
   static values = {
     rowData:        { type: Array, default: [] },
@@ -44,6 +54,7 @@ export default class GridController extends Controller {
     sidePanel:           { type: Boolean, default: false },                            // right-side tool panel for groups/pivots/values
     columnGroups:        { type: Array,   default: [] },                               // multi-row headers: [{headerName, children:[field,...]}]
     pinnedBottomRow:     { type: Boolean, default: false },                            // sticky bottom row with grand totals (from aggFuncs)
+    persistKey:          { type: String,  default: '' },                                // when non-empty, auto-save/restore state to localStorage under sgrid:<key>
   };
 
   initialize() {
@@ -123,6 +134,9 @@ export default class GridController extends Controller {
     document.removeEventListener('mouseup', this._onCellMouseUp);
     document.removeEventListener('copy', this._onCopy);
     document.removeEventListener('mousemove', this._onRowDragMove);
+    this._thead?.removeEventListener('contextmenu', this._onHeaderContextMenu);
+    this._closeColumnMenu();
+    this._teardownPersistence();
     this._rowDrag?.ghost?.remove();
     this._rowDrag?.indicator?.remove();
   }
@@ -230,6 +244,11 @@ export default class GridController extends Controller {
       this._main = null;
       this._sidePanel = null;
     }
+
+    // Right-click on any leaf header opens a context menu with quick actions
+    // for that column (pin / autosize / group / pivot / aggregate / hide).
+    // Mounting once here is enough — the menu reads live state on each open.
+    this._thead?.addEventListener('contextmenu', this._onHeaderContextMenu);
   }
 
   async _initialLoad() {
@@ -254,7 +273,13 @@ export default class GridController extends Controller {
     this._render();
     this._attachBodyListeners();
 
-    // 3. Fire ready.
+    // 3. Persistence (opt-in via data-grid-persist-key-value). Restore BEFORE
+    // wiring the save listener so the initial restore doesn't trigger a
+    // self-save loop, then attach the debounced auto-save.
+    this._restorePersistedState();
+    this._setupPersistence();
+
+    // 4. Fire ready.
     emit(this.element, 'grid:ready', { api: this.element.gridApi });
     emit(this.element, 'grid:rowDataChanged', { rows: this.state.rowData });
   }
@@ -355,11 +380,22 @@ export default class GridController extends Controller {
   registerColumn(def, headerEl) {
     const existing = this.state.columnDefs.findIndex((c) => c.field === def.field);
     const overrides = this._runtimeOverrides[def.field] || {};
-    const enriched = { ...def, ...overrides, _headerEl: headerEl };
+    // When a col is already registered (e.g. <th> re-attaches during a header
+    // reorder, or a persisted state restore moves it), preserve any runtime
+    // overrides on the existing col that the header markup doesn't carry:
+    // hidden, pinned, and width are user-controlled and would otherwise get
+    // clobbered back to the markup defaults.
+    const old = existing >= 0 ? this.state.columnDefs[existing] : null;
+    const carryover = old ? {
+      ...(old.hidden != null ? { hidden: old.hidden } : {}),
+      ...(old.pinned       ? { pinned: old.pinned } : {}),
+      ...(old.width != null ? { width: old.width } : {}),
+    } : {};
+    const enriched = { ...def, ...overrides, ...carryover, _headerEl: headerEl };
     if (existing >= 0) {
-      const old = this.state.columnDefs[existing];
+      const oldRef = this.state.columnDefs[existing];
       // No-op when nothing changed — breaks any latent reconnect → re-register loop.
-      if (old._headerEl === headerEl && sameColDef(old, enriched)) return;
+      if (oldRef._headerEl === headerEl && sameColDef(oldRef, enriched)) return;
       this.state.columnDefs[existing] = enriched;
     } else {
       this.state.columnDefs.push(enriched);
@@ -1387,6 +1423,151 @@ export default class GridController extends Controller {
   }
   isPinnedBottomRow() { return !!this.pinnedBottomRowValue; }
 
+  // ----- Column state serialization + persistence -----
+  //
+  // getColumnState() captures everything a user can change about the grid's
+  // layout — column order/width/pinning/visibility, row groups, pivot,
+  // value aggregations, header groups, the pinned bottom row toggle, and
+  // the sort/filter/quick-filter model — into a plain JSON-serializable
+  // object. applyColumnState() restores that snapshot, then schedules a
+  // single render and emits `grid:columnStateApplied` so subscribers (e.g.
+  // the side panel) refresh in one shot. With `data-grid-persist-key-value`
+  // set, the same shape is round-tripped to localStorage automatically.
+
+  getColumnState() {
+    return {
+      v: 1,
+      cols: this.state.columnDefs
+        .filter((c) => !c._isGroupCol && !c._isPivot)
+        .map((c) => {
+          const out = { field: c.field };
+          if (c.width != null) out.width = c.width;
+          if (c.pinned) out.pinned = c.pinned;
+          if (c.hidden) out.hidden = true;
+          return out;
+        }),
+      rowGroupCols: this.state.group.cols.slice(),
+      pivot: { mode: !!this.state.pivot.mode, cols: this.state.pivot.cols.slice() },
+      values: this.getValueColumns(),
+      columnGroups: this.getColumnGroups(),
+      pinnedBottomRow: !!this.pinnedBottomRowValue,
+      sortModel: this.state.sortModel.slice(),
+      filterModel: { ...this.state.filterModel },
+      quickFilter: this.state.quickFilter || '',
+    };
+  }
+
+  applyColumnState(state) {
+    if (!state || typeof state !== 'object') return;
+    if (Array.isArray(state.cols)) {
+      const byField = new Map(this.state.columnDefs.map((c) => [c.field, c]));
+      const ordered = [];
+      for (const s of state.cols) {
+        const c = byField.get(s.field);
+        if (!c) continue;
+        if (s.width != null) c.width = s.width;
+        c.pinned = s.pinned || undefined;
+        c.hidden = !!s.hidden;
+        byField.delete(s.field);
+        ordered.push(c);
+      }
+      // Append cols added since the snapshot was taken so they don't vanish.
+      for (const c of byField.values()) ordered.push(c);
+      this.state.columnDefs = ordered;
+    }
+    if (Array.isArray(state.rowGroupCols)) this.state.group.cols = state.rowGroupCols.slice();
+    if (state.pivot && typeof state.pivot === 'object') {
+      this.state.pivot.cols = Array.isArray(state.pivot.cols) ? state.pivot.cols.slice() : [];
+      this.state.pivot.mode = !!state.pivot.mode;
+    }
+    if (Array.isArray(state.values)) {
+      const next = {};
+      for (const { field, aggFunc } of state.values) if (field && aggFunc) next[field] = aggFunc;
+      this.state.group.aggs = next;
+    }
+    if (Array.isArray(state.columnGroups)) this.columnGroupsValue = state.columnGroups;
+    if (typeof state.pinnedBottomRow === 'boolean') this.pinnedBottomRowValue = state.pinnedBottomRow;
+    if (Array.isArray(state.sortModel)) this.state.sortModel = state.sortModel.slice();
+    if (state.filterModel && typeof state.filterModel === 'object') {
+      this.state.filterModel = { ...state.filterModel };
+    }
+    if (typeof state.quickFilter === 'string') this.state.quickFilter = state.quickFilter;
+    // Dirty every stage that buildDisplayList branches on, plus 'columns' so
+    // _renderHeader rebuilds the visible col set. Without 'group'/'pivot'/etc
+    // the body would render off the stale display list while the header
+    // already reflects the restored state.
+    for (const stage of ['columns', 'group', 'pivot', 'sort', 'filter', 'data']) {
+      this.scheduleRender(stage);
+    }
+    // Single broadcast — subscribers re-render from current API state instead
+    // of subscribing to every granular event we deliberately suppressed.
+    emit(this.element, 'grid:columnStateApplied', { state });
+  }
+
+  _storageKey() { return `sgrid:${this.persistKeyValue}`; }
+
+  _restorePersistedState() {
+    if (!this.persistKeyValue || typeof localStorage === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(this._storageKey());
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (state && typeof state === 'object') this.applyColumnState(state);
+    } catch (e) {
+      console.warn('[stimulus_grid] failed to restore persisted state', e);
+    }
+  }
+
+  _setupPersistence() {
+    if (!this.persistKeyValue || typeof localStorage === 'undefined') return;
+    const save = () => {
+      clearTimeout(this._persistTimer);
+      // 200ms debounce keeps localStorage writes off the hot path of column
+      // resizes / sort flips while still feeling instant on reload.
+      this._persistTimer = setTimeout(() => this._persistState(), 200);
+    };
+    this._persistListener = save;
+    for (const ev of PERSIST_EVENTS) this.element.addEventListener(ev, save);
+    // Flush on navigation so an in-flight debounce isn't lost when the user
+    // reloads the page right after a change.
+    this._persistBeforeUnload = () => {
+      if (this._persistTimer) {
+        clearTimeout(this._persistTimer);
+        this._persistState();
+      }
+    };
+    window.addEventListener('beforeunload', this._persistBeforeUnload);
+  }
+
+  _teardownPersistence() {
+    if (!this._persistListener) return;
+    for (const ev of PERSIST_EVENTS) this.element.removeEventListener(ev, this._persistListener);
+    if (this._persistBeforeUnload) {
+      window.removeEventListener('beforeunload', this._persistBeforeUnload);
+      this._persistBeforeUnload = null;
+    }
+    // Flush one last time on teardown so disconnect mid-edit doesn't drop state.
+    if (this._persistTimer) {
+      clearTimeout(this._persistTimer);
+      this._persistState();
+    }
+    this._persistListener = null;
+  }
+
+  _persistState() {
+    if (!this.persistKeyValue || typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(this._storageKey(), JSON.stringify(this.getColumnState()));
+    } catch (e) {
+      console.warn('[stimulus_grid] failed to persist state', e);
+    }
+  }
+
+  clearPersistedState() {
+    if (!this.persistKeyValue || typeof localStorage === 'undefined') return;
+    try { localStorage.removeItem(this._storageKey()); } catch { /* ignore */ }
+  }
+
   _buildGroupRow(row, cols, existing) {
     const id = `__g:${row.groupId}`;
     let tr = existing.get(id);
@@ -1620,6 +1801,146 @@ export default class GridController extends Controller {
   getRangeAggregates() {
     if (!this.state.cellSel.ranges.length) return null;
     return aggregateRange(this._cellRangeRawValues());
+  }
+
+  // ----- Right-click column menu -----
+  //
+  // contextmenu on a leaf <th> opens a fixed-positioned popup with quick
+  // actions for that column: pin/unpin (left|right), autosize, group/pivot
+  // toggles, aggregate selector, and hide. Synthetic columns (gutter,
+  // checkbox, auto-Group, pivot result) suppress the menu — they're owned by
+  // the grid and shouldn't be poked through this surface.
+  _onHeaderContextMenu = (e) => {
+    const th = e.target.closest('th[data-field], th[data-header-cell-field-value]');
+    if (!th) return;
+    const field = th.getAttribute('data-field') || th.getAttribute('data-header-cell-field-value');
+    const col = this._colByField(field);
+    if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isPivot) return;
+    e.preventDefault();
+    this._showColumnMenu(col, e.clientX, e.clientY);
+  };
+
+  _showColumnMenu(col, x, y) {
+    this._closeColumnMenu();
+    const items = this._columnMenuItems(col);
+    const menu = el('div', { class: 'sg-column-menu', role: 'menu' });
+    for (const item of items) {
+      if (item === 'separator') {
+        menu.appendChild(el('div', { class: 'sg-column-menu-separator', role: 'separator' }));
+        continue;
+      }
+      const btn = el('button', {
+        type: 'button',
+        class: 'sg-column-menu-item' + (item.active ? ' sg-column-menu-active' : ''),
+        role: 'menuitem',
+      });
+      btn.append(
+        el('span', { class: 'sg-column-menu-label' }, item.label),
+      );
+      if (item.active) btn.append(el('span', { class: 'sg-column-menu-check', 'aria-hidden': 'true' }, '✓'));
+      btn.addEventListener('click', () => { item.action(); this._closeColumnMenu(); });
+      menu.appendChild(btn);
+    }
+    document.body.appendChild(menu);
+    // Flip the menu away from any viewport edge it would overflow.
+    const w = menu.offsetWidth || 220;
+    const h = menu.offsetHeight || 280;
+    menu.style.left = `${Math.min(x, window.innerWidth - w - 4)}px`;
+    menu.style.top  = `${Math.min(y, window.innerHeight - h - 4)}px`;
+    this._columnMenu = menu;
+    // Defer outside-click attach so this very click doesn't immediately close it.
+    setTimeout(() => {
+      document.addEventListener('mousedown', this._onDocMouseDownColumnMenu);
+      document.addEventListener('keydown',   this._onColumnMenuKey);
+      window.addEventListener('resize',      this._closeColumnMenuBound = () => this._closeColumnMenu(), { once: true });
+      window.addEventListener('scroll',      this._closeColumnMenuBound, { once: true, capture: true });
+    }, 0);
+    emit(this.element, 'grid:columnMenuOpened', { colId: col.field });
+  }
+
+  _closeColumnMenu() {
+    if (!this._columnMenu) return;
+    this._columnMenu.remove();
+    this._columnMenu = null;
+    document.removeEventListener('mousedown', this._onDocMouseDownColumnMenu);
+    document.removeEventListener('keydown',   this._onColumnMenuKey);
+    if (this._closeColumnMenuBound) {
+      window.removeEventListener('resize', this._closeColumnMenuBound);
+      window.removeEventListener('scroll', this._closeColumnMenuBound, { capture: true });
+      this._closeColumnMenuBound = null;
+    }
+  }
+
+  _onDocMouseDownColumnMenu = (e) => {
+    if (this._columnMenu && !this._columnMenu.contains(e.target)) this._closeColumnMenu();
+  };
+  _onColumnMenuKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); this._closeColumnMenu(); }
+  };
+
+  // Build the menu item list for `col` based on the current grid state. Each
+  // item is { label, action, active? } or the string 'separator'. Items are
+  // emitted only when they make sense (e.g. "Unpin" doesn't show on an
+  // unpinned col), so the menu stays short.
+  _columnMenuItems(col) {
+    const api = this.element.gridApi;
+    const label = col.headerName || col.field;
+    const isGrouped = this.state.group.cols.includes(col.field);
+    const isPivot   = this.state.pivot.cols.includes(col.field);
+    const aggFunc   = this.state.group.aggs[col.field];
+    const isNum     = col.type === 'number';
+
+    const items = [];
+    if (col.pinned !== 'left')  items.push({ label: 'Pin left',  action: () => api.setColumnPinned(col.field, 'left') });
+    if (col.pinned !== 'right') items.push({ label: 'Pin right', action: () => api.setColumnPinned(col.field, 'right') });
+    if (col.pinned)             items.push({ label: 'Unpin',     action: () => api.setColumnPinned(col.field, null) });
+    items.push('separator');
+
+    items.push({ label: 'Autosize this column', action: () => api.autoSizeColumn(col.field) });
+    items.push({ label: 'Autosize all columns', action: () => api.autoSizeAllColumns() });
+    items.push('separator');
+
+    items.push(isGrouped
+      ? { label: `Ungroup ${label}`, action: () => api.removeRowGroupColumn(col.field) }
+      : { label: `Group by ${label}`, action: () => api.addRowGroupColumn(col.field) });
+
+    items.push(isPivot
+      ? { label: `Remove ${label} from pivot`, action: () => api.removePivotColumn(col.field) }
+      : { label: `Pivot by ${label}`, action: () => {
+        if (!api.isPivotMode()) api.setPivotMode(true);
+        api.addPivotColumn(col.field);
+      } });
+
+    // Aggregate section: only worth showing when the col is numeric (so
+    // sum/avg/min/max make sense) or already carries an agg.
+    if (isNum || aggFunc) {
+      items.push('separator');
+      for (const fn of ['sum', 'avg', 'count', 'min', 'max']) {
+        items.push({
+          label: `Aggregate: ${fn}`,
+          active: aggFunc === fn,
+          action: () => api.addValueColumn(col.field, fn),
+        });
+      }
+      if (aggFunc) {
+        items.push({ label: 'Remove aggregation', action: () => api.removeValueColumn(col.field) });
+      }
+    }
+
+    items.push('separator');
+    items.push({ label: 'Hide column', action: () => api.setColumnVisible(col.field, false) });
+    items.push({
+      label: 'Show all columns',
+      action: () => {
+        this.state.columnDefs.forEach((c) => {
+          if (c.hidden && !c._isGroupCol && !c._isPivot && !c._isCheckbox && !c._isRowNumber) {
+            api.setColumnVisible(c.field, true);
+          }
+        });
+      },
+    });
+
+    return items;
   }
 
   // ----- Event delegation (clicks on rendered tbody) -----

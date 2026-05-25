@@ -422,6 +422,46 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
    display). Keeps their header-cell controllers connected. */
 .sg-grid thead tr.sg-hidden-header-row { display: none; }
 
+/* ----- Right-click column menu -----
+   Lives at document.body so it overlays anything; positioned at the cursor
+   with a viewport-edge flip handled in JS. */
+.sg-column-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 220px;
+  padding: 4px 0;
+  background: var(--sg-bg, #fff);
+  border: 1px solid var(--sg-border-strong, #d1d5db);
+  border-radius: 5px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  font-family: var(--sg-font, system-ui, sans-serif);
+  font-size: 12px;
+  color: var(--sg-fg, #1f2937);
+}
+.sg-column-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.sg-column-menu-item:hover { background: var(--sg-bg-hover, #eef2ff); }
+.sg-column-menu-item:disabled { color: var(--sg-fg-muted, #6b7280); cursor: default; }
+.sg-column-menu-item.sg-column-menu-active { color: var(--sg-accent, #2563eb); font-weight: 600; }
+.sg-column-menu-label { flex: 1; white-space: nowrap; }
+.sg-column-menu-check { color: var(--sg-accent, #2563eb); font-size: 11px; }
+.sg-column-menu-separator {
+  height: 1px;
+  background: var(--sg-border, #e5e7eb);
+  margin: 4px 0;
+}
+
 /* ----- Multi-row column header groups -----
    Group header cells span across their child leaf headers (colspan). The
    visual hierarchy is muted/uppercase so the leaf row stays the visual

@@ -98,6 +98,12 @@ export function createGridApi(grid) {
     setPinnedBottomRow(on) { grid.setPinnedBottomRow(on); },
     isPinnedBottomRow() { return grid.isPinnedBottomRow(); },
 
+    // ---- Column state + persistence ----
+    getColumnState() { return grid.getColumnState(); },
+    applyColumnState(state) { grid.applyColumnState(state); },
+    clearPersistedState() { grid.clearPersistedState(); },
+    getPersistKey() { return grid.persistKeyValue || ''; },
+
     // ---- Export ----
     getDataAsCsv(opts = {}) { return grid.getDataAsCsv(opts); },
     exportDataAsCsv(opts = {}) { return grid.exportDataAsCsv(opts); },
