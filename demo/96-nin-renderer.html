@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>96 — NIN renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>96 — UK NIN renderer</h1>
+  <p class="lede">UK National Insurance Number — 9 chars, formatted <code>AB 12 34 56 C</code>.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="employee" data-header-cell-width-value="200">Employee</th>
+        <th data-controller="header-cell" data-header-cell-field-value="nin" data-header-cell-cell-renderer-value="nin" data-header-cell-width-value="180">NIN</th>
+        <th data-controller="header-cell" data-header-cell-field-value="role" data-header-cell-width-value="160">Role</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { employee: 'Astrid Hale',  nin: 'AB123456C', role: 'Engineer' },
+      { employee: 'Marcus Chen',  nin: 'JM654321A', role: 'CTO'      },
+      { employee: 'Priya Patel',  nin: 'EH112233B', role: 'Designer' },
+      { employee: 'Invalid row',  nin: 'NOPE',     role: '—'         },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

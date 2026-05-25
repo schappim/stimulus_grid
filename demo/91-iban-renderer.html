@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>91 — IBAN renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>91 — IBAN renderer</h1>
+  <p class="lede">4-char groups (e.g. <code>GB29 NWBK 6016 1331 9268 19</code>). Hover for country name when known.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="bank" data-header-cell-width-value="160">Bank</th>
+          <th data-controller="header-cell" data-header-cell-field-value="iban" data-header-cell-cell-renderer-value="iban" data-header-cell-width-value="320">IBAN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="holder" data-header-cell-width-value="200">Holder</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { bank: 'NatWest',    iban: 'GB29NWBK60161331926819',    holder: 'Astrid Hale'   },
+      { bank: 'Deutsche',   iban: 'DE89370400440532013000',    holder: 'Marcus Chen'   },
+      { bank: 'BNP',        iban: 'FR1420041010050500013M02606', holder: 'Priya Patel'   },
+      { bank: 'ING',        iban: 'NL91ABNA0417164300',         holder: 'Tomás Vega'    },
+      { bank: 'INVALID',    iban: 'ZZ99000000000',              holder: 'Test row'      },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

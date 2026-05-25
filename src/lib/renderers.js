@@ -6332,6 +6332,128 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- iban (International Bank Account Number) ---------------
+ *
+ * Renders IBAN in standard 4-char groups (e.g. "GB29 NWBK 6016 1331
+ * 9268 19"). Country prefix (first 2 letters) gets a soft tint and the
+ * tooltip resolves to the country's full name when known. */
+const IBAN_COUNTRIES = {
+  AT: 'Austria', AU: 'Australia', BE: 'Belgium', CH: 'Switzerland',
+  DE: 'Germany', DK: 'Denmark', ES: 'Spain', FI: 'Finland', FR: 'France',
+  GB: 'United Kingdom', IE: 'Ireland', IT: 'Italy', NL: 'Netherlands',
+  NO: 'Norway', NZ: 'New Zealand', PT: 'Portugal', SE: 'Sweden', US: 'United States',
+};
+
+export function iban({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-iban-cell');
+    const text = String(value).replace(/\s+/g, '').toUpperCase();
+    const valid = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(text);
+    const grouped = text.match(/.{1,4}/g)?.join(' ') || text;
+    const cc = text.slice(0, 2);
+    const country = IBAN_COUNTRIES[cc];
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: country ? `${grouped} — ${country}` : grouped },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(grouped)));
+  };
+}
+
+/* ---------- swift / bic (8 or 11 char bank code) -------------------
+ *
+ * Renders an ISO 9362 SWIFT/BIC code as bank(4) country(2) location(2) +
+ * optional branch(3). Country code tooltip when known. */
+export function swift({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-swift-cell');
+    const text = String(value).replace(/\s+/g, '').toUpperCase();
+    const valid = /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(text);
+    let display;
+    if (valid) {
+      display = text.length === 8
+        ? `${text.slice(0,4)} ${text.slice(4,6)} ${text.slice(6,8)}`
+        : `${text.slice(0,4)} ${text.slice(4,6)} ${text.slice(6,8)} ${text.slice(8,11)}`;
+    } else {
+      display = text;
+    }
+    const cc = text.slice(4, 6);
+    const country = IBAN_COUNTRIES[cc];
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: country ? `${display} — ${country}` : display },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
+/* ---------- ssn (US Social Security Number, always masked) ----------
+ *
+ * Mirrors the TFN renderer's behaviour for the US. Displays the
+ * trailing 4 digits with leading digits masked: `•••-••-1234`. */
+export function ssn({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-mask-numeric');
+    const digits = String(value).replace(/\D/g, '');
+    if (digits.length !== 9) {
+      return h('span', { class: 'sg-renderer-uuid is-invalid' },
+        h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(String(value))));
+    }
+    const masked = `•••-••-${digits.slice(5)}`;
+    return h('span', { class: 'sg-renderer-uuid', title: 'SSN (masked)' },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(masked)));
+  };
+}
+
+/* ---------- ein (US Employer Identification Number) ----------------
+ *
+ * 9-digit US tax ID rendered as XX-XXXXXXX. */
+export function ein({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-ein-cell');
+    const digits = String(value).replace(/\D/g, '');
+    const valid = digits.length === 9;
+    const display = valid ? `${digits.slice(0,2)}-${digits.slice(2)}` : String(value);
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: display },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
+/* ---------- vat (EU VAT number) -------------------------------------
+ *
+ * 2-letter country prefix + national VAT digits. Country tooltip when
+ * known. */
+export function vat({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-vat-cell');
+    const text = String(value).replace(/\s+/g, '').toUpperCase();
+    const valid = /^[A-Z]{2}[A-Z0-9]{2,15}$/.test(text);
+    const cc = text.slice(0, 2);
+    const country = IBAN_COUNTRIES[cc];
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: country ? `${text} — ${country}` : text },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(text)));
+  };
+}
+
+/* ---------- nin (UK National Insurance Number) ---------------------
+ *
+ * 9-character UK NIN — 2 letters, 6 digits, 1 letter (A-D). Formatted
+ * as "AB 12 34 56 C". */
+const NIN_RE = /^[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\d{6}[A-D]$/i;
+
+export function nin({} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-nin-cell');
+    const text = String(value).replace(/\s+/g, '').toUpperCase();
+    const valid = NIN_RE.test(text);
+    const display = valid
+      ? `${text.slice(0,2)} ${text.slice(2,4)} ${text.slice(4,6)} ${text.slice(6,8)} ${text.slice(8)}`
+      : text;
+    return h('span', { class: `sg-renderer-uuid${valid ? '' : ' is-invalid'}`, title: text },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
 /* ---------- avatar-stack (overlapping avatars + overflow counter) ---
  *
  * Linear / Jira / GitHub-style overlapping avatar pile with a `+N`
@@ -6727,6 +6849,12 @@ registerRenderer('mac-address',       macAddress());
 registerRenderer('license-key',       licenseKey());
 registerRenderer('vin',               vin());
 registerRenderer('isbn',              isbn());
+registerRenderer('iban',              iban());
+registerRenderer('swift',             swift());
+registerRenderer('ssn',               ssn());
+registerRenderer('ein',               ein());
+registerRenderer('vat',               vat());
+registerRenderer('nin',               nin());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -7296,4 +7424,5 @@ export const renderers = {
   dragHandle, rowNumber, expandToggle,
   avatarStack, presence, assignee,
   uuid, gitSha, macAddress, licenseKey, vin, isbn,
+  iban, swift, ssn, ein, vat, nin,
 };
