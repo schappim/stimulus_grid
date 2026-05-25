@@ -1076,40 +1076,27 @@ export default class GridController extends Controller {
     });
     while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
 
-    // When every visible column has an explicit width, set the table's own
-    // width to the sum so the columns render at exactly the declared sizes.
-    // Without this, `table-layout: fixed` + `width: 100%` distributes any
-    // leftover space (container width minus sum of declared widths) across
-    // every column proportionally — a 120 px column ends up ~155 px wide
-    // because the panel is wider than the table content needs. With width
-    // set to the sum, narrow tables sit at their natural size inside the
-    // viewport and wide ones scroll horizontally (sg-body-viewport is
-    // already overflow:auto). If any column lacks an explicit width the
-    // browser still needs the slack to absorb auto-sized cells, so we
-    // fall back to width:100% in that case.
-    //
-    // Special case: when every column has an explicit width AND the sum is
-    // narrower than the viewport, stretch ONLY the last column to absorb the
-    // leftover space so the table fills its container edge-to-edge without
-    // disturbing the declared widths of earlier columns. The col element
-    // gets the inflated width; the stored col.width (state) is left alone so
-    // subsequent renders (and persisted layouts) still reflect the user's
-    // declared sizes.
-    const anyAuto = visible.some((c) => !c.width);
+    // visible always ends in the synthetic spacer column (see _visibleCols).
+    // Its job is to soak up any leftover viewport width so real columns render
+    // at exactly their declared sizes instead of being stretched by
+    // `table-layout: fixed`'s leftover-distribution rule. When the real
+    // columns already overflow the viewport the spacer collapses to 0 width
+    // (no horizontal scrollbar artifact, no visible trailing cell). When any
+    // real column lacks an explicit width we fall back to width:100% — the
+    // browser still needs slack to absorb the auto-sized cells, so a spacer
+    // isn't useful there.
+    const realCols = visible.filter((c) => !c._isSpacer);
+    const spacerNode = colgroup.lastElementChild;
+    const anyAuto = realCols.some((c) => !c.width);
     if (anyAuto) {
+      if (spacerNode) spacerNode.style.width = '0px';
       this._table.style.width = '100%';
     } else {
-      const sum = visible.reduce((acc, c) => acc + (Number(c.width) || 0), 0);
+      const sum = realCols.reduce((acc, c) => acc + (Number(c.width) || 0), 0);
       const viewportWidth = this._viewport?.clientWidth || 0;
-      if (viewportWidth && sum < viewportWidth && visible.length > 0) {
-        const lastColNode = colgroup.lastElementChild;
-        const lastDeclared = Number(visible[visible.length - 1].width) || 0;
-        const sumOthers = sum - lastDeclared;
-        lastColNode.style.width = (viewportWidth - sumOthers) + 'px';
-        this._table.style.width = viewportWidth + 'px';
-      } else {
-        this._table.style.width = sum + 'px';
-      }
+      const leftover = viewportWidth && sum < viewportWidth ? viewportWidth - sum : 0;
+      if (spacerNode) spacerNode.style.width = leftover + 'px';
+      this._table.style.width = (sum + leftover) + 'px';
     }
   }
 
@@ -1322,6 +1309,13 @@ export default class GridController extends Controller {
   }
 
   _ensureHeaderChrome(th, col, sortEntry) {
+    if (col._isSpacer) {
+      // Trailing spacer column: empty, no chrome (no sort icon, filter icon,
+      // or resize handle), no click affordance. Visually inert end-of-row gap.
+      th.classList.add('sg-spacer-header');
+      th.textContent = '';
+      return;
+    }
     if (col._isRowNumber) {
       th.classList.add('sg-gutter-header');
       th.textContent = '';   // blank corner, like a spreadsheet
@@ -1625,9 +1619,17 @@ export default class GridController extends Controller {
     for (let i = 0; i < cols.length; i++) {
       const col = cols[i];
       if (skipCols > 0) { skipCols -= 1; continue; }
-      // Structural columns (gutter, checkbox, group, master-expand) opt out of
-      // spanning — a span declared on the first data field never eats them.
-      const isStructural = col._isRowNumber || col._isCheckbox || col._isGroupCol || col._isMasterExpand;
+      // Structural columns (gutter, checkbox, group, master-expand, spacer) opt
+      // out of spanning — a span declared on the first data field never eats
+      // them.
+      const isStructural = col._isRowNumber || col._isCheckbox || col._isGroupCol || col._isMasterExpand || col._isSpacer;
+      if (col._isSpacer) {
+        // Trailing spacer cell: empty, inert. No data-col-id so cell selection,
+        // keyboard nav, and cellClicked events skip it; no value semantics.
+        const td = el('td', { class: 'sg-spacer-cell', 'aria-hidden': 'true' });
+        tr.appendChild(td);
+        continue;
+      }
       const requestedSpan = spans && !isStructural ? Number(spans[col.field]) : 0;
       const spanCount = Math.max(1, Math.min(requestedSpan || 1, cols.length - i));
       // Set the skip count now so every early-continue path below (gutter,
@@ -2087,12 +2089,18 @@ export default class GridController extends Controller {
     const pivot = !!(this.state.pivot?.mode && this._displayList?.pivot);
     const isAllRow = row.__pivotAll === true;
     // Inline mode: label goes in the grouped column's own cell (or first data col).
-    const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox && !c._isGroupCol);
+    const dataCols = cols.filter((c) => !c._isRowNumber && !c._isCheckbox && !c._isGroupCol && !c._isSpacer);
     const inlineLabelField = dataCols.some((c) => c.field === row.field) ? row.field : dataCols[0]?.field;
     // "(All)" pivot totals row: indent at level 0, no expand/collapse caret.
     const indentLevel = Math.max(0, row.level);
     if (isAllRow) tr.classList.add('sg-pivot-all-row');
     for (const col of cols) {
+      if (col._isSpacer) {
+        // Trailing spacer cell on group rows — empty, inert, no styling so the
+        // group-row background flows edge-to-edge.
+        tr.appendChild(el('td', { class: 'sg-spacer-cell', 'aria-hidden': 'true' }));
+        continue;
+      }
       const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
@@ -3357,6 +3365,17 @@ export default class GridController extends Controller {
   // ----- Helpers -----
 
   _visibleCols() {
+    const cols = this._visibleColsCore();
+    // Always append a synthetic spacer column at the very end. It absorbs any
+    // leftover horizontal space in the viewport so real columns render at their
+    // declared widths edge-to-edge, but is otherwise inert: empty content, not
+    // selectable, not editable, not resizable, not sortable, never persisted.
+    // Width is computed dynamically in _renderColgroup.
+    cols.push(this._spacerCol());
+    return cols;
+  }
+
+  _visibleColsCore() {
     const visible = this.state.columnDefs.filter((c) => !c.hidden);
     const groupFields = this.state.group?.cols || [];
 
@@ -3430,6 +3449,24 @@ export default class GridController extends Controller {
       sortable: false,
       filter: null,
       resizable: false,
+    };
+  }
+
+  // Synthetic trailing spacer column. Width is set by _renderColgroup to
+  // `viewport - sum(other widths)` (or 0 when columns already overflow), so
+  // the spacer absorbs leftover horizontal space without disturbing declared
+  // column widths. Marked with _isSpacer so every structural-flag check (cell
+  // selection, paste, CSV export, header chrome, …) can skip it.
+  _spacerCol() {
+    return {
+      field: '__spacer',
+      headerName: '',
+      _isSpacer: true,
+      width: 0,
+      sortable: false,
+      filter: null,
+      resizable: false,
+      editable: false,
     };
   }
 
