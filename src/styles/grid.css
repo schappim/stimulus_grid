@@ -4533,6 +4533,103 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-signature-by { color: #1f2937; font-weight: 500; }
 .sg-grid .sg-renderer-signature-when { font-variant-numeric: tabular-nums; }
+.sg-grid .sg-renderer-signature-cell { cursor: pointer; }
+
+/* Signature pad editor popover. */
+.sg-signature-editor {
+  z-index: 1000;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  padding: 0;
+  width: 408px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+  box-sizing: border-box;
+}
+.sg-signature-editor-header {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  font-weight: 600;
+  font-size: 12px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sg-signature-editor-canvas {
+  display: block;
+  margin: 14px auto 8px;
+  background: #fafafa;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  touch-action: none;       /* let the pad capture every drag */
+  cursor: crosshair;
+}
+.sg-signature-editor-by {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 8px;
+}
+.sg-signature-editor-by-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.sg-signature-editor-by-input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 0;
+}
+.sg-signature-editor-by-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.18);
+}
+.sg-signature-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid #f3f4f6;
+}
+.sg-signature-editor-clear {
+  margin-right: auto;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+}
+.sg-signature-editor-cancel,
+.sg-signature-editor-save {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.sg-signature-editor-cancel {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+.sg-signature-editor-save {
+  background: #2563eb;
+  color: #ffffff;
+}
+.sg-signature-editor-save:hover { background: #1d4ed8; }
 
 /* Job photo — thumb with Before / During / After badge corner. */
 .sg-grid .sg-renderer-job-photo { display: inline-block; }

@@ -9232,16 +9232,37 @@ export function jobPhoto({ width = 60, height = 60 } = {}) {
 
 /* ---------- signature ---------------------------------------------
  *
- * Customer sign-off image preview. Value: URL string, or
- * `{ url, signedBy, signedAt }`. Renders as a compact 80×32 thumbnail
- * with the signer's name + timestamp underneath (when supplied).
+ * Customer sign-off image preview + signature pad editor.
  *
- * Click the thumb to open the full image in a new tab (or wire your
- * own preview behaviour via `onClick`). */
-export function signature({ width = 80, height = 32 } = {}) {
-  return ({ value }) => {
+ *   value: URL string  | { url, signedBy?, signedAt? }   (image data URI works)
+ *
+ * Read mode: 80×32 thumbnail. Click → open the full image in a new tab.
+ *
+ * Edit mode (default on): double-click the cell → popover signature pad.
+ * Mouse + touch + stylus all draw; "Clear" wipes, "Save" trims to the
+ * inked bounds, downsamples to a PNG data URI, and commits via
+ * `grid:cellValueChanged`. The committed value has the same shape the
+ * cell came in with (string → string, object → object); the renderer
+ * preserves `signedBy` from the prior value and stamps `signedAt`
+ * with the current ISO date. */
+export function signature({ width = 80, height = 32, editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-signature-cell');
+      td._sgSignature = value;
+      if (editable && !td._sgSignatureEditBound) {
+        td._sgSignatureEditBound = true;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgSignatureHandled) return;
+          e._sgSignatureHandled = true;
+          e.stopPropagation();
+          openSignatureEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return h('span', { class: 'sg-renderer-signature is-empty' },
-      document.createTextNode('— unsigned —'));
+      document.createTextNode(editable ? 'dbl-click to sign' : '— unsigned —'));
     const v = typeof value === 'string' ? { url: value } : value;
     if (!v.url) return '';
     const wrap = h('span', { class: 'sg-renderer-signature' });
@@ -9270,6 +9291,176 @@ export function signature({ width = 80, height = 32 } = {}) {
     }
     return wrap;
   };
+}
+
+let activeSignatureEditor = null;
+function closeSignatureEditor() {
+  if (!activeSignatureEditor) return;
+  const { pop, onKey, onDocClick } = activeSignatureEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeSignatureEditor = null;
+}
+
+function openSignatureEditor(anchor, ctx) {
+  closeSignatureEditor();
+  const prior = anchor._sgSignature;
+  const wasObj = prior && typeof prior === 'object';
+  const startBy = wasObj ? (prior.signedBy || '') : '';
+
+  // Popover scaffold.
+  const pop = h('div', { class: 'sg-signature-editor', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const header = h('div', { class: 'sg-signature-editor-header' },
+    document.createTextNode('Sign here'));
+
+  // Drawing surface — render at 2× CSS pixels for crisp output on HiDPI.
+  const CSS_W = 380, CSS_H = 140;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const canvas = h('canvas', {
+    class: 'sg-signature-editor-canvas',
+    width: CSS_W * DPR, height: CSS_H * DPR,
+    style: `width:${CSS_W}px;height:${CSS_H}px;`,
+  });
+  const ctx2d = canvas.getContext('2d');
+  ctx2d.scale(DPR, DPR);
+  ctx2d.lineWidth = 2;
+  ctx2d.lineCap = 'round';
+  ctx2d.lineJoin = 'round';
+  ctx2d.strokeStyle = '#111827';
+
+  let drawing = false, lastX = 0, lastY = 0, inked = false;
+  function coords(e) {
+    const r = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return [p.clientX - r.left, p.clientY - r.top];
+  }
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    [lastX, lastY] = coords(e);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const [x, y] = coords(e);
+    ctx2d.beginPath();
+    ctx2d.moveTo(lastX, lastY);
+    ctx2d.lineTo(x, y);
+    ctx2d.stroke();
+    lastX = x; lastY = y;
+    inked = true;
+  }
+  function end() { drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+
+  // Signed-by row.
+  const byWrap = h('label', { class: 'sg-signature-editor-by' });
+  byWrap.append(h('span', { class: 'sg-signature-editor-by-label' },
+    document.createTextNode('Signed by')));
+  const byInput = h('input', { type: 'text', value: startBy,
+    placeholder: 'Customer name',
+    class: 'sg-signature-editor-by-input' });
+  byWrap.append(byInput);
+
+  // Footer.
+  const footer = h('div', { class: 'sg-signature-editor-footer' });
+  const clear = h('button', { type: 'button', class: 'sg-signature-editor-clear' },
+    document.createTextNode('Clear'));
+  const cancel = h('button', { type: 'button', class: 'sg-signature-editor-cancel' },
+    document.createTextNode('Cancel'));
+  const save = h('button', { type: 'button', class: 'sg-signature-editor-save' },
+    document.createTextNode('Save'));
+  footer.append(clear, cancel, save);
+
+  pop.append(header, canvas, byWrap, footer);
+
+  clear.addEventListener('click', () => {
+    ctx2d.clearRect(0, 0, CSS_W, CSS_H);
+    inked = false;
+  });
+  cancel.addEventListener('click', () => closeSignatureEditor());
+
+  function commit() {
+    if (!inked) {                       // empty pad → store null
+      commitSignature(anchor, ctx, null);
+      closeSignatureEditor();
+      return;
+    }
+    // Trim to inked bounds so the saved image is tight.
+    const trimmed = trimSignatureCanvas(canvas, DPR);
+    const url = trimmed.toDataURL('image/png');
+    // Preserve prior shape: string in → string out; object in → object out.
+    const signedBy = byInput.value.trim() || (wasObj ? prior.signedBy || '' : '');
+    const next = (typeof prior === 'string' || prior == null) && !signedBy
+      ? url
+      : { url, signedBy: signedBy || null, signedAt: new Date().toISOString().slice(0, 10) };
+    commitSignature(anchor, ctx, next);
+    closeSignatureEditor();
+  }
+  save.addEventListener('click', commit);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeSignatureEditor(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commit(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeSignatureEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeSignatureEditor = { pop, onKey, onDocClick };
+}
+
+function trimSignatureCanvas(source, dpr) {
+  // Scan pixel alpha to find the bounding box, then copy into a new canvas
+  // sized to that box (+ small padding) so saved PNGs don't carry a sea of
+  // transparent pixels around a tiny squiggle.
+  const w = source.width, h = source.height;
+  const data = source.getContext('2d').getImageData(0, 0, w, h).data;
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX) return source;       // empty pad — return as-is
+  const pad = 4 * dpr;
+  minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+  maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+  const tw = maxX - minX + 1, th = maxY - minY + 1;
+  const out = document.createElement('canvas');
+  out.width = tw; out.height = th;
+  out.getContext('2d').drawImage(source, minX, minY, tw, th, 0, 0, tw, th);
+  return out;
+}
+
+function commitSignature(td, ctx, next) {
+  const { row, col, api } = ctx;
+  const oldValue = row && col?.field != null ? row[col.field] : null;
+  if (row && col?.field != null) row[col.field] = next;
+  td._sgSignature = next;
+  if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+  const grid = td.closest('[data-controller~="grid"]');
+  if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+    bubbles: true,
+    detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+  }));
 }
 
 /* ---------- defect / snag -----------------------------------------

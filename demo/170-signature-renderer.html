@@ -18,12 +18,19 @@
 </head>
 <body>
   <p class="crumbs"><a href="./">← demos</a></p>
-  <h1>170 — Signature (customer sign-off preview)</h1>
+  <h1>170 — Signature (customer sign-off + pad editor)</h1>
   <p class="lede">
     Inline signature thumbnail — 80×32 by default, click to open full
-    image. Optional <code>signedBy</code> / <code>signedAt</code> render
-    as a two-line meta block on the right.
+    image. <strong>Double-click the cell</strong> to open the signature
+    pad (mouse / touch / stylus all draw). Save commits via
+    <code>grid:cellValueChanged</code>; the image is auto-trimmed to the
+    inked bounds and stamped with <code>signedAt</code> (today's date).
   </p>
+
+  <div class="tip">
+    Cmd/Ctrl+Enter saves from inside the pad. Esc cancels. Empty pad
+    saves <code>null</code>.
+  </div>
 
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
     <table>
@@ -35,7 +42,8 @@
               data-header-cell-width-value="180">Customer</th>
           <th data-controller="header-cell" data-header-cell-field-value="sig"
               data-header-cell-cell-renderer-value="signature"
-              data-header-cell-width-value="260">Signature</th>
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Signature</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -62,6 +70,7 @@
     ];
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('signature change:', e.detail));
   </script>
 </body>
 </html>
