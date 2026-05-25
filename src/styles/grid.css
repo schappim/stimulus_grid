@@ -1009,6 +1009,14 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   white-space: nowrap;
 }
 
+/* Sparkline — mini SVG line/area/bar chart. The SVG sets its own width
+   + height inline, so nothing here is required for layout; this just
+   keeps it baseline-aligned with adjacent cell text. */
+.sg-grid .sg-renderer-sparkline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

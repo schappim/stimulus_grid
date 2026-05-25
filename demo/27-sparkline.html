@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>27 — Sparkline | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>27 — Sparkline</h1>
+  <p class="lede">
+    Mini SVG line / area / bar chart per row, fed from a numeric array
+    cell value. Auto-scales the y-axis to <code>[min, max]</code> across
+    the data (or pass <code>baseline: 0</code> to lock the minimum at
+    zero — better for "did we go up from nothing?" stories). Pure SVG,
+    no library, ~40 lines of renderer code.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="metric"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="200">Metric</th>
+          <th data-controller="header-cell" data-header-cell-field-value="current"
+              data-header-cell-cell-renderer-value="compact-number"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="100">Now</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trend"
+              data-header-cell-cell-renderer-value="sparkline"
+              data-header-cell-width-value="120">Trend (30d)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trend_area"
+              data-header-cell-cell-renderer-value="spark-area"
+              data-header-cell-width-value="120">Area</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trend_bar"
+              data-header-cell-cell-renderer-value="spark-bar"
+              data-header-cell-width-value="120">Bar (weekly)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trend_red"
+              data-header-cell-cell-renderer-value="spark-red"
+              data-header-cell-width-value="120">Errors</th>
+          <th data-controller="header-cell" data-header-cell-field-value="delta_pct"
+              data-header-cell-cell-renderer-value="delta"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="100">vs prev.</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Variants:</strong> the <em>Area</em> column is
+    <code>sparkline({ type: 'area' })</code>, <em>Bar</em> is
+    <code>sparkline({ type: 'bar', baseline: 0 })</code>, <em>Errors</em>
+    is <code>sparkline({ color: 'red', type: 'area' })</code>. Pass any
+    palette key (<code>blue</code>, <code>green</code>, <code>red</code>,
+    <code>orange</code>, <code>purple</code>, <code>pink</code>,
+    <code>gray</code>) or a raw CSS colour. The cell value is just an
+    array of numbers — pre-aggregated server-side, or sliced from a
+    longer time series client-side.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('spark-area', renderers.sparkline({ type: 'area' }));
+    registerRenderer('spark-bar',  renderers.sparkline({ type: 'bar', baseline: 0 }));
+    registerRenderer('spark-red',  renderers.sparkline({ type: 'area', color: 'red' }));
+
+    // Deterministic-ish sample series so the screenshot is stable.
+    const series = (n, seed, amplitude, base) => {
+      const out = [];
+      let s = seed;
+      for (let i = 0; i < n; i++) {
+        s = (s * 9301 + 49297) % 233280;
+        out.push(Math.round(base + Math.sin(i / 3 + seed / 1000) * amplitude + (s / 233280) * amplitude * 0.4));
+      }
+      return out;
+    };
+
+    const ROWS = [
+      { id: 1, metric: 'Active users',     current: 18420,  trend: series(30, 12, 800, 17000),  trend_area: series(30, 12, 800, 17000),
+        trend_bar: series(8, 12, 800, 17000), trend_red: series(30, 7, 6, 12),  delta_pct: 4.2 },
+      { id: 2, metric: 'MRR',              current: 184000, trend: series(30, 88, 6000, 170000), trend_area: series(30, 88, 6000, 170000),
+        trend_bar: series(8, 88, 6000, 170000), trend_red: series(30, 33, 4, 8), delta_pct: 2.4 },
+      { id: 3, metric: 'Trial signups',    current: 1380,   trend: series(30, 240, 120, 1100),   trend_area: series(30, 240, 120, 1100),
+        trend_bar: series(8, 240, 120, 1100), trend_red: series(30, 99, 3, 5),   delta_pct: 12.8 },
+      { id: 4, metric: 'Conversion %',     current: 4.2,    trend: series(30, 5, 1.1, 4.0),     trend_area: series(30, 5, 1.1, 4.0),
+        trend_bar: series(8, 5, 1.1, 4.0),  trend_red: series(30, 14, 8, 14),   delta_pct: -0.6 },
+      { id: 5, metric: 'Error rate',       current: 0.04,   trend: series(30, 18, 3, 8),         trend_area: series(30, 18, 3, 8),
+        trend_bar: series(8, 18, 3, 8),    trend_red: series(30, 1, 30, 40),    delta_pct: -23.0 },
+      { id: 6, metric: 'Avg response (ms)', current: 142,   trend: series(30, 320, 22, 140),    trend_area: series(30, 320, 22, 140),
+        trend_bar: series(8, 320, 22, 140), trend_red: series(30, 41, 18, 30),  delta_pct: -0.4 },
+      { id: 7, metric: 'Self-serve cancels', current: 92,   trend: series(30, 77, 18, 95),     trend_area: series(30, 77, 18, 95),
+        trend_bar: series(8, 77, 18, 95),   trend_red: series(30, 51, 22, 55),  delta_pct: -8.0 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

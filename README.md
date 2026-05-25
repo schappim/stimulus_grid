@@ -266,6 +266,7 @@ without conflict.
 | `copyable` | IDs / tokens / handles | Value + tiny copy-to-clipboard button (visible on row hover); flips to a check mark briefly on copy |
 | `image` | thumbnails | Inline thumbnail (`loading="lazy"`, `decoding="async"`); `size`, `rounded: 'sm'/'lg'/'full'/'none'`, optional `clickToZoom` overlay (closes on click or Escape) |
 | `color-swatch` | colours / theme tokens | Coloured chip + label; accepts any CSS colour value (hex, `rgb()`, `hsl()`, `oklch()`, named); `shape: 'circle'/'square'`, `label: 'value'/'name'/fn`, `showLabel: false` for chip-only |
+| `sparkline` | numeric arrays / trends | Mini SVG `line` / `area` / `bar` chart per row; auto-scales y, or pass `baseline: 0`; configurable colour from a 7-key palette or any CSS colour; pure SVG, no library |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

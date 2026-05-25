@@ -565,6 +565,91 @@ export function colorSwatch({
   };
 }
 
+/* ---------- sparkline ----------------------------------------------- */
+
+// Mini SVG line / area / bar chart from a numeric array. Auto-scales the
+// y-axis to [min, max] across the values (or pass `baseline: 0` to lock
+// the min at zero — better for "did we go up from nothing?" stories).
+// Pure SVG with sensible defaults: 80×24, soft stroke + transparent
+// fill for `line`; filled wash under the stroke for `area`; even-width
+// bars for `bar`. Last point gets a small dot. Width / height / colour
+// configurable.
+const SPARK_COLORS = {
+  blue:   '#3b82f6',
+  green:  '#10b981',
+  red:    '#ef4444',
+  orange: '#f97316',
+  purple: '#8b5cf6',
+  pink:   '#ec4899',
+  gray:   '#6b7280',
+};
+
+export function sparkline({
+  type = 'line',                    // 'line' | 'area' | 'bar'
+  width = 80,
+  height = 24,
+  color = 'blue',                   // palette key OR raw CSS colour
+  baseline = null,                  // null = auto-min, 0 = lock min at zero, N = lock at N
+  showLast = true,                  // small dot on the last point (line / area only)
+} = {}) {
+  const stroke = SPARK_COLORS[color] || color;
+  return ({ value }) => {
+    if (!Array.isArray(value) || value.length === 0) return '';
+    const data = value.map(Number).filter((n) => Number.isFinite(n));
+    if (data.length === 0) return '';
+
+    const minVal = baseline != null ? baseline : Math.min(...data);
+    const maxVal = Math.max(...data, baseline != null ? baseline : -Infinity);
+    const range = (maxVal - minVal) || 1;             // avoid divide-by-zero on flatlines
+
+    // Inset by a couple of pixels on every side so stroke ends + dot
+    // edges don't clip against the viewBox.
+    const padX = 1.5, padY = 2.5;
+    const w = width  - padX * 2;
+    const ph = height - padY * 2;
+    const xAt = (i) => padX + (data.length === 1 ? w / 2 : (i / (data.length - 1)) * w);
+    const yAt = (v) => padY + ph - ((v - minVal) / range) * ph;
+
+    let inner = '';
+    if (type === 'bar') {
+      const barGap = 1;
+      const barW = Math.max(1, (w - (data.length - 1) * barGap) / data.length);
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i];
+        const x = padX + i * (barW + barGap);
+        const y = yAt(v);
+        const bh = padY + ph - y;
+        inner += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${bh.toFixed(2)}" fill="${stroke}"/>`;
+      }
+    } else {
+      let path = '';
+      for (let i = 0; i < data.length; i++) {
+        path += `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(data[i]).toFixed(2)} `;
+      }
+      if (type === 'area') {
+        const areaPath = path
+          + ` L ${xAt(data.length - 1).toFixed(2)} ${(padY + ph).toFixed(2)}`
+          + ` L ${xAt(0).toFixed(2)} ${(padY + ph).toFixed(2)} Z`;
+        inner += `<path d="${areaPath}" fill="${stroke}" fill-opacity="0.18" stroke="none"/>`;
+      }
+      inner += `<path d="${path.trim()}" fill="none" stroke="${stroke}" stroke-width="1.4"`
+            +  ` stroke-linecap="round" stroke-linejoin="round"/>`;
+      if (showLast) {
+        const lx = xAt(data.length - 1);
+        const ly = yAt(data[data.length - 1]);
+        inner += `<circle cx="${lx.toFixed(2)}" cy="${ly.toFixed(2)}" r="1.8" fill="${stroke}"/>`;
+      }
+    }
+    // Return the SVG as an HTML string so the grid sets it via innerHTML
+    // on the cell — keeps the SVG in the correct namespace without us
+    // having to fiddle with document.createElementNS.
+    return `<svg class="sg-renderer-sparkline is-${type}" viewBox="0 0 ${width} ${height}"`
+         + ` width="${width}" height="${height}" preserveAspectRatio="none" aria-hidden="true">`
+         + inner
+         + `</svg>`;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -848,6 +933,7 @@ registerRenderer('truncate',       truncate());
 registerRenderer('copyable',       copyable());
 registerRenderer('image',          image());
 registerRenderer('color-swatch',   colorSwatch());
+registerRenderer('sparkline',      sparkline());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -855,5 +941,5 @@ export const renderers = {
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
   boolean, delta,
-  truncate, copyable, image, colorSwatch,
+  truncate, copyable, image, colorSwatch, sparkline,
 };
