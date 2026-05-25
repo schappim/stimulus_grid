@@ -4681,6 +4681,7 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-weight: 700;
   opacity: 0.9;
 }
+.sg-grid .sg-renderer-payment-terms-cell { cursor: pointer; }
 
 /* Retention — $ + release-date countdown. */
 .sg-grid .sg-renderer-retention {

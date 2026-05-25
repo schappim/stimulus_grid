@@ -9251,9 +9251,30 @@ export function invoiceStatus() {
  * the pill colour to red.
  *
  *   value: 'net 30' | 'cod' | 'eom' | …
- *        | { terms: 'net 30', dueDate: '2026-06-15' } */
-export function paymentTerms() {
-  return ({ value }) => {
+ *        | { terms: 'net 30', dueDate: '2026-06-15' }
+ *
+ * Double-click opens a two-field popover (terms select + due-date
+ * picker) and commits via `grid:cellValueChanged`. Plain-string values
+ * stay strings on save (unless a due date is added). */
+const PAYMENT_TERMS_OPTIONS = [
+  'COD', 'Prepaid', 'Net 7', 'Net 14', 'Net 30', 'Net 45', 'Net 60', 'EOM',
+];
+export function paymentTerms({ editable = true } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-payment-terms-cell');
+      td._sgPaymentTerms = value;
+      if (editable && !td._sgPaymentTermsBound) {
+        td._sgPaymentTermsBound = true;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgPaymentTermsHandled) return;
+          e._sgPaymentTermsHandled = true;
+          e.stopPropagation();
+          openPaymentTermsEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
     let terms, dueDate = null;
     if (typeof value === 'object') { terms = value.terms || ''; dueDate = value.dueDate || null; }
@@ -9276,6 +9297,106 @@ export function paymentTerms() {
     }
     return pill;
   };
+}
+
+let activePaymentTermsEditor = null;
+function closePaymentTermsEditor() {
+  if (!activePaymentTermsEditor) return;
+  const { pop, onKey, onDocClick } = activePaymentTermsEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activePaymentTermsEditor = null;
+}
+
+function openPaymentTermsEditor(anchor, ctx) {
+  closePaymentTermsEditor();
+  const prior = anchor._sgPaymentTerms;
+  const wasObj = prior && typeof prior === 'object';
+  const startTerms = wasObj ? (prior.terms || '') : (typeof prior === 'string' ? prior : '');
+  const startDue = wasObj ? (prior.dueDate || '') : '';
+
+  const pop = h('div', { class: 'sg-licence-editor', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+  pop.append(h('div', { class: 'sg-licence-editor-header' },
+    document.createTextNode('Payment terms')));
+
+  const form = h('form', { class: 'sg-licence-editor-form', novalidate: 'novalidate' });
+  const grid = h('div', { class: 'sg-licence-editor-grid' });
+
+  // Terms select
+  const termsWrap = h('label', { class: 'sg-licence-editor-field', 'data-field': 'terms' });
+  termsWrap.append(h('span', { class: 'sg-licence-editor-label' },
+    document.createTextNode('Terms')));
+  const termsSel = h('select', { class: 'sg-licence-editor-input' });
+  for (const t of PAYMENT_TERMS_OPTIONS) {
+    const k = t.toLowerCase().trim();
+    const startK = String(startTerms).toLowerCase().trim();
+    termsSel.append(h('option', { value: t, selected: startK === k ? '' : null },
+      document.createTextNode(t)));
+  }
+  termsWrap.append(termsSel);
+
+  // Due date input
+  const dueWrap = h('label', { class: 'sg-licence-editor-field', 'data-field': 'dueDate' });
+  dueWrap.append(h('span', { class: 'sg-licence-editor-label' },
+    document.createTextNode('Due date')));
+  const dueInput = h('input', { type: 'date', class: 'sg-licence-editor-input',
+    value: startDue ? String(startDue).slice(0, 10) : '' });
+  dueWrap.append(dueInput);
+
+  grid.append(termsWrap, dueWrap);
+
+  const footer = h('div', { class: 'sg-licence-editor-footer' });
+  const cancel = h('button', { type: 'button', class: 'sg-licence-editor-cancel' },
+    document.createTextNode('Cancel'));
+  const save = h('button', { type: 'submit', class: 'sg-licence-editor-save' },
+    document.createTextNode('Save'));
+  footer.append(cancel, save);
+
+  form.append(grid, footer);
+  pop.append(form);
+
+  function commit() {
+    const t = termsSel.value;
+    const d = dueInput.value || null;
+    // Preserve shape: if input was a plain string AND there's no due
+    // date, keep it a string. Otherwise emit the object form.
+    const next = (typeof prior === 'string' || prior == null) && !d
+      ? t
+      : { terms: t, dueDate: d };
+    commitPaymentTerms(anchor, ctx, next);
+    closePaymentTermsEditor();
+  }
+  form.addEventListener('submit', (e) => { e.preventDefault(); commit(); });
+  cancel.addEventListener('click', () => closePaymentTermsEditor());
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closePaymentTermsEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closePaymentTermsEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  termsSel.focus();
+  activePaymentTermsEditor = { pop, onKey, onDocClick };
+}
+
+function commitPaymentTerms(td, ctx, next) {
+  const { row, col, api } = ctx;
+  const oldValue = row && col?.field != null ? row[col.field] : null;
+  if (row && col?.field != null) row[col.field] = next;
+  td._sgPaymentTerms = next;
+  if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+  const grid = td.closest('[data-controller~="grid"]');
+  if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+    bubbles: true,
+    detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+  }));
 }
 
 /* ---------- callout-fee -------------------------------------------
