@@ -9313,7 +9313,8 @@ const FUEL_CARD_BADGES = {
   motorpass:{ bg: '#0f172a', fg: '#ffffff', short: 'Motorpass' },
 };
 export function fuelCard() {
-  return ({ value }) => {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-fuel-card-cell');
     if (isBlank(value)) return '';
     const v = typeof value === 'object' ? value : { number: String(value) };
     const wrap = h('span', { class: 'sg-renderer-fuel-card' });

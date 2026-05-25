@@ -4922,6 +4922,8 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   letter-spacing: 0.02em;
 }
 .sg-grid .sg-renderer-fuel-card-number { color: #1f2937; }
+.sg-grid .sg-renderer-fuel-card-cell { text-align: right; }
+.sg-grid .sg-renderer-fuel-card-cell .sg-renderer-fuel-card { justify-content: flex-end; }
 
 /* Odometer — tabular number + unit suffix. */
 .sg-grid .sg-renderer-odometer {

@@ -7030,21 +7030,21 @@ const un = {
   motorpass: { bg: "#0f172a", fg: "#ffffff", short: "Motorpass" }
 };
 function Yi() {
-  return ({ value: t }) => {
-    if (C(t)) return "";
-    const s = typeof t == "object" ? t : { number: String(t) }, e = d("span", { class: "sg-renderer-fuel-card" });
-    if (s.provider) {
-      const n = String(s.provider).toLowerCase().replace(/[^a-z0-9]+/g, ""), r = Object.keys(un).find((o) => n.startsWith(o.replace(/-/g, ""))) || null, i = r ? un[r] : { bg: "#6b7280", fg: "#ffffff", short: s.provider };
-      e.append(d("span", {
+  return ({ value: t, td: s }) => {
+    if (s && s.classList.add("sg-renderer-fuel-card-cell"), C(t)) return "";
+    const e = typeof t == "object" ? t : { number: String(t) }, n = d("span", { class: "sg-renderer-fuel-card" });
+    if (e.provider) {
+      const r = String(e.provider).toLowerCase().replace(/[^a-z0-9]+/g, ""), i = Object.keys(un).find((a) => r.startsWith(a.replace(/-/g, ""))) || null, o = i ? un[i] : { bg: "#6b7280", fg: "#ffffff", short: e.provider };
+      n.append(d("span", {
         class: "sg-renderer-fuel-card-badge",
-        style: `background:${i.bg};color:${i.fg};`
-      }, document.createTextNode(i.short)));
+        style: `background:${o.bg};color:${o.fg};`
+      }, document.createTextNode(o.short)));
     }
-    return s.number && e.append(d(
+    return e.number && n.append(d(
       "span",
       { class: "sg-renderer-fuel-card-number sg-renderer-mono" },
-      document.createTextNode(String(s.number))
-    )), e;
+      document.createTextNode(String(e.number))
+    )), n;
   };
 }
 function Zi() {
