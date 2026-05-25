@@ -6,7 +6,7 @@ module StimulusGridRails
   # Created via the `column` DSL inside an ApplicationGrid subclass; not
   # instantiated directly. See StimulusGridRails::Grid for usage.
   class Column
-    TYPES = %i[string text integer bigint decimal money boolean enum date datetime reference].freeze
+    TYPES = %i[string text integer bigint decimal money boolean enum date datetime reference attachments].freeze
 
     attr_reader :name, :type, :editor, :editor_config, :enum_values, :concurrency,
                 :depends_on, :validators, :header, :width, :pinned, :cell_renderer,
@@ -214,6 +214,7 @@ module StimulusGridRails
       when :enum                      then "select"
       when :date                      then "date"
       when :datetime                  then "datetime-local"
+      when :attachments               then "attachments"  # handled in-renderer popover
       else "text"
       end
     end

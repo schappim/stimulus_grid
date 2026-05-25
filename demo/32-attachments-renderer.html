@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>32 — Attachments renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .tip ul { margin: 6px 0 0 18px; padding: 0; }
+    .tip li { margin: 3px 0; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>32 — Attachments renderer</h1>
+  <p class="lede">
+    Airtable-style attachments cell. The value is an array of
+    <code>{ id, filename, url, content_type, byte_size, thumb_url? }</code>
+    objects. Image attachments render as inline thumbnails; non-images
+    render as kind-tinted file icons. Click an image to open a
+    keyboard-navigable lightbox carousel; click a file to open it in a
+    new tab.
+  </p>
+
+  <p class="lede">
+    The editable column on the right opens an attachment editor popover
+    on double-click (or via the <strong>+</strong> button): drag files
+    onto the cell, paste from the clipboard, or browse — existing
+    attachments get an × remove button. Up to N thumbnails show inline;
+    overflow collapses into a <code>+N</code> chip that opens the
+    lightbox.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="56"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="220">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="owner"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="140">Owner</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="100">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="files"
+              data-header-cell-cell-renderer-value="attachments"
+              data-header-cell-width-value="240">Files (read-only)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="uploads"
+              data-header-cell-cell-renderer-value="attachments-editable"
+              data-header-cell-width-value="300">Uploads (editable)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong>
+    <ul>
+      <li>Click any image thumbnail in the <em>Files</em> column → carousel opens; use ← / → to step through, Esc to close.</li>
+      <li>Click a PDF / doc icon → opens in a new tab.</li>
+      <li><strong>Double-click</strong> a cell in <em>Uploads</em>, or click the dashed <strong>+</strong> button → editor popover opens.</li>
+      <li>Drag a file from your desktop onto an <em>Uploads</em> cell, or paste an image after focusing the dropzone.</li>
+      <li>Click × on any tile in the editor to remove that attachment.</li>
+    </ul>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // Editable variant — the renderer's `editable: true` enables the
+    // dblclick editor + drag-drop on the cell. Without onUpload/onRemove
+    // callbacks it falls back to local-only object URLs (good for demos;
+    // for persistence pass callbacks that PATCH your server).
+    registerRenderer('attachments-editable', renderers.attachments({
+      editable: true,
+      thumbSize: 32,
+      maxThumbs: 5,
+    }));
+
+    // SVG data URIs so the screenshot works fully offline. In a real
+    // app these would be ActiveStorage variants / S3 CDN paths.
+    const swatch = (bg, fg, label) =>
+      `data:image/svg+xml;utf8,` + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+           <rect width="200" height="200" fill="${bg}"/>
+           <text x="100" y="118" font-family="system-ui" font-size="72" font-weight="700"
+                 fill="${fg}" text-anchor="middle">${label}</text>
+         </svg>`);
+
+    const att = (id, filename, kind, opts = {}) => {
+      const types = {
+        png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif',
+        pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        zip: 'application/zip', mp4: 'video/mp4', mp3: 'audio/mpeg',
+        json: 'application/json', csv: 'text/csv',
+      };
+      const ext = filename.split('.').pop().toLowerCase();
+      return {
+        id, filename,
+        content_type: types[ext] || 'application/octet-stream',
+        byte_size: opts.byte_size || 12345,
+        url: opts.url || '#',
+        thumb_url: opts.thumb_url || (kind === 'image' ? opts.url : null),
+      };
+    };
+
+    const ROWS = [
+      { id: 1, task: 'Brand refresh — phase 1', owner: 'Marcus Chen', status: 'In review',
+        files: [
+          att('a1', 'logo-mark.png', 'image', { url: swatch('#1e3a8a', '#fff', 'L'), byte_size: 24_400 }),
+          att('a2', 'palette.png', 'image', { url: swatch('#fef3c7', '#92400e', 'P'), byte_size: 18_120 }),
+          att('a3', 'brand-guidelines.pdf', 'file', { byte_size: 1_234_000 }),
+        ],
+        uploads: [
+          att('u1', 'storyboard-v3.png', 'image', { url: swatch('#fce7f3', '#831843', 'S'), byte_size: 144_000 }),
+          att('u2', 'notes.docx', 'file', { byte_size: 56_200 }),
+        ],
+      },
+      { id: 2, task: 'Q3 reporting pack', owner: 'Priya Patel', status: 'In progress',
+        files: [
+          att('a4', 'revenue.xlsx', 'file', { byte_size: 88_900 }),
+          att('a5', 'cohorts.csv', 'file', { byte_size: 14_500 }),
+          att('a6', 'chart-1.png', 'image', { url: swatch('#dcfce7', '#14532d', '↗'), byte_size: 22_000 }),
+          att('a7', 'chart-2.png', 'image', { url: swatch('#fef9c3', '#713f12', 'σ'), byte_size: 30_400 }),
+          att('a8', 'chart-3.png', 'image', { url: swatch('#fee2e2', '#7f1d1d', '↘'), byte_size: 18_900 }),
+          att('a9', 'narrative.docx', 'file', { byte_size: 102_000 }),
+        ],
+        uploads: [],
+      },
+      { id: 3, task: 'Holiday campaign assets', owner: 'Tomás Vega', status: 'Done',
+        files: [
+          att('b1', 'hero-1.jpg', 'image', { url: swatch('#fef3c7', '#7c2d12', '★'), byte_size: 240_000 }),
+          att('b2', 'hero-2.jpg', 'image', { url: swatch('#fce7f3', '#831843', '♥'), byte_size: 198_000 }),
+          att('b3', 'hero-3.jpg', 'image', { url: swatch('#dbeafe', '#1e3a8a', '✦'), byte_size: 220_000 }),
+          att('b4', 'launch.mp4', 'file', { byte_size: 14_800_000 }),
+          att('b5', 'audio-bed.mp3', 'file', { byte_size: 3_200_000 }),
+        ],
+        uploads: [
+          att('u3', 'screenshot.png', 'image', { url: swatch('#e0e7ff', '#312e81', 'UI'), byte_size: 64_400 }),
+        ],
+      },
+      { id: 4, task: 'Customer onboarding deck', owner: 'Astrid Hale', status: 'Draft',
+        files: [
+          att('c1', 'deck-v2.pdf', 'file', { byte_size: 4_400_000 }),
+        ],
+        uploads: [],
+      },
+      { id: 5, task: 'Engineering RFC — search', owner: 'Lena Brooks', status: 'In review',
+        files: [
+          att('d1', 'rfc-search-v4.pdf', 'file', { byte_size: 220_000 }),
+          att('d2', 'benchmarks.json', 'file', { byte_size: 5_100 }),
+          att('d3', 'profile.png', 'image', { url: swatch('#dcfce7', '#14532d', 'B'), byte_size: 60_800 }),
+        ],
+        uploads: [],
+      },
+      { id: 6, task: 'Conference booth — sketches', owner: 'Jamal Owens', status: 'Backlog',
+        files: [],
+        uploads: [],
+      },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

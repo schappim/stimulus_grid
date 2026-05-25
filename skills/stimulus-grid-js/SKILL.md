@@ -81,7 +81,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`) ·
 `data-grid-persist-key-value` (default `""`; when set, the grid auto-saves/restores its layout to `localStorage["sgrid:" + persistKey]`) ·
 `data-grid-master-detail-value` (default `false` — enable expandable detail rows) · `data-grid-detail-template-value` (id of a `<template>` cloned into each detail panel) · `data-grid-detail-rows-key-value` (master-row field holding nested rows; auto-seeds an inner `[data-controller="grid"]` inside the template) · `data-grid-detail-row-height-value` (minimum panel height in px, default `240`) ·
-`data-grid-tree-data-value` (default `false` — treat `rowData` as a self-referential `parent_id` tree) · `data-grid-tree-parent-field-value` (default `"parent_id"`) · `data-grid-tree-display-field-value` (which column hosts the indent + chevron; default first non-gutter col) · `data-grid-tree-default-expanded-value` (`-1` all · `0` only roots · `N` first-N levels).
+`data-grid-tree-data-value` (default `false` — treat `rowData` as a self-referential `parent_id` tree) · `data-grid-tree-parent-field-value` (default `"parent_id"`) · `data-grid-tree-display-field-value` (which column hosts the indent + chevron; default first non-gutter col) · `data-grid-tree-default-expanded-value` (`-1` all · `0` only roots · `N` first-N levels) ·
+`data-grid-accept-files-value` (default `false` — when `true`, every data cell becomes a file drop target and dispatches a cancellable `grid:fileAttached` event; if no listener calls `preventDefault()`, file metadata is appended to `row[attachmentsField]`) · `data-grid-attachments-field-value` (which field collects appended file metadata; default is the drop-target's own column).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -91,7 +92,11 @@ Each row needs a stable id. Default field is `id`; override with
 `-width-value` / `-min-width-value` / `-max-width-value` ·
 `-pinned-value` (`left`|`right`) · `-hidden-value` · `-resizable-value` ·
 `-cell-renderer-value` (template id) · `-cell-editor-value` (template id) ·
-`-checkbox-value` (renders a selection checkbox column).
+`-checkbox-value` (renders a selection checkbox column) ·
+`-accept-files-value` (`"true"`|`"false"` — per-column opt-in/opt-out of the grid-wide drag-to-attach behaviour).
+
+Numeric headers (`type="number"`) auto-right-align via a `data-type="number"`
+attribute the grid sets on the `<th>`; values right-align as before.
 
 ## gridApi (on `element.gridApi`, ready after `grid:ready`)
 
@@ -144,7 +149,11 @@ status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:detailRowExpanded`/`grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
 `grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`) ·
 `grid:treeRowExpanded`/`grid:treeRowCollapsed` (`{rowId, row}`) ·
-`grid:treeDataChanged` (`{treeData}`).
+`grid:treeDataChanged` (`{treeData}`) ·
+`grid:fileAttached` (`{rowId, colId, files, row, dataTransfer}` — cancellable;
+fires when files are dropped on a cell while `accept-files` is on. Call
+`preventDefault()` to take over persistence; otherwise the grid appends
+`{filename, byte_size, content_type, url}` entries to `row[attachmentsField]`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -209,6 +218,7 @@ ship pre-registered:
 | `mask` | Mask sensitive data — format presets `cc-last4`, `cc-bin-last4`, `phone-last4`, `email`, `last4`, or generic `{ showFirst, showLast, char }`; groups right-aligned so the visible last-N always sits as a clean trailing block (Amex-friendly); numeric formats auto-right-align in monospace |
 | `highlight` | Wraps matches of the grid's active `quickFilter` in `<mark>` tags — case-insensitive by default; pass `{ query }` for a fixed search term |
 | `multi-line` | Preserves `\n` newlines + optional `{ lines: N }` clamp; bump `data-grid-row-height-value` to fit |
+| `attachments` | Airtable-style file strip: image thumbs + kind-tinted icons for PDFs/docs/audio/video/zips; click an image → lightbox carousel (← / → / Esc); click a file → opens in a new tab. `editable: true` enables a popover editor (dblclick or `+` button) with drag-drop, paste, and per-tile × remove; supply `onUpload(files, ctx)` / `onRemove(att, ctx)` to persist to your server. Value shape: `[{ id, filename, url, content_type, byte_size, thumb_url? }]` |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the
@@ -570,6 +580,89 @@ api.getTreeExpandedRowIds()
   assume a flat dataset.
 - Events: `grid:treeRowExpanded`/`grid:treeRowCollapsed`
   (`{rowId, row}`), `grid:treeDataChanged` (`{treeData}`).
+
+## Separators & merged cells (quote/invoice/report layouts)
+
+Two structural primitives let one grid render a real-world tax invoice or
+quote without forking into a separate document component.
+
+**Separator rows** — any `rowData` entry carrying `__sgSeparator: true`.
+The shape decides the variant:
+
+```js
+{ __sgSeparator: true }                                      // blank spacer
+{ __sgSeparator: true, variant: 'divider' }                  // thin ruled line
+{ __sgSeparator: true, label: 'Professional services' }      // section heading
+{ __sgSeparator: true, label: 'Subtotal', value: '$17,364' } // summary line
+{ __sgSeparator: true, variant: 'total',
+  label: 'Total due', value: '$19,100.40' }                  // emphasised grand total
+{ __sgSeparator: true, variant: 'subtle', label: 'Notes' }   // muted heading
+```
+
+Variants: `heading` (auto when only `label`), `summary` (auto when `label`
++ `value`), `total`, `subtle`, `blank`, `divider`. Explicit `variant` wins
+over the auto-pick.
+
+- **Positional anchors.** Separators always render in declared position;
+  sort and filter only reorder / hide the data rows *around* them. Quote
+  sections stay intact when the user clicks a header to sort.
+- **Inert.** Never selected, edited, exported to CSV, counted in
+  aggregates, or stepped over by keyboard navigation.
+- **HTML-first equivalent:** `<tr data-separator="heading"
+  data-label="Hardware"></tr>` (with optional `data-value="…"`).
+
+**Merged cells** — per-row `__sgSpans` map: each key is a field name,
+each value is how many visible columns that cell should swallow.
+
+```js
+{
+  id: 6,
+  description: '↪ Includes preconfigured Raspbian image + 12 months remote support.',
+  total: 0,
+  __sgSpans: { description: 3 },   // covers description + qty + unit-price
+}
+```
+
+HTML-first: standard `colspan` on the `<td>` (or `data-spans="N"`) — the
+grid picks it up during initial-markup capture.
+
+See **demo 33** (`demo/33-invoice-separators-merged.html`) for a worked
+tax invoice with section headings, a description-spanning note row, and a
+Subtotal / GST 10% / Total due summary block — on the same grid that
+sorts, edits, and exports CSV.
+
+## Drag-to-attach files
+
+With `data-grid-accept-files-value="true"`, every data cell becomes a
+file drop target. On drop the grid fires a cancellable
+`grid:fileAttached` event with `{rowId, colId, files, row, dataTransfer}`.
+
+- If a listener calls `preventDefault()`, the consumer takes over (e.g.,
+  uploads to S3, then calls `applyTransaction` with the persisted URLs).
+- Otherwise the grid synthesises `{filename, byte_size, content_type,
+  url: blob://…}` entries and appends them to `row[attachmentsField]`
+  (defaults to the drop target's own column, override with
+  `data-grid-attachments-field-value`).
+- Per-column opt-out: `data-header-cell-accept-files-value="false"` on
+  the `<th>` (e.g., for read-only id columns).
+- Pairs naturally with the `attachments` renderer — drop files onto an
+  attachments cell and they render immediately.
+
+```html
+<div data-controller="grid"
+     data-grid-accept-files-value="true"
+     data-grid-attachments-field-value="files">
+  <table>…</table>
+</div>
+```
+
+```js
+grid.addEventListener('grid:fileAttached', async (e) => {
+  e.preventDefault()
+  const persisted = await uploadToServer(e.detail.files)
+  api.applyTransaction({ update: [{ ...e.detail.row, files: [...(e.detail.row.files || []), ...persisted] }] })
+})
+```
 
 ## Gotchas
 

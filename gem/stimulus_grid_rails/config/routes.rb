@@ -21,4 +21,16 @@ StimulusGridRails::Engine.routes.draw do
   delete "/:resource/rows/bulk",    to: "rows#destroy_bulk",  as: :bulk_rows
   delete "/:resource/rows/:row_id", to: "rows#destroy",      as: :row,
          constraints: { row_id: /[^\/]+/ }
+
+  # Attachments — upload + remove on an :attachments column. The cells
+  # endpoint handles scalar values; multipart file uploads and per-blob
+  # detachments live here so the wire shape stays clean.
+  post   "/:resource/:row_id/attachments/:column",
+         to: "attachments#create",
+         as: :attachments,
+         constraints: { row_id: /[^\/]+/, column: /[^\/]+/ }
+  delete "/:resource/:row_id/attachments/:column/:attachment_id",
+         to: "attachments#destroy",
+         as: :attachment,
+         constraints: { row_id: /[^\/]+/, column: /[^\/]+/, attachment_id: /[^\/]+/ }
 end

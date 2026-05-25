@@ -13,6 +13,7 @@ Rails.application.routes.draw do
     get :grouping, on: :collection
   end
   resources :big_rows, only: %i[index]
+  resources :file_records, only: %i[index]
 
   root "athletes#index"
 end

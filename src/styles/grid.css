@@ -1056,20 +1056,29 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   letter-spacing: 0.02em;
 }
 
-/* Multi-line — preserve \n via white-space:pre-line. Optional line-clamp
-   reads from --sg-clamp set inline by the renderer. Vertically top-aligns
-   so the first line sits where a normal cell's text would. */
+/* Multi-line — preserve \n via white-space:pre-line. The renderer marks
+   the parent <tr> with .sg-has-multiline so every cell in the row shares
+   vertical-align: top — otherwise short cells (SHA, Author, etc.) center
+   vertically while the multi-line text starts at the top and the row
+   looks asymmetric. */
 .sg-grid td.sg-renderer-multiline {
   white-space: pre-line;
-  vertical-align: top;
   line-height: 1.4;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
-.sg-grid td.sg-renderer-multiline-clamp {
+.sg-grid tr.sg-has-multiline td { vertical-align: top; padding-top: 6px; padding-bottom: 6px; }
+/* The clamp lives on an inner wrapper, NOT the <td> — putting
+   display:-webkit-box on the table cell collapses its height to the
+   content's, breaking the row's natural max-height. */
+.sg-grid .sg-renderer-multiline-clamp {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--sg-clamp, 2);
           line-clamp: var(--sg-clamp, 2);
   overflow: hidden;
+  white-space: pre-line;
+  line-height: 1.4;
 }
 
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */

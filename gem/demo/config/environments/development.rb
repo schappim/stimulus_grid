@@ -64,4 +64,14 @@ Rails.application.configure do
   # Allow the mygrok tunnel host so the demo is reachable through the public
   # *.schappi.cloud subdomain (dev Host Authorization blocks non-local hosts).
   config.hosts << ".schappi.cloud"
+
+  # Active Storage — disk service for the demo. Production should swap to S3
+  # / GCS / Azure via storage.yml.
+  config.active_storage.service = :local
+
+  # Allow SVG to be served inline (default safelist excludes it because
+  # untrusted SVG can carry script). The file_records demo uses SVG thumbs
+  # so they need to render as images, not download as octet-stream.
+  config.active_storage.content_types_allowed_inline += ["image/svg+xml"]
+  config.active_storage.content_types_to_serve_as_binary -= ["image/svg+xml"]
 end

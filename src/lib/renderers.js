@@ -861,20 +861,823 @@ function wrapHighlightMatches(text, q, caseSensitive, className) {
 export function multiLine({ lines = null, separator = '\n' } = {}) {
   return ({ value, td }) => {
     if (isBlank(value)) return '';
-    const text = String(value);
+    const raw = String(value);
+    const text = separator === '\n' ? raw : raw.split(separator).join('\n');
     if (td) {
       td.classList.add('sg-renderer-multiline');
       td.setAttribute('title', text);
-      if (lines != null && lines > 0) {
-        td.classList.add('sg-renderer-multiline-clamp');
-        td.style.setProperty('--sg-clamp', String(lines));
-      }
+      // Mark the row so every cell in it can share the same vertical-align
+      // (top). Otherwise short cells (SHA, Author) center vertically while
+      // the multi-line text starts at the top — visually misaligned.
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
     }
-    // Normalise the separator to a literal "\n" — CSS white-space:pre-line
-    // handles wrapping; we don't need <br> nodes. Keeps text content clean
-    // for cell-selection copy.
-    return separator === '\n' ? text : text.split(separator).join('\n');
+    // For the clamp variant we mount an inner wrapper that owns the
+    // -webkit-box / -webkit-line-clamp styles. Putting those on the <td>
+    // directly changes its display from `table-cell` to `-webkit-box`,
+    // which collapses the cell to its content height and breaks the
+    // row-height that the longest cell would otherwise enforce.
+    if (lines != null && lines > 0) {
+      const inner = document.createElement('div');
+      inner.className = 'sg-renderer-multiline-clamp';
+      inner.style.setProperty('--sg-clamp', String(lines));
+      inner.textContent = text;
+      return inner;
+    }
+    // Plain multi-line: white-space:pre-line on the TD lets text wrap on
+    // \n; cell-selection copy still grabs the raw text.
+    return text;
   };
+}
+
+/* ---------- attachments (Active Storage / Airtable-style) ----------- */
+
+// Compact byte-size formatter (1234 → "1.2 KB") used in attachment titles
+// and the editor popover. We don't reuse `fileSize()` here — that one
+// returns a renderer, this is a one-shot helper.
+function formatBytes(n) {
+  if (n == null || !Number.isFinite(Number(n))) return '';
+  let bytes = Number(n);
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let i = -1;
+  do { bytes /= 1024; i++; } while (bytes >= 1024 && i < units.length - 1);
+  return `${bytes.toFixed(bytes < 10 ? 1 : 0)} ${units[i]}`;
+}
+
+// Is this attachment an image we can show inline? Treats any image/*
+// content type as previewable; falls back to filename extension when the
+// content_type is missing or generic (octet-stream upload, etc).
+const IMG_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico']);
+function isImageAttachment(a) {
+  if (!a) return false;
+  if (typeof a.content_type === 'string' && a.content_type.startsWith('image/')) return true;
+  const ext = String(a.filename || '').split('.').pop()?.toLowerCase();
+  return ext ? IMG_EXT.has(ext) : false;
+}
+
+// Small icon family for non-image file kinds. Keeps the renderer
+// dependency-free (no font-awesome import). Generic "file" is the
+// fallback when nothing else matches.
+const ATTACH_ICONS = {
+  pdf:    '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM88 304h32c30.9 0 56 25.1 56 56s-25.1 56-56 56h-16v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V320c0-8.8 7.2-16 16-16zm32 80c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v48h16zm72-64c0-8.8 7.2-16 16-16h24c26.5 0 48 21.5 48 48v48c0 26.5-21.5 48-48 48H208c-8.8 0-16-7.2-16-16V320zm32 16v80h8c8.8 0 16-7.2 16-16v-48c0-8.8-7.2-16-16-16h-8z"/></svg>',
+  doc:    '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM104 280c0-13.3 10.7-24 24-24h128c13.3 0 24 10.7 24 24s-10.7 24-24 24H128c-13.3 0-24-10.7-24-24zm0 80c0-13.3 10.7-24 24-24h128c13.3 0 24 10.7 24 24s-10.7 24-24 24H128c-13.3 0-24-10.7-24-24z"/></svg>',
+  sheet:  '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zm192 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16v128c0 8.8-7.2 16-16 16H112c-8.8 0-16-7.2-16-16V272c0-8.8 7.2-16 16-16zm16 32v32h48V288H128zm80 0v32h48V288H208zm-80 64v32h48V352H128zm80 0v32h48V352H208z"/></svg>',
+  zip:    '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H160V64H224V0H320c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zM160 64v32h64V64H160zm0 96v32h64V160H160zm0 96v32h64V256H160zm0 96c-17.7 0-32 14.3-32 32v48c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16V384c0-17.7-14.3-32-32-32H160z"/></svg>',
+  audio:  '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM160 288c-8.8 0-16 7.2-16 16v89c-5-1.9-10.4-3-16-3c-25.4 0-48 18.1-48 44s22.6 44 48 44s48-18.1 48-44V362.5l64-21.3V388c-5-1.9-10.4-3-16-3c-25.4 0-48 18.1-48 44s22.6 44 48 44s48-18.1 48-44V304c0-5.1-2.5-10-6.6-13s-9.5-3.9-14.5-2.3L160 309.8V304c0-8.8-7.2-16-16-16z"/></svg>',
+  video:  '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM64 288c0-17.7 14.3-32 32-32H224c17.7 0 32 14.3 32 32V416c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V288zm259.7-11.3c5.2 2.7 8.3 8 8.3 13.8v123c0 5.8-3.2 11.2-8.3 13.8s-11.3 2.3-16.1-.9L256 392.7V312l51.5-32.6c4.9-3.1 11-3.4 16.1-.8z"/></svg>',
+  code:   '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM200.4 281.7c5.8 6.7 5.2 16.8-1.5 22.6L165.5 333l33.4 28.7c6.7 5.8 7.4 15.9 1.6 22.6s-15.9 7.4-22.6 1.6l-48-41.2c-3.5-3-5.5-7.4-5.5-12s2-9 5.5-12l48-41.2c6.7-5.8 16.8-5.2 22.6 1.5zM226 281.7c5.8-6.7 15.9-7.4 22.6-1.5l48 41.2c3.5 3 5.5 7.4 5.5 12s-2 9-5.5 12l-48 41.2c-6.7 5.8-16.8 5.2-22.6-1.6s-5.2-16.8 1.5-22.6L260.5 333 227.5 304.4c-6.7-5.8-7.4-15.9-1.5-22.6z"/></svg>',
+  file:   '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0z"/></svg>',
+};
+const ATTACH_PLUS = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>';
+const ATTACH_X    = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>';
+const ATTACH_PREV = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>';
+const ATTACH_NEXT = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 105.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg>';
+
+const AUDIO_EXT = new Set(['mp3', 'wav', 'flac', 'm4a', 'ogg', 'aac', 'opus']);
+const VIDEO_EXT = new Set(['mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v']);
+function iconKeyFor(a) {
+  const ct = String(a?.content_type || '').toLowerCase();
+  const ext = String(a?.filename || '').split('.').pop()?.toLowerCase() || '';
+  if (ct.includes('pdf') || ext === 'pdf') return 'pdf';
+  if (ct.startsWith('audio/') || AUDIO_EXT.has(ext)) return 'audio';
+  if (ct.startsWith('video/') || VIDEO_EXT.has(ext)) return 'video';
+  if (ct.includes('zip') || ['zip', 'tar', 'gz', '7z', 'rar'].includes(ext)) return 'zip';
+  if (ct.includes('sheet') || ct.includes('excel') || ct.includes('csv')
+      || ['xls', 'xlsx', 'csv', 'numbers'].includes(ext)) return 'sheet';
+  if (ct.includes('word') || ct.includes('document') || ['doc', 'docx', 'txt', 'md', 'rtf'].includes(ext)) return 'doc';
+  if (['js', 'ts', 'rb', 'py', 'go', 'rs', 'java', 'json', 'xml', 'html', 'css', 'sh', 'sql'].includes(ext)) return 'code';
+  return 'file';
+}
+
+// Coerce assorted cell value shapes into a clean Attachment array.
+// Accepts: an array (already shaped), a single object, a JSON string, null.
+// Strips entries missing both url and signed_id (they have nothing useful
+// to render or commit).
+function normaliseAttachments(value) {
+  if (value == null || value === '') return [];
+  let list = value;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list); }
+    catch { return []; }
+  }
+  if (!Array.isArray(list)) list = [list];
+  return list.filter((a) => a && (a.url || a.signed_id))
+    .map((a, i) => ({
+      id: a.id != null ? String(a.id) : `att_${i}`,
+      filename: a.filename || a.name || `attachment-${i + 1}`,
+      url: a.url || '#',
+      content_type: a.content_type || a.contentType || a.mime_type || '',
+      byte_size: a.byte_size ?? a.byteSize ?? a.size ?? null,
+      preview_url: a.preview_url || a.previewUrl || (isImageAttachment(a) ? a.url : null),
+      thumb_url: a.thumb_url || a.thumbUrl || (isImageAttachment(a) ? a.url : null),
+      signed_id: a.signed_id || a.signedId || null,
+    }));
+}
+
+// Airtable-style attachments cell. Renders a horizontal strip of small
+// thumbnails (images) and file chips (non-images); clicking an image
+// opens a centred lightbox with prev/next; clicking a non-image opens
+// the file in a new tab (or downloads when `download: true`).
+//
+// When `editable: true` (set on the column AND on the renderer), a
+// dblclick opens a popover anchored to the cell with:
+//   • a grid of larger thumbs/chips, each with an × remove button
+//   • a drop zone that accepts drag-drop, click-to-pick, and paste
+//   • a Done button to dismiss
+//
+// `onUpload(files, ctx) → Promise<Attachment[]>` is called when files
+// are added; the returned array is the new full attachment list. If
+// `onUpload` is omitted, the renderer falls back to URL.createObjectURL
+// for local-only previews — fine for demos, not for persistence.
+//
+// `onRemove(attachment, ctx) → Promise<Attachment[] | void>` is called
+// when × is clicked; return the new list, or void to let the renderer
+// drop it locally.
+export function attachments({
+  thumbSize = 28,
+  maxThumbs = 4,
+  empty = '',
+  editable = false,
+  accept = null,
+  multiple = true,
+  download = false,
+  onUpload = null,
+  onRemove = null,
+} = {}) {
+  return (ctx) => {
+    const { value, td, row, col } = ctx;
+    const list = normaliseAttachments(value);
+    if (td) {
+      td.classList.add('sg-renderer-attachments-cell');
+      td.dataset.attachmentCount = String(list.length);
+      // Stash the live attachment array on the cell for the editor popover
+      // to read; we re-attach on every render so it stays in sync.
+      td._sgAttachments = list;
+    }
+    if (list.length === 0 && !editable) {
+      return empty ? document.createTextNode(empty) : '';
+    }
+    const wrap = h('div', { class: 'sg-renderer-attachments', role: 'group' });
+    const shown = list.slice(0, maxThumbs);
+    const overflow = Math.max(0, list.length - shown.length);
+    shown.forEach((att) => wrap.append(buildAttachmentThumb(att, thumbSize, list, download)));
+    if (overflow > 0) {
+      const more = h('span', { class: 'sg-attach-more', title: `${overflow} more` },
+        document.createTextNode(`+${overflow}`));
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAttachmentLightbox(list, list[shown.length]);
+      });
+      wrap.append(more);
+    }
+    if (editable) {
+      const add = h('button', {
+        type: 'button',
+        class: 'sg-attach-add',
+        title: 'Add files',
+        'aria-label': 'Add attachments',
+        'data-sg-attach': 'add',
+      });
+      add.innerHTML = ATTACH_PLUS;
+      add.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAttachmentEditor(td, ctx, { thumbSize, accept, multiple, onUpload, onRemove });
+      });
+      wrap.append(add);
+      // Drag-drop directly onto the cell when editable.
+      bindCellDropZone(td, ctx, { onUpload });
+      // Dblclick anywhere in the cell also opens the editor (matches the
+      // grid's "dblclick to edit" affordance, but without going through
+      // the standard cell editor — attachments isn't a scalar value).
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgAttachmentHandled) return;
+        e._sgAttachmentHandled = true;
+        e.stopPropagation();
+        openAttachmentEditor(td, ctx, { thumbSize, accept, multiple, onUpload, onRemove });
+      }, { once: false });
+    }
+    return wrap;
+  };
+}
+
+function buildAttachmentThumb(att, size, allInCell, download) {
+  const btn = h('button', {
+    type: 'button',
+    class: 'sg-attach-thumb',
+    title: `${att.filename}${att.byte_size != null ? ' · ' + formatBytes(att.byte_size) : ''}`,
+    'data-attachment-id': att.id,
+    'data-attachment-kind': isImageAttachment(att) ? 'image' : 'file',
+    'aria-label': att.filename,
+    style: `width: ${size}px; height: ${size}px;`,
+  });
+  if (isImageAttachment(att) && att.thumb_url) {
+    btn.append(h('img', {
+      src: att.thumb_url, alt: att.filename, loading: 'lazy', decoding: 'async',
+      width: String(size), height: String(size),
+    }));
+  } else {
+    const kind = iconKeyFor(att);
+    const ic = h('span', { class: `sg-attach-icon is-${kind}`, 'aria-hidden': 'true' });
+    ic.innerHTML = ATTACH_ICONS[kind] || ATTACH_ICONS.file;
+    btn.append(ic);
+  }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isImageAttachment(att)) {
+      // Show all image attachments in the cell as a carousel; the click
+      // target becomes the initial frame.
+      const images = allInCell.filter(isImageAttachment);
+      openAttachmentLightbox(images.length ? images : [att], att);
+    } else if (download) {
+      // <button> can't carry download=; spawn a real anchor for one click.
+      const a = document.createElement('a');
+      a.href = att.url; a.download = att.filename;
+      document.body.appendChild(a); a.click(); a.remove();
+    } else {
+      window.open(att.url, '_blank', 'noopener,noreferrer');
+    }
+  });
+  return btn;
+}
+
+// ----- Lightbox (image carousel) -----
+
+let activeLightbox = null;
+
+function openAttachmentLightbox(list, current) {
+  closeAttachmentLightbox();                       // single-instance — replace any open one
+  const images = list.filter(isImageAttachment);
+  if (images.length === 0) return;
+  let idx = Math.max(0, images.findIndex((a) => a.id === current?.id));
+  if (idx < 0) idx = 0;
+
+  const overlay = h('div', { class: 'sg-image-zoom sg-attach-lightbox', role: 'dialog', 'aria-modal': 'true' });
+  const stage = h('div', { class: 'sg-attach-lightbox-stage' });
+  const img = h('img', { class: 'sg-image-zoom-img', alt: '' });
+  const caption = h('div', { class: 'sg-attach-lightbox-caption' });
+  const prev = h('button', { type: 'button', class: 'sg-attach-lightbox-nav is-prev',
+                             'aria-label': 'Previous attachment' });
+  const next = h('button', { type: 'button', class: 'sg-attach-lightbox-nav is-next',
+                             'aria-label': 'Next attachment' });
+  prev.innerHTML = ATTACH_PREV; next.innerHTML = ATTACH_NEXT;
+
+  function paint() {
+    const a = images[idx];
+    img.src = a.preview_url || a.url;
+    img.alt = a.filename;
+    caption.textContent = `${a.filename}${a.byte_size != null ? ' · ' + formatBytes(a.byte_size) : ''} (${idx + 1}/${images.length})`;
+    prev.style.visibility = images.length > 1 ? 'visible' : 'hidden';
+    next.style.visibility = images.length > 1 ? 'visible' : 'hidden';
+  }
+  function step(d) { idx = (idx + d + images.length) % images.length; paint(); }
+  function onKey(e) {
+    if (e.key === 'Escape') closeAttachmentLightbox();
+    else if (e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'ArrowRight') step(1);
+  }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target === stage) closeAttachmentLightbox();
+  });
+  prev.addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+  next.addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+  document.addEventListener('keydown', onKey);
+
+  stage.append(prev, img, next);
+  overlay.append(stage, caption);
+  document.body.appendChild(overlay);
+  activeLightbox = { overlay, onKey };
+  paint();
+}
+
+function closeAttachmentLightbox() {
+  if (!activeLightbox) return;
+  document.removeEventListener('keydown', activeLightbox.onKey);
+  activeLightbox.overlay.remove();
+  activeLightbox = null;
+}
+
+// ----- Editor popover (upload / remove) -----
+
+let activeAttachmentEditor = null;
+
+function bindCellDropZone(td, ctx, { onUpload }) {
+  if (td._sgAttachDropBound) return;
+  td._sgAttachDropBound = true;
+  td.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    td.classList.add('is-drop-target');
+  });
+  td.addEventListener('dragleave', () => td.classList.remove('is-drop-target'));
+  td.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    td.classList.remove('is-drop-target');
+    const files = Array.from(e.dataTransfer.files);
+    await applyAttachmentUpload(td, ctx, files, onUpload);
+  });
+}
+
+function openAttachmentEditor(anchor, ctx, opts) {
+  closeAttachmentEditor();
+  const { thumbSize, accept, multiple, onUpload, onRemove } = opts;
+  const list = anchor._sgAttachments || normaliseAttachments(ctx.value);
+
+  const pop = h('div', { class: 'sg-attach-editor', role: 'dialog', 'aria-modal': 'false' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const header = h('div', { class: 'sg-attach-editor-header' }, [
+    h('span', { class: 'sg-attach-editor-title' },
+      document.createTextNode(list.length === 1 ? '1 attachment' : `${list.length} attachments`)),
+    (() => {
+      const close = h('button', { type: 'button', class: 'sg-attach-editor-close',
+                                  'aria-label': 'Close' });
+      close.innerHTML = ATTACH_X;
+      close.addEventListener('click', closeAttachmentEditor);
+      return close;
+    })(),
+  ]);
+  const grid = h('div', { class: 'sg-attach-editor-grid' });
+  function paintGrid() {
+    const items = anchor._sgAttachments || [];
+    grid.replaceChildren();
+    items.forEach((att) => grid.append(buildEditorTile(att, anchor, ctx, onRemove, thumbSize)));
+    header.firstChild.textContent =
+      items.length === 1 ? '1 attachment' : `${items.length} attachments`;
+  }
+  paintGrid();
+  anchor._sgAttachRepaint = paintGrid;
+
+  // Drop / pick zone.
+  const zone = h('label', { class: 'sg-attach-dropzone', tabindex: '0' });
+  zone.innerHTML = `
+    <span class="sg-attach-dropzone-icon" aria-hidden="true">${ATTACH_PLUS}</span>
+    <span class="sg-attach-dropzone-text">Drop files, paste, or <strong>browse</strong></span>
+  `;
+  const fileInput = h('input', { type: 'file', multiple: multiple ? '' : null, accept: accept || null });
+  fileInput.style.display = 'none';
+  zone.append(fileInput);
+  fileInput.addEventListener('change', async () => {
+    if (!fileInput.files?.length) return;
+    await applyAttachmentUpload(anchor, ctx, Array.from(fileInput.files), onUpload);
+    fileInput.value = '';                          // allow same-file re-pick
+    paintGrid();
+  });
+  zone.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    zone.classList.add('is-drop-target');
+  });
+  zone.addEventListener('dragleave', () => zone.classList.remove('is-drop-target'));
+  zone.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    zone.classList.remove('is-drop-target');
+    await applyAttachmentUpload(anchor, ctx, Array.from(e.dataTransfer.files), onUpload);
+    paintGrid();
+  });
+
+  // Paste support (only fires while the popover has focus).
+  function onPaste(e) {
+    const files = Array.from(e.clipboardData?.files || []);
+    if (files.length === 0) return;
+    e.preventDefault();
+    applyAttachmentUpload(anchor, ctx, files, onUpload).then(paintGrid);
+  }
+  pop.addEventListener('paste', onPaste);
+
+  // Escape closes; outside-click closes.
+  function onKey(e) { if (e.key === 'Escape') closeAttachmentEditor(); }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeAttachmentEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  pop.append(header, grid, zone);
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  zone.focus();
+  activeAttachmentEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeAttachmentEditor() {
+  if (!activeAttachmentEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeAttachmentEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  if (anchor) delete anchor._sgAttachRepaint;
+  activeAttachmentEditor = null;
+}
+
+function buildEditorTile(att, anchor, ctx, onRemove, thumbSize) {
+  const tile = h('div', { class: 'sg-attach-editor-tile', 'data-attachment-id': att.id });
+  const preview = h('div', { class: 'sg-attach-editor-preview',
+                              style: `width: ${thumbSize * 2}px; height: ${thumbSize * 2}px;` });
+  if (isImageAttachment(att) && att.thumb_url) {
+    preview.append(h('img', { src: att.thumb_url, alt: att.filename,
+                              width: String(thumbSize * 2), height: String(thumbSize * 2) }));
+  } else {
+    const kind = iconKeyFor(att);
+    const ic = h('span', { class: `sg-attach-icon is-${kind}`, 'aria-hidden': 'true' });
+    ic.innerHTML = ATTACH_ICONS[kind] || ATTACH_ICONS.file;
+    preview.append(ic);
+  }
+  const meta = h('div', { class: 'sg-attach-editor-meta' }, [
+    h('div', { class: 'sg-attach-editor-name', title: att.filename },
+      document.createTextNode(att.filename)),
+    h('div', { class: 'sg-attach-editor-size' },
+      document.createTextNode(att.byte_size != null ? formatBytes(att.byte_size) : '')),
+  ]);
+  const x = h('button', {
+    type: 'button', class: 'sg-attach-editor-remove',
+    title: 'Remove', 'aria-label': `Remove ${att.filename}`,
+    'data-sg-attach': 'remove', 'data-attachment-id': att.id,
+  });
+  x.innerHTML = ATTACH_X;
+  x.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await applyAttachmentRemove(anchor, ctx, att, onRemove);
+  });
+  tile.append(preview, meta, x);
+  return tile;
+}
+
+// Position the popover under (or above, if no room) the anchor cell.
+function positionPopover(pop, anchor) {
+  const rect = anchor.getBoundingClientRect();
+  pop.style.position = 'fixed';
+  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 360, rect.left))}px`;
+  const below = window.innerHeight - rect.bottom;
+  if (below > 280) pop.style.top = `${rect.bottom + 4}px`;
+  else             pop.style.top = `${Math.max(8, rect.top - pop.offsetHeight - 4)}px`;
+}
+
+// ----- Commit helpers -----
+
+async function applyAttachmentUpload(td, ctx, files, onUpload) {
+  if (!files.length) return;
+  td.classList.add('is-uploading');
+  try {
+    let next;
+    if (typeof onUpload === 'function') {
+      const result = await onUpload(files, ctx);
+      next = Array.isArray(result) ? result : (td._sgAttachments || []).concat(localAttachmentsFromFiles(files));
+    } else {
+      next = (td._sgAttachments || []).concat(localAttachmentsFromFiles(files));
+    }
+    commitAttachmentList(td, ctx, normaliseAttachments(next));
+  } finally {
+    td.classList.remove('is-uploading');
+  }
+}
+
+async function applyAttachmentRemove(td, ctx, att, onRemove) {
+  let next;
+  if (typeof onRemove === 'function') {
+    const result = await onRemove(att, ctx);
+    next = Array.isArray(result)
+      ? result
+      : (td._sgAttachments || []).filter((a) => a.id !== att.id);
+  } else {
+    next = (td._sgAttachments || []).filter((a) => a.id !== att.id);
+  }
+  commitAttachmentList(td, ctx, normaliseAttachments(next));
+}
+
+// Build local-only Attachment objects from raw File handles. Object URLs
+// are revoked when the cell re-renders — the grid drops the old node,
+// browsers GC the URL.
+function localAttachmentsFromFiles(files) {
+  return files.map((f, i) => ({
+    id: `local_${Date.now()}_${i}`,
+    filename: f.name,
+    url: URL.createObjectURL(f),
+    content_type: f.type || '',
+    byte_size: f.size,
+    preview_url: f.type?.startsWith('image/') ? URL.createObjectURL(f) : null,
+    thumb_url: f.type?.startsWith('image/') ? URL.createObjectURL(f) : null,
+  }));
+}
+
+// Write the new list back through the grid API. Updates the row data
+// (so future re-renders stay in sync) and asks the api to re-render the
+// affected row. Falls back to mutating the row and patching the cell
+// directly when api.applyTransaction isn't available.
+function commitAttachmentList(td, ctx, list) {
+  const { row, col, api } = ctx;
+  if (row && col?.field != null) row[col.field] = list;
+  td._sgAttachments = list;
+  if (api?.applyTransaction) {
+    api.applyTransaction({ update: [row] });
+  } else if (api?.refreshCells) {
+    api.refreshCells({ rowIds: [row?.id ?? row?._sg_id] });
+  }
+  if (td._sgAttachRepaint) td._sgAttachRepaint();
+}
+
+/* ---------- address-au (formatted AU street address) ----------------
+ *
+ * Value shape: an object describing an Australian address.
+ *
+ *   {
+ *     address1: '12 Smith Street',
+ *     address2: 'Unit 4',          // optional
+ *     address3: 'Level 2',         // optional, only shown if address2 set
+ *     suburb:   'Bondi',
+ *     state:    'NSW',
+ *     postcode: '2026',
+ *     country:  'Australia',       // optional, defaults to Australia
+ *   }
+ *
+ * Plain strings are passed through verbatim (escape hatch).
+ *
+ * Display: `address1, suburb [STATE] postcode` with the state rendered
+ * as a small colour-coded badge (the colour scheme nods at each state's
+ * traditional sporting / coat-of-arms palette: NSW sky-blue, VIC navy,
+ * QLD maroon, WA gold, SA red, TAS forest green, ACT gold, NT ochre).
+ *
+ * Click-to-edit: dblclick opens a popover with a multi-field form
+ * (address1 / address2 / + another line / suburb / state / postcode /
+ * country). Commits via `api.applyTransaction({ update: [row] })`. Set
+ * `{ editable: false }` to render display-only. */
+
+const AU_STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
+const AU_STATE_NAMES = {
+  NSW: 'New South Wales', VIC: 'Victoria', QLD: 'Queensland',
+  WA: 'Western Australia', SA: 'South Australia', TAS: 'Tasmania',
+  ACT: 'Australian Capital Territory', NT: 'Northern Territory',
+};
+
+function normaliseAddressAu(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string') return { _raw: v };
+  if (typeof v !== 'object') return null;
+  const state = v.state ? String(v.state).trim().toUpperCase() : '';
+  return {
+    address1: v.address1 ? String(v.address1) : '',
+    address2: v.address2 ? String(v.address2) : '',
+    address3: v.address3 ? String(v.address3) : '',
+    suburb:   v.suburb   ? String(v.suburb)   : '',
+    state,
+    postcode: v.postcode != null ? String(v.postcode) : '',
+    country:  v.country  ? String(v.country)  : '',
+  };
+}
+
+function formatAddressAuLine(a) {
+  if (!a) return '';
+  if (a._raw) return a._raw;
+  const left = a.address1 || '';
+  const right = [a.suburb, a.state, a.postcode].filter(Boolean).join(' ');
+  if (!left && !right) return '';
+  return [left, right].filter(Boolean).join(', ');
+}
+
+function formatAddressAuMultiline(a) {
+  if (!a || a._raw) return a?._raw || '';
+  const lines = [a.address1, a.address2, a.address3].filter(Boolean);
+  const cityLine = [a.suburb, a.state, a.postcode].filter(Boolean).join(' ');
+  if (cityLine) lines.push(cityLine);
+  if (a.country && a.country.toLowerCase() !== 'australia') lines.push(a.country);
+  return lines.join('\n');
+}
+
+export function addressAu({ editable = true, empty = '' } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    const a = normaliseAddressAu(value);
+    if (td) {
+      td.classList.add('sg-renderer-address-au-cell');
+      td._sgAddress = a;
+    }
+    if (!a) return empty ? document.createTextNode(empty) : '';
+
+    if (editable && td && !td._sgAddressEditBound) {
+      td._sgAddressEditBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgAddressHandled) return;
+        e._sgAddressHandled = true;
+        e.stopPropagation();
+        openAddressAuEditor(td, ctx);
+      });
+    }
+
+    const wrap = h('div', {
+      class: 'sg-renderer-address-au',
+      title: formatAddressAuMultiline(a),
+    });
+    if (a._raw) {
+      wrap.append(document.createTextNode(a._raw));
+      return wrap;
+    }
+
+    const street = [a.address1, a.address2 && `· ${a.address2}`].filter(Boolean).join(' ');
+    if (street) {
+      wrap.append(h('span', { class: 'sg-address-au-street' }, document.createTextNode(street)));
+    }
+    if (a.suburb || a.state || a.postcode) {
+      const tail = h('span', { class: 'sg-address-au-tail' });
+      if (a.suburb) tail.append(document.createTextNode(a.suburb));
+      if (a.state) {
+        if (a.suburb) tail.append(document.createTextNode(' '));
+        tail.append(h('span', {
+          class: `sg-address-au-state is-${a.state.toLowerCase()}`,
+          title: AU_STATE_NAMES[a.state] || a.state,
+        }, document.createTextNode(a.state)));
+      }
+      if (a.postcode) {
+        if (a.suburb || a.state) tail.append(document.createTextNode(' '));
+        tail.append(h('span', { class: 'sg-address-au-postcode' },
+          document.createTextNode(a.postcode)));
+      }
+      wrap.append(tail);
+    }
+    if (a.country && a.country.toLowerCase() !== 'australia') {
+      wrap.append(h('span', { class: 'sg-address-au-country' },
+        document.createTextNode(a.country)));
+    }
+    return wrap;
+  };
+}
+
+let activeAddressEditor = null;
+
+function openAddressAuEditor(anchor, ctx) {
+  closeAddressAuEditor();
+  const current = anchor._sgAddress && !anchor._sgAddress._raw
+    ? { ...anchor._sgAddress }
+    : { address1: '', address2: '', address3: '', suburb: '', state: '', postcode: '', country: 'Australia' };
+  if (!current.country) current.country = 'Australia';
+
+  const pop = h('div', { class: 'sg-address-au-editor', role: 'dialog', 'aria-modal': 'false' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const header = h('div', { class: 'sg-address-au-editor-header' });
+  header.append(
+    h('span', { class: 'sg-address-au-editor-title' }, document.createTextNode('Edit address')),
+    h('span', { class: 'sg-address-au-editor-flag', title: 'Australian address' },
+      document.createTextNode('🇦🇺')),
+  );
+
+  const form = h('form', { class: 'sg-address-au-editor-form', novalidate: 'novalidate' });
+
+  function field({ label, name, type = 'text', value = '', maxlength, inputmode, placeholder, autocomplete }) {
+    const wrap = h('label', { class: 'sg-address-au-editor-field', 'data-field': name });
+    wrap.append(h('span', { class: 'sg-address-au-editor-label' }, document.createTextNode(label)));
+    const input = h('input', {
+      type,
+      name,
+      value: value || '',
+      maxlength: maxlength || null,
+      inputmode: inputmode || null,
+      placeholder: placeholder || null,
+      autocomplete: autocomplete || null,
+      class: 'sg-address-au-editor-input',
+    });
+    wrap.append(input);
+    return { wrap, input };
+  }
+
+  const f1 = field({ label: 'Address line 1', name: 'address1', value: current.address1,
+                     placeholder: '12 Smith Street', autocomplete: 'address-line1' });
+  const f2 = field({ label: 'Address line 2', name: 'address2', value: current.address2,
+                     placeholder: 'Unit / suite (optional)', autocomplete: 'address-line2' });
+
+  const line3Wrap = h('div', { class: 'sg-address-au-editor-line3-wrap' });
+  const f3 = field({ label: 'Address line 3', name: 'address3', value: current.address3,
+                     placeholder: 'Level / building (optional)', autocomplete: 'address-line3' });
+  line3Wrap.append(f3.wrap);
+
+  const addLine3 = h('button', {
+    type: 'button',
+    class: 'sg-address-au-editor-add-line',
+  }, document.createTextNode('+ Add another line'));
+
+  function syncLine3Visibility() {
+    const showLine3 = !!(f2.input.value.trim() || f3.input.value.trim());
+    line3Wrap.hidden = !showLine3;
+    addLine3.hidden = showLine3;
+  }
+  f2.input.addEventListener('input', syncLine3Visibility);
+  addLine3.addEventListener('click', () => {
+    line3Wrap.hidden = false;
+    addLine3.hidden = true;
+    f3.input.focus();
+  });
+
+  const suburb = field({ label: 'Suburb', name: 'suburb', value: current.suburb,
+                         placeholder: 'Bondi', autocomplete: 'address-level2' });
+
+  const stateWrap = h('label', { class: 'sg-address-au-editor-field', 'data-field': 'state' });
+  stateWrap.append(h('span', { class: 'sg-address-au-editor-label' }, document.createTextNode('State')));
+  const stateSel = h('select', { name: 'state', class: 'sg-address-au-editor-input sg-address-au-editor-state',
+                                  autocomplete: 'address-level1' });
+  stateSel.append(h('option', { value: '' }, document.createTextNode('—')));
+  for (const s of AU_STATES) {
+    const opt = h('option', { value: s, selected: current.state === s ? '' : null },
+                  document.createTextNode(`${s} — ${AU_STATE_NAMES[s]}`));
+    stateSel.append(opt);
+  }
+  stateWrap.append(stateSel);
+
+  const postcode = field({ label: 'Postcode', name: 'postcode', type: 'text',
+                           value: current.postcode, maxlength: 4,
+                           inputmode: 'numeric', placeholder: '2026',
+                           autocomplete: 'postal-code' });
+  postcode.input.classList.add('sg-address-au-editor-postcode');
+  postcode.input.addEventListener('input', () => {
+    postcode.input.value = postcode.input.value.replace(/\D/g, '').slice(0, 4);
+  });
+
+  const country = field({ label: 'Country', name: 'country', value: current.country,
+                          autocomplete: 'country-name' });
+
+  const grid = h('div', { class: 'sg-address-au-editor-grid' });
+  grid.append(f1.wrap);                     // row 1: full width
+  grid.append(f2.wrap, addLine3);           // row 2: line2 + add-line button
+  grid.append(line3Wrap);                   // row 3 (conditional)
+  grid.append(suburb.wrap, stateWrap, postcode.wrap);  // row 4: 3 cols
+  grid.append(country.wrap);                // row 5: full width
+
+  const footer = h('div', { class: 'sg-address-au-editor-footer' });
+  const cancel = h('button', { type: 'button', class: 'sg-address-au-editor-cancel' },
+                   document.createTextNode('Cancel'));
+  const save = h('button', { type: 'submit', class: 'sg-address-au-editor-save' },
+                 document.createTextNode('Save'));
+  footer.append(cancel, save);
+
+  form.append(grid, footer);
+  pop.append(header, form);
+
+  function readForm() {
+    return {
+      address1: f1.input.value.trim(),
+      address2: f2.input.value.trim(),
+      address3: line3Wrap.hidden ? '' : f3.input.value.trim(),
+      suburb:   suburb.input.value.trim(),
+      state:    stateSel.value,
+      postcode: postcode.input.value.trim(),
+      country:  country.input.value.trim() || 'Australia',
+    };
+  }
+
+  function commit() {
+    const next = readForm();
+    const allEmpty = !next.address1 && !next.suburb && !next.state && !next.postcode;
+    commitAddressAu(anchor, ctx, allEmpty ? null : next);
+    closeAddressAuEditor();
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); commit(); });
+  cancel.addEventListener('click', () => closeAddressAuEditor());
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeAddressAuEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeAddressAuEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  syncLine3Visibility();
+  f1.input.focus();
+  f1.input.select();
+  activeAddressEditor = { pop, onKey, onDocClick };
+}
+
+function closeAddressAuEditor() {
+  if (!activeAddressEditor) return;
+  const { pop, onKey, onDocClick } = activeAddressEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeAddressEditor = null;
+}
+
+function commitAddressAu(td, ctx, next) {
+  const { row, col, api } = ctx;
+  const oldValue = row && col?.field != null ? row[col.field] : null;
+  if (row && col?.field != null) row[col.field] = next;
+  td._sgAddress = next;
+  if (api?.applyTransaction) {
+    api.applyTransaction({ update: [row] });
+  } else if (api?.refreshCells) {
+    api.refreshCells({ rowIds: [row?.id ?? row?._sg_id] });
+  }
+  // Mirror the standard editor's contract so consumers can persist.
+  const grid = td.closest('[data-controller~="grid"]');
+  if (grid) {
+    grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+  }
 }
 
 /* ---------- progress bar -------------------------------------------- */
@@ -1165,6 +1968,8 @@ registerRenderer('heatmap-cell',   heatmap());
 registerRenderer('mask',           mask());
 registerRenderer('highlight',      highlight());
 registerRenderer('multi-line',     multiLine());
+registerRenderer('attachments',    attachments());
+registerRenderer('address-au',     addressAu());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -1173,5 +1978,5 @@ export const renderers = {
   number, compactNumber, fileSize,
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
-  heatmap, mask, highlight, multiLine,
+  heatmap, mask, highlight, multiLine, attachments, addressAu,
 };

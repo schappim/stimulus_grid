@@ -1,0 +1,160 @@
+<% content_for :title, "File records — stimulus_grid_rails demo" %>
+
+<header class="page">
+  <h1>File records — attachments</h1>
+  <p class="lede">
+    Each row owns a <code>has_many_attached :attachments</code> association
+    (Active Storage). The grid's <code>:attachments</code> column
+    serialises the file list as JSON the JS
+    <code>attachments</code> renderer consumes — click an image for the
+    lightbox carousel, click a file to open it, double-click any cell to
+    add / remove files. Uploads round-trip through
+    <code>POST /grids/file_records/:id/attachments/attachments</code>
+    and broadcast the new cell over Turbo Streams so every connected
+    tab sees the same list.
+  </p>
+  <ul class="features">
+    <li><strong>Server registry</strong>: <code>app/grids/file_record_grid.rb</code> — note <code>type: :attachments</code> + the editable <code>attachments-editable</code> renderer.</li>
+    <li><strong>Engine endpoints</strong>: upload via multipart <code>POST /grids/file_records/:id/attachments/attachments</code>, remove via <code>DELETE /grids/file_records/:id/attachments/attachments/:attachment_id</code>.</li>
+    <li><strong>Live sync</strong>: every upload/remove broadcasts a cell stream — open this page in two tabs.</li>
+    <li><strong>Drop / paste / pick</strong>: drag files onto a cell, paste an image after focusing the editor, or click the <code>+</code> button.</li>
+  </ul>
+</header>
+
+<div class="searchbar" data-grid-id="file_records-grid">
+  <input type="search" id="global-search" autocomplete="off"
+         placeholder="🔎  Search records — name, owner, notes (server-side)…" />
+  <button type="button" id="clear-filters">Clear</button>
+</div>
+
+<div class="toolbar" data-grid-id="file_records-grid">
+  <button type="button" id="add-row">+ Add record</button>
+  <button type="button" id="delete-selected">Delete selected</button>
+  <span class="stat" id="stat">…</span>
+</div>
+
+<%= render partial: "stimulus_grid_rails/grids/grid",
+           locals: { grid: @grid, rows: @file_records, row_selection: "multiple", page_size: 25 } %>
+<%# Surface the engine mount path so the inline upload/remove fetches use it. %>
+<script>
+  document.getElementById("file_records-grid").dataset.gridSyncMountPath = "<%= StimulusGridRails.mount_path %>";
+</script>
+
+<script>
+  // The editable renderer needs `onUpload` / `onRemove` callbacks that hit
+  // the engine's attachment endpoints. We register a named variant once,
+  // then reference it by name from the grid column declaration.
+  (function () {
+    const grid = document.getElementById("file_records-grid");
+
+    // Wait until StimulusGrid is loaded (importmap may resolve async).
+    function whenReady(fn) {
+      if (window.StimulusGrid?.renderers?.attachments) fn();
+      else setTimeout(() => whenReady(fn), 16);
+    }
+
+    whenReady(() => {
+      const { registerRenderer, renderers } = window.StimulusGrid;
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+      // Engine mount path comes from a data attribute set below, so the view
+      // works regardless of where the host app mounts the engine (e.g.
+      // /admin/grids in this demo, /grids by default).
+      const mount = grid.dataset.gridSyncMountPath || "/grids";
+
+      async function upload(files, ctx) {
+        const url = `${mount}/file_records/${ctx.row.id}/attachments/attachments`;
+        const fd = new FormData();
+        files.forEach((f) => fd.append("files[]", f));
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken, "Accept": "application/json" },
+          body: fd,
+        });
+        if (!resp.ok) throw new Error(`upload failed (${resp.status})`);
+        const json = await resp.json();
+        return json.attachments;
+      }
+
+      async function remove(att, ctx) {
+        const url = `${mount}/file_records/${ctx.row.id}/attachments/attachments/${att.id}`;
+        const resp = await fetch(url, {
+          method: "DELETE",
+          headers: { "X-CSRF-Token": csrfToken, "Accept": "application/json" },
+        });
+        if (!resp.ok) throw new Error(`remove failed (${resp.status})`);
+        const json = await resp.json();
+        return json.attachments;
+      }
+
+      registerRenderer("attachments-editable", renderers.attachments({
+        editable: true,
+        thumbSize: 32,
+        maxThumbs: 5,
+        onUpload: upload,
+        onRemove: remove,
+      }));
+      // The grid may have already rendered before the renderer was registered
+      // (importmap defers application.js, view inline scripts run inline).
+      // Force a single re-render so the attachment cells pick up the renderer.
+      const api = grid.gridApi;
+      if (api?.setRowData) api.setRowData(api.getRowData());
+    });
+
+    // Toolbar plumbing — mirrors the athletes page.
+    const stat = document.getElementById("stat");
+    document.getElementById("add-row").addEventListener("click", () =>
+      grid.dispatchEvent(new CustomEvent("grid-sync:add-row")));
+    document.getElementById("delete-selected").addEventListener("click", () =>
+      grid.dispatchEvent(new CustomEvent("grid-sync:delete-selected")));
+    document.getElementById("global-search").addEventListener("input", (e) =>
+      grid.dispatchEvent(new CustomEvent("grid-sync:search", { detail: { q: e.target.value } })));
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      document.getElementById("global-search").value = "";
+      grid.dispatchEvent(new CustomEvent("grid-sync:clear-filters"));
+    });
+
+    function refreshStat() {
+      const api = grid.gridApi; if (!api) return;
+      const shown = api.getRowData().length;
+      const selected = api.getSelectedRowIds ? api.getSelectedRowIds().length : 0;
+      stat.textContent = `${shown} record(s)` + (selected ? ` · ${selected} selected` : "");
+    }
+    ["grid:ready", "grid:rowDataChanged", "grid:selectionChanged"].forEach((ev) =>
+      grid.addEventListener(ev, refreshStat));
+    requestAnimationFrame(refreshStat);
+  })();
+</script>
+
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 1280px; margin: 30px auto; padding: 0 20px; color: #1f2937; line-height: 1.5; }
+  header.page h1 { margin-bottom: 4px; }
+  .lede { color: #4b5563; margin-top: 0; }
+  .features {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 10px 28px; font-size: 13px; color: #374151;
+  }
+  .features li { margin: 4px 0; }
+  .features strong { color: #111827; }
+  .searchbar { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+  .searchbar #global-search {
+    flex: 1; appearance: none; background: #fff; border: 1px solid #d1d5db;
+    border-radius: 8px; padding: 10px 14px; font: inherit; font-size: 15px;
+    color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .searchbar #clear-filters {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 9px 16px; font: inherit; cursor: pointer; color: #374151;
+  }
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .toolbar button {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 5px;
+    padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  .toolbar #add-row { border-color: #2563eb; color: #1d4ed8; }
+  .toolbar #delete-selected { border-color: #fca5a5; color: #dc2626; }
+  .toolbar .stat { margin-left: auto; color: #6b7280; font-size: 13px; }
+  .sgr-panel { height: 600px; margin-top: 10px; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px;
+         font-family: ui-monospace, monospace; font-size: .9em; }
+</style>

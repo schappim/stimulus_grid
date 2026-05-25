@@ -201,12 +201,18 @@ module StimulusGridRails
       when :date    then v.respond_to?(:to_date) ? v.to_date.iso8601 : v.to_s
       when :datetime then v.respond_to?(:iso8601) ? v.iso8601 : v.to_s
       when :boolean then v ? "✓" : ""
+      when :attachments
+        # The JS attachments renderer expects an array of file objects on the
+        # row's data, not innerHTML. Stash the JSON in data-value so the
+        # client picks it up via the standard renderer pipeline.
+        JSON.generate(attachments_payload(row, column))
       else v.to_s
       end
     end
 
     # JSON-friendly value for row_to_h — numbers stay numeric, dates become
-    # ISO strings, everything else stringifies sensibly.
+    # ISO strings, attachments become the file-list shape the JS renderer
+    # expects, everything else stringifies sensibly.
     def serialize_value(v, column)
       case column.type
       when :integer, :bigint then v.to_i
@@ -214,8 +220,99 @@ module StimulusGridRails
       when :boolean        then !!v
       when :date           then v.respond_to?(:to_date) ? v.to_date.iso8601 : v
       when :datetime       then v.respond_to?(:iso8601) ? v.iso8601 : v
+      when :attachments    then attachments_payload_for_value(v)
       else v
       end
+    end
+
+    # Build the JSON shape the JS `attachments` renderer expects from a
+    # `has_many_attached` association on the row. Each attachment becomes
+    # `{ id, filename, url, content_type, byte_size, thumb_url?, preview_url?, signed_id }`.
+    # Override in a subclass for non-Active-Storage backends (S3 presigned
+    # URLs, etc.) or to add tighter URL controls.
+    def attachments_payload(row, column)
+      relation = if row.respond_to?(column.name)
+                   row.public_send(column.name)
+                 else
+                   nil
+                 end
+      attachments_payload_for_value(relation)
+    end
+
+    # Same as attachments_payload but takes the relation/value directly —
+    # used by serialize_value when JSON-ifying a row to the wire.
+    def attachments_payload_for_value(value)
+      return [] if value.blank?
+      # Active Storage `attachments` association
+      list = if value.respond_to?(:each) && value.respond_to?(:attached?)
+               value.each.to_a
+             elsif value.respond_to?(:attached?) && value.attached?
+               [value]                        # has_one_attached
+             else
+               Array(value)
+             end
+      list.compact.map { |a| serialize_active_storage_attachment(a) }
+    end
+
+    # Per-attachment serializer. Falls through to the row hash shape if the
+    # object isn't an Active Storage attachment (lets users pass plain
+    # hashes through unchanged for testing / custom backends).
+    def serialize_active_storage_attachment(att)
+      return att if att.is_a?(Hash)
+      blob = att.respond_to?(:blob) ? att.blob : nil
+      attachment_id = att.respond_to?(:id) ? att.id : nil
+      filename = blob&.filename&.to_s || att.try(:filename).to_s
+      content_type = blob&.content_type || att.try(:content_type)
+      byte_size = blob&.byte_size || att.try(:byte_size)
+      url = attachment_url_for(att)
+      thumb = image_attachment?(content_type, filename) ? attachment_url_for(att) : nil
+      {
+        id: attachment_id || (att.respond_to?(:signed_id) ? att.signed_id : SecureRandom.hex(6)),
+        filename: filename,
+        url: url,
+        content_type: content_type,
+        byte_size: byte_size,
+        thumb_url: thumb,
+        preview_url: thumb,
+        signed_id: att.respond_to?(:signed_id) ? att.signed_id : nil,
+      }
+    end
+
+    # Build a URL the browser can fetch. Defaults to Rails' built-in
+    # blob route (Rails.application.routes.url_helpers.rails_blob_url).
+    # Override in a subclass to use signed/expiring URLs or a CDN host.
+    def attachment_url_for(att)
+      return nil unless att.respond_to?(:signed_id)
+      Rails.application.routes.url_helpers.rails_blob_path(att, only_path: true)
+    rescue StandardError
+      nil
+    end
+
+    def image_attachment?(content_type, filename)
+      return true if content_type.to_s.start_with?("image/")
+      ext = File.extname(filename.to_s).delete(".").downcase
+      %w[png jpg jpeg gif webp avif svg bmp ico].include?(ext)
+    end
+
+    # Mutate the attachments association on `row` based on a list of
+    # operations sent from the client:
+    #   { attach: [<signed_id>, …], detach: [<attachment_id>, …] }
+    # Returns the updated attachments_payload for broadcast.
+    def apply_attachments!(row, column, ops)
+      relation = row.public_send(column.name)
+      attach_ids = Array(ops[:attach] || ops["attach"])
+      detach_ids = Array(ops[:detach] || ops["detach"])
+
+      # Detach by attachment id. Active Storage's `attachments` is the
+      # ActiveStorage::Attachment join — destroy each row in scope.
+      if detach_ids.any?
+        relation.attachments.where(id: detach_ids).find_each(&:purge)
+      end
+      # Attach new blobs by signed_id (the client uploaded via direct-upload
+      # or via our POST endpoint and we hand back the signed_id).
+      attach_ids.each { |sid| relation.attach(sid) }
+      row.reload if row.respond_to?(:reload)
+      attachments_payload(row, column)
     end
   end
 end

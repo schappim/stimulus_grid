@@ -60,3 +60,16 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
 - Bulk paste (RAILS.md §9): paste tab/newline-separated data from an anchor cell;
   grid-sync fills the range and POSTs to /bulk.
 - Full Minitest suite for the Rails side (62 examples) under demo/test.
+- `:attachments` column type backed by Active Storage `has_many_attached`.
+  `Grid#format_cell` / `serialize_value` emit the file list as JSON (id, filename,
+  url, content_type, byte_size, thumb_url, signed_id) the JS `attachments`
+  renderer consumes directly. New `AttachmentsController` adds
+  `POST /grids/:resource/:row_id/attachments/:column` (multipart upload OR
+  signed_ids) and `DELETE /grids/:resource/:row_id/attachments/:column/:attachment_id`;
+  each mutation broadcasts the new attachment payload as a `cell` Turbo Stream
+  so every connected tab reconciles automatically. New `apply_attachments!`
+  helper on Grid handles the attach/detach round-trip; override
+  `attachment_url_for` for signed/expiring URLs or CDN hosts. The row partial
+  now emits structured cell values in `data-cell-value=` (avoids the JSON
+  briefly flashing as the cell's textContent on first paint). The demo app
+  ships a `file_records` page wired to `FileRecord` + `FileRecordGrid`.

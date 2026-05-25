@@ -24,7 +24,15 @@
     <%
       attrs = col.client_data_attrs(row, local_assigns[:current_user])
       attrs["data-pinned"] = col.pinned if col.pinned
+      cell  = grid.format_cell(row, col)
+      # Attachment / structured columns: stash the JSON in data-cell-value so
+      # the client picks up a real Array instead of trying to parse textContent.
+      # The cell renders empty until the JS renderer mounts.
+      if col.type == :attachments
+        attrs["data-cell-value"] = cell
+        cell = ""
+      end
     %>
-    <td <% attrs.each do |k, v| %><%= k %>="<%= v %>" <% end %>><%= grid.format_cell(row, col) %></td>
+    <td <% attrs.each do |k, v| %><%= k %>="<%= v %>" <% end %>><%= cell %></td>
   <% end %>
 </tr>
