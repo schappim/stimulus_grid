@@ -938,10 +938,13 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-fill-purple { background: #8b5cf6; }
 .sg-grid .sg-fill-pink   { background: #ec4899; }
 
-/* Star rating — used by starRating({max}). A half-star is a grey outline
-   glyph with a filled amber glyph layered on top and clipped to the left
-   50% by .sg-star-clip's overflow:hidden. Single SVG silhouette across all
-   three states keeps spacing + pixel-grid alignment perfect. */
+/* Star rating — used by starRating({max, precision}). Every state renders
+   the SAME solid filled glyph; full = amber, empty = grey, partial = grey
+   silhouette behind with an amber silhouette clipped to the fractional
+   width on top. Using one silhouette for every state means the cell
+   background never shows through (the outline-with-hole glyphs would let
+   it through and look "white-cored"), and any precision (halves, quarters,
+   tenths) renders without rebuilding paths. */
 .sg-grid .sg-renderer-stars {
   display: inline-flex; align-items: center; gap: 2px;
 }
@@ -952,18 +955,20 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   line-height: 0;
 }
 .sg-grid .sg-renderer-star > svg { width: 13px; height: 13px; display: block; }
-.sg-grid .sg-renderer-star.is-full  > svg { color: #f59e0b; }     /* amber */
-.sg-grid .sg-renderer-star.is-empty > svg { color: #d1d5db; }     /* outline grey */
-.sg-grid .sg-renderer-star.is-half  > svg { color: #d1d5db; }     /* outline grey behind */
-.sg-grid .sg-renderer-star.is-half > .sg-star-clip {
+.sg-grid .sg-renderer-star.is-full    > svg { color: #f59e0b; }   /* amber */
+.sg-grid .sg-renderer-star.is-empty   > svg { color: #d1d5db; }   /* grey */
+.sg-grid .sg-renderer-star.is-partial > svg { color: #d1d5db; }   /* grey behind */
+.sg-grid .sg-renderer-star.is-partial > .sg-star-clip {
   position: absolute;
   top: 0; left: 0;
-  width: 50%; height: 100%;
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
+  /* width is set inline as a percentage by the renderer (50% for halves,
+     25% for quarters, 10% for tenths, …). */
 }
-.sg-grid .sg-renderer-star.is-half > .sg-star-clip > svg {
-  width: 13px; height: 13px;     /* natural size; the wrapper clips to left half */
+.sg-grid .sg-renderer-star.is-partial > .sg-star-clip > svg {
+  width: 13px; height: 13px;        /* natural size; wrapper clips to fraction */
   color: #f59e0b;
   display: block;
 }
