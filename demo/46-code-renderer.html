@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>46 — Code renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>46 — Code renderer</h1>
+  <p class="lede">
+    Dark monospace block for code-like cell values — CLI commands,
+    snippets, SQL, JSON-Pointer paths. Hover the cell to reveal a copy
+    button in the top-right; pass <code>language</code> to surface a
+    tiny uppercase label beside it.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="80"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="step"
+              data-header-cell-width-value="180"
+              data-header-cell-sortable-value="true">Step</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cmd"
+              data-header-cell-cell-renderer-value="code-sh"
+              data-header-cell-width-value="380">Shell</th>
+          <th data-controller="header-cell" data-header-cell-field-value="query"
+              data-header-cell-cell-renderer-value="code-sql"
+              data-header-cell-width-value="420">SQL</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Pairing tip:</strong> <code>code</code> styles the value as
+    code; <code>copyable</code> styles the value as a label with a small
+    copy chip beside it. Use <code>code</code> for snippets / commands
+    and <code>copyable</code> for one-line tokens or short IDs.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('code-sh',  renderers.code({ language: 'sh'  }));
+    registerRenderer('code-sql', renderers.code({ language: 'sql' }));
+
+    const ROWS = [
+      { id: 1, step: 'Install deps',
+        cmd: 'npm install @ninjaai/stimulus_grid',
+        query: 'SELECT COUNT(*) FROM orders WHERE created_at > NOW() - INTERVAL \'7 days\';' },
+      { id: 2, step: 'Run migration',
+        cmd: 'bin/rails db:migrate RAILS_ENV=production',
+        query: 'ALTER TABLE customers ADD COLUMN tax_id VARCHAR(20);' },
+      { id: 3, step: 'Smoke test',
+        cmd: 'curl -fsSL https://api.example.com/health | jq .ok',
+        query: 'SELECT id, name, ltv FROM customers ORDER BY ltv DESC LIMIT 10;' },
+      { id: 4, step: 'Tail logs',
+        cmd: 'tail -f log/production.log | grep --color=auto ERROR',
+        query: 'UPDATE feature_flags SET rolled_out_pct = 50 WHERE name = \'recsys_v3\';' },
+      { id: 5, step: 'Deploy',
+        cmd: 'fly deploy --strategy bluegreen --wait-timeout 300',
+        query: 'CREATE INDEX CONCURRENTLY ON orders (customer_id, created_at DESC);' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

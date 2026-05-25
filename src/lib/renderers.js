@@ -3061,6 +3061,66 @@ export function qr({
   };
 }
 
+/* ---------- code (monospace snippet) --------------------------------
+ *
+ * Code-like cell values that deserve a monospace face, dark chrome,
+ * and an optional copy button. Different from `copyable`: this one
+ * styles the value AS code (dark pre block, syntax-friendly background)
+ * rather than as a styled label with a copy chip.
+ *
+ *   <th data-header-cell-cell-renderer-value="code">Snippet</th>
+ *
+ * Pass `language: 'sql' | 'sh' | 'js' | …` to surface a small uppercase
+ * label in the top-right of the block. `copy: false` removes the copy
+ * button (e.g. when the value is sensitive enough that we don't want
+ * one-click copying). */
+export function code({
+  language = null,
+  copy = true,
+} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    if (td) {
+      td.classList.add('sg-renderer-code-cell');
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
+    }
+    const wrap = h('div', { class: 'sg-renderer-code' });
+    if (language) {
+      wrap.append(h('span', { class: 'sg-renderer-code-lang' },
+        document.createTextNode(String(language))));
+    }
+    if (copy) {
+      const btn = h('button', {
+        type: 'button',
+        class: 'sg-renderer-code-copy',
+        title: 'Copy',
+        'aria-label': 'Copy code',
+      });
+      btn.innerHTML = COPY_SVG;
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+          else fallbackCopy(text);
+          btn.innerHTML = COPY_OK_SVG;
+          btn.classList.add('is-copied');
+          setTimeout(() => {
+            btn.innerHTML = COPY_SVG;
+            btn.classList.remove('is-copied');
+          }, 1200);
+        } catch (_) { /* UI feedback is the failure signal */ }
+      });
+      wrap.append(btn);
+    }
+    const pre = h('pre', { class: 'sg-renderer-code-pre' });
+    pre.textContent = text;
+    wrap.append(pre);
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3106,6 +3166,7 @@ registerRenderer('time',           time());
 registerRenderer('diff',           diff());
 registerRenderer('geo',            geo());
 registerRenderer('qr',             qr());
+registerRenderer('code',           code());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3117,5 +3178,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, audioAttachment,
+  diff, geo, qr, code, audioAttachment,
 };

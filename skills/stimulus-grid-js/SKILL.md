@@ -230,6 +230,7 @@ ship pre-registered:
 | `diff` | Audit-log before/after. Accepts `{ from, to }` (also `{ old, new }`, `{ before, after }`, `{ previous, current }`), `[from, to]`, or a `"from → to"` string. Inline = single line, `style: 'stacked'` for two-line. One-sided changes render as a `+ added` (green) or `− removed` (red strikethrough) without the arrow |
 | `geo` | Lat-lng coords + "View on Maps" link. Accepts `[lat, lng]`, `{ lat, lng }` (also `{ latitude, longitude }`, `{ lat, lon }`), or `"lat,lng"` string. `style: 'dms'` switches to surveyor / aviation `33°52'07.7"S` notation. `staticMap: (lat,lng) ⇒ url` paints a tile thumbnail beside the coords; `mapUrl` overrides the destination URL (default Google Maps) |
 | `qr` | Inline SVG QR code from the cell value. Pure-JS encoder (Reed-Solomon over GF(2⁸), versions 1-10, ECC=M ≈ 15% recovery, byte mode). 213-byte cap; over-capacity values fall back to "QR · too long". `moduleSize` controls pixel density, `margin` the quiet zone, `showText: true` prints the encoded value beside the matrix |
+| `code` | Dark monospace block for code-like cell values (CLI commands, snippets, SQL). Different shape from `copyable` (styled-label-with-chip) and `markdown` (`` `code` `` inline only). Pass `language: 'sh' | 'sql' | 'js' | …` for a small uppercase label in the top-right; `copy: false` to hide the copy button |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

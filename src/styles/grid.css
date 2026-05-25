@@ -2396,3 +2396,60 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 11px;
   font-style: italic;
 }
+
+/* Code renderer — dark mono block with optional language label + copy
+   button. Distinct from `copyable`, which styles the value as a label;
+   this one styles it AS code. */
+.sg-grid td.sg-renderer-code-cell {
+  vertical-align: top;
+  padding-top: 4px; padding-bottom: 4px;
+}
+.sg-grid .sg-renderer-code {
+  position: relative;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 4px;
+  padding: 6px 36px 6px 10px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-width: 100%;
+  overflow: hidden;
+}
+.sg-grid .sg-renderer-code-lang {
+  position: absolute;
+  top: 4px;
+  right: 32px;
+  font-size: 9px;
+  font-family: var(--sg-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.sg-grid .sg-renderer-code-copy {
+  appearance: none;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 3px;
+  line-height: 0;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+.sg-grid .sg-renderer-code-copy svg { width: 11px; height: 11px; display: block; }
+.sg-grid .sg-renderer-code-copy:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.sg-grid .sg-renderer-code-copy.is-copied { color: #34d399; }
+.sg-grid .sg-renderer-code-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
