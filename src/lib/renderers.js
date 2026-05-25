@@ -9227,6 +9227,27 @@ export function jsaStatus() {
   });
 }
 
+/* ---------- incident-severity --------------------------------------
+ *
+ * Incident classification pill. Values track Safe Work Australia's
+ * categorisation for notifiable incidents:
+ *
+ *   near-miss   gray   no harm but plausible
+ *   first-aid   yellow on-site treatment only
+ *   mti         orange Medical Treatment Injury (>first aid)
+ *   lti         red    Lost Time Injury (≥1 shift off)
+ *   notifiable  red    statutory regulator-notifiable event
+ *   fatality    red    work-related fatality */
+export function incidentSeverity() {
+  return statusPill({
+    'near-miss': 'gray', 'first-aid': 'yellow', mti: 'orange',
+    lti: 'red', notifiable: 'red', fatality: 'red',
+  }, {
+    'near-miss': 'circle', 'first-aid': 'check-circle', mti: 'alert',
+    lti: 'alert', notifiable: 'alert', fatality: 'x-circle',
+  });
+}
+
 /* ---------- ppe-checklist -----------------------------------------
  *
  * Inline icon strip for required Personal Protective Equipment. Value
@@ -10285,6 +10306,7 @@ registerRenderer('swms-status',       swmsStatus());
 registerRenderer('jsa-status',        jsaStatus());
 registerRenderer('toolbox-talk',      toolboxTalk());
 registerRenderer('ppe-checklist',     ppeChecklist());
+registerRenderer('incident-severity', incidentSeverity());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10872,6 +10894,7 @@ wireBuiltin('swms-status',    clip.text);
 wireBuiltin('jsa-status',     clip.text);
 wireBuiltin('toolbox-talk',   clip.json);
 wireBuiltin('ppe-checklist',  clip.stringList);
+wireBuiltin('incident-severity', clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10909,5 +10932,5 @@ export const renderers = {
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
   retention, materialsPick,
-  swmsStatus, jsaStatus, toolboxTalk, ppeChecklist,
+  swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity,
 };

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>181 — Incident severity | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>181 — Incident severity</h1>
+  <p class="lede">
+    Safe Work Australia incident classification: near-miss / first-aid /
+    MTI / LTI / notifiable / fatality. Drives reporting obligations
+    and trigger thresholds on the incident register.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Incident #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="140">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="summary"
+              data-header-cell-width-value="280">Summary</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sev"
+              data-header-cell-cell-renderer-value="incident-severity"
+              data-header-cell-width-value="180">Severity</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, ref: 'INC-2042', when: '2026-05-22', summary: 'Material dropped from scaffold (no contact)',     sev: 'near-miss' },
+      { id: 2, ref: 'INC-2043', when: '2026-05-23', summary: 'Cut to hand — bandage applied on site',           sev: 'first-aid' },
+      { id: 3, ref: 'INC-2044', when: '2026-05-23', summary: 'Twisted ankle — GP referral',                     sev: 'mti' },
+      { id: 4, ref: 'INC-2045', when: '2026-05-21', summary: 'Fall from EWP — 2 days off',                      sev: 'lti' },
+      { id: 5, ref: 'INC-2046', when: '2026-05-18', summary: 'Trench collapse — SafeWork notified',             sev: 'notifiable' },
+      { id: 6, ref: 'INC-2047', when: '2026-05-15', summary: 'Confined-space asphyxiation (regulator notified)', sev: 'fatality' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

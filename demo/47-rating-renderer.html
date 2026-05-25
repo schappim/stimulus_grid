@@ -15,71 +15,65 @@
     .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
            border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
 
-    /* Custom cell editor — interactive pickers per rating type. Each
-       editor lives in a focusable wrapper that owns the value; clicks
-       on its inner buttons update the wrapper's .value via the
-       controller. The grid reads the value on Enter / Tab / blur. */
-    .rating-editor {
+    /* Interactive in-cell rating — the renderer IS the editor. Each cell
+       always shows the full picker, and a single click on a glyph / button
+       commits the new value via api.applyTransaction(). No edit mode,
+       no double-click. */
+    .rating-cell {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 4px 6px;
-      background: #fff;
-      border: 1px solid var(--sg-accent, #2563eb);
-      border-radius: 4px;
-      outline: none;
       cursor: default;
     }
-    .rating-editor:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
 
     /* Star / heart glyph picker — two click-halves per glyph for
        fractional precision. */
-    .rating-editor-glyph {
+    .rating-cell-glyph {
       position: relative;
-      width: 22px; height: 22px;
+      width: 20px; height: 20px;
       line-height: 0;
       cursor: pointer;
     }
-    .rating-editor-glyph > svg { width: 22px; height: 22px; color: #d1d5db; display: block; }
-    .rating-editor-glyph.is-star.is-full > svg,
-    .rating-editor-glyph.is-heart.is-full > svg { color: var(--rating-color, #f59e0b); }
-    .rating-editor-glyph .rating-editor-fill-half {
+    .rating-cell-glyph > svg { width: 20px; height: 20px; color: #d1d5db; display: block; }
+    .rating-cell-glyph.is-star.is-full > svg,
+    .rating-cell-glyph.is-heart.is-full > svg { color: var(--rating-color, #f59e0b); }
+    .rating-cell-glyph .rating-cell-fill-half {
       position: absolute; left: 0; top: 0; width: 50%; height: 100%;
       overflow: hidden; line-height: 0;
     }
-    .rating-editor-glyph .rating-editor-fill-half > svg {
-      width: 22px; height: 22px; color: var(--rating-color, #f59e0b);
+    .rating-cell-glyph .rating-cell-fill-half > svg {
+      width: 20px; height: 20px; color: var(--rating-color, #f59e0b);
     }
-    .rating-editor-glyph.is-empty .rating-editor-fill-half { display: none; }
-    .rating-editor-glyph .rating-editor-half-l,
-    .rating-editor-glyph .rating-editor-half-r {
+    .rating-cell-glyph.is-empty .rating-cell-fill-half { display: none; }
+    .rating-cell-glyph .rating-cell-half-l,
+    .rating-cell-glyph .rating-cell-half-r {
       position: absolute; top: 0; height: 100%; width: 50%; z-index: 1;
     }
-    .rating-editor-glyph .rating-editor-half-l { left: 0; }
-    .rating-editor-glyph .rating-editor-half-r { right: 0; }
+    .rating-cell-glyph .rating-cell-half-l { left: 0; }
+    .rating-cell-glyph .rating-cell-half-r { right: 0; }
 
     /* Thumb up / neutral / down */
-    .rating-editor-thumb {
+    .rating-cell-thumb {
       display: inline-flex; align-items: center;
-      width: 30px; height: 26px; padding: 0; margin: 0;
+      width: 28px; height: 22px; padding: 0; margin: 0;
       border: 1px solid #e5e7eb; background: #fff;
       justify-content: center; cursor: pointer;
       border-radius: 4px;
     }
-    .rating-editor-thumb svg { width: 14px; height: 14px; color: #6b7280; }
-    .rating-editor-thumb:hover { background: #f3f4f6; }
-    .rating-editor-thumb.is-active.is-up   { background: #d1fae5; border-color: #10b981; }
-    .rating-editor-thumb.is-active.is-up   svg { color: #047857; }
-    .rating-editor-thumb.is-active.is-down { background: #fee2e2; border-color: #ef4444; }
-    .rating-editor-thumb.is-active.is-down svg { color: #b91c1c; }
-    .rating-editor-thumb.is-active.is-neutral { background: #f3f4f6; border-color: #9ca3af; color: #4b5563; }
+    .rating-cell-thumb svg { width: 12px; height: 12px; color: #6b7280; }
+    .rating-cell-thumb:hover { background: #f3f4f6; }
+    .rating-cell-thumb.is-active.is-up   { background: #d1fae5; border-color: #10b981; }
+    .rating-cell-thumb.is-active.is-up   svg { color: #047857; }
+    .rating-cell-thumb.is-active.is-down { background: #fee2e2; border-color: #ef4444; }
+    .rating-cell-thumb.is-active.is-down svg { color: #b91c1c; }
+    .rating-cell-thumb.is-active.is-neutral { background: #f3f4f6; border-color: #9ca3af; color: #4b5563; }
 
     /* Smiley face picker */
-    .rating-editor-smiley {
-      width: 28px; height: 28px;
+    .rating-cell-smiley {
+      width: 24px; height: 24px;
       border: 1px solid transparent;
       background: transparent;
-      font-size: 20px;
+      font-size: 17px;
       line-height: 1;
       cursor: pointer;
       border-radius: 4px;
@@ -87,16 +81,16 @@
       filter: grayscale(0.6) opacity(0.55);
       transition: filter 0.08s ease, border-color 0.08s ease;
     }
-    .rating-editor-smiley:hover    { filter: grayscale(0) opacity(0.85); }
-    .rating-editor-smiley.is-active {
+    .rating-cell-smiley:hover    { filter: grayscale(0) opacity(0.85); }
+    .rating-cell-smiley.is-active {
       filter: none;
       border-color: var(--sg-accent, #2563eb);
       background: var(--sg-bg-hover, #eef2ff);
     }
 
     /* NPS 0-10 button row */
-    .rating-editor-nps {
-      width: 22px; height: 24px; padding: 0;
+    .rating-cell-nps {
+      width: 20px; height: 22px; padding: 0;
       border: 1px solid #e5e7eb; background: #fff;
       font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
       font-weight: 600;
@@ -104,32 +98,23 @@
       cursor: pointer;
       border-radius: 3px;
     }
-    .rating-editor-nps:hover { background: #f3f4f6; }
-    .rating-editor-nps.is-detractor:hover { background: #fef2f2; }
-    .rating-editor-nps.is-passive:hover   { background: #fffbeb; }
-    .rating-editor-nps.is-promoter:hover  { background: #ecfdf5; }
-    .rating-editor-nps.is-active.is-detractor { background: #ef4444; color: #fff; border-color: #b91c1c; }
-    .rating-editor-nps.is-active.is-passive   { background: #f59e0b; color: #fff; border-color: #b45309; }
-    .rating-editor-nps.is-active.is-promoter  { background: #10b981; color: #fff; border-color: #047857; }
-
-    /* Hide the data-editor-input but keep it focusable so the grid's
-       keydown / blur handlers attached to it still fire. */
-    .rating-editor-hidden-input {
-      position: absolute;
-      width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
-      clip-path: inset(50%); border: 0;
-    }
+    .rating-cell-nps:hover { background: #f3f4f6; }
+    .rating-cell-nps.is-detractor:hover { background: #fef2f2; }
+    .rating-cell-nps.is-passive:hover   { background: #fffbeb; }
+    .rating-cell-nps.is-promoter:hover  { background: #ecfdf5; }
+    .rating-cell-nps.is-active.is-detractor { background: #ef4444; color: #fff; border-color: #b91c1c; }
+    .rating-cell-nps.is-active.is-passive   { background: #f59e0b; color: #fff; border-color: #b45309; }
+    .rating-cell-nps.is-active.is-promoter  { background: #10b981; color: #fff; border-color: #047857; }
   </style>
 </head>
 <body>
   <p class="crumbs"><a href="./">← demos</a></p>
-  <h1>47 — Rating renderer (with custom cell editors)</h1>
+  <h1>47 — Rating renderer (in-cell direct editing)</h1>
   <p class="lede">
-    Stars / hearts / thumb / smiley / NPS each pair their renderer with
-    a bespoke <strong>custom cell editor</strong> (AG-Grid-style),
-    wired up through the grid's existing <code>cellEditor</code>
-    template path + a Stimulus controller that owns the interactive UI.
-    Double-click any cell to see it.
+    Each cell renders the full picker (stars / hearts / thumb / smiley / NPS)
+    inline. Click any glyph or button to update the row — no double-click,
+    no edit mode. Clicks commit immediately through
+    <code>api.applyTransaction(...)</code>.
   </p>
 
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
@@ -142,29 +127,19 @@
               data-header-cell-sortable-value="true">Customer response</th>
           <th data-controller="header-cell" data-header-cell-field-value="stars"
               data-header-cell-cell-renderer-value="rating-star"
-              data-header-cell-cell-editor-value="rating-editor-star"
-              data-header-cell-editable-value="true"
               data-header-cell-width-value="180">Stars</th>
           <th data-controller="header-cell" data-header-cell-field-value="hearts"
               data-header-cell-cell-renderer-value="rating-heart"
-              data-header-cell-cell-editor-value="rating-editor-heart"
-              data-header-cell-editable-value="true"
               data-header-cell-width-value="180">Hearts</th>
           <th data-controller="header-cell" data-header-cell-field-value="thumb"
               data-header-cell-cell-renderer-value="rating-thumb"
-              data-header-cell-cell-editor-value="rating-editor-thumb"
-              data-header-cell-editable-value="true"
               data-header-cell-width-value="120">Thumb</th>
           <th data-controller="header-cell" data-header-cell-field-value="csat"
               data-header-cell-cell-renderer-value="rating-smiley"
-              data-header-cell-cell-editor-value="rating-editor-smiley"
-              data-header-cell-editable-value="true"
-              data-header-cell-width-value="200">CSAT</th>
+              data-header-cell-width-value="180">CSAT</th>
           <th data-controller="header-cell" data-header-cell-field-value="nps"
               data-header-cell-cell-renderer-value="rating-nps"
-              data-header-cell-cell-editor-value="rating-editor-nps"
-              data-header-cell-editable-value="true"
-              data-header-cell-width-value="320">NPS</th>
+              data-header-cell-width-value="300">NPS</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -172,54 +147,16 @@
   </div>
 
   <div class="tip">
-    <strong>How the wiring works:</strong> each editor is a
-    <code>&lt;template&gt;</code> the grid clones into the cell on
-    edit. The template carries
-    <code>data-controller="rating-editor"</code>, so Stimulus connects
-    a small controller that builds the interactive UI and writes the
-    selected value to a hidden <code>data-editor-input</code> field —
-    that's the field the grid reads back when editing finishes
-    (Enter / Tab / blur).
+    <strong>How the wiring works:</strong> a single
+    <code>registerRenderer</code> per rating kind returns a clickable
+    DOM tree. Each click-target carries <code>data-value</code>; a
+    delegated handler on the wrapper reads it and calls
+    <code>api.applyTransaction({ update: [{ id, [field]: value }] })</code>.
+    The grid then re-renders the row with the new value.
   </div>
-
-  <!-- Editor templates — five variants, all driven by one controller. -->
-  <template id="rating-editor-star">
-    <span class="rating-editor" data-controller="rating-editor"
-          data-rating-editor-kind-value="star"
-          data-rating-editor-max-value="5"
-          data-rating-editor-precision-value="0.5"
-          data-rating-editor-color-value="#f59e0b"
-          tabindex="0"></span>
-  </template>
-  <template id="rating-editor-heart">
-    <span class="rating-editor" data-controller="rating-editor"
-          data-rating-editor-kind-value="heart"
-          data-rating-editor-max-value="5"
-          data-rating-editor-precision-value="0.5"
-          data-rating-editor-color-value="#ec4899"
-          tabindex="0"></span>
-  </template>
-  <template id="rating-editor-thumb">
-    <span class="rating-editor" data-controller="rating-editor"
-          data-rating-editor-kind-value="thumb"
-          tabindex="0"></span>
-  </template>
-  <template id="rating-editor-smiley">
-    <span class="rating-editor" data-controller="rating-editor"
-          data-rating-editor-kind-value="smiley"
-          data-rating-editor-max-value="5"
-          tabindex="0"></span>
-  </template>
-  <template id="rating-editor-nps">
-    <span class="rating-editor" data-controller="rating-editor"
-          data-rating-editor-kind-value="nps"
-          tabindex="0"></span>
-  </template>
 
   <script src="../dist/stimulus_grid.js"></script>
   <script type="module">
-    import { Controller, Application } from 'https://unpkg.com/@hotwired/stimulus@3.2.2/dist/stimulus.js';
-
     // ---- Glyph SVGs (FontAwesome 6, single solid silhouette per state) ---
     const STAR_SVG  = '<svg viewBox="0 0 576 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>';
     const HEART_SVG = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M225.8 468.2L46.9 295.4C18.9 268.2 0 230.1 0 187.8C0 117.4 56.1 60 125.7 60c25.3 0 51 9.2 70.3 25.4L256 138l60-52.6C335.3 69.2 361 60 386.3 60C455.9 60 512 117.4 512 187.8c0 42.3-18.9 80.4-46.9 107.6L286.2 468.2c-7.2 7.4-17.1 11.8-27.6 11.8c-10.5 0-20.4-4.4-27.6-11.8z"/></svg>';
@@ -229,161 +166,116 @@
 
     const SMILEY_FACES = ['😞', '😕', '😐', '🙂', '😄'];
 
-    // ---- Stimulus custom cell editor controller ----------------------
-    class RatingEditor extends Controller {
-      static values = {
-        kind:      { type: String, default: 'star' },     // star | heart | thumb | smiley | nps
-        max:       { type: Number, default: 5 },
-        precision: { type: Number, default: 1 },
-        color:     { type: String, default: '#f59e0b' },
-      };
+    // ---- Paint functions (each builds the picker for the current value) ---
 
-      connect() {
-        // The grid sets `.value` directly on this element via
-        // _seedEditorValue (because we carry data-editor-input). We
-        // also store the canonical numeric value here and re-paint
-        // whenever it changes.
-        this.element.setAttribute('data-editor-input', '');
-        const seed = this.element.value;
-        this._value = seed !== '' && seed != null && !Number.isNaN(parseFloat(seed))
-          ? parseFloat(seed) : null;
-        this.element.style.setProperty('--rating-color', this.colorValue);
-        this._paint();
-        // Click handler — delegated to the wrapper.
-        this._onClick = (e) => this._handleClick(e);
-        this.element.addEventListener('click', this._onClick);
-        // Define a getter so the grid's commit path reads the picked value.
-        // (this.element.value is the official API the grid reads.)
-        Object.defineProperty(this.element, 'value', {
-          get: () => (this._value == null ? '' : String(this._value)),
-          set: (v) => {
-            this._value = (v === '' || v == null || Number.isNaN(parseFloat(v))) ? null : parseFloat(v);
-            this._paint();
-          },
-          configurable: true,
-        });
-      }
-
-      disconnect() {
-        this.element.removeEventListener('click', this._onClick);
-      }
-
-      _paint(hoverValue) {
-        const v = hoverValue != null ? hoverValue : this._value;
-        this.element.replaceChildren();
-        switch (this.kindValue) {
-          case 'star':   this._paintGlyphRow(STAR_SVG,  v); break;
-          case 'heart':  this._paintGlyphRow(HEART_SVG, v); break;
-          case 'thumb':  this._paintThumb(v); break;
-          case 'smiley': this._paintSmiley(v); break;
-          case 'nps':    this._paintNps(v); break;
+    function paintGlyphRow(wrap, svg, kind, max, precision, value) {
+      const n = Math.max(0, Math.min(max, value ?? 0));
+      for (let i = 1; i <= max; i++) {
+        const cell = document.createElement('span');
+        cell.className = `rating-cell-glyph is-${kind}`;
+        cell.innerHTML = svg;
+        if (n >= i) {
+          cell.classList.add('is-full');
+        } else if (n > i - 1) {
+          const fill = document.createElement('span');
+          fill.className = 'rating-cell-fill-half';
+          fill.style.width = `${Math.round((n - (i - 1)) * 100)}%`;
+          fill.innerHTML = svg;
+          cell.appendChild(fill);
+        } else {
+          cell.classList.add('is-empty');
         }
-      }
-
-      _paintGlyphRow(svg, v) {
-        const n = Math.max(0, Math.min(this.maxValue, v ?? 0));
-        for (let i = 1; i <= this.maxValue; i++) {
-          const cell = document.createElement('span');
-          cell.className = `rating-editor-glyph is-${this.kindValue}`;
-          // Base (grey) glyph
-          cell.innerHTML = svg;
-          if (n >= i) {
-            cell.classList.add('is-full');
-          } else if (n > i - 1) {
-            // Partial fill — clipped overlay set to the fractional width.
-            const fill = document.createElement('span');
-            fill.className = 'rating-editor-fill-half';
-            fill.style.width = `${Math.round((n - (i - 1)) * 100)}%`;
-            fill.innerHTML = svg;
-            cell.appendChild(fill);
-          } else {
-            cell.classList.add('is-empty');
-          }
-          // Two click-halves overlay so .5 / 1.0 pick precisely. We
-          // don't repaint on hover — that would detach the click target
-          // mid-mouse-down. Instead the click handler reads
-          // data-value and commits immediately.
-          const lh = document.createElement('span');
-          lh.className = 'rating-editor-half-l';
-          lh.dataset.value = String(this.precisionValue >= 1 ? i : i - 0.5);
-          const rh = document.createElement('span');
-          rh.className = 'rating-editor-half-r';
-          rh.dataset.value = String(i);
-          cell.append(lh, rh);
-          this.element.appendChild(cell);
-        }
-      }
-
-      _paintThumb(v) {
-        const buttons = [
-          { tone: 'down',    val: -1, svg: THUMB_DOWN_SVG },
-          { tone: 'neutral', val: 0,  svg: DASH_SVG },
-          { tone: 'up',      val: 1,  svg: THUMB_UP_SVG },
-        ];
-        for (const { tone, val, svg } of buttons) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = `rating-editor-thumb is-${tone}${Number(v) === val ? ' is-active' : ''}`;
-          b.dataset.value = String(val);
-          b.innerHTML = svg;
-          this.element.appendChild(b);
-        }
-      }
-
-      _paintSmiley(v) {
-        for (let i = 1; i <= this.maxValue; i++) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = `rating-editor-smiley${Math.round(v) === i ? ' is-active' : ''}`;
-          b.dataset.value = String(i);
-          b.textContent = SMILEY_FACES[Math.min(SMILEY_FACES.length - 1,
-                            Math.floor((i - 1) / (this.maxValue - 1 || 1) * (SMILEY_FACES.length - 1)))];
-          this.element.appendChild(b);
-        }
-      }
-
-      _paintNps(v) {
-        for (let i = 0; i <= 10; i++) {
-          const band = i <= 6 ? 'detractor' : i <= 8 ? 'passive' : 'promoter';
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = `rating-editor-nps is-${band}${Math.round(v) === i ? ' is-active' : ''}`;
-          b.dataset.value = String(i);
-          b.textContent = String(i);
-          this.element.appendChild(b);
-        }
-      }
-
-      _handleClick(e) {
-        const target = e.target.closest('[data-value]');
-        if (!target) return;
-        const next = parseFloat(target.dataset.value);
-        this._value = Number.isFinite(next) ? next : null;
-        this._paint();
-        // Commit immediately so single-click feels snappy. The grid's
-        // stopEditing reads this.element.value (via the getter we
-        // installed) and persists.
-        const grid = this.element.closest('[data-controller~="grid"]');
-        if (grid?.gridApi) {
-          // The grid only re-reads via the standard editor-stop path,
-          // so we trigger that by dispatching a synthetic blur to the
-          // grid's onEditorBlur handler.
-          grid.gridApi.stopEditing?.();
-        }
+        // Two click-halves overlay so .5 / 1.0 picks are precise.
+        const lh = document.createElement('span');
+        lh.className = 'rating-cell-half-l';
+        lh.dataset.value = String(precision >= 1 ? i : i - 0.5);
+        const rh = document.createElement('span');
+        rh.className = 'rating-cell-half-r';
+        rh.dataset.value = String(i);
+        cell.append(lh, rh);
+        wrap.appendChild(cell);
       }
     }
 
-    // Register the controller on the same Stimulus Application the grid uses.
-    const app = StimulusGrid.start();
-    app.register('rating-editor', RatingEditor);
+    function paintThumb(wrap, value) {
+      const buttons = [
+        { tone: 'down',    val: -1, svg: THUMB_DOWN_SVG },
+        { tone: 'neutral', val: 0,  svg: DASH_SVG },
+        { tone: 'up',      val: 1,  svg: THUMB_UP_SVG },
+      ];
+      for (const { tone, val, svg } of buttons) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `rating-cell-thumb is-${tone}${Number(value) === val ? ' is-active' : ''}`;
+        b.dataset.value = String(val);
+        b.innerHTML = svg;
+        wrap.appendChild(b);
+      }
+    }
 
-    // ---- Renderers (unchanged from the previous version) ---------------
-    const { registerRenderer, renderers } = StimulusGrid;
-    registerRenderer('rating-star',   renderers.rating({ icon: 'star' }));
-    registerRenderer('rating-heart',  renderers.rating({ icon: 'heart' }));
-    registerRenderer('rating-thumb',  renderers.rating({ icon: 'thumb' }));
-    registerRenderer('rating-smiley', renderers.rating({ icon: 'smiley', max: 5 }));
-    registerRenderer('rating-nps',    renderers.rating({ icon: 'nps' }));
+    function paintSmiley(wrap, max, value) {
+      const v = value == null ? null : Math.round(value);
+      for (let i = 1; i <= max; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `rating-cell-smiley${v === i ? ' is-active' : ''}`;
+        b.dataset.value = String(i);
+        b.textContent = SMILEY_FACES[Math.min(SMILEY_FACES.length - 1,
+                          Math.floor((i - 1) / (max - 1 || 1) * (SMILEY_FACES.length - 1)))];
+        wrap.appendChild(b);
+      }
+    }
+
+    function paintNps(wrap, value) {
+      const v = value == null ? null : Math.round(value);
+      for (let i = 0; i <= 10; i++) {
+        const band = i <= 6 ? 'detractor' : i <= 8 ? 'passive' : 'promoter';
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `rating-cell-nps is-${band}${v === i ? ' is-active' : ''}`;
+        b.dataset.value = String(i);
+        b.textContent = String(i);
+        wrap.appendChild(b);
+      }
+    }
+
+    // ---- Renderer factory — one per rating kind ------------------------
+
+    function ratingRenderer({ kind, max = 5, precision = 0.5, color = '#f59e0b' }) {
+      return ({ value, row, col, api }) => {
+        const n = value !== '' && value != null && !Number.isNaN(parseFloat(value))
+          ? parseFloat(value) : null;
+        const wrap = document.createElement('span');
+        wrap.className = 'rating-cell';
+        wrap.style.setProperty('--rating-color', color);
+        switch (kind) {
+          case 'star':   paintGlyphRow(wrap, STAR_SVG,  'star',  max, precision, n); break;
+          case 'heart':  paintGlyphRow(wrap, HEART_SVG, 'heart', max, precision, n); break;
+          case 'thumb':  paintThumb(wrap, n); break;
+          case 'smiley': paintSmiley(wrap, max, n); break;
+          case 'nps':    paintNps(wrap, n); break;
+        }
+        wrap.addEventListener('click', (e) => {
+          const target = e.target.closest('[data-value]');
+          if (!target || !wrap.contains(target)) return;
+          const next = parseFloat(target.dataset.value);
+          if (!Number.isFinite(next)) return;
+          api.applyTransaction({ update: [{ id: row.id, [col.field]: next }] });
+        });
+        return wrap;
+      };
+    }
+
+    const { registerRenderer } = StimulusGrid;
+    registerRenderer('rating-star',   ratingRenderer({ kind: 'star',   color: '#f59e0b' }));
+    registerRenderer('rating-heart',  ratingRenderer({ kind: 'heart',  color: '#ec4899' }));
+    registerRenderer('rating-thumb',  ratingRenderer({ kind: 'thumb' }));
+    registerRenderer('rating-smiley', ratingRenderer({ kind: 'smiley', max: 5 }));
+    registerRenderer('rating-nps',    ratingRenderer({ kind: 'nps' }));
+
+    // Boot the grid (Stimulus also needs starting since we don't use the
+    // dedicated editor controller anymore, but the grid bundle handles that).
+    StimulusGrid.start();
 
     const ROWS = [
       { id: 1, response: 'Astrid — "Love the new editor"',     stars: 5,   hearts: 5,   thumb: 1,  csat: 5,  nps: 10 },
