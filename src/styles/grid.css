@@ -4466,6 +4466,22 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-weight: 600;
 }
 
+/* Variation — ID mono + signed $ + status pill. */
+.sg-grid .sg-renderer-variation {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-variation-id { color: #1f2937; }
+.sg-grid .sg-renderer-variation-delta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.sg-grid .sg-renderer-variation-delta.is-up   { color: #14532d; }
+.sg-grid .sg-renderer-variation-delta.is-down { color: #7f1d1d; }
+.sg-grid .sg-renderer-variation-status { font-size: 10px; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>167 — Variation | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>167 — Variation (scope-change with signed $ + approval)</h1>
+  <p class="lede">
+    Variation order on a job — ID + signed dollar delta (negative for
+    credits) + approval status pill. Drives "what's been signed off"
+    visibility on a project register.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="240">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scope"
+              data-header-cell-width-value="220">Scope change</th>
+          <th data-controller="header-cell" data-header-cell-field-value="var"
+              data-header-cell-cell-renderer-value="variation"
+              data-header-cell-width-value="300">Variation</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, project: 'Bondi Reno',     scope: 'Added powder room',     var: { id: 'VAR-001', delta: 4800, status: 'approved' } },
+      { id: 2, project: 'Vega Studio',    scope: 'Marble swap for stone', var: { id: 'VAR-002', delta: -1200, status: 'approved' } },
+      { id: 3, project: 'Coogee Tower',   scope: 'Extra balcony glazing', var: { id: 'VAR-003', delta: 18400, status: 'pending' } },
+      { id: 4, project: 'Manly Reno',     scope: 'Kitchen extension',     var: { id: 'VAR-004', delta: 22000, status: 'rejected' } },
+      { id: 5, project: 'Glebe Build',    scope: 'Spa relocation',        var: { id: 'VAR-005', delta: 3500, status: 'draft' } },
+      { id: 6, project: 'Newtown Bakery', scope: 'Oven upgrade credit',   var: { id: 'VAR-006', delta: -750, status: 'approved' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

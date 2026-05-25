@@ -9197,6 +9197,42 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- variation ---------------------------------------------
+ *
+ * Variation order on a job. ID + dollar delta (signed) + status chip.
+ *
+ *   value: {
+ *     id: 'VAR-001',
+ *     delta: 2400,                          // signed AUD; negative = credit
+ *     status: 'approved' | 'pending' | 'rejected' | 'draft',
+ *   } */
+export function variation({ currency = 'AUD', locale = 'en-AU' } = {}) {
+  const STATUS_COLOR = { approved: 'green', pending: 'orange', rejected: 'red', draft: 'gray' };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = (typeof value === 'object') ? value : { id: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-variation' });
+    if (v.id) wrap.append(h('span', { class: 'sg-renderer-variation-id sg-renderer-mono' },
+      document.createTextNode(String(v.id))));
+    if (v.delta != null && Number.isFinite(+v.delta)) {
+      const n = +v.delta;
+      const fmt = Math.abs(n).toLocaleString(locale, { style: 'currency', currency });
+      const sign = n > 0 ? '+' : n < 0 ? '-' : '';
+      wrap.append(h('span', {
+        class: `sg-renderer-variation-delta ${n >= 0 ? 'is-up' : 'is-down'}`,
+      }, document.createTextNode(`${sign}${fmt}`)));
+    }
+    if (v.status) {
+      const k = String(v.status).toLowerCase();
+      const color = STATUS_COLOR[k] || 'gray';
+      wrap.append(h('span', {
+        class: `sg-pill sg-pill-${color} sg-renderer-variation-status`,
+      }, document.createTextNode(titleCaseStr(v.status))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- progress-claim ----------------------------------------
  *
  * Milestone progress claim. "Claim 2 of 5 · 40%" with a thin bar that
@@ -9574,6 +9610,7 @@ registerRenderer('route-stop',        routeStop());
 registerRenderer('travel-time',       travelTime());
 registerRenderer('technician-slot',   technicianSlot());
 registerRenderer('progress-claim',    progressClaim());
+registerRenderer('variation',         variation());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10147,6 +10184,7 @@ wireBuiltin('route-stop',     clip.json);
 wireBuiltin('travel-time',    clip.json);
 wireBuiltin('technician-slot', clip.json);
 wireBuiltin('progress-claim', clip.json);
+wireBuiltin('variation',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10182,4 +10220,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
+  variation,
 };
