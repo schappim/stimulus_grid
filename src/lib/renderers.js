@@ -4551,6 +4551,198 @@ function closeMultiselectEditor() {
   activeMultiselectEditor = null;
 }
 
+/* ---------- combobox (typeahead-filtered single-choice popover) -----
+ *
+ * Type-to-filter sibling of `select`. Same display (pill + placeholder)
+ * but the popover has a search input at the top and the list filters as
+ * you type. Highlighted row commits on Enter; arrow-keys move highlight.
+ *
+ *   registerRenderer('city', renderers.combobox({
+ *     options: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', ...],
+ *     allowCustom: false,
+ *   }));
+ *
+ * `allowCustom: true` lets users commit a typed value that doesn't match
+ * any option (a free-form combobox). Per-cell config honoured the same
+ * way as select() — `data-header-cell-cell-renderer-config-value` JSON. */
+export function combobox({
+  options = [],
+  placeholder = 'Search…',
+  editable = true,
+  allowCustom = false,
+  colorMap = null,
+} = {}) {
+  const baseOpts = normaliseSelectOptions(options);
+  if (colorMap && typeof colorMap === 'object') {
+    for (const o of baseOpts) {
+      if (!o.color && Object.prototype.hasOwnProperty.call(colorMap, o.value)) o.color = colorMap[o.value];
+    }
+  }
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = resolveSelectConfig(ctx, { options: baseOpts, placeholder, colorMap, editable });
+    const allow = ctx?.col?.cellRendererConfig?.allowCustom ?? allowCustom;
+    let opts = baseOpts;
+    if (baseOpts.length === 0 && cfg.options.length) {
+      opts = normaliseSelectOptions(cfg.options);
+      if (cfg.colorMap && typeof cfg.colorMap === 'object') {
+        for (const o of opts) {
+          if (!o.color && Object.prototype.hasOwnProperty.call(cfg.colorMap, o.value)) o.color = cfg.colorMap[o.value];
+        }
+      }
+    }
+    if (td) {
+      td.classList.add('sg-renderer-combobox-cell');
+      td._sgComboOpts = opts;
+      td._sgComboAllowCustom = allow;
+      td._sgComboPlaceholder = cfg.placeholder;
+    }
+
+    if (cfg.editable && td && !td._sgComboEditBound) {
+      td._sgComboEditBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgComboHandled) return;
+        e._sgComboHandled = true;
+        e.stopPropagation();
+        openComboboxEditor(td, ctx);
+      });
+    }
+
+    const current = opts.find((o) => String(o.value) === String(value)) || null;
+    if (!current) {
+      if (isBlank(value)) {
+        return h('span', { class: 'sg-renderer-select-placeholder' },
+          document.createTextNode(cfg.placeholder));
+      }
+      return h('span', { class: 'sg-renderer-select-bare' }, document.createTextNode(String(value)));
+    }
+    return buildSelectPill(current, SG_PALETTE_RE);
+  };
+}
+
+let activeComboboxEditor = null;
+
+function openComboboxEditor(anchor, ctx) {
+  closeComboboxEditor();
+  const opts = anchor._sgComboOpts || [];
+  const allowCustom = !!anchor._sgComboAllowCustom;
+  const placeholder = anchor._sgComboPlaceholder || 'Search…';
+  const { row, col } = ctx;
+  let query = '';
+  let highlight = 0;
+
+  const pop = h('div', { class: 'sg-renderer-combobox-popover', role: 'combobox' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  const input = h('input', {
+    type: 'search',
+    class: 'sg-renderer-combobox-input',
+    placeholder,
+    autocomplete: 'off',
+  });
+  pop.append(input);
+  const list = h('div', { class: 'sg-renderer-combobox-list', role: 'listbox' });
+  pop.append(list);
+
+  function commit(next) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeComboboxEditor();
+  }
+
+  function filtered() {
+    const q = query.trim().toLowerCase();
+    if (!q) return opts;
+    return opts.filter((o) => String(o.label).toLowerCase().includes(q));
+  }
+
+  function rebuild() {
+    list.replaceChildren();
+    const matches = filtered();
+    if (highlight >= matches.length) highlight = Math.max(0, matches.length - 1);
+    matches.forEach((opt, i) => {
+      const row = h('button', {
+        type: 'button',
+        class: `sg-renderer-combobox-option${i === highlight ? ' is-highlighted' : ''}`,
+        role: 'option',
+        'aria-selected': i === highlight ? 'true' : 'false',
+      });
+      row.append(buildSelectPill(opt, SG_PALETTE_RE));
+      row.addEventListener('mouseenter', () => { highlight = i; updateHighlights(); });
+      row.addEventListener('click', () => commit(opt.value));
+      list.append(row);
+    });
+    if (matches.length === 0) {
+      const msg = h('div', { class: 'sg-renderer-combobox-empty' });
+      if (allowCustom && query.trim()) {
+        msg.append(document.createTextNode(`Press Enter to add "${query.trim()}"`));
+      } else {
+        msg.append(document.createTextNode('No matches'));
+      }
+      list.append(msg);
+    }
+  }
+
+  function updateHighlights() {
+    list.querySelectorAll('.sg-renderer-combobox-option').forEach((el, i) => {
+      el.classList.toggle('is-highlighted', i === highlight);
+      el.setAttribute('aria-selected', i === highlight ? 'true' : 'false');
+    });
+  }
+
+  input.addEventListener('input', () => { query = input.value; highlight = 0; rebuild(); });
+  input.addEventListener('keydown', (e) => {
+    const matches = filtered();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlight = Math.min(matches.length - 1, highlight + 1);
+      updateHighlights();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlight = Math.max(0, highlight - 1);
+      updateHighlights();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (matches[highlight]) commit(matches[highlight].value);
+      else if (allowCustom && query.trim()) commit(query.trim());
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeComboboxEditor();
+    }
+  });
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeComboboxEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeComboboxEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  rebuild();
+  setTimeout(() => input.focus(), 0);
+  activeComboboxEditor = { pop, onKey, onDocClick };
+}
+
+function closeComboboxEditor() {
+  if (!activeComboboxEditor) return;
+  const { pop, onKey, onDocClick } = activeComboboxEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeComboboxEditor = null;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -4623,6 +4815,7 @@ registerRenderer('loading-shimmer', loadingShimmer());
 registerRenderer('audio-attachment', audioAttachment());
 registerRenderer('select',           select());
 registerRenderer('multiselect',       multiselect());
+registerRenderer('combobox',          combobox());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -4637,5 +4830,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select, multiselect,
+  select, multiselect, combobox,
 };
