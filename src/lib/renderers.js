@@ -4208,6 +4208,162 @@ export function loadingShimmer({
   };
 }
 
+/* ---------- select / dropdown (single-choice popover editor) ---------
+ *
+ * Fixed-list inline editor: cell shows the current value (with optional
+ * colour-tinted pill from a colorMap); double-click opens a popover with
+ * the option list, single click on an option commits and closes.
+ *
+ *   registerRenderer('priority', renderers.select({
+ *     options: ['Low', 'Medium', 'High', 'Critical'],
+ *     colorMap: { Low: 'gray', Medium: 'blue', High: 'orange', Critical: 'red' },
+ *   }));
+ *
+ * `options` may be an array of strings, or `{ value, label, color }`
+ * objects. The cell value is stored as the option's `value` (or the
+ * string itself if a bare array). `clearable: true` adds a "(none)"
+ * row at the top. */
+function normaliseSelectOptions(options) {
+  if (!Array.isArray(options)) return [];
+  return options.map((o) => {
+    if (o == null) return null;
+    if (typeof o === 'object') return { value: o.value, label: o.label ?? String(o.value), color: o.color || null, icon: o.icon || null };
+    return { value: o, label: String(o), color: null, icon: null };
+  }).filter(Boolean);
+}
+
+function buildSelectPill(opt, palette) {
+  const pill = h('span', { class: 'sg-renderer-select-pill' });
+  if (opt.color) {
+    if (palette.test(opt.color)) pill.classList.add(`sg-pill-${opt.color}`);
+    else { pill.style.background = opt.color; pill.style.color = readableForeground(opt.color); }
+  } else {
+    pill.classList.add('sg-renderer-select-pill-bare');
+  }
+  if (opt.icon) {
+    pill.append(h('span', { class: 'sg-renderer-select-pill-icon', 'aria-hidden': 'true' }, opt.icon));
+  }
+  pill.append(h('span', { class: 'sg-renderer-select-pill-label' },
+    document.createTextNode(opt.label)));
+  return pill;
+}
+
+const SG_PALETTE_RE = /^(gray|red|orange|yellow|green|blue|indigo|purple|pink)$/;
+
+export function select({
+  options = [],
+  placeholder = 'Select…',
+  editable = true,
+  clearable = false,
+  colorMap = null,
+} = {}) {
+  const opts = normaliseSelectOptions(options);
+  if (colorMap && typeof colorMap === 'object') {
+    for (const o of opts) {
+      if (!o.color && Object.prototype.hasOwnProperty.call(colorMap, o.value)) o.color = colorMap[o.value];
+    }
+  }
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-select-cell');
+      td._sgSelectOpts = opts;
+      td._sgSelectClearable = clearable;
+    }
+
+    if (editable && td && !td._sgSelectEditBound) {
+      td._sgSelectEditBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgSelectHandled) return;
+        e._sgSelectHandled = true;
+        e.stopPropagation();
+        openSelectEditor(td, ctx);
+      });
+    }
+
+    const current = opts.find((o) => String(o.value) === String(value)) || null;
+    if (!current) {
+      if (isBlank(value)) {
+        return h('span', { class: 'sg-renderer-select-placeholder' },
+          document.createTextNode(placeholder));
+      }
+      // Value not in options — show raw text faintly so user knows it's out of list.
+      const tag = h('span', { class: 'sg-renderer-select-bare' }, document.createTextNode(String(value)));
+      return tag;
+    }
+    return buildSelectPill(current, SG_PALETTE_RE);
+  };
+}
+
+let activeSelectEditor = null;
+
+function openSelectEditor(anchor, ctx) {
+  closeSelectEditor();
+  const opts = anchor._sgSelectOpts || [];
+  const clearable = anchor._sgSelectClearable;
+  const { row, col } = ctx;
+  const current = row && col?.field != null ? row[col.field] : null;
+
+  const pop = h('div', { class: 'sg-renderer-select-popover', role: 'listbox' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit(next) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    if (row && col?.field != null) row[col.field] = next;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+    }));
+    closeSelectEditor();
+  }
+
+  if (clearable) {
+    const noneRow = h('button', {
+      type: 'button',
+      class: 'sg-renderer-select-option sg-renderer-select-option-none',
+      role: 'option',
+    }, document.createTextNode('(none)'));
+    noneRow.addEventListener('click', () => commit(null));
+    pop.append(noneRow);
+  }
+
+  for (const opt of opts) {
+    const row = h('button', {
+      type: 'button',
+      class: `sg-renderer-select-option${String(opt.value) === String(current) ? ' is-selected' : ''}`,
+      role: 'option',
+    });
+    row.append(buildSelectPill(opt, SG_PALETTE_RE));
+    row.addEventListener('click', () => commit(opt.value));
+    pop.append(row);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeSelectEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeSelectEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeSelectEditor = { pop, onKey, onDocClick };
+}
+
+function closeSelectEditor() {
+  if (!activeSelectEditor) return;
+  const { pop, onKey, onDocClick } = activeSelectEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeSelectEditor = null;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -4278,6 +4434,7 @@ registerRenderer('empty',          empty());
 registerRenderer('credit-card',    creditCard());
 registerRenderer('loading-shimmer', loadingShimmer());
 registerRenderer('audio-attachment', audioAttachment());
+registerRenderer('select',           select());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -4292,4 +4449,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
+  select,
 };

@@ -2872,3 +2872,78 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   width: 13px; height: 13px;
   display: block;
 }
+
+/* ----- select / dropdown editor (Tier 5) --------------------------- */
+.sg-grid .sg-renderer-select-cell { cursor: pointer; }
+.sg-grid .sg-renderer-select-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  background: var(--sg-pill-gray-bg);
+  color: var(--sg-pill-gray-fg);
+}
+.sg-grid .sg-renderer-select-pill-bare {
+  background: transparent;
+  color: var(--sg-fg, #1f2937);
+  padding: 2px 4px;
+}
+.sg-grid .sg-renderer-select-pill-label { display: inline-block; }
+.sg-grid .sg-renderer-select-pill-icon { display: inline-flex; }
+.sg-grid .sg-renderer-select-placeholder {
+  color: var(--sg-fg-muted, #9ca3af);
+  font-style: italic;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-select-bare {
+  color: var(--sg-fg-muted, #6b7280);
+  font-size: 12px;
+}
+
+/* Popover — appended to <body>, positioned via positionPopover(). */
+.sg-renderer-select-popover {
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  max-width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 4px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.sg-renderer-select-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  color: #1f2937;
+  font-size: 13px;
+}
+.sg-renderer-select-option:hover { background: #f3f4f6; }
+.sg-renderer-select-option.is-selected { background: #eff6ff; }
+.sg-renderer-select-option.is-selected::after {
+  content: '✓';
+  margin-left: auto;
+  color: #2563eb;
+  font-weight: 600;
+}
+.sg-renderer-select-option-none {
+  color: #9ca3af;
+  font-style: italic;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+  padding-bottom: 7px;
+}

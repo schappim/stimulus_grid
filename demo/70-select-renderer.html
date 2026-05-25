@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>70 — Select / dropdown editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>70 — Select / dropdown editor</h1>
+  <p class="lede">
+    Fixed-list single-choice cell. Double-click any cell to pick a value
+    from the popover. Options can be tinted via <code>colorMap</code>
+    (palette name) or <code>color</code> per-option (raw CSS colour).
+    Set <code>clearable: true</code> for a "(none)" row at the top.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ticket"
+              data-header-cell-width-value="120">Ticket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="260">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="select-status"
+              data-header-cell-width-value="160">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="priority"
+              data-header-cell-cell-renderer-value="select-priority"
+              data-header-cell-width-value="160">Priority</th>
+          <th data-controller="header-cell" data-header-cell-field-value="team"
+              data-header-cell-cell-renderer-value="select-team"
+              data-header-cell-width-value="180">Team</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Double-click any cell in the <code>Status</code>, <code>Priority</code>, or
+    <code>Team</code> columns. The picker commits via the same
+    <code>grid:cellValueChanged</code> event the inline editor uses, so any
+    persistence wired up to the grid keeps working.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // Status — palette colours via colorMap.
+    registerRenderer('select-status', renderers.select({
+      options: ['Backlog', 'In progress', 'In review', 'Done', 'Won’t fix'],
+      colorMap: {
+        'Backlog':      'gray',
+        'In progress':  'blue',
+        'In review':    'purple',
+        'Done':         'green',
+        'Won’t fix': 'red',
+      },
+    }));
+
+    // Priority — per-option icon + colour, plus clearable.
+    registerRenderer('select-priority', renderers.select({
+      clearable: true,
+      options: [
+        { value: 'p0', label: 'P0 — Critical', color: 'red' },
+        { value: 'p1', label: 'P1 — High',     color: 'orange' },
+        { value: 'p2', label: 'P2 — Medium',   color: 'yellow' },
+        { value: 'p3', label: 'P3 — Low',      color: 'green' },
+        { value: 'p4', label: 'P4 — Trivial',  color: 'gray' },
+      ],
+    }));
+
+    // Team — bare (no colour pills).
+    registerRenderer('select-team', renderers.select({
+      options: ['Platform', 'Growth', 'Billing', 'Mobile', 'Data', 'Design'],
+      placeholder: 'Unassigned',
+    }));
+
+    const data = [
+      { id: 1, ticket: 'ENG-101', title: 'OAuth callback drops session on Safari',          status: 'In progress', priority: 'p1', team: 'Platform' },
+      { id: 2, ticket: 'ENG-102', title: 'Reconcile Stripe invoices nightly',               status: 'Backlog',     priority: 'p2', team: 'Billing'  },
+      { id: 3, ticket: 'ENG-103', title: 'Crash on launch when locale=ja_JP',               status: 'In review',   priority: 'p0', team: 'Mobile'   },
+      { id: 4, ticket: 'ENG-104', title: 'Audit log export — CSV column order',             status: 'Done',        priority: 'p3', team: 'Data'     },
+      { id: 5, ticket: 'ENG-105', title: 'Empty-state illustration for new dashboards',     status: 'Backlog',     priority: 'p4', team: 'Design'   },
+      { id: 6, ticket: 'ENG-106', title: 'Webhook signature verification documentation',    status: 'In progress', priority: 'p2', team: 'Platform' },
+      { id: 7, ticket: 'ENG-107', title: 'Refactor onboarding wizard to step-machine',      status: 'Backlog',     priority: 'p3', team: 'Growth'   },
+      { id: 8, ticket: 'ENG-108', title: 'Mark legacy 2017 cohort as soft-deleted',         status: 'Won’t fix', priority: null, team: null    },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      console.log('cell change:', e.detail);
+    });
+  </script>
+</body>
+</html>
