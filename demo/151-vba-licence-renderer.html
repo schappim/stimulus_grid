@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>151 — VBA licence | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>151 — VBA licence (Victorian Building Authority)</h1>
+  <p class="lede">
+    Victorian Building Authority registered practitioner. 5-year renewal
+    cycle. <code>class</code> = category (Builder Domestic Unlimited,
+    Plumbing, Building Surveyor Unlimited, Building Inspector).
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="company"
+              data-header-cell-width-value="220">Company</th>
+          <th data-controller="header-cell" data-header-cell-field-value="practitioner"
+              data-header-cell-width-value="180">Practitioner</th>
+          <th data-controller="header-cell" data-header-cell-field-value="vba"
+              data-header-cell-cell-renderer-value="vba-licence"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="340">VBA</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, company: 'Melbourne Builders Pty Ltd', practitioner: 'Astrid Hale', vba: { state: 'VIC', number: 'DB-U 23410', class: 'Builder Domestic Unlimited', expires: inDays(1500) } },
+      { id: 2, company: 'Geelong Construction Co',    practitioner: 'Marcus Chen', vba: { state: 'VIC', number: 'CB-L 14422', class: 'Builder Commercial L', expires: inDays(120) } },
+      { id: 3, company: 'Footscray Plumbing',         practitioner: 'Priya Patel', vba: { state: 'VIC', number: 'PL-66501',   class: 'Plumbing', expires: inDays(30) } },
+      { id: 4, company: 'Ballarat Inspect',           practitioner: 'Jamal Owens', vba: { state: 'VIC', number: 'BI-U-21008', class: 'Building Inspector Unlimited', expires: inDays(-15) } },
+      { id: 5, company: 'Surveyor Holdings',          practitioner: 'Lena Brooks', vba: { state: 'VIC', number: 'BS-U-11122', class: 'Building Surveyor' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

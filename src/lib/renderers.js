@@ -9095,6 +9095,13 @@ export function qbccLicence(opts = {}) {
   return complianceCard({ prefix: 'QBCC', ...opts });
 }
 
+// Victorian Building Authority — registered building practitioner.
+// Number is a 4–6 digit registration ID; `class` is the category
+// (Builder, Plumbing, Surveyor, …). Renews every 5 years.
+export function vbaLicence(opts = {}) {
+  return complianceCard({ prefix: 'VBA', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9248,6 +9255,7 @@ registerRenderer('high-risk-licence', highRiskLicence());
 registerRenderer('coes',              coes());
 registerRenderer('coc',               coc());
 registerRenderer('qbcc-licence',      qbccLicence());
+registerRenderer('vba-licence',       vbaLicence());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9805,6 +9813,7 @@ wireBuiltin('high-risk-licence', clip.json);
 wireBuiltin('coes',           clip.json);
 wireBuiltin('coc',            clip.json);
 wireBuiltin('qbcc-licence',   clip.json);
+wireBuiltin('vba-licence',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9835,5 +9844,6 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc, qbccLicence,
+  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
+  qbccLicence, vbaLicence,
 };
