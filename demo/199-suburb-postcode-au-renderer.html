@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>199 — Suburb / postcode (AU) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>199 — Suburb / state / postcode (AU)</h1>
+  <p class="lede">
+    The AU "locality line" — "<strong>BONDI</strong> NSW 2026". Sister to
+    the existing <a href="./34-address-au-renderer.html">address-au</a>
+    renderer for cases where the street address lives in another
+    column and you only want the suburb-state-postcode line.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="160">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="street"
+              data-header-cell-width-value="220">Street</th>
+          <th data-controller="header-cell" data-header-cell-field-value="loc"
+              data-header-cell-cell-renderer-value="suburb-postcode-au"
+              data-header-cell-width-value="220">Locality</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, job: 'J-1042', street: '12 Smith St',         loc: { suburb: 'Bondi',     state: 'NSW', postcode: '2026' } },
+      { id: 2, job: 'J-1043', street: '88 Pacific Hwy',      loc: { suburb: 'Manly',     state: 'NSW', postcode: '2095' } },
+      { id: 3, job: 'J-1044', street: '4/22 Bay St',         loc: { suburb: 'St Kilda',  state: 'VIC', postcode: '3182' } },
+      { id: 4, job: 'J-1045', street: 'Lvl 12, 240 Queen St',loc: { suburb: 'Brisbane',  state: 'QLD', postcode: '4000' } },
+      { id: 5, job: 'J-1046', street: '17 Pine St',          loc: { suburb: 'Adelaide',  state: 'SA',  postcode: '5000' } },
+      { id: 6, job: 'J-1047', street: '5 Ocean Ave',         loc: { suburb: 'Perth',     state: 'WA',  postcode: '6000' } },
+      { id: 7, job: 'J-1048', street: 'Hobart CBD',          loc: 'HOBART TAS 7000' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

@@ -9255,6 +9255,38 @@ export function customerType() {
   });
 }
 
+/* ---------- suburb-postcode-au ------------------------------------
+ *
+ * AU-formatted suburb line: "BONDI NSW 2026". Sister to the
+ * existing `address-au` renderer for cases where the full street
+ * address lives elsewhere and you only need the locality line.
+ *
+ *   value: { suburb, state, postcode }
+ *        | 'Bondi, NSW 2026'                       string passes through */
+export function suburbPostcodeAu() {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    if (typeof value === 'string') return h('span', { class: 'sg-renderer-suburb-postcode-au' },
+      document.createTextNode(value));
+    const wrap = h('span', { class: 'sg-renderer-suburb-postcode-au' });
+    if (value.suburb) wrap.append(h('span', { class: 'sg-renderer-suburb-postcode-au-suburb' },
+      document.createTextNode(String(value.suburb).toUpperCase())));
+    if (value.state) {
+      if (value.suburb) wrap.append(document.createTextNode(' '));
+      wrap.append(h('span', {
+        class: `sg-address-au-state is-${String(value.state).toLowerCase()}`,
+        title: AU_STATE_NAMES[String(value.state).toUpperCase()] || value.state,
+      }, document.createTextNode(String(value.state).toUpperCase())));
+    }
+    if (value.postcode) {
+      if (value.suburb || value.state) wrap.append(document.createTextNode(' '));
+      wrap.append(h('span', { class: 'sg-renderer-suburb-postcode-au-postcode sg-renderer-mono' },
+        document.createTextNode(String(value.postcode))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- region-classifier -------------------------------------
  *
  * Metro / Regional / Remote / Very remote pill — drives travel rate
@@ -10836,6 +10868,7 @@ registerRenderer('strata-plan',       strataPlan());
 registerRenderer('lot-plan',          lotPlan());
 registerRenderer('council-lga',       councilLga());
 registerRenderer('region-classifier', regionClassifier());
+registerRenderer('suburb-postcode-au', suburbPostcodeAu());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11441,6 +11474,7 @@ wireBuiltin('strata-plan',    clip.json);
 wireBuiltin('lot-plan',       clip.json);
 wireBuiltin('council-lga',    clip.json);
 wireBuiltin('region-classifier', clip.text);
+wireBuiltin('suburb-postcode-au', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11483,4 +11517,5 @@ export const renderers = {
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
   customerType, strataPlan, lotPlan, councilLga, regionClassifier,
+  suburbPostcodeAu,
 };
