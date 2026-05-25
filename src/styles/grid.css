@@ -4979,11 +4979,13 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-council-lga-name { color: #1f2937; font-weight: 500; }
 .sg-grid .sg-renderer-council-lga-suffix { color: #6b7280; font-size: 11px; }
 
-/* AU suburb-line — "BONDI NSW 2026" caps suburb + state badge + postcode. */
+/* AU suburb-line — "BONDI NSW 2026" caps suburb + state badge + postcode.
+ * `gap` here, not whitespace text-nodes — flex layout collapses bare
+ * whitespace between children, so we have to spell out the rhythm. */
 .sg-grid .sg-renderer-suburb-postcode-au {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 6px;
   font-size: 12px;
 }
 .sg-grid .sg-renderer-suburb-postcode-au-suburb {

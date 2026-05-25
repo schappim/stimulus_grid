@@ -10667,6 +10667,116 @@ export function insuranceCert() {
   };
 }
 
+/* ---------- email-thread ------------------------------------------
+ *
+ * Mail-list cell — sender + time on one row, then subject, then a
+ * one-line preview, plus optional attachment chip(s). Shape designed
+ * to sit naturally in a CRM "Inbox" column or a contact's comms log.
+ *
+ *   value: {
+ *     from:        'Dean Sarelius' | { name, email },
+ *     time:        Date | ISO string | pre-formatted string,
+ *     subject:     'Introducing Complete AI Edge Solutions — …',
+ *     preview:     'Dear Marcus, I hope this message finds you well…',
+ *     attachments: [{ filename }, …],   // optional
+ *     unread:      true,                 // optional — bolds sender + adds dot
+ *   }
+ *
+ * Time formats relative to "today": same-day → "3:19 pm", same-year →
+ * "23 May", else → "23 May 2024". Strings that don't parse as an ISO
+ * timestamp pass through verbatim so callers can supply pre-formatted
+ * text ("yesterday", "5d ago", …). */
+const EMAIL_THREAD_EXT_COLOURS = {
+  pdf:  '#dc2626',
+  doc:  '#2563eb', docx: '#2563eb', rtf: '#2563eb', txt: '#6b7280', md: '#6b7280',
+  xls:  '#15803d', xlsx: '#15803d', csv: '#15803d', numbers: '#15803d',
+  ppt:  '#ea580c', pptx: '#ea580c', key: '#ea580c',
+  zip:  '#a16207', tar: '#a16207', gz: '#a16207', '7z': '#a16207', rar: '#a16207',
+  png:  '#7c3aed', jpg: '#7c3aed', jpeg: '#7c3aed', gif: '#7c3aed', webp: '#7c3aed', svg: '#7c3aed',
+  mp3:  '#0891b2', wav: '#0891b2', m4a: '#0891b2', ogg: '#0891b2',
+  mp4:  '#9333ea', mov: '#9333ea', webm: '#9333ea', mkv: '#9333ea',
+};
+
+function emailThreadAttachmentChip(att) {
+  const filename = att && (att.filename || att.name) ? String(att.filename || att.name) : 'attachment';
+  const ext = (filename.includes('.') ? filename.split('.').pop() : '').toLowerCase();
+  const bg = EMAIL_THREAD_EXT_COLOURS[ext] || '#6b7280';
+  const chip = h('span', { class: 'sg-renderer-email-thread-attachment', title: filename });
+  chip.append(h('span', {
+    class: 'sg-renderer-email-thread-attachment-icon',
+    style: `background:${bg};`,
+  }, document.createTextNode(ext ? ext.slice(0, 3).toUpperCase() : 'FILE')));
+  chip.append(h('span', { class: 'sg-renderer-email-thread-attachment-name' },
+    document.createTextNode(filename)));
+  return chip;
+}
+
+function emailThreadTime(value, locale) {
+  if (isBlank(value)) return '';
+  // String that doesn't look like an ISO timestamp — pre-formatted; pass through.
+  if (typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}/.test(value)) return value;
+  const d = toDate(value);
+  if (!d) return typeof value === 'string' ? value : '';
+  const now = new Date();
+  const sameDay = d.getFullYear() === now.getFullYear()
+               && d.getMonth() === now.getMonth()
+               && d.getDate() === now.getDate();
+  if (sameDay) {
+    // "3:19 pm" — lowercase to match Apple Mail / Gmail Australian style.
+    return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true })
+      .format(d).toLowerCase().replace(/\s+/g, ' ');
+  }
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat(locale, sameYear
+    ? { day: 'numeric', month: 'short' }
+    : { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+}
+
+function emailThreadFromName(from) {
+  if (isBlank(from)) return '(unknown sender)';
+  if (typeof from === 'string') return from;
+  if (typeof from === 'object') return from.name || from.email || '(unknown sender)';
+  return String(from);
+}
+
+export function emailThread({ locale = 'en-AU' } = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const v = typeof value === 'object' ? value : { subject: String(value) };
+    if (td) {
+      td.classList.add('sg-renderer-email-thread-cell');
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
+    }
+    const wrap = h('div', {
+      class: `sg-renderer-email-thread${v.unread ? ' is-unread' : ''}`,
+    });
+    const head = h('div', { class: 'sg-renderer-email-thread-row' });
+    head.append(h('span', { class: 'sg-renderer-email-thread-from' },
+      document.createTextNode(emailThreadFromName(v.from))));
+    const timeText = emailThreadTime(v.time, locale);
+    if (timeText) {
+      head.append(h('span', { class: 'sg-renderer-email-thread-time' },
+        document.createTextNode(timeText)));
+    }
+    wrap.append(head);
+    if (!isBlank(v.subject)) {
+      wrap.append(h('div', { class: 'sg-renderer-email-thread-subject' },
+        document.createTextNode(String(v.subject))));
+    }
+    if (!isBlank(v.preview)) {
+      wrap.append(h('div', { class: 'sg-renderer-email-thread-preview' },
+        document.createTextNode(String(v.preview))));
+    }
+    if (Array.isArray(v.attachments) && v.attachments.length) {
+      const row = h('div', { class: 'sg-renderer-email-thread-attachments' });
+      v.attachments.forEach((a) => row.append(emailThreadAttachmentChip(a)));
+      wrap.append(row);
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -10869,6 +10979,7 @@ registerRenderer('lot-plan',          lotPlan());
 registerRenderer('council-lga',       councilLga());
 registerRenderer('region-classifier', regionClassifier());
 registerRenderer('suburb-postcode-au', suburbPostcodeAu());
+registerRenderer('email-thread',      emailThread());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11475,6 +11586,7 @@ wireBuiltin('lot-plan',       clip.json);
 wireBuiltin('council-lga',    clip.json);
 wireBuiltin('region-classifier', clip.text);
 wireBuiltin('suburb-postcode-au', clip.json);
+wireBuiltin('email-thread',   clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11518,4 +11630,5 @@ export const renderers = {
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
   customerType, strataPlan, lotPlan, councilLga, regionClassifier,
   suburbPostcodeAu,
+  emailThread,
 };
