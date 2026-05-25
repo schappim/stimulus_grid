@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>125 — File renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>125 — File renderer (single file)</h1>
+  <p class="lede">Single-file sibling to <code>attachments</code> — emoji icon picked from MIME / extension + filename, opens in a new tab.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="invoice" data-header-cell-width-value="120">Invoice</th>
+        <th data-controller="header-cell" data-header-cell-field-value="file" data-header-cell-cell-renderer-value="file-with-size" data-header-cell-width-value="320">Attachment</th>
+        <th data-controller="header-cell" data-header-cell-field-value="amount" data-header-cell-cell-renderer-value="currency" data-header-cell-width-value="120">Amount</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('file-with-size', renderers.file({ showSize: true }));
+
+    const data = [
+      { invoice: 'INV-1001', file: { url: '#', filename: 'march-receipts.pdf',   content_type: 'application/pdf', byte_size: 281_034 }, amount: 412.55 },
+      { invoice: 'INV-1002', file: { url: '#', filename: 'tax-summary.xlsx',     content_type: 'application/vnd.ms-excel', byte_size: 14_222 }, amount: 89.20 },
+      { invoice: 'INV-1003', file: { url: '#', filename: 'office-photo.jpg',     content_type: 'image/jpeg',  byte_size: 1_823_440 }, amount: 0     },
+      { invoice: 'INV-1004', file: { url: '#', filename: 'receipts.zip',         content_type: 'application/zip', byte_size: 9_211_111 }, amount: 1240.00 },
+      { invoice: 'INV-1005', file: '#contract-notes.txt',                                                                                  amount: 200.00 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

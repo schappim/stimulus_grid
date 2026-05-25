@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>128 — Gallery renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>128 — Gallery renderer</h1>
+  <p class="lede">Multi-image strip — distinct from <code>attachments</code> (which renders kind-tinted chips for mixed file types). Up to <code>max</code> thumbnails + a <code>+N</code> overflow chip.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="listing" data-header-cell-width-value="260">Listing</th>
+        <th data-controller="header-cell" data-header-cell-field-value="photos" data-header-cell-cell-renderer-value="gallery" data-header-cell-width-value="320">Photos</th>
+        <th data-controller="header-cell" data-header-cell-field-value="price" data-header-cell-cell-renderer-value="currency" data-header-cell-width-value="120">Price</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ph = (i) => `https://picsum.photos/seed/sg-gallery-${i}/120/120`;
+    const data = [
+      { listing: '3-bed Bondi apartment',     photos: [ph(11), ph(12), ph(13), ph(14)],            price: 1450000 },
+      { listing: 'Surry Hills warehouse loft', photos: [ph(21), ph(22), ph(23), ph(24), ph(25), ph(26), ph(27)], price: 2200000 },
+      { listing: 'Hunters Hill cottage',       photos: [ph(31)],                                     price: 980000  },
+      { listing: 'Off-market — coming soon',   photos: [],                                            price: null    },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

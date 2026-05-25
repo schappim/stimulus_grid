@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>126 — Download link renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>126 — Download link renderer</h1>
+  <p class="lede">Inline "Download (1.2 MB)" button. Uses the HTML <code>download</code> attribute so clicks save the file instead of opening it.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="report" data-header-cell-width-value="240">Report</th>
+        <th data-controller="header-cell" data-header-cell-field-value="file" data-header-cell-cell-renderer-value="download-link" data-header-cell-width-value="220">Download</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { report: 'March audit summary',           file: { url: '#', filename: 'march-audit.pdf', byte_size: 481_322 } },
+      { report: 'Customers CSV (full)',           file: { url: '#', filename: 'customers.csv',   byte_size: 9_211_111 } },
+      { report: 'Quarterly board pack',           file: { url: '#', filename: 'q1-board.pptx',   byte_size: 14_829_211 } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

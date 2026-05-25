@@ -6332,6 +6332,215 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- file (single file + mime-type icon) --------------------
+ *
+ * Single-file sibling to the multi-file `attachments` renderer. Value
+ * is either a string URL, or `{ url, filename?, content_type?, byte_size? }`.
+ * Icon is selected from the file extension or MIME prefix; filename
+ * is displayed alongside. */
+const MIME_ICONS = [
+  { match: /^image\//,                           icon: '🖼️' },
+  { match: /^audio\//,                           icon: '🎵' },
+  { match: /^video\//,                           icon: '🎬' },
+  { match: /pdf$/,                               icon: '📕' },
+  { match: /(zip|tar|gz|7z|rar)$/,               icon: '🗜️' },
+  { match: /(xls|xlsx|csv|sheet)$/,              icon: '📊' },
+  { match: /(doc|docx|wordprocessing)$/,         icon: '📄' },
+  { match: /(ppt|pptx|presentation)$/,           icon: '📊' },
+  { match: /(txt|md|markdown|plain)$/,           icon: '📝' },
+  { match: /(js|ts|jsx|tsx|py|rb|go|rs|java|cpp|c|h|html|css|json|yaml|yml|toml)$/, icon: '📜' },
+];
+
+function iconForFile(filename, content_type) {
+  const mime = String(content_type || '').toLowerCase();
+  const ext  = (filename || '').toLowerCase().split('.').pop();
+  for (const r of MIME_ICONS) {
+    if (mime && r.match.test(mime)) return r.icon;
+    if (ext && r.match.test(ext))   return r.icon;
+  }
+  return '📎';
+}
+
+function fmtBytes(n) {
+  if (!Number.isFinite(n)) return '';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return `${i === 0 ? n : n.toFixed(1)} ${u[i]}`;
+}
+
+function normaliseFile(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string') return { url: v, filename: v.split('/').pop()?.split('?')[0] || v };
+  return {
+    url: v.url || v.src || v.href,
+    filename: v.filename || v.name || (v.url ? v.url.split('/').pop()?.split('?')[0] : ''),
+    content_type: v.content_type || v.contentType || v.mime_type || '',
+    byte_size: v.byte_size ?? v.byteSize ?? v.size,
+  };
+}
+
+export function file({
+  showSize = false,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-file-cell');
+    const f = normaliseFile(value);
+    if (!f) return '';
+    const icon = iconForFile(f.filename, f.content_type);
+    const wrap = h('a', {
+      class: 'sg-renderer-file',
+      href: f.url || '#',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      title: f.filename,
+    });
+    wrap.append(h('span', { class: 'sg-renderer-file-icon', 'aria-hidden': 'true' },
+      document.createTextNode(icon)));
+    wrap.append(h('span', { class: 'sg-renderer-file-name' },
+      document.createTextNode(f.filename || 'file')));
+    if (showSize && f.byte_size) {
+      wrap.append(h('span', { class: 'sg-renderer-file-size' },
+        document.createTextNode(fmtBytes(f.byte_size))));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- download-link ('Download (1.2 MB)' button) -------------
+ *
+ * Inline anchor with a download icon + filename + human-readable size. */
+const SG_DOWNLOAD_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1a1 1 0 011 1v6.586l1.293-1.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 011.414-1.414L7 8.586V2a1 1 0 011-1zm-6 11a1 1 0 011 1v1h10v-1a1 1 0 112 0v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2a1 1 0 011-1z"/></svg>';
+
+export function downloadLink({
+  label = 'Download',
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-download-cell');
+    const f = normaliseFile(value);
+    if (!f) return '';
+    const wrap = h('a', {
+      class: 'sg-renderer-link sg-renderer-download',
+      href: f.url || '#',
+      download: f.filename || '',
+      title: f.filename,
+    });
+    const ic = h('span', { class: 'sg-renderer-download-icon', 'aria-hidden': 'true' });
+    ic.innerHTML = SG_DOWNLOAD_SVG;
+    wrap.append(ic);
+    let labelText = label;
+    if (f.byte_size) labelText += ` (${fmtBytes(f.byte_size)})`;
+    wrap.append(h('span', {}, document.createTextNode(labelText)));
+    return wrap;
+  };
+}
+
+/* ---------- mime-icon (icon only, no filename) ---------------------
+ *
+ * Just the emoji glyph, large size. Useful as a gutter column for a
+ * file-listing grid where the filename lives elsewhere. */
+export function mimeIcon({ size = 18 } = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-mime-icon-cell');
+    if (isBlank(value)) return '';
+    const f = typeof value === 'object' ? value : { content_type: String(value), filename: String(value) };
+    const icon = iconForFile(f.filename, f.content_type);
+    return h('span', {
+      class: 'sg-renderer-mime-icon',
+      style: `font-size: ${size}px;`,
+      title: f.content_type || f.filename || '',
+    }, document.createTextNode(icon));
+  };
+}
+
+/* ---------- gallery (multi-image strip / carousel) -----------------
+ *
+ * Multi-image strip. Distinct from `attachments` (which expects mixed
+ * file types and renders kind-tinted chips); `gallery` is purely
+ * image-shape: an array of `{ url, alt? }` or just URL strings.
+ * Renders up to `max` thumbnails inline with a `+N` chip for overflow. */
+export function gallery({
+  max = 5,
+  thumbSize = 40,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-gallery-cell');
+    if (isBlank(value)) return '';
+    const list = (Array.isArray(value) ? value : [value])
+      .map((i) => typeof i === 'string' ? { url: i } : i)
+      .filter((i) => i && i.url);
+    if (!list.length) return '';
+    const wrap = h('span', { class: 'sg-renderer-gallery' });
+    const visible = list.slice(0, max);
+    for (const img of visible) {
+      wrap.append(h('img', {
+        src: img.url,
+        alt: img.alt || '',
+        class: 'sg-renderer-gallery-thumb',
+        loading: 'lazy', decoding: 'async',
+        style: `width: ${thumbSize}px; height: ${thumbSize}px;`,
+      }));
+    }
+    const overflow = list.length - visible.length;
+    if (overflow > 0) {
+      wrap.append(h('span', {
+        class: 'sg-renderer-gallery-more',
+        style: `width: ${thumbSize}px; height: ${thumbSize}px; font-size: ${thumbSize / 3}px;`,
+        title: list.slice(max).map((i) => i.alt).filter(Boolean).join(', '),
+      }, document.createTextNode(`+${overflow}`)));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- waveform (audio-only viz) ------------------------------
+ *
+ * Static waveform glyph for audio rows. Expects either an array of
+ * normalised amplitudes (0..1) or a URL — when given a URL, renders a
+ * "best-effort" deterministic waveform seeded by the URL string so it
+ * doesn't need to fetch the audio. */
+function seededRandom(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) - h) + seed.charCodeAt(i);
+  return () => {
+    h = (h * 9301 + 49297) % 233280;
+    return h / 233280;
+  };
+}
+
+export function waveform({
+  width = 100,
+  height = 24,
+  bars = 28,
+  color = '#3b82f6',
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-waveform-cell');
+    if (isBlank(value)) return '';
+    let amps;
+    if (Array.isArray(value)) {
+      amps = value.map(Number);
+    } else {
+      const rand = seededRandom(String(value));
+      amps = Array.from({ length: bars }, () => 0.2 + rand() * 0.8);
+    }
+    const n = Math.min(bars, amps.length);
+    const barW = width / n;
+    const gap  = Math.max(0.6, barW * 0.25);
+    let body = '';
+    for (let i = 0; i < n; i++) {
+      const a = Math.max(0.05, Math.min(1, amps[i]));
+      const bh = a * height;
+      const x = i * barW + gap / 2;
+      const y = (height - bh) / 2;
+      body += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${(barW - gap).toFixed(2)}" height="${bh.toFixed(2)}" rx="0.6" fill="${color}"/>`;
+    }
+    const wrap = h('span', { class: 'sg-renderer-waveform' });
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    return wrap;
+  };
+}
+
 /* ---------- favicon (URL + Google s2 favicon thumbnail) ------------
  *
  * Sibling to `url`. Renders a small favicon next to the link text. Uses
@@ -7890,6 +8099,11 @@ registerRenderer('domain',            domain());
 registerRenderer('social-link',       socialLink());
 registerRenderer('tracking-number',   trackingNumber());
 registerRenderer('video-link',        videoLink());
+registerRenderer('file',              file());
+registerRenderer('download-link',     downloadLink());
+registerRenderer('mime-icon',         mimeIcon());
+registerRenderer('gallery',           gallery());
+registerRenderer('waveform',          waveform());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -8465,4 +8679,5 @@ export const renderers = {
   countdown, age, fiscalPeriod, timezone, cron,
   spinner, errorCell, syncStatus, staleCell, freshCell,
   favicon, domain, socialLink, trackingNumber, videoLink,
+  file, downloadLink, mimeIcon, gallery, waveform,
 };

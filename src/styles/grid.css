@@ -3992,3 +3992,49 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ----- file / download / mime-icon / gallery / waveform -------- */
+.sg-grid .sg-renderer-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: #2563eb;
+}
+.sg-grid .sg-renderer-file:hover { text-decoration: underline; }
+.sg-grid .sg-renderer-file-icon { font-size: 14px; }
+.sg-grid .sg-renderer-file-name { color: #1f2937; }
+.sg-grid .sg-renderer-file-size { color: #6b7280; font-size: 11px; }
+.sg-grid .sg-renderer-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sg-grid .sg-renderer-download-icon svg {
+  width: 11px; height: 11px;
+  display: block;
+}
+.sg-grid .sg-renderer-mime-icon-cell { text-align: center; }
+.sg-grid .sg-renderer-mime-icon { line-height: 1; }
+.sg-grid .sg-renderer-gallery {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sg-grid .sg-renderer-gallery-thumb {
+  border-radius: 3px;
+  object-fit: cover;
+  border: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-gallery-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-waveform { display: inline-flex; align-items: center; }
