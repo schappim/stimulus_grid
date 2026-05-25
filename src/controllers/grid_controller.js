@@ -19,6 +19,9 @@ const FILTER_SVG = '<svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg
 // needing to also declare `type: 'number'`.
 const NUMERIC_RENDERERS = new Set([
   'number', 'currency', 'percent', 'compactNumber', 'fileSize', 'duration',
+  // The kebab-case names too, since data-header-cell-cell-renderer-value
+  // uses the registry key (kebab) and not the camelCase export name.
+  'compact-number', 'file-size', 'credit-card',
 ]);
 
 // Input types whose value comes from a native browser picker (color picker,

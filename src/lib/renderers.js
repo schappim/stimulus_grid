@@ -4143,7 +4143,11 @@ function detectCardBrand(d) {
 }
 
 export function creditCard({ mask = true } = {}) {
-  return ({ value }) => {
+  return ({ value, td }) => {
+    // Numeric-identifier columns read better right-aligned with the rest of
+    // the financial columns. The same .sg-renderer-number hook the currency
+    // / number renderers use does the work — right-align + tabular nums.
+    if (td) td.classList.add('sg-renderer-number');
     if (isBlank(value)) return '';
     const digits = String(value).replace(/\D/g, '');
     const lenOk = digits.length >= 13 && digits.length <= 19;

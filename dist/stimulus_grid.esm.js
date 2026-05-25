@@ -3651,25 +3651,25 @@ function Br(s) {
   return /^4\d{12}(\d{3,6})?$/.test(s) ? "visa" : /^(5[1-5]\d{14}|2(2[2-9]|[3-6]\d|7[01]|720)\d{12})$/.test(s) ? "mastercard" : /^3[47]\d{13}$/.test(s) ? "amex" : /^(6011\d{12,15}|65\d{14,17}|64[4-9]\d{13}|622(12[6-9]|1[3-9]\d|[2-8]\d{2}|9([01]\d|2[0-5]))\d{10,13})$/.test(s) ? "discover" : /^35(2[89]|[3-8]\d)\d{12}$/.test(s) ? "jcb" : /^3(0[0-5]|[68]\d|9\d)\d{11}$/.test(s) ? "diners" : null;
 }
 function Tn({ mask: s = !0 } = {}) {
-  return ({ value: r }) => {
-    if (R(r)) return "";
-    const e = String(r).replace(/\D/g, ""), t = e.length >= 13 && e.length <= 19, n = t && Pr(e), i = t ? Br(e) : null, o = h("span", { class: `sg-renderer-card${n ? "" : " is-invalid"}` });
-    i && o.append(h("span", {
-      class: `sg-renderer-card-brand is-${i}`,
-      title: i[0].toUpperCase() + i.slice(1)
-    }, document.createTextNode(i === "mastercard" ? "MC" : i.toUpperCase())));
-    let a;
-    if (!t)
-      a = String(r);
+  return ({ value: r, td: e }) => {
+    if (e && e.classList.add("sg-renderer-number"), R(r)) return "";
+    const t = String(r).replace(/\D/g, ""), n = t.length >= 13 && t.length <= 19, i = n && Pr(t), o = n ? Br(t) : null, a = h("span", { class: `sg-renderer-card${i ? "" : " is-invalid"}` });
+    o && a.append(h("span", {
+      class: `sg-renderer-card-brand is-${o}`,
+      title: o[0].toUpperCase() + o.slice(1)
+    }, document.createTextNode(o === "mastercard" ? "MC" : o.toUpperCase())));
+    let l;
+    if (!n)
+      l = String(r);
     else {
-      const l = s ? "•".repeat(e.length - 4) + e.slice(-4) : e;
-      i === "amex" || i === "diners" ? a = `${l.slice(0, 4)} ${l.slice(4, 10)} ${l.slice(10)}` : a = l.match(/.{1,4}/g).join(" ");
+      const d = s ? "•".repeat(t.length - 4) + t.slice(-4) : t;
+      o === "amex" || o === "diners" ? l = `${d.slice(0, 4)} ${d.slice(4, 10)} ${d.slice(10)}` : l = d.match(/.{1,4}/g).join(" ");
     }
-    return o.append(h(
+    return a.append(h(
       "span",
       { class: "sg-renderer-card-num sg-renderer-mono" },
-      document.createTextNode(a)
-    )), o;
+      document.createTextNode(l)
+    )), a;
   };
 }
 function Dn({
@@ -3822,7 +3822,12 @@ const Hr = {
   "percent",
   "compactNumber",
   "fileSize",
-  "duration"
+  "duration",
+  // The kebab-case names too, since data-header-cell-cell-renderer-value
+  // uses the registry key (kebab) and not the camelCase export name.
+  "compact-number",
+  "file-size",
+  "credit-card"
 ]), jr = /* @__PURE__ */ new Set([
   "color",
   "date",

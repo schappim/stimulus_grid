@@ -14,6 +14,17 @@
     code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
     .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
            border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Right-align the Exp column — plain-text column with no renderer,
+       so we target it directly by field name. Card column gets right-
+       alignment via the credit-card renderer (now treated as a numeric
+       column by the grid's _columnAlignment resolver). */
+    .sg-grid th[data-field="exp"] { text-align: right; }
+    .sg-grid th[data-field="exp"] .sg-header-content { justify-content: flex-end; }
+    .sg-grid td[data-col-id="exp"] {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>

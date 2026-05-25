@@ -20,6 +20,17 @@
       padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
     }
     button:hover { background: #f3f4f6; }
+
+    /* Right-align the LTV column. The loading-shimmer renderer doesn't
+       opt the cell into the .sg-renderer-number alignment hook (it's a
+       generic placeholder, not a number renderer), so we target by
+       data-field / data-col-id directly. */
+    .sg-grid th[data-field="ltv"] { text-align: right; }
+    .sg-grid th[data-field="ltv"] .sg-header-content { justify-content: flex-end; }
+    .sg-grid td[data-col-id="ltv"] {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
