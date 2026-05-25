@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>29 — Mask renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>29 — Mask renderer</h1>
+  <p class="lede">
+    Mask sensitive values for at-a-glance display: credit cards as
+    <code>•••• •••• •••• 4242</code>, phones as <code>••• ••• 9999</code>,
+    emails as <code>a••••@example.com</code>. Built-in <code>format</code>
+    presets cover the common shapes; a generic
+    <code>{ showFirst, showLast, char }</code> config covers everything
+    else.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="160"
+              data-header-cell-editable-value="true">Cardholder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="card"
+              data-header-cell-cell-renderer-value="mask-cc"
+              data-header-cell-width-value="180">Card</th>
+          <th data-controller="header-cell" data-header-cell-field-value="card_bin"
+              data-header-cell-cell-renderer-value="mask-cc-bin"
+              data-header-cell-width-value="180">Card (BIN)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="phone"
+              data-header-cell-cell-renderer-value="mask-phone"
+              data-header-cell-width-value="160">Phone</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-cell-renderer-value="mask-email"
+              data-header-cell-width-value="220">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="api_key"
+              data-header-cell-cell-renderer-value="mask-token"
+              data-header-cell-width-value="200">API token</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Presets used here:</strong>
+    <code>mask({ format: 'cc-last4' })</code>,
+    <code>mask({ format: 'cc-bin-last4' })</code>,
+    <code>mask({ format: 'phone-last4' })</code>,
+    <code>mask({ format: 'email' })</code>, and a generic
+    <code>mask({ showFirst: 4, showLast: 4 })</code> for the API token.
+    The mask character is <code>•</code> by default; pass
+    <code>{ char: '*' }</code> for asterisks.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('mask-cc',      renderers.mask({ format: 'cc-last4' }));
+    registerRenderer('mask-cc-bin',  renderers.mask({ format: 'cc-bin-last4' }));
+    registerRenderer('mask-phone',   renderers.mask({ format: 'phone-last4' }));
+    registerRenderer('mask-email',   renderers.mask({ format: 'email' }));
+    registerRenderer('mask-token',   renderers.mask({ showFirst: 4, showLast: 4 }));
+
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale',    card: '4242424242424242', card_bin: '4242424242424242',
+        phone: '0412345678', email: 'astrid@chickcom.com',  api_key: 'demo_live_5142adf913b7c8e9d2a4f6b8c1e3d5f7' },
+      { id: 2, name: 'Marcus Chen',    card: '5555555555554444', card_bin: '5555555555554444',
+        phone: '+61398765432', email: 'marcus@example.com', api_key: 'demo_test_3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r' },
+      { id: 3, name: 'Priya Patel',    card: '378282246310005',  card_bin: '378282246310005',   // Amex (15 digits)
+        phone: '1300975707', email: 'priya@example.org',   api_key: 'demo_live_9182736455647382910abcdef0123456' },
+      { id: 4, name: 'Jamal Owens',    card: '6011000990139424', card_bin: '6011000990139424',
+        phone: '0298765432', email: 'jamal@notvalid',      api_key: 'demo_live_aabbccddeeff0011223344556677aabb' },
+      { id: 5, name: 'Lena Brooks',    card: '4012888888881881', card_bin: '4012888888881881',
+        phone: '0412000000', email: 'lena@studio.io',      api_key: 'demo_test_qwertyuiopasdfghjklzxcvbnm123456' },
+      { id: 6, name: 'Tomás Vega',     card: '5105105105105100', card_bin: '5105105105105100',
+        phone: '+34911234567', email: 'tomas@example.es',  api_key: 'demo_live_zyxwvutsrqponmlkjihgfedcba654321' },
+      { id: 7, name: 'Mei Tanaka',     card: '',                 card_bin: '',
+        phone: '0298111111', email: 'mei@example.jp',      api_key: '' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

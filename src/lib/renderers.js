@@ -715,6 +715,85 @@ export function heatmap({
   };
 }
 
+/* ---------- mask (sensitive data) ----------------------------------- */
+
+// Common shorthand formats — the right "shape" for a given kind of value.
+// Pass `format: 'cc-last4'` (or any of the keys below) to skip the manual
+// showFirst/showLast/separator wiring.
+const MASK_FORMATS = {
+  // Credit card: 16 digits grouped 4-4-4-4, last 4 visible. Handles 13-19
+  // digit lengths gracefully (Amex 15, others 16). Non-digits are stripped.
+  'cc-last4': (text, char) => groupedMask(text.replace(/\D/g, ''), 4, 4, char, ' '),
+  // BIN + last4: show the first 6 + last 4, mask the middle (PCI-friendly).
+  'cc-bin-last4': (text, char) => groupedMask(text.replace(/\D/g, ''), 4, 4, char, ' ', 6),
+  // Phone: show the last 4 digits, mask the rest as a single bullet
+  // block ("•••••• 1234"). Sidesteps the country-specific 3-3-4 / 4-3-3
+  // grouping ambiguity — register your own variant if you need a
+  // region-specific layout.
+  'phone-last4': (text, char) => {
+    const d = text.replace(/\D/g, '');
+    if (!d) return text;
+    if (d.length <= 4) return d;
+    return char.repeat(d.length - 4) + ' ' + d.slice(-4);
+  },
+  // Email: show first char + domain ("a••••@example.com").
+  'email': (text, char) => {
+    const m = String(text).match(/^([^@\s]+)(@.+)$/);
+    if (!m) return text;
+    return m[1][0] + char.repeat(Math.max(1, m[1].length - 1)) + m[2];
+  },
+  // SSN / ABN-style: show last 4.
+  'last4': (text, char) => maskAllButLast(text, 4, char),
+};
+
+function maskAllButLast(text, n, char) {
+  const t = String(text);
+  if (t.length <= n) return t;
+  return char.repeat(t.length - n) + t.slice(-n);
+}
+
+// Group a digit string into chunks (default 4 wide) with a separator
+// between groups, mask everything except the leading `showFirst` digits
+// and the trailing `showLast` digits. Grouping is right-aligned so the
+// last `showLast` characters always form a clean trailing block —
+// matters for Amex (15 digits) and other non-multiple-of-4 lengths.
+function groupedMask(digits, groupSize, showLast, char, sep, showFirst = 0) {
+  if (!digits) return '';
+  const total = digits.length;
+  const masked = digits.split('').map((d, i) => {
+    if (i < showFirst) return d;
+    if (i >= total - showLast) return d;
+    return char;
+  }).join('');
+  const out = [];
+  for (let end = masked.length; end > 0; end -= groupSize) {
+    out.unshift(masked.slice(Math.max(0, end - groupSize), end));
+  }
+  return out.join(sep);
+}
+
+// Mask a value for display. Either pass a `format` preset (cc-last4,
+// cc-bin-last4, phone-last4, email, last4) or a generic
+// { showFirst, showLast, char } config. Blank values render blank.
+export function mask({
+  format = null,
+  showFirst = 0,
+  showLast = 4,
+  char = '•',
+} = {}) {
+  const preset = format ? MASK_FORMATS[format] : null;
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    if (preset) return preset(text, char);
+    // Generic: keep `showFirst` chars + `showLast` chars, replace middle.
+    const head = text.slice(0, showFirst);
+    const tail = showLast > 0 ? text.slice(-showLast) : '';
+    const middleLen = Math.max(0, text.length - showFirst - showLast);
+    return head + char.repeat(middleLen) + tail;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -1000,6 +1079,7 @@ registerRenderer('image',          image());
 registerRenderer('color-swatch',   colorSwatch());
 registerRenderer('sparkline',      sparkline());
 registerRenderer('heatmap-cell',   heatmap());
+registerRenderer('mask',           mask());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -1008,5 +1088,5 @@ export const renderers = {
   number, compactNumber, fileSize,
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
-  heatmap,
+  heatmap, mask,
 };
