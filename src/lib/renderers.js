@@ -43,6 +43,94 @@ export function listRenderers() {
   return Array.from(REGISTRY.keys());
 }
 
+/* ---------- clipboard contract: copyValue + parseValue --------------
+ *
+ * Cell renderers are display-only — they take a raw value and return a
+ * DOM node. For copy/paste round-trips, a renderer may ALSO declare:
+ *
+ *   fn.copyValue(ctx)            → string written to the clipboard
+ *   fn.parseValue(text, ctx)     → coerced value (or `undefined` to skip)
+ *
+ * The grid's Cmd/Ctrl+C handler reads `copyValue` first, falling back to
+ * `formatValue(row, col)`. Cmd/Ctrl+V parses each pasted cell through the
+ * column's `parseValue`, then writes the result (firing the same
+ * `grid:cellValueChanged` event the inline editor uses).
+ *
+ * Returning `undefined` from `parseValue` rejects the value — the grid
+ * skips that cell and includes it in `grid:pasteRejected.detail.rejected`
+ * so apps can surface a toast. Returning anything else (including the raw
+ * text) commits it; renderers with built-in validation (abn, acn,
+ * credit-card …) deliberately commit raw text so their invalid-styling
+ * surfaces to the user instead of silently dropping the paste. */
+
+// Helper: attach copy/parse to a renderer factory's result. Returns the
+// same function for chaining at the end of `currency(…)`-style factories.
+function withClipboard(fn, { copy, parse } = {}) {
+  if (typeof copy  === 'function') fn.copyValue  = copy;
+  if (typeof parse === 'function') fn.parseValue = parse;
+  return fn;
+}
+
+const BOOL_TRUTHY_STRINGS = new Set(['1', 'true', 't', 'yes', 'y', 'on', '✓', 'checked']);
+const BOOL_FALSY_STRINGS  = new Set(['0', 'false', 'f', 'no', 'n', 'off', '✗', 'unchecked', '-', '—']);
+
+// Default parser used when a column has no renderer (or its renderer
+// hasn't opted into parseValue). Exported so grid_controller can call it
+// from its paste handler — keeps the type-coercion logic in one place.
+export function defaultParseValue(text, col) {
+  const s = String(text ?? '');
+  if (s === '') return '';
+  switch (col?.type) {
+    case 'number': {
+      const cleaned = s.replace(/[,$£€¥\s]/g, '').replace(/%$/, '');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    case 'boolean': {
+      const k = s.trim().toLowerCase();
+      if (BOOL_TRUTHY_STRINGS.has(k)) return true;
+      if (BOOL_FALSY_STRINGS.has(k))  return false;
+      return undefined;
+    }
+    case 'date': {
+      const d = new Date(s);
+      return Number.isNaN(d.valueOf()) ? undefined : s;
+    }
+    default:
+      return s;
+  }
+}
+
+// Default copy used when a renderer hasn't opted into copyValue. The
+// grid passes the already-computed `formatted` (from model.formatValue)
+// so this stays a one-liner — kept here so renderers can compose
+// ("formatted, plus an extra annotation").
+export function defaultCopyValue(value, _col, formatted) {
+  if (formatted != null && formatted !== '') return formatted;
+  return value == null ? '' : String(value);
+}
+
+// Helpers — shared between several built-in renderers' parseValue impls.
+
+// Strip currency / percent / thousands-separator noise to a bare number.
+function parseNumeric(text) {
+  if (text == null || text === '') return undefined;
+  const cleaned = String(text).replace(/[,$£€¥\s]/g, '').replace(/%$/, '');
+  if (cleaned === '' || cleaned === '-' || cleaned === '.') return undefined;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Parse "true" / "false" / "1" / "0" / "yes" / "✓" — same set as the
+// boolean renderer's defaultIsTruthy plus an explicit falsy match.
+function parseBooleanText(text) {
+  const k = String(text ?? '').trim().toLowerCase();
+  if (k === '') return undefined;
+  if (BOOL_TRUTHY_STRINGS.has(k)) return true;
+  if (BOOL_FALSY_STRINGS.has(k))  return false;
+  return undefined;
+}
+
 // Small utility: create an element with attrs + (optional) text or children.
 function h(tag, attrs = {}, content = null) {
   const node = document.createElement(tag);
