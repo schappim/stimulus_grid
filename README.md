@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), a library of **built-in cell renderers** (email/URL/phone links, currency, percent, progress bars, star ratings, country flags, ABNs, avatars, status pills), and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -229,6 +229,91 @@ grid.addEventListener("grid:cellValueChanged", (e) => console.log(e.detail))
 - **Editor** clones the template on edit. The control marked `[data-editor-input]`
   (or the first `input`/`select`/`textarea`) is seeded with the current value,
   focused, and read back on commit (Enter / Tab / blur).
+
+## Built-in cell renderers
+
+Ten functional renderers ship pre-registered — reference them by name from
+`data-header-cell-cell-renderer-value`. `cell-renderer` first resolves as a
+`<template>` id (the section above); when no template matches, it falls
+through to the renderer registry, so templates and named renderers coexist
+without conflict.
+
+![grid showing every built-in renderer in one row: avatar with initials, mailto email link, formatted phone, flag + country code, hostname-only URL, ABN with spaces (or red INVALID), USD currency, progress bar, percent, half-star rating, tag chips, plus four status pills — Subscribed/Delivered/Shopify/Express](docs/images/grid-renderers.png)
+
+| Renderer | Use for | Notes |
+|---|---|---|
+| `email` | email addresses | `mailto:` anchor when valid; red text otherwise |
+| `url` | links | Anchor showing `hostname[/path]`, opens in a new tab |
+| `phone` | phone numbers | `tel:` anchor with AU-aware formatting |
+| `currency` | money | USD by default; right-aligned, tabular-nums |
+| `percent` | percentages | `N%` suffix, right-aligned |
+| `progress-bar` | 0-100 values | Clamped bar; configurable colour |
+| `star-rating` | ratings | Half-star precision, SVG glyphs |
+| `tags` | CSV / arrays | Splits on commas → pill chips |
+| `country-flag` | 2-letter ISO codes | Emoji flag + code label |
+| `abn` | Australian Business Numbers | Checksum-validated → ABR lookup link; red on invalid |
+| `avatar` | user references | Image (or initials) + name; reads from `window.__sgUsers`, `row[avatarField]`, or a custom `lookup` function |
+
+```html
+<th data-controller="header-cell" data-header-cell-field-value="email"
+    data-header-cell-cell-renderer-value="email">Email</th>
+<th data-controller="header-cell" data-header-cell-field-value="rating"
+    data-header-cell-cell-renderer-value="star-rating"
+    data-header-cell-type-value="number">Rating</th>
+<th data-controller="header-cell" data-header-cell-field-value="completion"
+    data-header-cell-cell-renderer-value="progress-bar"
+    data-header-cell-type-value="number">Onboarding</th>
+```
+
+### Status pills (`statusPill(colorMap, iconMap?)`)
+
+Every "status" column in this codebase converges on the same shape — a
+coloured pill with an optional icon. Register one per status column, then
+reference it like any other renderer. The colour map keys are lower-cased
+before lookup, so input data can be sloppy.
+
+```js
+import { registerRenderer, renderers } from "@ninjaai/stimulus_grid"
+
+registerRenderer("subscription", renderers.statusPill({
+  subscribed:       "green",
+  unsubscribed:     "yellow",
+  "not-subscribed": "gray",
+}))
+
+registerRenderer("fulfillment", renderers.statusPill({
+  fulfilled:    "gray",  delivered: "green", "in-transit": "blue",
+  pending:      "yellow", partial:   "orange", rejected:   "red",
+}, {
+  fulfilled:    "check-circle", delivered: "check-circle",
+  "in-transit": "truck",        pending:   "clock",
+  partial:      "half-circle",  rejected:  "x-circle",
+}))
+```
+
+Built-in icon names: `check`, `check-circle`, `x-circle`, `clock`, `truck`,
+`dot`, `circle`, `half-circle`, `alert`, `cart`. Pass a raw SVG string for
+anything custom. Pill colours: `gray`, `red`, `orange`, `yellow`, `green`,
+`blue`, `indigo`, `purple`, `pink`.
+
+### Writing your own renderer
+
+A renderer is one function. Return an element / HTML string and the grid
+drops it into the `<td>`; return nothing and the renderer is assumed to
+have mutated `td` directly. The grid passes the `td` so you can add
+classes (right-align, etc.) without wrapping the cell content.
+
+```js
+import { registerRenderer } from "@ninjaai/stimulus_grid"
+
+registerRenderer("severity", ({ value, td }) => {
+  td.classList.add(`severity-${value}`)
+  return value.toUpperCase()
+})
+```
+
+See **[demo 19](demo/19-cell-renderers.html)** for every built-in side
+by side.
 
 ## Row grouping & aggregation
 

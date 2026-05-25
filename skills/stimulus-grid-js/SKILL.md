@@ -175,6 +175,69 @@ Define `<template>` elements and reference them by id:
   seeded with the current value, focused, and read on commit. A column can have
   both a custom renderer and a custom editor.
 
+## Built-in cell renderers
+
+`cell-renderer` first resolves as a `<template>` id (above); when no template
+matches, it falls through to the renderer registry. Ten functional renderers
+ship pre-registered:
+
+| Name | Use for |
+|---|---|
+| `email` | Mailto link when valid; red text otherwise |
+| `url` | Anchor showing `hostname[/path]`, new tab |
+| `phone` | `tel:` anchor with AU-aware formatting |
+| `currency` | USD by default, right-aligned, tabular-nums |
+| `percent` | `N%` suffix, right-aligned |
+| `progress-bar` | Clamped 0-100 visual bar (green default) |
+| `star-rating` | Half-star precision, SVG glyphs |
+| `tags` | CSV / array → pill chips |
+| `country-flag` | 2-letter ISO code → emoji + code |
+| `abn` | Australian Business Number; valid → ABR lookup, invalid → red |
+| `avatar` | Image (or initials) + name; reads `window.__sgUsers` by default |
+
+```html
+<th data-controller="header-cell" data-header-cell-field-value="email"
+    data-header-cell-cell-renderer-value="email">Email</th>
+```
+
+For badge/pill status columns (every "status" column converges on the same
+shape), use the `statusPill(colorMap, iconMap?)` builder once at app boot
+and reference it by name from HTML:
+
+```js
+import { registerRenderer, renderers } from "@ninjaai/stimulus_grid"
+
+registerRenderer("subscription", renderers.statusPill({
+  subscribed: "green", unsubscribed: "yellow", "not-subscribed": "gray",
+}))
+
+registerRenderer("fulfillment", renderers.statusPill({
+  fulfilled: "gray", delivered: "green", "in-transit": "blue",
+  pending: "yellow", rejected: "red",
+}, {
+  fulfilled: "check-circle", delivered: "check-circle",
+  "in-transit": "truck", pending: "clock", rejected: "x-circle",
+}))
+```
+
+Pill colours: `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `indigo`,
+`purple`, `pink`. Built-in icon names: `check`, `check-circle`, `x-circle`,
+`clock`, `truck`, `dot`, `circle`, `half-circle`, `alert`, `cart` (or pass
+your own SVG string per status).
+
+Writing your own:
+
+```js
+registerRenderer("severity", ({ value, td }) => {
+  td.classList.add(`severity-${value}`)
+  return value.toUpperCase()
+})
+```
+
+A renderer is `({value, row, col, td, formatted}) → HTMLElement | string |
+void`. Return an element/string and the grid drops it in; return nothing
+and the renderer is assumed to have mutated `td` directly. See **demo 19**.
+
 ## Editing behavior
 
 Double-click an editable cell to edit. **Enter** commits, **Escape** cancels,

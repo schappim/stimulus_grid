@@ -386,6 +386,41 @@ reorder siblings within each parent — tree shape is preserved. Cycles,
 self-parents, and orphan rows become roots. Mutually exclusive with
 `row_group_cols` and `pivot_mode`.
 
+## Built-in cell renderers
+
+Ten functional renderers ship pre-registered in the JS bundle — declare
+them on the column with `cell_renderer:` and they render through the
+normal partial. Useful for the common cases that don't need a custom
+`<template>`: links, currency, percent, progress bars, stars, tags, flags,
+ABNs, avatars, and status pills.
+
+```ruby
+class UserGrid < ApplicationGrid
+  resource :user
+  column :name,         cell_renderer: "avatar"
+  column :email,        cell_renderer: "email"
+  column :phone,        cell_renderer: "phone"
+  column :country,      cell_renderer: "country-flag"
+  column :lifetime_value, type: :decimal, cell_renderer: "currency"
+  column :rating,       type: :decimal,   cell_renderer: "star-rating"
+  column :subscription, cell_renderer: "subscription"   # registered in JS
+end
+```
+
+For status pills, register once at JS boot with your colour map:
+
+```js
+import { registerRenderer, renderers } from "@ninjaai/stimulus_grid"
+
+registerRenderer("subscription", renderers.statusPill({
+  subscribed: "green", unsubscribed: "yellow", "not-subscribed": "gray",
+}))
+```
+
+Pre-registered names: `email`, `url`, `phone`, `currency`, `percent`,
+`progress-bar`, `star-rating`, `tags`, `country-flag`, `abn`, `avatar`.
+Pill colours: gray, red, orange, yellow, green, blue, indigo, purple, pink.
+
 ## Pivot mode (with sortable pivot columns)
 
 `pivot_mode: true` reshapes the data into a pivot table — `row_group_cols`

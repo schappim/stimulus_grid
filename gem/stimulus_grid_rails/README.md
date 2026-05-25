@@ -469,6 +469,47 @@ narrows the view to USA-only sports.
 | `pivot_cols:` | JSON-coerced array of fields whose unique values become columns |
 | `side_panel:` | `true` to render the drag-driven row groups / pivots / values tool drawer |
 
+## Built-in cell renderers
+
+The grid ships with ten named cell renderers and a status-pill builder —
+declare them on the column with `cell_renderer:` and they render through
+the existing `_grid.html.erb` partial without any extra setup. Useful for
+the common cases that don't need a custom `<template>`: email/phone/URL
+links, currency, percentages, progress bars, star ratings, tag chips,
+country flags, ABN validation, avatars, and badge-style status columns.
+
+```ruby
+class UserGrid < ApplicationGrid
+  resource :user
+  column :name,         cell_renderer: "avatar"
+  column :email,        cell_renderer: "email"
+  column :phone,        cell_renderer: "phone"
+  column :country,      cell_renderer: "country-flag"
+  column :lifetime_value, type: :decimal, cell_renderer: "currency"
+  column :onboarding,   type: :integer,   cell_renderer: "progress-bar"
+  column :rating,       type: :decimal,   cell_renderer: "star-rating"
+  column :tags,         cell_renderer: "tags"
+  column :abn,          cell_renderer: "abn"
+  column :subscription, cell_renderer: "subscription"   # custom — registered in JS
+end
+```
+
+For status pills, register once at JS boot with your colour map. The
+column merely names the renderer; the colours live on the client (CSS):
+
+```js
+import { registerRenderer, renderers } from "@ninjaai/stimulus_grid"
+
+registerRenderer("subscription", renderers.statusPill({
+  subscribed: "green", unsubscribed: "yellow", "not-subscribed": "gray",
+}))
+```
+
+Available pre-registered renderers: `email`, `url`, `phone`, `currency`,
+`percent`, `progress-bar`, `star-rating`, `tags`, `country-flag`, `abn`,
+`avatar`. See the JS [README — Built-in cell renderers](../../README.md#built-in-cell-renderers)
+for the full list of options.
+
 ## Automatic broadcasts
 
 `include StimulusGridRails::Broadcastable; broadcasts_grid YourGrid` is all the
