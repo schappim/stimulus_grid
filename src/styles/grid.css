@@ -1028,6 +1028,25 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-weight: 500;
 }
 
+/* Highlight — <mark> nodes wrapping quick-filter matches. Subtle amber
+   highlight; the browser default is too saturated for table cells. */
+.sg-grid .sg-renderer-mark {
+  background: #fef08a;     /* amber-200 */
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+/* Mask, numeric formats — right-align + monospace + tabular numerals so
+   the bullets (•) and the visible trailing digits stack pixel-perfectly
+   column-to-column. The masking character is also fixed-width in mono. */
+.sg-grid td.sg-renderer-mask-numeric {
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

@@ -772,26 +772,83 @@ function groupedMask(digits, groupSize, showLast, char, sep, showFirst = 0) {
   return out.join(sep);
 }
 
+// Numeric formats — masked digits live in tabular columns and read
+// cleaner right-aligned with a monospace face so the bullets line up
+// vertically column-to-column.
+const MASK_NUMERIC_FORMATS = new Set(['cc-last4', 'cc-bin-last4', 'phone-last4', 'last4']);
+
 // Mask a value for display. Either pass a `format` preset (cc-last4,
 // cc-bin-last4, phone-last4, email, last4) or a generic
 // { showFirst, showLast, char } config. Blank values render blank.
+// `align` overrides auto-detection: pass `'right'` to force right-align
+// on a generic mask, or `'left'` to suppress right-align on a numeric
+// preset.
 export function mask({
   format = null,
   showFirst = 0,
   showLast = 4,
   char = '•',
+  align = null,                     // 'left' | 'right' | null (auto)
 } = {}) {
   const preset = format ? MASK_FORMATS[format] : null;
-  return ({ value }) => {
+  const autoNumeric = format ? MASK_NUMERIC_FORMATS.has(format) : false;
+  const rightAlign = align === 'right' || (align !== 'left' && autoNumeric);
+  return ({ value, td }) => {
+    if (td && rightAlign) td.classList.add('sg-renderer-mask-numeric');
     if (isBlank(value)) return '';
     const text = String(value);
     if (preset) return preset(text, char);
-    // Generic: keep `showFirst` chars + `showLast` chars, replace middle.
     const head = text.slice(0, showFirst);
     const tail = showLast > 0 ? text.slice(-showLast) : '';
     const middleLen = Math.max(0, text.length - showFirst - showLast);
     return head + char.repeat(middleLen) + tail;
   };
+}
+
+/* ---------- highlight (quickFilter matches) ------------------------- */
+
+// Wrap matches of the active quick-filter (or any explicit `query`) in
+// <mark> tags so users can see *why* a row was matched. Reads the live
+// query from the gridApi we pass into every renderer call, so it updates
+// naturally on every quickFilter change (the grid re-renders rows, the
+// renderer re-runs).
+//
+// Defaults to case-insensitive matching; pass `{ caseSensitive: true }`
+// for case-sensitive. The HTML `<mark>` element is the right primitive
+// here — accessible, styleable, and what every search tool reaches for.
+export function highlight({
+  query = null,
+  caseSensitive = false,
+  className = 'sg-renderer-mark',
+} = {}) {
+  return ({ value, api }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const q = query != null ? String(query) : (api?.getQuickFilter?.() || '');
+    if (!q) return document.createTextNode(text);
+    return wrapHighlightMatches(text, q, caseSensitive, className);
+  };
+}
+
+function wrapHighlightMatches(text, q, caseSensitive, className) {
+  const haystack = caseSensitive ? text : text.toLowerCase();
+  const needle   = caseSensitive ? q    : q.toLowerCase();
+  const wrap = document.createElement('span');
+  let i = 0;
+  while (i < text.length) {
+    const idx = haystack.indexOf(needle, i);
+    if (idx === -1) {
+      wrap.appendChild(document.createTextNode(text.slice(i)));
+      break;
+    }
+    if (idx > i) wrap.appendChild(document.createTextNode(text.slice(i, idx)));
+    const mark = document.createElement('mark');
+    mark.className = className;
+    mark.textContent = text.slice(idx, idx + q.length);
+    wrap.appendChild(mark);
+    i = idx + q.length;
+  }
+  return wrap;
 }
 
 /* ---------- progress bar -------------------------------------------- */
@@ -1080,6 +1137,7 @@ registerRenderer('color-swatch',   colorSwatch());
 registerRenderer('sparkline',      sparkline());
 registerRenderer('heatmap-cell',   heatmap());
 registerRenderer('mask',           mask());
+registerRenderer('highlight',      highlight());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -1088,5 +1146,5 @@ export const renderers = {
   number, compactNumber, fileSize,
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
-  heatmap, mask,
+  heatmap, mask, highlight,
 };

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>30 — Highlight renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .toolbar { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+    .toolbar input[type="search"] {
+      padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 4px;
+      font: inherit; min-width: 260px;
+    }
+    .toolbar .stat { color: #6b7280; font-size: 13px; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>30 — Highlight (quick-filter matches)</h1>
+  <p class="lede">
+    Wraps matches of the grid's active <code>quickFilter</code> in
+    <code>&lt;mark&gt;</code> tags so users see <em>why</em> a row was
+    matched — not just <em>that</em> it was. The renderer reads the live
+    filter via the <code>api</code> passed into every renderer call, so
+    typing in the search box repaints highlights instantly without any
+    wiring on your side.
+  </p>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Quick filter… try &quot;air&quot;, &quot;Beijing&quot;, &quot;de&quot;…">
+    <span id="stat" class="stat">no filter</span>
+  </div>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-cell-renderer-value="highlight"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="260">Name</th>
+          <th data-controller="header-cell" data-header-cell-field-value="city"
+              data-header-cell-cell-renderer-value="highlight"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">City</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-cell-renderer-value="highlight"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-cell-renderer-value="highlight"
+              data-header-cell-sortable-value="true" data-header-cell-editable-value="true"
+              data-header-cell-width-value="320">Title</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>How it works:</strong> the highlight renderer reads
+    <code>api.getQuickFilter()</code> from the renderer context. When the
+    grid's quickFilter changes, every row re-renders → the renderer
+    re-runs → matches re-wrap. Case-insensitive by default; pass
+    <code>{ caseSensitive: true }</code> for case-sensitive. Pass
+    <code>{ query: '…' }</code> to highlight a fixed string regardless
+    of the filter.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, name: 'Aerospace Engineer',   city: 'Beijing',     country: 'China',          title: 'Senior Aerodynamicist · jet propulsion' },
+      { id: 2, name: 'Alexandra Beaumont',   city: 'Paris',       country: 'France',         title: 'Head of Air-traffic Systems' },
+      { id: 3, name: 'Beatrice Aldridge',    city: 'Berlin',      country: 'Germany',        title: 'Lead Researcher · Atmospheric data' },
+      { id: 4, name: 'Carlos Berenguer',     city: 'Barcelona',   country: 'Spain',          title: 'Engineering Manager · Airfoil design' },
+      { id: 5, name: 'Daniela Carvalho',     city: 'Rio de Janeiro', country: 'Brazil',      title: 'Director of Maritime Operations' },
+      { id: 6, name: 'Erik Aaberg',          city: 'Oslo',        country: 'Norway',         title: 'Air-quality Modeller' },
+      { id: 7, name: 'Fatima Al-Rashid',     city: 'Dubai',       country: 'United Arab Emirates', title: 'Principal Architect · Aerospace' },
+      { id: 8, name: 'Gunther Adelmann',     city: 'Munich',      country: 'Germany',        title: 'Test Engineer · Airframe assembly' },
+      { id: 9, name: 'Hiroshi Ando',         city: 'Tokyo',       country: 'Japan',          title: 'Senior Hardware Engineer · Avionics' },
+      { id: 10, name: 'Isabella Aldana',     city: 'Buenos Aires', country: 'Argentina',     title: 'VP Engineering · Air Cargo' },
+      { id: 11, name: 'Jiang Beihong',       city: 'Beijing',     country: 'China',          title: 'Product Manager · Air-quality sensors' },
+      { id: 12, name: 'Khaled Bahir',        city: 'Cairo',       country: 'Egypt',          title: 'Operations Lead · Maritime + air freight' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    const search = document.getElementById('search');
+    const stat = document.getElementById('stat');
+
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:filterChanged', () => {
+      const q = grid.gridApi.getQuickFilter();
+      stat.textContent = q ? `filtering "${q}"` : 'no filter';
+    });
+    search.addEventListener('input', (e) => grid.gridApi.setQuickFilter(e.target.value));
+  </script>
+</body>
+</html>

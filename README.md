@@ -268,7 +268,8 @@ without conflict.
 | `color-swatch` | colours / theme tokens | Coloured chip + label; accepts any CSS colour value (hex, `rgb()`, `hsl()`, `oklch()`, named); `shape: 'circle'/'square'`, `label: 'value'/'name'/fn`, `showLabel: false` for chip-only |
 | `sparkline` | numeric arrays / trends | Mini SVG `line` / `area` / `bar` chart per row; auto-scales y, or pass `baseline: 0`; configurable colour from a 7-key palette or any CSS colour; pure SVG, no library |
 | `heatmap-cell` | KPIs / SLOs | Colour-grade the **cell background** on a numeric scale; configurable `min`/`max` + 2-or-3-stop palette; `inverted` flips "lower is better"; text colour auto-flips between dark + white for legibility |
-| `mask` | credit cards / phones / tokens / SSNs | Mask sensitive values: format presets `cc-last4`, `cc-bin-last4`, `phone-last4`, `email`, `last4`, or a generic `{ showFirst, showLast, char }` — masking groups from the right so the visible last-N always forms a clean trailing block (handles Amex's 15-digit cards correctly) |
+| `mask` | credit cards / phones / tokens / SSNs | Mask sensitive values: format presets `cc-last4`, `cc-bin-last4`, `phone-last4`, `email`, `last4`, or a generic `{ showFirst, showLast, char }` — masking groups from the right so the visible last-N always forms a clean trailing block (handles Amex's 15-digit cards correctly). Numeric formats auto-right-align in monospace |
+| `highlight` | search-result grids | Wraps matches of the grid's active `quickFilter` in `<mark>` tags so users see *why* a row matched; case-insensitive by default; pass a fixed `query` to highlight regardless of filter |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
