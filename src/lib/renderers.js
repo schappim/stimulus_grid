@@ -4328,6 +4328,18 @@ export function select({
   };
 }
 
+// Return focus to the grid after a popover-editor closes so the grid's
+// keyboard handler (arrow keys, Tab, Enter) keeps working without the
+// user clicking the cell again. The grid's keyboard handler refuses to
+// move when focus is inside an <input>, which our popovers are; the
+// fix is just to focus the grid element on close.
+function refocusGrid(anchor) {
+  if (!anchor) return;
+  const grid = anchor.closest('[data-controller~="grid"]');
+  if (!grid) return;
+  try { grid.focus({ preventScroll: true }); } catch { /* ignore */ }
+}
+
 let activeSelectEditor = null;
 
 function openSelectEditor(anchor, ctx) {
@@ -4385,16 +4397,17 @@ function openSelectEditor(anchor, ctx) {
 
   document.body.appendChild(pop);
   positionPopover(pop, anchor);
-  activeSelectEditor = { pop, onKey, onDocClick };
+  activeSelectEditor = { pop, onKey, onDocClick, anchor };
 }
 
 function closeSelectEditor() {
   if (!activeSelectEditor) return;
-  const { pop, onKey, onDocClick } = activeSelectEditor;
+  const { pop, onKey, onDocClick, anchor } = activeSelectEditor;
   document.removeEventListener('keydown', onKey);
   document.removeEventListener('mousedown', onDocClick);
   pop.remove();
   activeSelectEditor = null;
+  refocusGrid(anchor);
 }
 
 /* ---------- multiselect (multi-choice popover editor) ---------------
@@ -4539,16 +4552,17 @@ function openMultiselectEditor(anchor, ctx) {
 
   document.body.appendChild(pop);
   positionPopover(pop, anchor);
-  activeMultiselectEditor = { pop, onKey, onDocClick };
+  activeMultiselectEditor = { pop, onKey, onDocClick, anchor };
 }
 
 function closeMultiselectEditor() {
   if (!activeMultiselectEditor) return;
-  const { pop, onKey, onDocClick } = activeMultiselectEditor;
+  const { pop, onKey, onDocClick, anchor } = activeMultiselectEditor;
   document.removeEventListener('keydown', onKey);
   document.removeEventListener('mousedown', onDocClick);
   pop.remove();
   activeMultiselectEditor = null;
+  refocusGrid(anchor);
 }
 
 /* ---------- combobox (typeahead-filtered single-choice popover) -----
@@ -4731,16 +4745,212 @@ function openComboboxEditor(anchor, ctx) {
   positionPopover(pop, anchor);
   rebuild();
   setTimeout(() => input.focus(), 0);
-  activeComboboxEditor = { pop, onKey, onDocClick };
+  activeComboboxEditor = { pop, onKey, onDocClick, anchor };
 }
 
 function closeComboboxEditor() {
   if (!activeComboboxEditor) return;
-  const { pop, onKey, onDocClick } = activeComboboxEditor;
+  const { pop, onKey, onDocClick, anchor } = activeComboboxEditor;
   document.removeEventListener('keydown', onKey);
   document.removeEventListener('mousedown', onDocClick);
   pop.remove();
   activeComboboxEditor = null;
+  refocusGrid(anchor);
+}
+
+/* ---------- date-picker (calendar popover editor) ------------------
+ *
+ * Display shows the date formatted via the same Intl pipeline as
+ * `date()`. Double-click opens a calendar grid popover; clicking a day
+ * commits the new ISO date via grid:cellValueChanged. Today is
+ * highlighted; arrows navigate months.
+ *
+ *   registerRenderer('start_date', renderers.datePicker({
+ *     dateStyle: 'medium',
+ *     min: '2020-01-01', max: '2030-12-31',
+ *   }));
+ *
+ * For pure display use the existing `date` renderer — datePicker is
+ * the editable sibling. */
+function ymd(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+function sameDay(a, b) {
+  return a && b && a.getFullYear() === b.getFullYear()
+                && a.getMonth() === b.getMonth()
+                && a.getDate() === b.getDate();
+}
+
+export function datePicker({
+  locale = undefined,
+  dateStyle = 'medium',
+  editable = true,
+  empty = '',
+  min = null,
+  max = null,
+  firstDayOfWeek = 1,            // 0 = Sunday, 1 = Monday (default)
+} = {}) {
+  const fmt = new Intl.DateTimeFormat(locale, { dateStyle });
+  return (ctx) => {
+    const { value, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const minD = cfg.min ? toDate(cfg.min) : (min ? toDate(min) : null);
+    const maxD = cfg.max ? toDate(cfg.max) : (max ? toDate(max) : null);
+    const fdow = cfg.firstDayOfWeek ?? firstDayOfWeek;
+    const ed   = cfg.editable ?? editable;
+
+    if (td) {
+      td.classList.add('sg-renderer-datepicker-cell');
+      td._sgDatePickerMin = minD;
+      td._sgDatePickerMax = maxD;
+      td._sgDatePickerFdow = fdow;
+    }
+
+    if (ed && td && !td._sgDatePickerBound) {
+      td._sgDatePickerBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgDatePickerHandled) return;
+        e._sgDatePickerHandled = true;
+        e.stopPropagation();
+        openDatePickerEditor(td, ctx);
+      });
+    }
+
+    const d = toDate(value);
+    if (!d) return empty ? document.createTextNode(empty) : '';
+    return h('span', { class: 'sg-renderer-datepicker-value' },
+      document.createTextNode(fmt.format(d)));
+  };
+}
+
+let activeDatePickerEditor = null;
+const DP_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+const DP_DOW    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function buildCalendar(viewYear, viewMonth, selected, onPick, minD, maxD, fdow) {
+  const wrap = h('div', { class: 'sg-renderer-datepicker-cal' });
+  const head = h('div', { class: 'sg-renderer-datepicker-head' });
+  const prev = h('button', { type: 'button', class: 'sg-renderer-datepicker-nav', 'aria-label': 'Previous month' },
+    document.createTextNode('‹'));
+  const title = h('span', { class: 'sg-renderer-datepicker-title' },
+    document.createTextNode(`${DP_MONTHS[viewMonth]} ${viewYear}`));
+  const next = h('button', { type: 'button', class: 'sg-renderer-datepicker-nav', 'aria-label': 'Next month' },
+    document.createTextNode('›'));
+  head.append(prev, title, next);
+
+  const dows = h('div', { class: 'sg-renderer-datepicker-dows' });
+  for (let i = 0; i < 7; i++) {
+    dows.append(h('span', { class: 'sg-renderer-datepicker-dow' },
+      document.createTextNode(DP_DOW[(i + fdow) % 7])));
+  }
+
+  const grid = h('div', { class: 'sg-renderer-datepicker-grid' });
+  const first = new Date(viewYear, viewMonth, 1);
+  const startDow = (first.getDay() - fdow + 7) % 7;
+  const start = new Date(viewYear, viewMonth, 1 - startDow);
+  const today = new Date();
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const inMonth = cur.getMonth() === viewMonth;
+    const isSel = sameDay(cur, selected);
+    const isToday = sameDay(cur, today);
+    const disabled = (minD && cur < minD) || (maxD && cur > maxD);
+    const cls = ['sg-renderer-datepicker-day'];
+    if (!inMonth) cls.push('is-other-month');
+    if (isSel)    cls.push('is-selected');
+    if (isToday)  cls.push('is-today');
+    if (disabled) cls.push('is-disabled');
+    const btn = h('button', {
+      type: 'button',
+      class: cls.join(' '),
+      disabled: disabled ? '' : null,
+      title: ymd(cur),
+    }, document.createTextNode(String(cur.getDate())));
+    btn.addEventListener('click', () => onPick(cur));
+    grid.append(btn);
+  }
+  wrap.append(head, dows, grid);
+  return { wrap, prev, next, title };
+}
+
+function openDatePickerEditor(anchor, ctx) {
+  closeDatePickerEditor();
+  const { row, col } = ctx;
+  const current = toDate(row && col?.field != null ? row[col.field] : null);
+  let viewYear = (current || new Date()).getFullYear();
+  let viewMonth = (current || new Date()).getMonth();
+  let selected = current;
+  const minD = anchor._sgDatePickerMin || null;
+  const maxD = anchor._sgDatePickerMax || null;
+  const fdow = anchor._sgDatePickerFdow ?? 1;
+
+  const pop = h('div', { class: 'sg-renderer-datepicker-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  function commit(d) {
+    const { api } = ctx;
+    const oldValue = row && col?.field != null ? row[col.field] : null;
+    const out = d ? ymd(d) : null;
+    if (row && col?.field != null) row[col.field] = out;
+    if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+    const grid = anchor.closest('[data-controller~="grid"]');
+    if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+      bubbles: true,
+      detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: out },
+    }));
+    closeDatePickerEditor();
+  }
+
+  function render() {
+    pop.replaceChildren();
+    const { wrap, prev, next } = buildCalendar(viewYear, viewMonth, selected, commit, minD, maxD, fdow);
+    prev.addEventListener('click', () => {
+      if (viewMonth === 0) { viewMonth = 11; viewYear -= 1; } else viewMonth -= 1;
+      render();
+    });
+    next.addEventListener('click', () => {
+      if (viewMonth === 11) { viewMonth = 0; viewYear += 1; } else viewMonth += 1;
+      render();
+    });
+    const footer = h('div', { class: 'sg-renderer-datepicker-footer' });
+    const today = h('button', { type: 'button', class: 'sg-renderer-datepicker-today' },
+      document.createTextNode('Today'));
+    today.addEventListener('click', () => commit(new Date()));
+    const clear = h('button', { type: 'button', class: 'sg-renderer-datepicker-clear' },
+      document.createTextNode('Clear'));
+    clear.addEventListener('click', () => commit(null));
+    footer.append(today, clear);
+    pop.append(wrap, footer);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeDatePickerEditor(); }
+  }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeDatePickerEditor();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  render();
+  positionPopover(pop, anchor);
+  activeDatePickerEditor = { pop, onKey, onDocClick, anchor };
+}
+
+function closeDatePickerEditor() {
+  if (!activeDatePickerEditor) return;
+  const { pop, onKey, onDocClick, anchor } = activeDatePickerEditor;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeDatePickerEditor = null;
+  refocusGrid(anchor);
 }
 
 /* ---------- slider (inline range input) ----------------------------
@@ -4801,41 +5011,57 @@ export function slider({
     }
 
     if (isRange) {
+      // Custom track + two transparent native inputs overlaid: the native
+      // accent-color treatment fills from min to value, which produces a
+      // confusing double-paint when two range inputs share a stack. We
+      // hide the native tracks entirely and paint our own fill between
+      // the low and high thumbs.
       const [a, b] = Array.isArray(value) ? value : [lo, hi];
+      const span = Math.max(1, hi - lo);
+      const stack = h('div', { class: 'sg-renderer-slider-range-stack' });
+      const rail = h('div', { class: 'sg-renderer-slider-range-rail' });
+      const fill = h('div', { class: 'sg-renderer-slider-range-fill', style: `background:${accent};` });
       const lowInput = h('input', {
         type: 'range', class: 'sg-renderer-slider-input sg-renderer-slider-range-low',
         min: lo, max: hi, step: sp, value: a,
         disabled: ed ? null : '',
-        style: `accent-color: ${accent};`,
       });
       const highInput = h('input', {
         type: 'range', class: 'sg-renderer-slider-input sg-renderer-slider-range-high',
         min: lo, max: hi, step: sp, value: b,
         disabled: ed ? null : '',
-        style: `accent-color: ${accent};`,
       });
+      // The custom CSS thumb reads --sg-slider-accent for its fill; set it
+      // here so the thumb tracks the configured colour without an inline
+      // style override per element.
+      stack.style.setProperty('--sg-slider-accent', accent);
       const label = h('span', { class: 'sg-renderer-slider-value' },
         document.createTextNode(`${fmt(a)} – ${fmt(b)}`));
+
+      function paint() {
+        let l = Number(lowInput.value); let r = Number(highInput.value);
+        if (l > r) [l, r] = [r, l];
+        const lpct = ((l - lo) / span) * 100;
+        const rpct = ((r - lo) / span) * 100;
+        fill.style.left  = `${lpct}%`;
+        fill.style.width = `${Math.max(0, rpct - lpct)}%`;
+        label.textContent = `${fmt(l)} – ${fmt(r)}`;
+      }
       function commit() {
         let l = Number(lowInput.value); let r = Number(highInput.value);
         if (l > r) [l, r] = [r, l];
-        label.textContent = `${fmt(l)} – ${fmt(r)}`;
+        paint();
         dispatch([l, r]);
-      }
-      function preview() {
-        let l = Number(lowInput.value); let r = Number(highInput.value);
-        if (l > r) [l, r] = [r, l];
-        label.textContent = `${fmt(l)} – ${fmt(r)}`;
       }
       [lowInput, highInput].forEach((i) => {
         i.addEventListener('click', (e) => e.stopPropagation());
-        i.addEventListener('input', preview);
+        i.addEventListener('input', paint);
         i.addEventListener('change', commit);
       });
-      const stack = h('div', { class: 'sg-renderer-slider-range-stack' });
-      stack.append(lowInput, highInput);
+      stack.append(rail, fill, lowInput, highInput);
       wrap.append(stack);
       if (show) wrap.append(label);
+      paint();
     } else {
       const n = Number(value);
       const safe = Number.isFinite(n) ? n : lo;
@@ -4931,6 +5157,7 @@ registerRenderer('select',           select());
 registerRenderer('multiselect',       multiselect());
 registerRenderer('combobox',          combobox());
 registerRenderer('slider',            slider());
+registerRenderer('date-picker',       datePicker());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -4945,5 +5172,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select, multiselect, combobox, slider,
+  select, multiselect, combobox, slider, datePicker,
 };

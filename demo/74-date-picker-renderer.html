@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>74 — Date picker editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>74 — Date picker editor</h1>
+  <p class="lede">
+    Calendar popover sibling to the display-only <code>date</code>
+    renderer. Double-click any cell to open a 6×7 month grid; click a
+    day to commit, or use <strong>Today</strong> / <strong>Clear</strong>
+    in the footer. <code>min</code> / <code>max</code> disable
+    out-of-range days.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="task"
+              data-header-cell-width-value="240">Task</th>
+          <th data-controller="header-cell" data-header-cell-field-value="start"
+              data-header-cell-cell-renderer-value="dp-default"
+              data-header-cell-width-value="160">Start</th>
+          <th data-controller="header-cell" data-header-cell-field-value="due"
+              data-header-cell-cell-renderer-value="dp-medium"
+              data-header-cell-width-value="180">Due</th>
+          <th data-controller="header-cell" data-header-cell-field-value="released"
+              data-header-cell-cell-renderer-value="dp-iso"
+              data-header-cell-width-value="160">Released</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Released column constrains to 2024–2026 via <code>min</code> /
+    <code>max</code> — try paging the picker outside that window to see
+    the disabled days.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('dp-default', renderers.datePicker());
+    registerRenderer('dp-medium',  renderers.datePicker({ dateStyle: 'long' }));
+    registerRenderer('dp-iso',     renderers.datePicker({
+      dateStyle: 'short',
+      min: '2024-01-01',
+      max: '2026-12-31',
+    }));
+
+    const data = [
+      { id: 1, task: 'Migrate billing tables',     start: '2026-05-12', due: '2026-06-04', released: '2026-04-18' },
+      { id: 2, task: 'OAuth provider refresh',     start: '2026-05-25', due: '2026-07-10', released: null         },
+      { id: 3, task: 'Vendor security review',     start: '2026-06-01', due: '2026-06-30', released: '2025-12-20' },
+      { id: 4, task: 'Onboarding emails v3',       start: '2026-05-04', due: '2026-05-30', released: '2026-05-20' },
+      { id: 5, task: 'Postgres 16 rollout',        start: '2026-07-01', due: '2026-09-15', released: null         },
+      { id: 6, task: 'Recompute audit aggregates', start: null,         due: '2026-05-31', released: null         },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>

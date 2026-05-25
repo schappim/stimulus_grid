@@ -3097,17 +3097,173 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   position: relative;
   display: flex;
   align-items: center;
-  height: 16px;
+  height: 18px;
+  min-width: 80px;
+}
+.sg-grid .sg-renderer-slider-range-rail {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.sg-grid .sg-renderer-slider-range-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 999px;
+  pointer-events: none;
 }
 .sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input {
   position: absolute;
+  left: 0; right: 0;
   width: 100%;
+  margin: 0;
   background: transparent;
-  pointer-events: none;
+  pointer-events: none;       /* clicks pass through the track */
+  appearance: none;
+  -webkit-appearance: none;
+  height: 18px;
+  outline: none;
 }
+/* Hide the native track entirely — we paint our own rail + fill. The
+   thumb stays visible (and is the only interactive piece). */
+.sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 4px;
+  border: 0;
+}
+.sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-moz-range-track {
+  background: transparent;
+  height: 4px;
+  border: 0;
+}
+/* Re-style the thumb so it sits on top of the custom track. The fill
+   colour comes from the --sg-slider-accent CSS variable set on the stack
+   wrapper by the renderer. */
 .sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-webkit-slider-thumb {
   pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: var(--sg-slider-accent, #3b82f6);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  cursor: pointer;
+  margin-top: -5px;              /* center on the 4px track */
 }
 .sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-moz-range-thumb {
   pointer-events: auto;
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: var(--sg-slider-accent, #3b82f6);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  cursor: pointer;
 }
+
+/* ----- date-picker ------------------------------------------------- */
+.sg-grid .sg-renderer-datepicker-cell { cursor: pointer; }
+.sg-renderer-datepicker-popover {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+  width: 252px;
+}
+.sg-renderer-datepicker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 6px;
+}
+.sg-renderer-datepicker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.sg-renderer-datepicker-nav {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.sg-renderer-datepicker-nav:hover { background: #f3f4f6; color: #1f2937; }
+.sg-renderer-datepicker-dows {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.sg-renderer-datepicker-dow {
+  text-align: center;
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-renderer-datepicker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.sg-renderer-datepicker-day {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  height: 30px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1f2937;
+  padding: 0;
+}
+.sg-renderer-datepicker-day:hover { background: #eff6ff; }
+.sg-renderer-datepicker-day.is-other-month { color: #d1d5db; }
+.sg-renderer-datepicker-day.is-today {
+  color: #2563eb;
+  font-weight: 600;
+}
+.sg-renderer-datepicker-day.is-selected {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+.sg-renderer-datepicker-day.is-disabled {
+  color: #e5e7eb;
+  cursor: not-allowed;
+}
+.sg-renderer-datepicker-day.is-disabled:hover { background: transparent; }
+.sg-renderer-datepicker-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.sg-renderer-datepicker-today,
+.sg-renderer-datepicker-clear {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #2563eb;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+.sg-renderer-datepicker-today:hover,
+.sg-renderer-datepicker-clear:hover { background: #f3f4f6; }
+.sg-renderer-datepicker-clear { color: #6b7280; }
