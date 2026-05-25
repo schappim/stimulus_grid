@@ -6332,6 +6332,205 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- countdown (live-ticking remaining time) ----------------
+ *
+ * Live "T-minus" ticker against a target time. The cell schedules a
+ * 1-second interval to update itself; the interval is cleared if the
+ * cell is removed from the DOM (MutationObserver on the parent body).
+ *
+ *   registerRenderer('expires', renderers.countdown()); */
+function fmtCountdown(ms) {
+  if (ms <= 0) return 'expired';
+  const total = Math.floor(ms / 1000);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+export function countdown({
+  interval = 1000,
+  expiredText = 'expired',
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-countdown-cell');
+    if (isBlank(value)) return '';
+    const target = toDate(value);
+    if (!target) return String(value);
+    const span = h('span', { class: 'sg-renderer-countdown', title: target.toLocaleString() });
+    function tick() {
+      const ms = target.getTime() - Date.now();
+      span.textContent = ms <= 0 ? expiredText : fmtCountdown(ms);
+      span.classList.toggle('is-expired', ms <= 0);
+    }
+    tick();
+    const id = setInterval(tick, interval);
+    // Stop ticking when the cell leaves the DOM. Browsers don't auto-GC
+    // intervals; without this every row scrolled out of a virtualised
+    // viewport would keep ticking forever.
+    const stop = () => clearInterval(id);
+    if (typeof MutationObserver === 'function' && td) {
+      const obs = new MutationObserver(() => {
+        if (!document.body.contains(span)) { stop(); obs.disconnect(); }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    }
+    return span;
+  };
+}
+
+/* ---------- age (DOB → integer years) ------------------------------
+ *
+ * Computes age in years from a date-of-birth value against `now()` (or
+ * the row's `as_of` field when present). */
+export function age({
+  asOfField = 'as_of',
+  unit = 'years',
+} = {}) {
+  return ({ value, row, td }) => {
+    if (td) td.classList.add('sg-renderer-age-cell');
+    if (isBlank(value)) return '';
+    const dob = toDate(value);
+    if (!dob) return String(value);
+    const ref = row && asOfField && row[asOfField] ? toDate(row[asOfField]) || new Date() : new Date();
+    const years = ref.getFullYear() - dob.getFullYear() -
+      ((ref.getMonth() < dob.getMonth() ||
+        (ref.getMonth() === dob.getMonth() && ref.getDate() < dob.getDate())) ? 1 : 0);
+    return String(years);
+  };
+}
+
+/* ---------- fiscal-period (week / quarter / fiscal-year tag) -------
+ *
+ * Renders a date as the period it belongs to. `unit: 'week' | 'quarter'
+ * | 'month' | 'fiscalYear'`. `fiscalStartMonth` (1-12, default 7 for
+ * AU FY) controls the fiscal-year boundary. */
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+}
+
+export function fiscalPeriod({
+  unit = 'quarter',
+  fiscalStartMonth = 7,
+  format = null,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-fiscal-cell');
+    if (isBlank(value)) return '';
+    const d = toDate(value);
+    if (!d) return String(value);
+    let display;
+    switch (unit) {
+      case 'week':
+        display = `W${String(isoWeek(d)).padStart(2, '0')} ${d.getFullYear()}`;
+        break;
+      case 'month':
+        display = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(d);
+        break;
+      case 'quarter': {
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        display = `Q${q} ${d.getFullYear()}`;
+        break;
+      }
+      case 'fiscalYear': {
+        const fyStart = fiscalStartMonth - 1;
+        const fy = d.getMonth() >= fyStart ? d.getFullYear() + 1 : d.getFullYear();
+        display = `FY${String(fy).slice(-2)}`;
+        break;
+      }
+      default:
+        display = d.toISOString().slice(0, 10);
+    }
+    if (typeof format === 'function') display = format(display, d);
+    return h('span', { class: 'sg-pill sg-pill-blue' }, document.createTextNode(display));
+  };
+}
+
+/* ---------- timezone (TZ + offset display) -------------------------
+ *
+ * Renders an IANA tz name (e.g. `Australia/Sydney`) with its current
+ * UTC offset. Pass `withCity: true` to extract the city from the tz
+ * string for a friendlier "Sydney (UTC+10)" form. */
+function tzOffsetFor(tz, ref = new Date()) {
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' });
+    const parts = fmt.formatToParts(ref);
+    const off = parts.find((p) => p.type === 'timeZoneName')?.value || '';
+    // Normalise to "UTC±H[H][:MM]".
+    return off.replace(/^GMT/, 'UTC');
+  } catch {
+    return '';
+  }
+}
+
+export function timezone({
+  withCity = true,
+} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-tz-cell');
+    if (isBlank(value)) return '';
+    const tz = String(value);
+    const off = tzOffsetFor(tz);
+    const city = withCity ? tz.split('/').pop().replace(/_/g, ' ') : tz;
+    return h('span', { class: 'sg-renderer-tz', title: tz },
+      h('span', { class: 'sg-renderer-tz-city' }, document.createTextNode(city)),
+      ' ',
+      h('span', { class: 'sg-renderer-tz-offset' }, document.createTextNode(off ? `(${off})` : '')),
+    );
+  };
+}
+
+/* ---------- cron (human-readable schedule) -------------------------
+ *
+ * Translates a 5-field cron string (M H DOM MON DOW) into a one-line
+ * human description for common patterns. Falls back to the raw
+ * expression in a monospace chip when the pattern isn't recognised. */
+function humanCron(expr) {
+  const parts = String(expr).trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const [m, h, dom, mon, dow] = parts;
+  const everyMin   = m === '*' && h === '*' && dom === '*' && mon === '*' && dow === '*';
+  const hourly     = /^\d+$/.test(m) && h === '*' && dom === '*' && mon === '*' && dow === '*';
+  const daily      = /^\d+$/.test(m) && /^\d+$/.test(h) && dom === '*' && mon === '*' && dow === '*';
+  const everyNHour = m === '0' && /^\*\/\d+$/.test(h) && dom === '*' && mon === '*' && dow === '*';
+  const weekly     = /^\d+$/.test(m) && /^\d+$/.test(h) && dom === '*' && mon === '*' && /^[0-6]$/.test(dow);
+  const monthly    = /^\d+$/.test(m) && /^\d+$/.test(h) && /^\d+$/.test(dom) && mon === '*' && dow === '*';
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  if (everyMin)   return 'Every minute';
+  if (hourly)     return `Hourly at :${m.padStart(2, '0')}`;
+  if (everyNHour) return `Every ${h.split('/')[1]} hours`;
+  if (daily)      return `Daily at ${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  if (weekly)     return `Weekly on ${DAYS[Number(dow)]} at ${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  if (monthly)    return `Monthly on day ${dom} at ${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  return null;
+}
+
+export function cron({} = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-cron-cell');
+    if (isBlank(value)) return '';
+    const expr = String(value).trim();
+    const human = humanCron(expr);
+    const wrap = h('span', { class: 'sg-renderer-cron' });
+    if (human) {
+      wrap.append(h('span', { class: 'sg-renderer-cron-human' }, document.createTextNode(human)));
+      wrap.append(h('code', { class: 'sg-renderer-uuid-mono sg-renderer-cron-expr' },
+        document.createTextNode(expr)));
+    } else {
+      wrap.append(h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(expr)));
+    }
+    wrap.title = expr;
+    return wrap;
+  };
+}
+
 /* ---------- gauge (semicircular KPI dial) --------------------------
  *
  * Half-doughnut "KPI gauge". Same arithmetic as `donut` but only sweeps
@@ -7305,6 +7504,11 @@ registerRenderer('win-loss',          winLoss());
 registerRenderer('mini-bar-chart',    miniBarChart());
 registerRenderer('mini-line-chart',   miniLineChart());
 registerRenderer('trend',             trend());
+registerRenderer('countdown',         countdown());
+registerRenderer('age',               age());
+registerRenderer('fiscal-period',     fiscalPeriod());
+registerRenderer('timezone',          timezone());
+registerRenderer('cron',              cron());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -7877,4 +8081,5 @@ export const renderers = {
   iban, swift, ssn, ein, vat, nin,
   postalCode, addressUs, addressGeneric, barcode,
   gauge, winLoss, miniBarChart, miniLineChart, trend,
+  countdown, age, fiscalPeriod, timezone, cron,
 };

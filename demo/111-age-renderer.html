@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>111 — Age renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>111 — Age renderer</h1>
+  <p class="lede">DOB → integer years. Reads <code>row.as_of</code> when present, otherwise computes against <code>now()</code>.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="patient" data-header-cell-width-value="220">Patient</th>
+        <th data-controller="header-cell" data-header-cell-field-value="dob" data-header-cell-cell-renderer-value="date" data-header-cell-width-value="180">DOB</th>
+        <th data-controller="header-cell" data-header-cell-field-value="dob" data-header-cell-cell-renderer-value="age" data-header-cell-width-value="80">Age</th>
+        <th data-controller="header-cell" data-header-cell-field-value="as_of" data-header-cell-cell-renderer-value="date" data-header-cell-width-value="180">As of</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { patient: 'Astrid Hale',  dob: '1992-04-13', as_of: '2026-05-25' },
+      { patient: 'Marcus Chen',  dob: '1988-07-22', as_of: '2026-05-25' },
+      { patient: 'Priya Patel',  dob: '1995-11-04', as_of: '2026-05-25' },
+      { patient: 'Lena Brooks',  dob: '1962-02-19', as_of: '2026-05-25' },
+      { patient: 'Tomás Vega',   dob: '2008-12-31', as_of: '2026-05-25' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

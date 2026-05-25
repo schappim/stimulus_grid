@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>114 — Cron renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>114 — Cron renderer</h1>
+  <p class="lede">5-field crontab expression — translates common patterns to natural language ("Daily at 04:00", "Hourly at :15", "Weekly on Mon at 09:00"). Unrecognised expressions fall back to a monospace chip.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="job" data-header-cell-width-value="240">Job</th>
+        <th data-controller="header-cell" data-header-cell-field-value="schedule" data-header-cell-cell-renderer-value="cron" data-header-cell-width-value="320">Schedule</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { job: 'Send daily digest',          schedule: '0 7 * * *'   },
+      { job: 'Reconcile Stripe invoices',  schedule: '15 * * * *'  },
+      { job: 'Weekly retention email',     schedule: '0 9 * * 1'   },
+      { job: 'Monthly billing run',        schedule: '0 4 1 * *'   },
+      { job: 'Heartbeat',                  schedule: '*/5 * * * *' },
+      { job: 'Custom (non-trivial)',        schedule: '15,45 9-17 * * 1-5' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

@@ -3843,3 +3843,30 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-trend-icon svg { width: 10px; height: 10px; display: block; }
 .sg-grid .sg-renderer-trend-pct { font-variant-numeric: tabular-nums; }
 .sg-grid .sg-renderer-trend-spark { display: inline-flex; }
+
+/* ----- countdown / age / fiscal-period / timezone / cron --------- */
+.sg-grid .sg-renderer-countdown {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #1f2937;
+}
+.sg-grid .sg-renderer-countdown.is-expired { color: #b91c1c; font-style: italic; }
+.sg-grid .sg-renderer-tz {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-tz-offset {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-cron {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-cron-human { color: #1f2937; }
+.sg-grid .sg-renderer-cron-expr { font-size: 10.5px; }

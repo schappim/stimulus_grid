@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>112 — Fiscal period renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>112 — Fiscal period renderer</h1>
+  <p class="lede">Bucket dates into a reporting period: ISO week, calendar quarter, calendar month, or fiscal year (configurable start month — AU default is July).</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="invoice" data-header-cell-width-value="120">Invoice</th>
+        <th data-controller="header-cell" data-header-cell-field-value="date" data-header-cell-cell-renderer-value="date" data-header-cell-width-value="160">Date</th>
+        <th data-controller="header-cell" data-header-cell-field-value="date" data-header-cell-cell-renderer-value="fp-week" data-header-cell-width-value="120">Week</th>
+        <th data-controller="header-cell" data-header-cell-field-value="date" data-header-cell-cell-renderer-value="fp-quarter" data-header-cell-width-value="120">Quarter</th>
+        <th data-controller="header-cell" data-header-cell-field-value="date" data-header-cell-cell-renderer-value="fp-fy" data-header-cell-width-value="100">FY (AU)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('fp-week',    renderers.fiscalPeriod({ unit: 'week' }));
+    registerRenderer('fp-quarter', renderers.fiscalPeriod({ unit: 'quarter' }));
+    registerRenderer('fp-fy',      renderers.fiscalPeriod({ unit: 'fiscalYear', fiscalStartMonth: 7 }));
+    const data = [
+      { invoice: 'INV-1001', date: '2026-01-04' },
+      { invoice: 'INV-1002', date: '2026-04-12' },
+      { invoice: 'INV-1003', date: '2026-07-02' },
+      { invoice: 'INV-1004', date: '2026-09-30' },
+      { invoice: 'INV-1005', date: '2026-12-22' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
