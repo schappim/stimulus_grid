@@ -9068,6 +9068,13 @@ export function wwcc(opts = {}) {
   return complianceCard({ prefix: 'WWCC', ...opts });
 }
 
+// High-Risk Work Licence — national; SafeWork issues. The `class` field
+// carries the two-letter code (SI scaffolding intermediate, WP boom/EWP,
+// DG dogging, RB rigging basic, CN non-slewing crane, LF forklift …).
+export function highRiskLicence(opts = {}) {
+  return complianceCard({ prefix: 'HRWL', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9217,6 +9224,7 @@ registerRenderer('trade-licence',     tradeLicence());
 registerRenderer('white-card',        whiteCard());
 registerRenderer('blue-card',         blueCard());
 registerRenderer('wwcc',              wwcc());
+registerRenderer('high-risk-licence', highRiskLicence());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9770,6 +9778,7 @@ wireBuiltin('trade-licence',  clip.json);
 wireBuiltin('white-card',     clip.json);
 wireBuiltin('blue-card',      clip.json);
 wireBuiltin('wwcc',           clip.json);
+wireBuiltin('high-risk-licence', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9800,5 +9809,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard, wwcc,
+  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence,
 };
