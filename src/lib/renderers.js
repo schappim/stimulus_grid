@@ -9237,6 +9237,46 @@ export function jsaStatus() {
  * Rego plates, rego currency, CTP / green-slip, service-due, fuel
  * cards, odometer readings — the fleet-management vocabulary. */
 
+// Vehicle rego currency. Value: ISO date string (the rego expiry) or
+// `{ expires }`. Renders "Rego current/expires in N days/expired" pill
+// in traffic-light colour.
+export function regoStatus() {
+  return ({ value }) => {
+    if (isBlank(value)) return h('span', { class: 'sg-pill sg-pill-gray' },
+      document.createTextNode('No rego'));
+    const v = typeof value === 'object' ? value : { expires: value };
+    const days = daysUntil(v.expires);
+    if (days == null) return '';
+    const cls = days < 0 ? 'red' : days < 14 ? 'orange' : days < 60 ? 'yellow' : 'green';
+    const label = days < 0 ? `Expired ${Math.abs(days)}d ago`
+                : days === 0 ? 'Expires today'
+                : days < 60 ? `Expires in ${days}d`
+                : `Current (${Math.round(days / 30)}mo)`;
+    return h('span', { class: `sg-pill sg-pill-${cls} sg-renderer-rego-status` },
+      document.createTextNode(label));
+  };
+}
+
+// CTP / Green Slip currency. Same shape as rego-status — separate
+// renderer because the two often live side-by-side on a fleet card
+// and the label needs to read "CTP".
+export function ctpStatus() {
+  return ({ value }) => {
+    if (isBlank(value)) return h('span', { class: 'sg-pill sg-pill-gray' },
+      document.createTextNode('No CTP'));
+    const v = typeof value === 'object' ? value : { expires: value };
+    const days = daysUntil(v.expires);
+    if (days == null) return '';
+    const cls = days < 0 ? 'red' : days < 14 ? 'orange' : days < 60 ? 'yellow' : 'green';
+    const label = days < 0 ? `CTP expired ${Math.abs(days)}d ago`
+                : days === 0 ? 'CTP expires today'
+                : days < 60 ? `CTP ${days}d left`
+                : `CTP current (${Math.round(days / 30)}mo)`;
+    return h('span', { class: `sg-pill sg-pill-${cls} sg-renderer-ctp-status` },
+      document.createTextNode(label));
+  };
+}
+
 // AU vehicle registration plate with state-coloured background. The
 // palette mimics each state's current general-issue plate (NSW
 // yellow/black, VIC blue/white, QLD maroon/white, etc.). Value:
@@ -10570,6 +10610,7 @@ registerRenderer('skill-endorsement', skillEndorsement());
 registerRenderer('subcontractor',     subcontractor());
 registerRenderer('crew',              crew());
 registerRenderer('rego-plate',        regoPlate());
+registerRenderer('rego-status',       regoStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11165,6 +11206,7 @@ wireBuiltin('skill-endorsement', clip.json);
 wireBuiltin('subcontractor',  clip.json);
 wireBuiltin('crew',           clip.json);
 wireBuiltin('rego-plate',     clip.json);
+wireBuiltin('rego-status',    clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11205,5 +11247,5 @@ export const renderers = {
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
-  regoPlate,
+  regoPlate, regoStatus, ctpStatus,
 };
