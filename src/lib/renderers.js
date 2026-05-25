@@ -165,9 +165,12 @@ export function progressBar({ color = 'green', showValue = false } = {}) {
 
 /* ---------- star rating --------------------------------------------- */
 
-const STAR_FULL = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>';
-const STAR_HALF = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M288 0c-12.2 .1-23.3 7-28.6 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3L288 439.8V0z"/></svg>';
-const STAR_EMPTY = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M287.9 0c9.2 0 17.6 5.2 21.6 13.5l68.6 139 153.5 22.3c9.1 1.3 16.7 7.7 19.6 16.5s.5 18.4-6.1 24.8L433.6 328.4l26.2 152.9c1.5 9.1-2.2 18.4-9.7 23.8s-17.3 6.2-25.5 1.9L288 435.7 151.5 507c-8.2 4.3-18.1 3.7-25.5-1.9s-11.2-14.7-9.7-23.8l26.2-152.9L31.1 216.1c-6.6-6.4-8.9-16.1-6.1-24.8s10.5-15.3 19.6-16.5L198.2 152.6 266.3 13.5C270.4 5.2 278.7 0 287.9 0zM160.6 218.6L73.4 197.4l60.4 60.7c5.7 5.7 8.3 13.8 6.9 21.8L125.6 366.7l79.7-41.6c7.2-3.8 15.8-3.8 23 0l79.7 41.6L292.6 280c-1.4-8 1.2-16 6.9-21.8l60.4-60.7L272.8 218.6c-7.9-1.1-14.7-6.1-18.3-13.3L216.1 130.3 177.7 205.3c-3.5 7.2-10.4 12.2-18.3 13.3l1.2 0z"/></svg>';
+// Two glyphs from FontAwesome 6.5: one filled, one outline. Both share the
+// 576×512 viewBox so they overlay pixel-perfectly. Half-stars are rendered
+// as the outline + the filled glyph clipped to the left 50% — single source
+// of truth for the silhouette, no separate "half" path to drift out of sync.
+const STAR_FULL_SVG  = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>';
+const STAR_EMPTY_SVG = '<svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M287.9 0c9.2 0 17.6 5.2 21.6 13.5l68.6 139 153.5 22.3c9.1 1.3 16.7 7.7 19.6 16.5s.5 18.4-6.1 24.8L433.6 328.4l26.2 152.9c1.5 9.1-2.2 18.4-9.7 23.8s-17.3 6.2-25.5 1.9L288 435.7 151.5 507c-8.2 4.3-18.1 3.7-25.5-1.9s-11.2-14.7-9.7-23.8l26.2-152.9L31.1 216.1c-6.6-6.4-8.9-16.1-6.1-24.8s10.5-15.3 19.6-16.5L198.2 152.6 266.3 13.5C270.4 5.2 278.7 0 287.9 0zM160.6 218.6L73.4 197.4l60.4 60.7c5.7 5.7 8.3 13.8 6.9 21.8L125.6 366.7l79.7-41.6c7.2-3.8 15.8-3.8 23 0l79.7 41.6L292.6 280c-1.4-8 1.2-16 6.9-21.8l60.4-60.7L272.8 218.6c-7.9-1.1-14.7-6.1-18.3-13.3L216.1 130.3 177.7 205.3c-3.5 7.2-10.4 12.2-18.3 13.3l1.2 0z"/></svg>';
 
 export function starRating({ max = 5 } = {}) {
   return ({ value }) => {
@@ -175,21 +178,26 @@ export function starRating({ max = 5 } = {}) {
     if (!Number.isFinite(n)) n = 0;
     n = Math.max(0, Math.min(max, n));
     n = Math.round(n * 2) / 2;
-    const stars = [];
-    for (let i = 1; i <= max; i++) {
-      let cls = 'sg-renderer-star';
-      let svg;
-      if (n >= i) { cls += ' is-full'; svg = STAR_FULL; }
-      else if (n >= i - 0.5) { cls += ' is-half'; svg = STAR_HALF; }
-      else { cls += ' is-empty'; svg = STAR_EMPTY; }
-      stars.push(h('span', { class: cls, 'aria-hidden': 'true' }, svg));
-    }
     const wrap = h('div', {
       class: 'sg-renderer-stars',
       role: 'img',
       'aria-label': `${n} out of ${max} stars`,
     });
-    stars.forEach((s) => wrap.append(s));
+    for (let i = 1; i <= max; i++) {
+      if (n >= i) {
+        // Full: filled glyph, amber.
+        wrap.append(h('span', { class: 'sg-renderer-star is-full', 'aria-hidden': 'true' }, STAR_FULL_SVG));
+      } else if (n >= i - 0.5) {
+        // Half: outline behind + filled glyph clipped to the left half on top.
+        // The .sg-star-clip wrapper is 50% wide with overflow:hidden, and the
+        // inner SVG keeps its full natural size so the visible left half is
+        // exactly half the glyph (not a squashed scale).
+        wrap.append(h('span', { class: 'sg-renderer-star is-half', 'aria-hidden': 'true' },
+          `${STAR_EMPTY_SVG}<span class="sg-star-clip">${STAR_FULL_SVG}</span>`));
+      } else {
+        wrap.append(h('span', { class: 'sg-renderer-star is-empty', 'aria-hidden': 'true' }, STAR_EMPTY_SVG));
+      }
+    }
     return wrap;
   };
 }

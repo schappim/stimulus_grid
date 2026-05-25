@@ -938,25 +938,34 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-fill-purple { background: #8b5cf6; }
 .sg-grid .sg-fill-pink   { background: #ec4899; }
 
-/* Star rating — used by starRating({max}). Half-star uses two layered SVGs
-   in some implementations; we ship a single half-fill glyph instead. */
+/* Star rating — used by starRating({max}). A half-star is a grey outline
+   glyph with a filled amber glyph layered on top and clipped to the left
+   50% by .sg-star-clip's overflow:hidden. Single SVG silhouette across all
+   three states keeps spacing + pixel-grid alignment perfect. */
 .sg-grid .sg-renderer-stars {
-  display: inline-flex; align-items: center; gap: 1px;
-  color: #d1d5db;             /* empty-star fill */
+  display: inline-flex; align-items: center; gap: 2px;
 }
-.sg-grid .sg-renderer-star { display: inline-flex; width: 13px; height: 13px; }
-.sg-grid .sg-renderer-star svg { width: 13px; height: 13px; display: block; }
-.sg-grid .sg-renderer-star.is-full,
-.sg-grid .sg-renderer-star.is-half { color: #f59e0b; }   /* amber */
-.sg-grid .sg-renderer-star.is-half { position: relative; }
-.sg-grid .sg-renderer-star.is-half::after {
-  content: '';
+.sg-grid .sg-renderer-star {
+  position: relative;
+  display: inline-block;
+  width: 13px; height: 13px;
+  line-height: 0;
+}
+.sg-grid .sg-renderer-star > svg { width: 13px; height: 13px; display: block; }
+.sg-grid .sg-renderer-star.is-full  > svg { color: #f59e0b; }     /* amber */
+.sg-grid .sg-renderer-star.is-empty > svg { color: #d1d5db; }     /* outline grey */
+.sg-grid .sg-renderer-star.is-half  > svg { color: #d1d5db; }     /* outline grey behind */
+.sg-grid .sg-renderer-star.is-half > .sg-star-clip {
   position: absolute;
-  inset: 0 0 0 50%;
-  background: #d1d5db;
-  -webkit-mask: var(--sg-half-mask) center/cover no-repeat;
-          mask: var(--sg-half-mask) center/cover no-repeat;
+  top: 0; left: 0;
+  width: 50%; height: 100%;
+  overflow: hidden;
   pointer-events: none;
+}
+.sg-grid .sg-renderer-star.is-half > .sg-star-clip > svg {
+  width: 13px; height: 13px;     /* natural size; the wrapper clips to left half */
+  color: #f59e0b;
+  display: block;
 }
 
 /* Tags — used by tags({separator}). */
