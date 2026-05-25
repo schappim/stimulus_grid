@@ -2670,3 +2670,39 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   padding-top: 4px;
   padding-bottom: 4px;
 }
+
+/* Expand renderer — click-to-expand long values. The clamp variant uses
+   the same -webkit-line-clamp recipe as multi-line, but on an inner
+   wrapper (putting the clamp on the td breaks its table-cell layout). */
+.sg-grid td.sg-renderer-expand-cell {
+  vertical-align: top;
+  padding-top: 6px; padding-bottom: 6px;
+}
+.sg-grid .sg-renderer-expand {
+  line-height: 1.4;
+}
+.sg-grid .sg-renderer-expand-toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-left: 4px;
+  color: var(--sg-icon-accent);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sg-grid .sg-renderer-expand-toggle:hover { text-decoration: underline; }
+.sg-grid .sg-renderer-expand-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--sg-clamp, 2);
+          line-clamp: var(--sg-clamp, 2);
+  overflow: hidden;
+  white-space: pre-line;
+}
+.sg-grid .sg-renderer-expand-clamp.is-expanded {
+  -webkit-line-clamp: unset;
+          line-clamp: unset;
+  display: block;
+}

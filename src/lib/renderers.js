@@ -3618,6 +3618,75 @@ function buildMentionChip(text, url, cls) {
   return node;
 }
 
+/* ---------- expand (click-to-expand long text) ----------------------
+ *
+ * Different from `truncate` (single-line ellipsis at cell width with
+ * the full value in the title attribute) and `multi-line` (preserves
+ * newlines, optional line-clamp): `expand` adds an in-cell "Read more"
+ * / "Show less" toggle that opens the full value right there, no
+ * hover, no tooltip, no popover.
+ *
+ *   registerRenderer('descr', expand({ lines: 2 }))
+ *   registerRenderer('story', expand({ chars: 180 }))
+ *
+ * Pass either `lines: N` (CSS line-clamp at N lines) or `chars: N`
+ * (clip at character count, hides the remainder behind the toggle).
+ * Strings short enough to fit render as plain text with no toggle. */
+export function expand({
+  chars = null,
+  lines = null,
+  moreLabel = 'Read more',
+  lessLabel = 'Show less',
+} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const useChars = chars && text.length > chars;
+    const useLines = !useChars && lines && /\n/.test(text);
+    // Plain pass-through when nothing's clipped.
+    if (!useChars && !lines) return text;
+    if (td) {
+      td.classList.add('sg-renderer-expand-cell');
+      const tr = td.parentElement;
+      if (tr && tr.tagName === 'TR') tr.classList.add('sg-has-multiline');
+    }
+    const wrap = h('div', { class: 'sg-renderer-expand' });
+    let expanded = false;
+    if (useChars) {
+      const shortText = text.slice(0, chars).trimEnd() + '…';
+      const shortEl = h('span', { class: 'sg-renderer-expand-short' },
+        document.createTextNode(shortText));
+      const fullEl = h('span', { class: 'sg-renderer-expand-full', hidden: '' },
+        document.createTextNode(text));
+      const toggle = h('button', { type: 'button', class: 'sg-renderer-expand-toggle' },
+        document.createTextNode(moreLabel));
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        expanded = !expanded;
+        shortEl.hidden = expanded;
+        fullEl.hidden = !expanded;
+        toggle.textContent = expanded ? lessLabel : moreLabel;
+      });
+      wrap.append(shortEl, fullEl, document.createTextNode(' '), toggle);
+    } else {
+      // Lines variant — line-clamp until expanded.
+      const inner = h('div', { class: 'sg-renderer-expand-clamp' });
+      inner.style.setProperty('--sg-clamp', String(lines));
+      inner.textContent = text;
+      const toggle = h('button', { type: 'button', class: 'sg-renderer-expand-toggle' },
+        document.createTextNode(moreLabel));
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        expanded = !expanded;
+        inner.classList.toggle('is-expanded', expanded);
+        toggle.textContent = expanded ? lessLabel : moreLabel;
+      });
+      wrap.append(inner, toggle);
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3671,6 +3740,7 @@ registerRenderer('histogram',      histogram());
 registerRenderer('rag',            rag());
 registerRenderer('timeline-steps', timelineSteps());
 registerRenderer('mention',        mention());
+registerRenderer('expand',         expand());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3683,5 +3753,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, audioAttachment,
+  mention, expand, audioAttachment,
 };

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>54 — Expand renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>54 — Expand renderer</h1>
+  <p class="lede">
+    Long-text cells with a click-to-expand toggle. Different from
+    <code>truncate</code> (hover for full value) and <code>multi-line</code>
+    (preserves newlines + optional line-clamp). Use it when descriptions
+    are too long for the row height but the reader sometimes wants the
+    full text right there.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true"
+       data-grid-row-height-value="76">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-width-value="240"
+              data-header-cell-sortable-value="true">Article</th>
+          <th data-controller="header-cell" data-header-cell-field-value="summary_chars"
+              data-header-cell-cell-renderer-value="expand-chars"
+              data-header-cell-width-value="320">Summary (chars=140)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="summary_lines"
+              data-header-cell-cell-renderer-value="expand-lines">Summary (lines=2)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Two modes:</strong> <code>chars: N</code> clips by character
+    count (clean for paragraphs); <code>lines: N</code> CSS-clamps at N
+    visible lines (preserves layout — needs newlines in the source to
+    actually trigger the clamp). Both render plain pass-through for
+    values short enough to fit.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('expand-chars', renderers.expand({ chars: 140 }));
+    registerRenderer('expand-lines', renderers.expand({ lines: 2 }));
+
+    const ROWS = [
+      { id: 1, title: 'On Postgres 17',
+        summary_chars: 'Postgres 17 lands with smarter parallel query planning, JSON_TABLE support, an upgraded vacuum subsystem with concurrent I/O, and finally a built-in incremental backup pipeline. Most existing migrations need only a bump in `pg_dump` minimums; the breaking changes are limited to a handful of legacy contrib modules.',
+        summary_lines: 'Postgres 17 lands with smarter parallel query planning.\nJSON_TABLE support, upgraded vacuum subsystem with concurrent I/O.\nA built-in incremental backup pipeline.\nMost existing migrations need only a bump in pg_dump minimums; the breaking changes are limited to a handful of legacy contrib modules.' },
+      { id: 2, title: 'Recsys v3',
+        summary_chars: 'Recsys v3 swaps the LightGBM stage for a TFRecord-backed two-tower model. Early canary numbers show +12% CTR and -4% dwell time vs v2; infra cost is broadly flat.',
+        summary_lines: 'Recsys v3 swaps the LightGBM stage for a TFRecord two-tower model.\nEarly canary: +12% CTR, -4% dwell time vs v2.\nInfra cost is broadly flat.\nQuery latency p95 dropped from 84ms to 71ms after the cache warm-up.' },
+      { id: 3, title: 'Vega Studio onboarding',
+        summary_chars: 'Customer wants priority shipping, multi-currency invoicing, and a clearer 4xx webhook error code surface. Tomás sent over the contract draft; legal needs ~3 weeks for AU↔EU data-residency review.',
+        summary_lines: 'Customer wants priority shipping.\nMulti-currency invoicing required.' },
+      { id: 4, title: 'Migration TODO',
+        summary_chars: 'Short note — nothing more.',
+        summary_lines: 'Short note — nothing more.' },
+      { id: 5, title: 'Q3 roadmap',
+        summary_chars: 'Five pillars for Q3: storefront v3 ship, recsys v3 GA, multi-currency invoices, mobile beta opens to wait-list, EU data residency cert. Eng is on pillars 1-4; legal owns 5. Status reviewed weekly in the leadership stand-up; sprint planning is fortnightly.',
+        summary_lines: 'Five pillars for Q3: storefront v3 ship, recsys v3 GA.\nMulti-currency invoices, mobile beta opens to wait-list, EU data residency cert.\nEng is on pillars 1-4; legal owns 5.\nStatus reviewed weekly in the leadership stand-up; sprint planning is fortnightly.' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
