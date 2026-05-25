@@ -152,6 +152,7 @@ column on the left. Collapsed here to country subtotals:
 | `persist-key` | when non-empty, auto-save/restore column order, widths, pinning, visibility, row groups, pivot, value aggregations, header groups, sort, filter and pinned-bottom-row toggle to `localStorage["sgrid:" + persistKey]` |
 | `master-detail` / `detail-template` / `detail-rows-key` / `detail-row-height` | enable expandable detail rows beneath each master row. `detail-template` is the id of a `<template>` cloned into each detail panel; `detail-rows-key` is the master-row field holding the nested rows array (auto-seeds an inner `[data-controller="grid"]` inside the template). `detail-row-height` is the panel's minimum pixel height (default `240`) |
 | `tree-data` / `tree-parent-field` / `tree-display-field` / `tree-default-expanded` | treat `rowData` as a self-referential parent/child tree (default `false`). `tree-parent-field` names the row attribute holding the parent's id (default `"parent_id"`). `tree-display-field` picks which column hosts the indent + chevron (default: first non-gutter column). `tree-default-expanded` is `-1` all · `0` only roots · `N` first-N levels. Mutually exclusive with row groups + pivot mode |
+| `accept-files` / `attachments-field` | drag-to-attach: when `true`, every data cell becomes a file drop target and dispatches a cancellable `grid:fileAttached` event with `{rowId, colId, files, row, dataTransfer}`. If the consumer doesn't `preventDefault()`, file metadata (`{filename, byte_size, content_type, url, …}`) is appended to `row[attachments-field]` (default: the drop target's own column). Per-column opt-out: `data-header-cell-accept-files-value="false"` on the `<th>` |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -159,7 +160,11 @@ column on the left. Collapsed here to country subtotals:
 `sortable` · `filter` (`text`\|`number`\|`date`\|`boolean`\|`set`) · `editable` ·
 `width` / `min-width` / `max-width` · `pinned` (`left`\|`right`) · `hidden` ·
 `resizable` · `cell-renderer` (template id) · `cell-editor` (template id) ·
-`checkbox` (selection checkbox column).
+`checkbox` (selection checkbox column) · `accept-files` (`"true"`\|`"false"` — per-column opt-in / opt-out of the grid-wide drag-to-attach behaviour).
+
+Headers whose `type` is `number` get their title text right-aligned in line
+with the value cells underneath, so columns of currency / counts read with
+a clean right edge.
 
 ## Public API — `element.gridApi`
 
@@ -198,7 +203,9 @@ Available after the `grid:ready` event. Highlights:
 `grid:detailRowExpanded` / `grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
 `grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`) ·
 `grid:treeRowExpanded` / `grid:treeRowCollapsed` (`{rowId, row}`) ·
-`grid:treeDataChanged` (`{treeData}`).
+`grid:treeDataChanged` (`{treeData}`) ·
+`grid:fileAttached` (`{rowId, colId, files, row, dataTransfer}` — cancellable
+with `preventDefault()` to suppress the built-in append-to-row default).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -271,6 +278,7 @@ without conflict.
 | `mask` | credit cards / phones / tokens / SSNs | Mask sensitive values: format presets `cc-last4`, `cc-bin-last4`, `phone-last4`, `email`, `last4`, or a generic `{ showFirst, showLast, char }` — masking groups from the right so the visible last-N always forms a clean trailing block (handles Amex's 15-digit cards correctly). Numeric formats auto-right-align in monospace |
 | `highlight` | search-result grids | Wraps matches of the grid's active `quickFilter` in `<mark>` tags so users see *why* a row matched; case-insensitive by default; pass a fixed `query` to highlight regardless of filter |
 | `multi-line` | notes / descriptions / commit messages | Preserves `\n` newlines via `white-space: pre-line`; pass `{ lines: N }` for `-webkit-line-clamp` truncation with the full value in `title=`. Pair with a taller `data-grid-row-height-value` (~64 for 2 lines, 84 for 3) |
+| `attachments` | files on a record (Active Storage / S3 / arbitrary) | Airtable-style strip of thumbs for images + kind-tinted icons for PDFs/docs/audio/video/zips; click an image to open a keyboard-navigable lightbox carousel; click a non-image to open in a new tab; collapses to `+N` past `maxThumbs`. Pass `{ editable: true }` to enable a popover editor (dblclick or `+` button) with drag-drop, paste, and per-file × remove; supply `onUpload(files, ctx)` / `onRemove(att, ctx)` to wire it to your server (Rails Active Storage, S3 presigned, etc.). Falls back to `URL.createObjectURL` when no callbacks are given |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"
@@ -826,6 +834,76 @@ as a real entity — leaves and branches share the same column layout.
 for a worked org-chart example with expand/collapse, search-with-ancestor-
 preservation, and salary-desc sibling sort.
 
+## Separators &amp; merged cells (quotes, invoices, reports)
+
+Drop **section headings**, **blank spacers**, **ruled dividers**, and
+**summary rows** between data rows; let any single cell **span multiple
+columns** via a per-row `__sgSpans` map. Together they cover the structural
+primitives a real-world quote, invoice, contract, or report layout needs —
+without forking the grid into a separate "document" component.
+
+![stimulus_grid rendering a tax invoice with PROFESSIONAL SERVICES + HARDWARE section headings, three service line items and two hardware line items, a description-spanning note row about the Raspberry Pi delivery schedule, and a Subtotal / GST 10% / Total due summary block at the foot of the table](docs/images/invoice-separators-merged.png)
+
+### Separator rows
+
+A *separator* is any row in `rowData` carrying `__sgSeparator: true`. The
+shape decides the variant:
+
+```js
+{ __sgSeparator: true }                                      // blank spacer
+{ __sgSeparator: true, variant: 'divider' }                  // thin ruled line
+{ __sgSeparator: true, label: 'Professional services' }      // section heading
+{ __sgSeparator: true, label: 'Subtotal', value: '$17,364' } // summary line
+{ __sgSeparator: true, variant: 'total',                     // emphasised grand-total
+  label: 'Total due', value: '$19,100.40' }
+{ __sgSeparator: true, variant: 'subtle', label: 'Notes' }   // muted heading
+```
+
+Variants: `heading` (default with label), `summary` (default with label+value),
+`total`, `subtle`, `blank`, `divider`. The `variant` field always wins over
+the auto-pick.
+
+- **Positional anchors.** Separators always render in declared position;
+  sort and filter only reorder / hide the data rows *around* them. Quote
+  sections stay intact when the user clicks a header.
+- **Inert.** Separators are never selected, edited, exported to CSV,
+  counted in aggregates, or stepped over by keyboard navigation.
+- **HTML-first too.** Server-rendered:
+  ```html
+  <tr data-separator="heading" data-label="Hardware"></tr>
+  <tr data-separator="total" data-label="Total due" data-value="$19,100.40"></tr>
+  ```
+
+### Merged cells
+
+Per-row `__sgSpans`: each key is a field name and each value is how many
+visible columns the cell should swallow.
+
+```js
+{
+  id: 6,
+  description: '↪ Includes preconfigured Raspbian image + 12 months remote support.',
+  total: 0,
+  // The description cell covers description + qty + unit-price columns.
+  __sgSpans: { description: 3 },
+}
+```
+
+Server-rendered equivalent: just use the standard HTML `colspan` on the `<td>`
+(or `data-spans="N"`) — the grid picks it up during `_captureInitialMarkup`.
+
+```html
+<tr data-row-id="6">
+  <td data-col-id="description" colspan="3">↪ Includes preconfigured Raspbian image…</td>
+  <td data-col-id="total">$0.00</td>
+</tr>
+```
+
+See **[demo 33](demo/33-invoice-separators-merged.html)** for a worked tax
+invoice with section headings, a description-spanning note row, and a
+Subtotal / GST 10% / Total due summary block — all on the same grid that
+sorts, edits, exports CSV, and (optionally) takes file drops elsewhere.
+
 ## Rails & Hotwire (`stimulus_grid_rails`)
 
 For Rails apps, the **[`stimulus_grid_rails`](gem/stimulus_grid_rails)** gem turns
@@ -936,10 +1014,13 @@ runnable app is in [`gem/demo`](gem/demo); full docs in
 
 ## Demos
 
-`npm install && npx vite`, then open `http://localhost:5173/demo/` — 12 demos
-covering basics, JSON data, filtering, selection, pagination, editing, custom
-renderers, 10k-row virtual scroll, everything-together, live filtering, row
-grouping with aggregation, and the status bar.
+`npm install && npx vite`, then open `http://localhost:5173/demo/` — 30+
+demos covering basics, JSON data, filtering, selection, pagination, editing,
+custom renderers, 10k-row virtual scroll, everything-together, live filtering,
+row grouping with aggregation, the status bar, pivot mode, header groups,
+the right-click column menu, persisted column state, master/detail, tree
+data, the built-in renderer library, attachments, and the invoice / quote
+layout (separators + merged cells).
 
 ## Build
 

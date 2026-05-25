@@ -19,6 +19,10 @@ export default class HeaderCellController extends Controller {
     cellEditor:   { type: String, default: '' },
     checkbox:     { type: Boolean, default: false },
     rowNumber:    { type: Boolean, default: false },   // gutter: shows 1-based row number, click selects row
+    // Per-column opt-out for drag-to-attach. Defaults to undefined (inherits
+    // the grid-wide acceptFiles setting); explicit false suppresses the drop
+    // visual + grid:fileAttached event for this column.
+    acceptFiles:  { type: String, default: '' },        // '' | 'true' | 'false'
   };
 
   connect() {
@@ -43,6 +47,12 @@ export default class HeaderCellController extends Controller {
   }
 
   toColumnDef() {
+    // 'true'/'false' opt-in/out for file drop. Undefined => inherit from
+    // the grid's acceptFilesValue. Stored as a real boolean (or undefined)
+    // so the grid's per-cell check is a simple `col.acceptFiles === false`.
+    let acceptFiles;
+    if (this.acceptFilesValue === 'true') acceptFiles = true;
+    else if (this.acceptFilesValue === 'false') acceptFiles = false;
     return {
       field:        this.fieldValue,
       headerName:   this.headerNameValue || this.fieldValue,
@@ -60,6 +70,7 @@ export default class HeaderCellController extends Controller {
       cellEditor:   this.cellEditorValue || null,
       _isCheckbox:  this.checkboxValue,
       _isRowNumber: this.rowNumberValue,
+      acceptFiles,
       sortable:     this.rowNumberValue ? false : this.sortableValue,
       resizable:    this.rowNumberValue ? false : this.resizableValue,
     };

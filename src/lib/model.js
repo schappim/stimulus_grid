@@ -83,10 +83,16 @@ function passesFilter(row, col, filter) {
 export function applyFilters(rows, filterModel, columnsByField) {
   const entries = Object.entries(filterModel || {}).filter(([, f]) => f != null);
   if (entries.length === 0) return rows;
-  return rows.filter((row) => entries.every(([colId, f]) => {
-    const col = columnsByField[colId];
-    return col ? passesFilter(row, col, f) : true;
-  }));
+  return rows.filter((row) => {
+    // Separator rows aren't data — they're positional anchors (section headings,
+    // subtotal rows, blank spacers in invoice/quote layouts). Always keep them
+    // so the document structure survives a filter.
+    if (row && row.__sgSeparator) return true;
+    return entries.every(([colId, f]) => {
+      const col = columnsByField[colId];
+      return col ? passesFilter(row, col, f) : true;
+    });
+  });
 }
 
 /* Quick filter: case-insensitive substring match across all visible column
@@ -95,6 +101,7 @@ export function applyQuickFilter(rows, query, visibleCols) {
   if (!query) return rows;
   const q = String(query).toLowerCase();
   return rows.filter((row) => {
+    if (row && row.__sgSeparator) return true;
     for (const col of visibleCols) {
       const v = formatValue(row, col);
       if (v && String(v).toLowerCase().includes(q)) return true;
@@ -121,8 +128,7 @@ function defaultComparator(a, b, type) {
 
 export function applySort(rows, sortModel, columnsByField) {
   if (!sortModel || sortModel.length === 0) return rows;
-  const sorted = rows.slice();
-  sorted.sort((ra, rb) => {
+  const cmpRows = (ra, rb) => {
     for (const { colId, sort } of sortModel) {
       const col = columnsByField[colId];
       if (!col) continue;
@@ -134,8 +140,29 @@ export function applySort(rows, sortModel, columnsByField) {
       if (cmp !== 0) return sort === 'desc' ? -cmp : cmp;
     }
     return 0;
-  });
-  return sorted;
+  };
+  // Separators are positional anchors (think section headings on an invoice).
+  // Partition the input into segments separated by separator rows, sort each
+  // segment independently, then re-stitch with the separators preserved at
+  // their original positions. This keeps "Services" / "Hardware" sections
+  // intact even when a user sorts by column.
+  const hasSeparators = rows.some((r) => r && r.__sgSeparator);
+  if (!hasSeparators) return rows.slice().sort(cmpRows);
+  const out = [];
+  let segment = [];
+  const flush = () => {
+    if (segment.length) {
+      segment.sort(cmpRows);
+      for (const r of segment) out.push(r);
+      segment = [];
+    }
+  };
+  for (const r of rows) {
+    if (r && r.__sgSeparator) { flush(); out.push(r); }
+    else segment.push(r);
+  }
+  flush();
+  return out;
 }
 
 /* -------- Pagination -------- */

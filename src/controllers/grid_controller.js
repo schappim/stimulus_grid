@@ -72,6 +72,8 @@ export default class GridController extends Controller {
     treeParentField:     { type: String,  default: 'parent_id' },                       // row field naming the parent row's id (default 'parent_id')
     treeDisplayField:    { type: String,  default: '' },                                // column whose cell carries the indent + chevron (default: first non-gutter col)
     treeDefaultExpanded: { type: Number,  default: -1 },                               // -1 all expanded · 0 only roots · N first-N levels expanded
+    acceptFiles:         { type: Boolean, default: false },                            // wire every data cell as a file drop target; emits grid:fileAttached
+    attachmentsField:    { type: String,  default: '' },                                // when set, dropped files are auto-appended to row[<field>] as { name, size, type } objects (the default behaviour when no consumer calls preventDefault on the event)
   };
 
   initialize() {
@@ -173,6 +175,10 @@ export default class GridController extends Controller {
     document.removeEventListener('mousemove', this._onRowDragMove);
     this._thead?.removeEventListener('contextmenu', this._onHeaderContextMenu);
     this._thead?.removeEventListener('click', this._onSynthHeaderClick);
+    this._tbody?.removeEventListener('dragenter', this._onCellDragEnter);
+    this._tbody?.removeEventListener('dragover',  this._onCellDragOver);
+    this._tbody?.removeEventListener('dragleave', this._onCellDragLeave);
+    this._tbody?.removeEventListener('drop',      this._onCellDrop);
     this._closeColumnMenu();
     this._teardownPersistence();
     this._rowDrag?.ghost?.remove();
@@ -188,16 +194,47 @@ export default class GridController extends Controller {
     if (existingTbody) {
       this._initialBodyHTML = existingTbody.innerHTML;
       this._initialRows = Array.from(existingTbody.querySelectorAll('tr')).map((tr, idx) => {
+        // Server-rendered separator: <tr data-separator="heading" data-label="Services">.
+        // Recognised before the normal row capture so the synthetic row never
+        // tries to read column-keyed cell content out of a heading.
+        if (tr.hasAttribute('data-separator')) {
+          const variantAttr = tr.getAttribute('data-separator');
+          const sep = { __sgSeparator: true };
+          if (variantAttr && variantAttr !== '' && variantAttr !== 'true') sep.variant = variantAttr;
+          const label = tr.getAttribute('data-label');
+          const value = tr.getAttribute('data-value');
+          if (label != null) sep.label = label;
+          if (value != null) sep.value = value;
+          return sep;
+        }
         const row = {};
         const idAttr = tr.getAttribute('data-row-id') || tr.getAttribute('data-row-row-id-value');
         // Coerce the parsed id the same way event handlers coerce data-row-id,
         // so row lookups (edit, select) match. Otherwise a string "1" parsed
         // here never equals the numeric 1 produced by _coerceRowId on click.
         row[this.getRowIdValue] = idAttr != null ? this._coerceRowId(idAttr) : idx + 1;
+        // Merged fields (__sgSpans): a <td> with colspan>1 (or an explicit
+        // data-spans="N") records the field-keyed span on the row so the
+        // re-render emits a single colspan'd cell instead of one per col.
+        const spans = {};
         tr.querySelectorAll('td').forEach((td) => {
           const colId = td.getAttribute('data-cell-col-id-value') || td.getAttribute('data-col-id');
-          if (colId) row[colId] = td.textContent.trim();
+          if (!colId) return;
+          // `data-cell-value` lets the server emit a structured value (JSON
+          // array, etc.) without it being readable as textContent — the
+          // attachments renderer uses this so the cell doesn't briefly
+          // show raw JSON on first paint before the renderer mounts.
+          const explicit = td.getAttribute('data-cell-value');
+          if (explicit != null) {
+            try { row[colId] = JSON.parse(explicit); }
+            catch { row[colId] = explicit; }
+          } else {
+            row[colId] = td.textContent.trim();
+          }
+          const span = Number(td.getAttribute('data-spans') || td.getAttribute('colspan') || 1);
+          if (span > 1) spans[colId] = span;
         });
+        if (Object.keys(spans).length) row.__sgSpans = spans;
         // Master/detail: server-rendered rows can carry their nested rows as a
         // JSON string in data-row-detail-rows-value. The Rails partial uses
         // this to feed an inner grid without re-fetching from JS.
@@ -559,7 +596,7 @@ export default class GridController extends Controller {
   }
 
   selectAll() {
-    this._displayList.filteredSorted.forEach((r) => { if (!r.__sgGroup) this.state.selection.add(this._rowId(r)); });
+    this._displayList.filteredSorted.forEach((r) => { if (!r.__sgGroup && !r.__sgSeparator) this.state.selection.add(this._rowId(r)); });
     this.scheduleRender('selection');
     emit(this.element, 'grid:selectionChanged', {
       selectedRows: this.getSelectedRows(),
@@ -584,7 +621,7 @@ export default class GridController extends Controller {
     const toIdx = list.findIndex((r) => this._rowId(r) === toId);
     if (fromIdx < 0 || toIdx < 0) return;
     const [a, b] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
-    for (let i = a; i <= b; i++) { if (!list[i].__sgGroup) this.state.selection.add(this._rowId(list[i])); }
+    for (let i = a; i <= b; i++) { if (!list[i].__sgGroup && !list[i].__sgSeparator) this.state.selection.add(this._rowId(list[i])); }
   }
 
   // ----- Pagination -----
@@ -849,7 +886,7 @@ export default class GridController extends Controller {
     // Use the underlying columnDefs so CSV always exports the real data columns,
     // including any grouped columns hidden by the auto group column.
     const cols = this.state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
-    const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup && !r.__sgDetail);
+    const rows = (onlySelected ? this.getSelectedRows() : this._displayList.filteredSorted).filter((r) => !r.__sgGroup && !r.__sgDetail && !r.__sgSeparator);
     const escape = (s) => /[",\n\r]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
     const lines = [cols.map((c) => escape(c.headerName || c.field)).join(columnSeparator)];
     for (const r of rows) {
@@ -1155,6 +1192,11 @@ export default class GridController extends Controller {
       'data-filter-active': this.state.filterModel[col.field] ? 'true' : null,
       'data-sort': sortEntry?.sort || null,
       'data-pinned': col.pinned || null,
+      // Carry the column's value-type onto the <th> so CSS can right-align
+      // numeric headers (matching the right-aligned numeric body cells from
+      // currency/number/percent renderers and from the `type: 'number'`
+      // formatter path).
+      'data-type': col.type && col.type !== 'text' ? col.type : null,
     });
     if (col.width) th.style.width = col.width + 'px';
     th.style.left = col.pinned === 'left' ? pin.left[col.field] + 'px' : '';
@@ -1266,20 +1308,34 @@ export default class GridController extends Controller {
 
     const fragment = document.createDocumentFragment();
     // 1-based row number shown in the gutter: pagination page offset + virtual
-    // window offset + position. (Server-side keeps pagination.enabled + page.)
+    // window offset + position. Separator rows skip the counter entirely so
+    // section headings / subtotal lines don't burn a row number, and the data
+    // rows stay numbered 1, 2, 3, … like the user expects.
     const pageOffset = this.state.pagination.enabled
       ? this.state.pagination.page * this.state.pagination.pageSize : 0;
-    const rowNumOf = (i) => pageOffset + firstIdx + i + 1;
+    // Seed the counter with the number of data rows that come BEFORE the
+    // current virtual window — without this, virtualised scrolling resets the
+    // numbering on every render.
+    let dataCounter = 0;
+    for (let k = 0; k < firstIdx; k++) {
+      const r = allRows[k];
+      if (r && !r.__sgGroup && !r.__sgDetail && !r.__sgSeparator) dataCounter += 1;
+    }
+    const rowNumOf = (row) => {
+      if (!row || row.__sgGroup || row.__sgDetail || row.__sgSeparator) return null;
+      dataCounter += 1;
+      return pageOffset + dataCounter;
+    };
 
     if (virtual) {
       const rh = this.state.rowHeight;
       const topPx = firstIdx * rh;
       const bottomPx = (allRows.length - firstIdx - windowed.length) * rh;
       fragment.appendChild(this._spacerRow(topPx, cols.length));
-      windowed.forEach((row, i) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(i))));
+      windowed.forEach((row) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(row))));
       fragment.appendChild(this._spacerRow(bottomPx, cols.length));
     } else {
-      windowed.forEach((row, i) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(i))));
+      windowed.forEach((row) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(row))));
     }
     // Pinned bottom row (grand totals) — appended last so its sticky-bottom
     // CSS pins it to the viewport floor under all scrolled rows. Suppressed
@@ -1321,6 +1377,7 @@ export default class GridController extends Controller {
   _buildRow(row, cols, existing, rowNum) {
     if (row.__sgGroup) return this._buildGroupRow(row, cols, existing);
     if (row.__sgDetail) return this._buildDetailRow(row, cols, existing);
+    if (row.__sgSeparator) return this._buildSeparatorRow(row, cols, existing);
     const id = String(this._rowId(row));
     let tr = existing.get(id);
     if (!tr) tr = el('tr');
@@ -1335,6 +1392,83 @@ export default class GridController extends Controller {
     if (this.masterDetailValue) tr.classList.add('sg-master-row');
     this._renderRow(tr, row, cols, rowNum);
     return tr;
+  }
+
+  // Separator rows are positional anchors in the body — section headings,
+  // subtotal / total lines on an invoice, blank spacers between groups of
+  // line items. They're not data: not selectable, not editable, never sorted
+  // or filtered. The shape on the row decides the visual variant:
+  //   { __sgSeparator: true }                                    → blank spacer
+  //   { __sgSeparator: true, variant: 'divider' }                → thin ruled line
+  //   { __sgSeparator: true, label: 'Services' }                 → section heading
+  //   { __sgSeparator: true, label: 'Subtotal', value: '$1,200' } → summary line
+  //   { __sgSeparator: true, label: 'Total',    value: '$1,320', variant: 'total' }
+  // An explicit `variant` always wins over the auto-pick.
+  _buildSeparatorRow(row, cols, existing) {
+    const id = `__s:${row.__sgSeparatorId ?? this._separatorKey(row)}`;
+    let tr = existing.get(id);
+    if (!tr) tr = el('tr');
+    tr.dataset.rowId = id;
+    tr.dataset.separator = 'true';
+    tr.className = '';                  // wipe any reused class from a data row
+    tr.removeAttribute('data-selected');
+    tr.removeAttribute('data-detail-expanded');
+
+    const variant = row.variant
+      || (row.value != null ? 'summary'
+        : row.label != null ? 'heading'
+        : 'blank');
+    tr.classList.add('sg-separator-row', `sg-separator-${variant}`);
+    if (row.className) tr.classList.add(row.className);
+
+    tr.innerHTML = '';
+    // Visible (non-gutter / non-checkbox / non-group-col) columns get the
+    // label+value content; structural columns stay blank so the gutter and
+    // checkbox column don't collapse the row.
+    const isStructural = (c) => c._isCheckbox || c._isRowNumber || c._isGroupCol || c._isMasterExpand;
+    const dataCols = cols.filter((c) => !isStructural(c));
+    const dataSpan = dataCols.length || cols.length || 1;
+
+    for (const col of cols) {
+      if (isStructural(col)) {
+        // Keep the gutter / checkbox / group cell present so widths line up
+        // with normal rows, but make it visually inert.
+        const tdGutter = el('td', { 'data-col-id': col.field, class: 'sg-separator-gutter' });
+        tr.appendChild(tdGutter);
+        continue;
+      }
+      // The first non-structural col owns the entire content area via colspan.
+      const td = el('td', {
+        'data-col-id': col.field,
+        colspan: String(dataSpan),
+        class: 'sg-separator-cell',
+      });
+      this._renderSeparatorContent(td, row, variant);
+      tr.appendChild(td);
+      break;
+    }
+    return tr;
+  }
+
+  _renderSeparatorContent(td, row, variant) {
+    if (variant === 'blank' || variant === 'divider') {
+      // Nothing to render — height + ruled border come from CSS.
+      return;
+    }
+    const inner = el('div', { class: 'sg-separator-content' });
+    if (row.label != null) {
+      inner.appendChild(el('span', { class: 'sg-separator-label' }, String(row.label)));
+    }
+    if (row.value != null) {
+      inner.appendChild(el('span', { class: 'sg-separator-value' }, String(row.value)));
+    }
+    td.appendChild(inner);
+  }
+
+  _separatorKey(row) {
+    // Stable-ish reuse key derived from the row's content so the same separator
+    // recycled between renders lands in the same <tr> in the row pool.
+    return [row.variant || '', row.label || '', row.value || ''].join('|');
   }
 
   _spacerRow(heightPx, colSpan) {
@@ -1363,14 +1497,35 @@ export default class GridController extends Controller {
     const treeMeta = this._displayList?.treeMeta;
     const treeInfo = treeMeta ? treeMeta.get(rowKey) : null;
     const treeColField = treeInfo ? this._treeDisplayColField() : null;
-    for (const col of cols) {
+    // Merged fields (__sgSpans): a row can declare that one of its cells should
+    // span several columns — { __sgSpans: { description: 3 } } says "the
+    // description cell covers the next 3 visible columns". Used by invoice /
+    // quote layouts where a long line description swallows the qty/price
+    // columns. `skipCols` is set after we emit a spanning cell so the loop
+    // doesn't render the swallowed columns.
+    const spans = (row && row.__sgSpans) || null;
+    let skipCols = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const col = cols[i];
+      if (skipCols > 0) { skipCols -= 1; continue; }
+      // Structural columns (gutter, checkbox, group, master-expand) opt out of
+      // spanning — a span declared on the first data field never eats them.
+      const isStructural = col._isRowNumber || col._isCheckbox || col._isGroupCol || col._isMasterExpand;
+      const requestedSpan = spans && !isStructural ? Number(spans[col.field]) : 0;
+      const spanCount = Math.max(1, Math.min(requestedSpan || 1, cols.length - i));
+      // Set the skip count now so every early-continue path below (gutter,
+      // checkbox, group, master-expand) still honours the span declared on a
+      // data field — though in practice spans are gated to non-structural cols.
+      if (spanCount > 1) skipCols = spanCount - 1;
       const key = `${rowKey}:${col.field}`;
       const td = el('td', {
         'data-col-id': col.field,
         'data-pinned': col.pinned || null,
         'data-cell-active': selKeys.active === key ? 'true' : null,
         'data-cell-range': selKeys.range && selKeys.range.has(key) ? 'true' : null,
+        colspan: spanCount > 1 ? String(spanCount) : null,
       });
+      if (spanCount > 1) td.classList.add('sg-merged-cell');
       if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
       else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
       if (col._isRowNumber) {
@@ -2045,7 +2200,7 @@ export default class GridController extends Controller {
       if (!rect) continue;
       for (let r = rect.r0; r <= rect.r1; r++) {
         const row = rect.rows[r];
-        if (!row || row.__sgGroup || row.__sgDetail) continue;
+        if (!row || row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
           if (!col || col._isCheckbox || col._isRowNumber || col._isGroupCol || col._isMasterExpand) continue;
@@ -2228,7 +2383,135 @@ export default class GridController extends Controller {
     document.addEventListener('mouseup', this._onCellMouseUp);
     document.addEventListener('copy', this._onCopy);
     this._viewport.addEventListener('scroll', this._onScroll, { passive: true });
+    // Drag-to-attach: opt-in via data-grid-accept-files-value="true" (and an
+    // optional per-column override). Every data cell becomes a file drop
+    // target and dispatches grid:fileAttached when files land on it.
+    if (this.acceptFilesValue) {
+      this._tbody.addEventListener('dragenter', this._onCellDragEnter);
+      this._tbody.addEventListener('dragover',  this._onCellDragOver);
+      this._tbody.addEventListener('dragleave', this._onCellDragLeave);
+      this._tbody.addEventListener('drop',      this._onCellDrop);
+    }
   }
+
+  // ----- Drag-to-attach files on cells -----
+  //
+  // Lightweight, render-loop-friendly drop handling: we don't decorate every
+  // <td> with attributes on render (that would balloon the row payload).
+  // Instead we listen at the tbody level and check each event's target on
+  // the fly. The cell gets `.sg-drop-target` class while the user is hovering
+  // a file, and `grid:fileAttached` fires when they release.
+  //
+  // Per-column opt-out: a column can set `acceptFiles: false` (or a column
+  // type that's clearly not file-friendly like `_isCheckbox`) to skip the
+  // drop visual / event.
+
+  _dropTarget(target) {
+    const td = target?.closest?.('td');
+    const tr = target?.closest?.('tr');
+    if (!td || !tr) return null;
+    if (tr.dataset.group === 'true' || tr.dataset.separator === 'true'
+      || tr.classList.contains('sg-detail-row')) return null;
+    if (td.classList.contains('sg-checkbox-cell')
+      || td.classList.contains('sg-group-leaf-cell')
+      || td.classList.contains('sg-master-expand-cell')
+      || td.dataset.gutter === 'true'
+      || !td.dataset.colId) return null;
+    const colId = td.dataset.colId;
+    const col = this._colByField(colId);
+    if (col && col.acceptFiles === false) return null;
+    return { td, tr, colId, rowId: this._coerceRowId(tr.dataset.rowId), col };
+  }
+
+  _isFileDrag(e) {
+    const types = e.dataTransfer?.types;
+    if (!types) return false;
+    // `types` is a DOMStringList on Safari, plain array elsewhere — `includes`
+    // works on both but `Array.from` keeps the indexOf path safe either way.
+    return Array.from(types).includes('Files');
+  }
+
+  _onCellDragEnter = (e) => {
+    if (!this._isFileDrag(e)) return;
+    const t = this._dropTarget(e.target);
+    if (!t) return;
+    e.preventDefault();
+    if (this._dropHotCell && this._dropHotCell !== t.td) {
+      this._dropHotCell.classList.remove('sg-drop-target');
+    }
+    t.td.classList.add('sg-drop-target');
+    this._dropHotCell = t.td;
+  };
+
+  _onCellDragOver = (e) => {
+    if (!this._isFileDrag(e)) return;
+    const t = this._dropTarget(e.target);
+    if (!t) return;
+    // preventDefault lets the browser know the cell IS a drop target;
+    // without it, drop never fires and the file opens in a new tab.
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    if (this._dropHotCell !== t.td) {
+      this._dropHotCell?.classList.remove('sg-drop-target');
+      t.td.classList.add('sg-drop-target');
+      this._dropHotCell = t.td;
+    }
+  };
+
+  _onCellDragLeave = (e) => {
+    // Only clear when leaving the cell entirely (drag enters child elements
+    // would otherwise immediately strip the highlight).
+    if (this._dropHotCell && !this._dropHotCell.contains(e.relatedTarget)) {
+      this._dropHotCell.classList.remove('sg-drop-target');
+      this._dropHotCell = null;
+    }
+  };
+
+  _onCellDrop = (e) => {
+    if (!this._isFileDrag(e)) return;
+    const t = this._dropTarget(e.target);
+    if (!t) return;
+    e.preventDefault();
+    this._dropHotCell?.classList.remove('sg-drop-target');
+    this._dropHotCell = null;
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    const row = this.state.rowData.find((r) => this._rowId(r) === t.rowId);
+    // Fire a cancellable custom event so consumers can run their own upload
+    // pipeline (Active Storage direct upload, S3 presigned PUT, etc). When
+    // nothing calls preventDefault, we run the built-in default below:
+    // append a lightweight {name, size, type} record to the configured
+    // attachmentsField on the row.
+    const detail = { rowId: t.rowId, colId: t.colId, files, row, dataTransfer: e.dataTransfer };
+    const ev = new CustomEvent('grid:fileAttached', { detail, bubbles: true, cancelable: true });
+    const proceed = this.element.dispatchEvent(ev);
+    if (!proceed || !row) return;
+    // Default behaviour: stash file metadata on the row. Convert each File to
+    // a serialisable record + an object URL for inline previews when an
+    // attachments-renderer column is hooked up.
+    const field = this.attachmentsFieldValue || t.colId;
+    const existing = Array.isArray(row[field]) ? row[field].slice() : [];
+    for (const file of files) {
+      let url = '';
+      try { url = URL.createObjectURL(file); } catch (_) { /* fall through */ }
+      existing.push({
+        id: `f_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        filename: file.name,
+        name: file.name,
+        byte_size: file.size,
+        size: file.size,
+        content_type: file.type || 'application/octet-stream',
+        url,
+        thumb_url: file.type?.startsWith('image/') ? url : null,
+        preview_url: file.type?.startsWith('image/') ? url : null,
+      });
+    }
+    row[field] = existing;
+    this.scheduleRender('cells');
+    emit(this.element, 'grid:cellValueChanged', {
+      rowId: t.rowId, colId: field, oldValue: null, newValue: existing,
+    });
+  };
 
   _onScroll = () => {
     this.state.scrollTop = this._viewport.scrollTop;
@@ -2245,6 +2528,9 @@ export default class GridController extends Controller {
       this.toggleGroup(tr.dataset.rowId.replace(/^__g:/, ''), Number(tr.dataset.groupLevel) || 0);
       return;
     }
+    // Separator row (invoice section heading, subtotal, blank spacer) — purely
+    // structural, so just swallow the click without triggering selection.
+    if (tr.dataset.separator === 'true') return;
     // Detail row itself: swallow clicks so they don't trigger row/cell
     // selection on the master. The nested grid (if any) handles its own
     // interactions.
@@ -2319,7 +2605,15 @@ export default class GridController extends Controller {
   _cellAt(target) {
     const td = target.closest?.('td');
     const tr = target.closest?.('tr');
-    if (!td || !tr || tr.dataset.group === 'true' || tr.classList.contains('sg-detail-row') || td.classList.contains('sg-checkbox-cell') || td.classList.contains('sg-group-leaf-cell') || td.classList.contains('sg-master-expand-cell') || td.dataset.gutter === 'true' || !td.dataset.colId) return null;
+    if (!td || !tr
+      || tr.dataset.group === 'true'
+      || tr.dataset.separator === 'true'
+      || tr.classList.contains('sg-detail-row')
+      || td.classList.contains('sg-checkbox-cell')
+      || td.classList.contains('sg-group-leaf-cell')
+      || td.classList.contains('sg-master-expand-cell')
+      || td.dataset.gutter === 'true'
+      || !td.dataset.colId) return null;
     if (td.dataset.editing === 'true') return null;
     return { rowId: this._coerceRowId(tr.dataset.rowId), colId: td.dataset.colId };
   }
@@ -2683,7 +2977,7 @@ export default class GridController extends Controller {
     if (!rows.length || !cols.length) return;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
     const active = this._activeCell();
-    const firstLeaf = () => rows.findIndex((r) => !r.__sgGroup && !r.__sgDetail);
+    const firstLeaf = () => rows.findIndex((r) => !r.__sgGroup && !r.__sgDetail && !r.__sgSeparator);
     let ri = active ? rows.findIndex((r) => this._rowId(r) === active.rowId) : firstLeaf();
     let ci = active ? cols.findIndex((c) => c.field === active.colId) : 0;
     if (ri < 0) ri = firstLeaf();
@@ -2696,14 +2990,15 @@ export default class GridController extends Controller {
       this._extendActiveRange({ rowId: this._rowId(rows[fr]), colId: cols[fc].field });
     } else {
       let nr = clamp(ri + dr, 0, rows.length - 1);
-      // Step over group header rows when moving vertically.
+      // Step over non-data rows (group headers / detail panels / separators)
+      // when moving vertically so arrow keys land on a real data cell.
       if (dr !== 0) {
-        while (rows[nr] && (rows[nr].__sgGroup || rows[nr].__sgDetail)) {
+        while (rows[nr] && (rows[nr].__sgGroup || rows[nr].__sgDetail || rows[nr].__sgSeparator)) {
           const next = nr + dr;
           if (next < 0 || next >= rows.length) break;
           nr = next;
         }
-        if (!rows[nr] || rows[nr].__sgGroup || rows[nr].__sgDetail) return;
+        if (!rows[nr] || rows[nr].__sgGroup || rows[nr].__sgDetail || rows[nr].__sgSeparator) return;
       }
       const nc = clamp(ci + dc, 0, cols.length - 1);
       this._setSingleCellSel({ rowId: this._rowId(rows[nr]), colId: cols[nc].field });
@@ -2736,7 +3031,7 @@ export default class GridController extends Controller {
       if (!rect) continue;
       for (let r = rect.r0; r <= rect.r1; r++) {
         const row = rect.rows[r];
-        if (!row || row.__sgGroup || row.__sgDetail) continue;
+        if (!row || row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
         for (let c = rect.c0; c <= rect.c1; c++) {
           const col = rect.cols[c];
           if (!col || !col.editable || col._isCheckbox || col._isRowNumber) continue;
@@ -2907,7 +3202,7 @@ export default class GridController extends Controller {
     const out = [];
     for (const row of pageRows) {
       out.push(row);
-      if (row.__sgGroup || row.__sgDetail) continue;
+      if (row.__sgGroup || row.__sgDetail || row.__sgSeparator) continue;
       const id = this._rowId(row);
       if (this._isDetailExpanded(id)) {
         out.push({ __sgDetail: true, master: row, masterId: id });

@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>33 — Invoice / quote (separators + merged cells) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1040px; margin: 40px auto; padding: 0 20px; color: #1f2937; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+
+    /* Invoice document chrome around the grid — header, meta box, terms.
+       The grid itself is just one piece of the page. */
+    .invoice-doc {
+      margin-top: 24px;
+      padding: 28px 32px 36px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .invoice-logo {
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      color: #111827;
+    }
+    .invoice-logo .dot { color: #2563eb; }
+    .invoice-meta {
+      text-align: right;
+      font-size: 13px;
+      color: #4b5563;
+      line-height: 1.55;
+    }
+    .invoice-meta strong { color: #111827; }
+    .invoice-meta .stamp {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 3px 10px;
+      background: #ecfdf5;
+      color: #047857;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .invoice-parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .invoice-parties h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin: 0 0 4px;
+    }
+    .invoice-parties strong { color: #111827; }
+    .invoice-terms {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed #e5e7eb;
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+    .invoice-terms strong { color: #1f2937; }
+
+    /* Make the grid expand to its content (no internal scroll for short
+       documents). domLayout='autoHeight' would let cell width auto-fit too,
+       but a fixed-width invoice column layout reads better. */
+    .invoice-grid { margin-bottom: 4px; }
+
+    .toolbar { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px;
+      padding:6px 12px; font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #eff6ff;
+      border-left: 3px solid #2563eb;
+      color:#1e3a8a;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .tip ul { margin: 6px 0 0; padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>33 — Invoice / quote (separators + merged cells)</h1>
+  <p class="lede">
+    Section headings, blank spacers, ruled dividers, summary rows and
+    column-spanning cells — all the structural primitives a real-world quote
+    or invoice needs, on top of the same Stimulus-first grid.
+  </p>
+
+  <div class="invoice-doc">
+    <div class="invoice-header">
+      <div>
+        <div class="invoice-logo">stimulus<span class="dot">_grid</span> Co</div>
+        <div style="color:#6b7280;font-size:12px;margin-top:4px;">123 Hotwire Street · Sydney NSW 2000 · ABN 12 345 678 901</div>
+      </div>
+      <div class="invoice-meta">
+        <span class="stamp">Tax Invoice</span><br />
+        Invoice <strong>#INV-2026-0412</strong><br />
+        Issued <strong>25 May 2026</strong><br />
+        Due <strong>24 Jun 2026</strong>
+      </div>
+    </div>
+
+    <div class="invoice-parties">
+      <div>
+        <h3>Billed To</h3>
+        <strong>Northwind Manufacturing Pty Ltd</strong><br />
+        Attn: Ada Lovelace, Finance<br />
+        47 Forge Lane, Melbourne VIC 3000<br />
+        ABN 98 765 432 109
+      </div>
+      <div>
+        <h3>Project</h3>
+        <strong>Operations dashboard — Phase 2</strong><br />
+        PO Reference: PO-9921<br />
+        Engagement period: May 2026
+      </div>
+    </div>
+
+    <div class="invoice-grid"
+         data-controller="grid"
+         data-grid-dom-layout-value="autoHeight">
+      <table>
+        <thead>
+          <tr>
+            <!-- Description has no explicit width: the grid sees an auto-sized
+                 column in the visible set, switches the table to width:100%,
+                 and the description absorbs whatever space the fixed-width
+                 columns don't claim. That's what lets the invoice table fill
+                 the document panel edge-to-edge. -->
+            <th data-controller="header-cell" data-header-cell-field-value="description">Description</th>
+            <th data-controller="header-cell" data-header-cell-field-value="qty"
+                data-header-cell-type-value="number" data-header-cell-width-value="90">Qty</th>
+            <th data-controller="header-cell" data-header-cell-field-value="rate"
+                data-header-cell-type-value="number" data-header-cell-width-value="140"
+                data-header-cell-cell-renderer-value="aud-rate">Unit price</th>
+            <th data-controller="header-cell" data-header-cell-field-value="total"
+                data-header-cell-type-value="number" data-header-cell-width-value="170"
+                data-header-cell-cell-renderer-value="aud-total">Amount</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="invoice-terms">
+      <strong>Payment terms.</strong> Net 30. Please pay by EFT to BSB 062-001
+      Account 1234 5678, reference <code>INV-2026-0412</code>. Late payment
+      attracts a 1.5% monthly surcharge under the Engagement Agreement.<br />
+      <strong>GST.</strong> Prices are exclusive of GST; 10% GST applies to all
+      Australian-sourced services and goods on this invoice.
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="add-line">+ Add line item</button>
+    <button id="add-section">+ New section</button>
+    <button id="reset">Reset invoice</button>
+    <button id="export-csv">Export CSV</button>
+    <span id="stat" class="stat"></span>
+  </div>
+
+  <div class="tip">
+    <strong>What's new in this demo:</strong>
+    <ul>
+      <li><code>{ __sgSeparator: true, label: 'Services' }</code> — section heading row.</li>
+      <li><code>{ __sgSeparator: true, label: 'Subtotal', value: '$17,364.00' }</code> — invoice summary line.</li>
+      <li><code>{ __sgSeparator: true, variant: 'total', label: 'Total due', value: '$19,100.40' }</code> — emphasised grand-total row.</li>
+      <li><code>{ id: 6, description: '…', __sgSpans: { description: 3 } }</code> — the description cell swallows the qty + unit-price columns.</li>
+    </ul>
+    Separators are positional anchors: sort or filter the line items and the
+    section headings / summary rows stay anchored in place.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // AUD-formatted right-aligned currency. Two registrations because the
+    // "Unit price" column shows ints prettily ("$80") while the "Amount"
+    // column lines up cents-precise totals ("$8,000.00").
+    registerRenderer('aud-rate',  renderers.currency({ currency: 'AUD', locale: 'en-AU', decimals: 2 }));
+    registerRenderer('aud-total', renderers.currency({ currency: 'AUD', locale: 'en-AU', decimals: 2 }));
+
+    const fmtAUD = new Intl.NumberFormat('en-AU', {
+      style: 'currency', currency: 'AUD',
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+
+    // Source-of-truth invoice rows. Mix of data rows, section separators,
+    // a description-spanning note row, and the summary block at the bottom.
+    const baseRows = () => ([
+      { __sgSeparator: true, label: 'Professional services', variant: 'heading' },
+      { id: 1, description: 'Discovery workshops + technical scoping (3 days · onsite)',
+        qty: 3, rate: 1800, total: 5400 },
+      { id: 2, description: 'Dashboard build — Phase 2 implementation',
+        qty: 40, rate: 220, total: 8800 },
+      { id: 3, description: 'Code review + production deployment',
+        qty: 8, rate: 220, total: 1760 },
+
+      { __sgSeparator: true, label: 'Hardware', variant: 'heading' },
+      { id: 4, description: 'Raspberry Pi 5 8GB kit (production sensor units)',
+        qty: 6, rate: 199, total: 1194 },
+      { id: 5, description: 'USB-C power supplies, official 27W',
+        qty: 6, rate: 35, total: 210 },
+      // Description-spanning note — qty/rate columns are blank because the
+      // description cell swallows them via __sgSpans.
+      { id: 6,
+        description: '↪ Includes preconfigured Raspbian image + 12 months remote support. Delivered in two batches: 3 units on 1 Jun, 3 units on 15 Jun.',
+        __sgSpans: { description: 3 },
+        total: 0 },
+
+      { __sgSeparator: true, variant: 'blank' },
+
+      { __sgSeparator: true, label: 'Subtotal',     value: fmtAUD.format(17364) },
+      { __sgSeparator: true, label: 'GST 10%',      value: fmtAUD.format(1736.4) },
+      { __sgSeparator: true, variant: 'total', label: 'Total due', value: fmtAUD.format(19100.4) },
+    ]);
+
+    const grid = document.querySelector('.invoice-grid');
+    const stat = document.getElementById('stat');
+
+    function recompute() {
+      const api = grid.gridApi;
+      if (!api) return;
+      const rows = api.getRowData();
+      let subtotal = 0;
+      for (const r of rows) {
+        if (r.__sgSeparator || !Number.isFinite(Number(r.total))) continue;
+        subtotal += Number(r.total) || 0;
+      }
+      const gst = subtotal * 0.1;
+      const total = subtotal + gst;
+      // Update the summary separator rows in place, then re-render.
+      const next = rows.map((r) => {
+        if (!r.__sgSeparator) return r;
+        if (r.label === 'Subtotal')  return { ...r, value: fmtAUD.format(subtotal) };
+        if (r.label === 'GST 10%')   return { ...r, value: fmtAUD.format(gst) };
+        if (r.label === 'Total due') return { ...r, value: fmtAUD.format(total) };
+        return r;
+      });
+      api.setRowData(next);
+      stat.textContent = `${rows.filter((r) => !r.__sgSeparator).length} line items · ${fmtAUD.format(total)} due`;
+    }
+
+    grid.addEventListener('grid:ready', () => {
+      grid.gridApi.setRowData(baseRows());
+      recompute();
+    });
+
+    grid.addEventListener('grid:cellValueChanged', () => recompute());
+
+    document.getElementById('reset').onclick = () => {
+      grid.gridApi.setRowData(baseRows());
+      recompute();
+    };
+
+    document.getElementById('add-line').onclick = () => {
+      const rows = grid.gridApi.getRowData().slice();
+      // Insert before the blank separator that opens the summary block.
+      const insertAt = rows.findIndex((r) => r.__sgSeparator && r.variant === 'blank');
+      const id = (rows.filter((r) => !r.__sgSeparator).reduce((max, r) => Math.max(max, Number(r.id) || 0), 0)) + 1;
+      rows.splice(insertAt >= 0 ? insertAt : rows.length, 0,
+        { id, description: 'New line item', qty: 1, rate: 0, total: 0 });
+      grid.gridApi.setRowData(rows);
+      recompute();
+    };
+
+    document.getElementById('add-section').onclick = () => {
+      const rows = grid.gridApi.getRowData().slice();
+      const insertAt = rows.findIndex((r) => r.__sgSeparator && r.variant === 'blank');
+      rows.splice(insertAt >= 0 ? insertAt : rows.length, 0,
+        { __sgSeparator: true, label: 'New section', variant: 'heading' });
+      grid.gridApi.setRowData(rows);
+      recompute();
+    };
+
+    document.getElementById('export-csv').onclick = () => {
+      grid.gridApi.exportDataAsCsv({ fileName: 'invoice-INV-2026-0412.csv' });
+    };
+  </script>
+</body>
+</html>

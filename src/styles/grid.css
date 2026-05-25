@@ -861,6 +861,15 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Numeric column headers: text-align follows the body cells so "Qty",
+   "Unit price", "Amount" sit flush right above their values. The header
+   row uses .sg-header-content (flex) for the label/icons stack; aligning
+   the label end-justifies it inside its flex slot, while the sort and
+   filter icons stay tucked at the row's right edge as before. */
+.sg-grid thead th[data-type="number"] { text-align: right; }
+.sg-grid thead th[data-type="number"] .sg-header-content { justify-content: flex-end; }
+.sg-grid thead th[data-type="number"] .sg-header-label { text-align: right; }
+
 /* Links inside cells inherit the grid's accent colour but stay subtle —
    no underline at rest, on hover. */
 .sg-grid .sg-renderer-link {
@@ -1205,3 +1214,419 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   flex-shrink: 0;
 }
 .sg-grid .sg-renderer-avatar-name { font-size: inherit; }
+
+/* Attachments — Airtable-style strip of thumbs / file chips with a
+   lightbox carousel and a popover editor. Sized to sit comfortably in
+   the default 32px row; bump `data-grid-row-height-value` to 48-64 for
+   2+ rows of larger thumbs. */
+.sg-grid .sg-renderer-attachments-cell { padding: 4px 8px; }
+.sg-grid .sg-renderer-attachments-cell.is-drop-target {
+  outline: 2px dashed #2563eb;
+  outline-offset: -2px;
+  background: rgba(37, 99, 235, 0.06);
+}
+.sg-grid .sg-renderer-attachments-cell.is-uploading { opacity: 0.7; }
+.sg-grid .sg-renderer-attachments {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: middle;
+}
+.sg-grid .sg-attach-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: #f9fafb;
+  border: 1px solid var(--sg-border, #e5e7eb);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  color: #4b5563;
+  flex-shrink: 0;
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+/* Hover affordance is a border-color + soft inset shadow swap. The previous
+   `transform: translateY(-1px)` clipped at the cell's top edge — the cell has
+   `overflow: hidden` to keep ellipsis truncation working, so any upward lift
+   sliced off the thumb's top border. Inset shadow + border-color stay inside
+   the box, so nothing clips. */
+.sg-grid .sg-attach-thumb:hover {
+  border-color: #6b7280;
+  box-shadow: inset 0 0 0 1px rgba(107, 114, 128, 0.18);
+}
+.sg-grid .sg-attach-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sg-grid .sg-attach-thumb .sg-attach-icon {
+  width: 60%;
+  height: 60%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sg-grid .sg-attach-thumb .sg-attach-icon svg { width: 100%; height: 100%; }
+/* Per-kind icon tints — red = pdf / blue = doc / etc. Subtle enough
+   that the chip still reads as part of a uniform strip. Not scoped to
+   .sg-grid because the editor popover and lightbox mount on <body>. */
+.sg-attach-icon.is-pdf   { color: #dc2626; }
+.sg-attach-icon.is-doc   { color: #2563eb; }
+.sg-attach-icon.is-sheet { color: #16a34a; }
+.sg-attach-icon.is-zip   { color: #ca8a04; }
+.sg-attach-icon.is-audio { color: #7c3aed; }
+.sg-attach-icon.is-video { color: #db2777; }
+.sg-attach-icon.is-code  { color: #475569; }
+.sg-attach-icon.is-file  { color: #6b7280; }
+
+.sg-grid .sg-attach-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sg-grid .sg-attach-more:hover { background: #d1d5db; }
+
+.sg-grid .sg-attach-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px dashed var(--sg-border, #d1d5db);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.sg-grid .sg-attach-add:hover { color: #2563eb; border-color: #2563eb; background: rgba(37, 99, 235, 0.05); }
+.sg-grid .sg-attach-add svg { width: 10px; height: 10px; }
+
+/* Lightbox — reuses the .sg-image-zoom overlay but adds a stage with
+   prev/next chevrons and a caption strip. The base .sg-image-zoom is
+   flex-row, which would put the caption beside the stage; force column
+   so the caption stacks below the image. */
+.sg-attach-lightbox {
+  flex-direction: column;
+}
+.sg-attach-lightbox .sg-attach-lightbox-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.sg-attach-lightbox .sg-image-zoom-img {
+  max-height: 82vh;
+  max-width: 80vw;
+  object-fit: contain;
+}
+.sg-attach-lightbox .sg-attach-lightbox-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.sg-attach-lightbox .sg-attach-lightbox-nav svg { width: 16px; height: 16px; }
+.sg-attach-lightbox .sg-attach-lightbox-nav:hover { background: #fff; }
+.sg-attach-lightbox .sg-attach-lightbox-caption {
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+/* Editor popover — anchored to the cell. Width capped to ~340 so it
+   doesn't dominate the page on a wide cell. */
+.sg-attach-editor {
+  position: fixed;
+  width: 340px;
+  background: #fff;
+  border: 1px solid var(--sg-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  padding: 12px;
+  z-index: 9000;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.sg-attach-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sg-attach-editor-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-attach-editor-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 4px;
+}
+.sg-attach-editor-close:hover { background: #f3f4f6; color: #111827; }
+.sg-attach-editor-close svg { width: 10px; height: 10px; }
+
+.sg-attach-editor-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.sg-attach-editor-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--sg-border, #e5e7eb);
+  border-radius: 6px;
+}
+.sg-attach-editor-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  border-radius: 4px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sg-attach-editor-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sg-attach-editor-preview .sg-attach-icon { width: 60%; height: 60%; }
+.sg-attach-editor-preview .sg-attach-icon svg { width: 100%; height: 100%; }
+.sg-attach-editor-meta { flex: 1; min-width: 0; }
+.sg-attach-editor-name {
+  font-size: 13px;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-attach-editor-size { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.sg-attach-editor-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sg-attach-editor-remove:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+.sg-attach-editor-remove svg { width: 10px; height: 10px; }
+
+.sg-attach-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  background: #f9fafb;
+}
+.sg-attach-dropzone:hover, .sg-attach-dropzone:focus {
+  outline: none;
+  border-color: #2563eb;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.04);
+}
+.sg-attach-dropzone.is-drop-target {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+.sg-attach-dropzone-icon { display: inline-flex; width: 14px; height: 14px; }
+.sg-attach-dropzone-icon svg { width: 100%; height: 100%; }
+.sg-attach-dropzone-text strong { color: #2563eb; }
+
+/* ----- Separator rows + merged cells -----
+   Separators are positional anchors in the body: section headings ("Services"),
+   summary lines ("Subtotal $1,200"), blank spacers, ruled dividers. They live
+   alongside data rows on invoice / quote layouts and never participate in
+   selection, sort, filter or aggregates. Merged cells use a colspan on the
+   <td> to swallow neighbouring columns — perfect for a long line description
+   that crosses the qty / price columns or a "Notes" row that spans the
+   whole table. */
+.sg-grid tbody tr.sg-separator-row {
+  background: transparent;
+  cursor: default;
+}
+.sg-grid tbody tr.sg-separator-row:hover { background: transparent; }
+.sg-grid tbody tr.sg-separator-row:nth-child(even) { background: transparent; }
+.sg-grid tbody tr.sg-separator-row td {
+  border-right: none;
+  /* `overflow: hidden` clips bold separator labels with descenders (e.g. "Subtotal"
+     in a tall-line font) — let separator cells render their full content. */
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  user-select: none;
+}
+.sg-grid tbody tr.sg-separator-row td.sg-separator-gutter {
+  background: var(--sg-bg);
+  border-bottom: none;
+}
+.sg-grid tbody tr.sg-separator-row td.sg-separator-cell {
+  padding: 0 var(--sg-cell-pad-x);
+}
+.sg-grid .sg-separator-content {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.sg-grid .sg-separator-label { font-weight: 600; }
+.sg-grid .sg-separator-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--sg-fg);
+}
+
+/* Heading: bold uppercase section title sitting above its lines. */
+.sg-grid tbody tr.sg-separator-heading td.sg-separator-cell {
+  background: var(--sg-bg-header);
+  border-top: 1px solid var(--sg-border-strong);
+  border-bottom: 1px solid var(--sg-border-strong);
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.sg-grid tbody tr.sg-separator-heading .sg-separator-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  color: var(--sg-fg-muted);
+}
+
+/* Subtle: same shape as heading, no background — quieter visually. */
+.sg-grid tbody tr.sg-separator-subtle td.sg-separator-cell {
+  border-bottom: 1px solid var(--sg-border);
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.sg-grid tbody tr.sg-separator-subtle .sg-separator-label {
+  font-size: 11px;
+  color: var(--sg-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Blank: just consume row height for a breathing spacer between sections. */
+.sg-grid tbody tr.sg-separator-blank td { height: 14px; padding: 0; border-bottom: none; }
+.sg-grid tbody tr.sg-separator-blank td.sg-separator-gutter { background: transparent; }
+
+/* Divider: a thin ruled line across the body. */
+.sg-grid tbody tr.sg-separator-divider td { height: 1px; padding: 0; border-bottom: none; }
+.sg-grid tbody tr.sg-separator-divider td.sg-separator-cell {
+  border-top: 1px solid var(--sg-border-strong);
+}
+
+/* Summary: invoice-style "Subtotal … $1,200.00" line. Label on the left,
+   value on the right. */
+.sg-grid tbody tr.sg-separator-summary td.sg-separator-cell {
+  background: var(--sg-bg-alt);
+  border-top: 1px solid var(--sg-border);
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.sg-grid tbody tr.sg-separator-summary .sg-separator-label { color: var(--sg-fg-muted); }
+
+/* Total: the loudest summary variant — for "Total" / "Grand Total". */
+.sg-grid tbody tr.sg-separator-total td.sg-separator-cell {
+  background: var(--sg-bg-header);
+  border-top: 2px solid var(--sg-border-strong);
+  border-bottom: 2px solid var(--sg-border-strong);
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.sg-grid tbody tr.sg-separator-total .sg-separator-label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-grid tbody tr.sg-separator-total .sg-separator-value {
+  font-size: 15px;
+  color: var(--sg-fg);
+}
+
+/* Merged cells (per-row __sgSpans). The colspan'd <td> behaves like a normal
+   data cell but lets the content wrap so a long description doesn't get
+   silently truncated by the standard nowrap rule. */
+.sg-grid tbody td.sg-merged-cell {
+  white-space: normal;
+  text-overflow: clip;
+  border-right: 1px solid var(--sg-border);
+}
+
+/* ----- Drag-to-attach (cell-level file drop) -----
+   `data-grid-accept-files-value="true"` (or per-column opt-in) wires every
+   data cell as a drop target. The cell glows blue while dragging, and emits
+   `grid:fileAttached` on drop so the consumer can run uploads. */
+.sg-grid tbody td.sg-drop-target {
+  outline: 2px dashed var(--sg-accent);
+  outline-offset: -2px;
+  background: rgba(37, 99, 235, 0.08);
+  z-index: 4;
+}
+.sg-grid tbody.sg-drop-active td[data-accept-files="true"] {
+  background-image: linear-gradient(rgba(37, 99, 235, 0.025), rgba(37, 99, 235, 0.025));
+}
+
+/* ----- Icon-button hover safety -----
+   Cells use `overflow: hidden` to enforce ellipsis truncation, but that
+   crops any hover affordance that extends past the cell bounds — most
+   notoriously the top edge of buttons that translate / grow / shadow on
+   hover. The attachment cells (which render thumbnails + an "add" button)
+   need visible overflow so the hover affordances render in full. */
+.sg-grid tbody td.sg-renderer-attachments-cell { overflow: visible; }
+.sg-grid .sg-renderer-attachments { overflow: visible; }
+/* Translate-up hover affordance on attachment thumbs needs the wrapping
+   stack to be visible too — otherwise the 1px lift gets sliced off. */
+.sg-grid .sg-attach-thumb { will-change: transform; }
