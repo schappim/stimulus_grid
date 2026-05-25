@@ -4337,8 +4337,8 @@ class $e extends q {
     const { rowId: t, colId: s, originalValue: i, draftValue: o } = this.state.editing, a = this._tbody.querySelector(`tr[data-row-id="${X(t)}"] td[data-col-id="${X(s)}"]`);
     let l = i;
     if (!e && a) {
-      const d = a.querySelector("[data-editor-input]") || a.querySelector("input,select,textarea");
-      d ? l = Ur(d.value, this._colByField(s)?.type) : o !== void 0 && (l = o);
+      const d = a.firstElementChild, c = d?.matches?.("[data-editor-input],input,select,textarea") ? d : a.querySelector("[data-editor-input]") || a.querySelector("input,select,textarea");
+      c ? l = Ur(c.value, this._colByField(s)?.type) : o !== void 0 && (l = o);
     }
     if (this.state.editing = null, !e && l !== i) {
       const d = this.state.rowData.find((u) => this._rowId(u) === t), c = d[s];
@@ -5125,7 +5125,7 @@ class $e extends q {
     if (e.cellEditor) {
       const i = Ge(e.cellEditor);
       if (i) {
-        const o = i.matches?.("input,select,textarea") ? i : i.querySelector?.("[data-editor-input]") || i.querySelector?.("input,select,textarea");
+        const o = i.matches?.("input,select,textarea,[data-editor-input]") ? i : i.querySelector?.("[data-editor-input]") || i.querySelector?.("input,select,textarea");
         return o && (this._seedEditorValue(o, e, t), o.addEventListener("keydown", this._onEditorKey), o.addEventListener("blur", this._onEditorBlur)), { node: i, control: o };
       }
     }

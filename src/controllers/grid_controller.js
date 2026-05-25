@@ -720,7 +720,15 @@ export default class GridController extends Controller {
     const td = this._tbody.querySelector(`tr[data-row-id="${cssEscape(rowId)}"] td[data-col-id="${cssEscape(colId)}"]`);
     let newValue = originalValue;
     if (!cancel && td) {
-      const input = td.querySelector('[data-editor-input]') || td.querySelector('input,select,textarea');
+      // The editor's controlling element may be the td's first child (a
+      // component-style root carrying data-editor-input) or a descendant
+      // input/select/textarea. Check the immediate child first so a
+      // top-level editor root is preferred over any of its descendants.
+      const firstChild = td.firstElementChild;
+      const input =
+        firstChild?.matches?.('[data-editor-input],input,select,textarea')
+          ? firstChild
+          : td.querySelector('[data-editor-input]') || td.querySelector('input,select,textarea');
       if (input) newValue = coerceByType(input.value, this._colByField(colId)?.type);
       else if (draftValue !== undefined) newValue = draftValue;
     }
@@ -2094,9 +2102,14 @@ export default class GridController extends Controller {
     if (col.cellEditor) {
       const node = cloneTemplate(col.cellEditor);
       if (node) {
-        const control = node.matches?.('input,select,textarea')
-          ? node
-          : (node.querySelector?.('[data-editor-input]') || node.querySelector?.('input,select,textarea'));
+        // Editor template root may BE the controlling element (custom
+        // component-style editor) or may CONTAIN one. We check the root
+        // first via .matches, then fall through to descendants. Mirrors
+        // the same precedence stopEditing uses when reading the value.
+        const control =
+          node.matches?.('input,select,textarea,[data-editor-input]')
+            ? node
+            : (node.querySelector?.('[data-editor-input]') || node.querySelector?.('input,select,textarea'));
         if (control) {
           this._seedEditorValue(control, col, value);
           control.addEventListener('keydown', this._onEditorKey);
