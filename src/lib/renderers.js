@@ -345,6 +345,57 @@ export function boolean({
   };
 }
 
+/* ---------- delta / change ------------------------------------------ */
+
+// Signed value with an up/down arrow and green/red text — the dashboard
+// staple for "+12.5% vs last week". `style` controls the suffix: 'percent'
+// adds %, 'number' renders the raw number, 'currency' formats as money.
+// `inverted: true` flips the colour semantics (positive = red, negative =
+// green) — useful for "error rate" or "churn" columns where a fall is good.
+const ARROW_UP    = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2 160 448c0 17.7 14.3 32 32 32s32-14.3 32-32l0-306.7L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"/></svg>';
+const ARROW_DOWN  = '<svg viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M169.4 470.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 370.7 224 64c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 306.7L54.6 265.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>';
+const ARROW_RIGHT = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M64 256a32 32 0 1 0 0-64H384V160c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l96 96c12.5 12.5 12.5 32.8 0 45.3l-96 96c-9.2 9.2-22.9 11.9-34.9 6.9S384 364.9 384 352V320H64z"/></svg>';
+
+export function delta({
+  style = 'percent',                  // 'percent' | 'number' | 'currency'
+  decimals = 1,
+  locale = undefined,
+  currency: ccy = 'USD',
+  inverted = false,
+  showSign = true,
+} = {}) {
+  let fmt;
+  if (style === 'currency') {
+    fmt = new Intl.NumberFormat(locale, {
+      style: 'currency', currency: ccy,
+      minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+      signDisplay: showSign ? 'always' : 'auto',
+    });
+  } else {
+    fmt = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+      signDisplay: showSign ? 'always' : 'auto',
+    });
+  }
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    let dirClass = 'is-flat', arrow = ARROW_RIGHT;
+    const positiveGood = !inverted;
+    if (n > 0) { dirClass = positiveGood ? 'is-up' : 'is-down'; arrow = ARROW_UP; }
+    else if (n < 0) { dirClass = positiveGood ? 'is-down' : 'is-up'; arrow = ARROW_DOWN; }
+    const wrap = h('span', { class: `sg-renderer-delta ${dirClass}` });
+    const ic = h('span', { class: 'sg-renderer-delta-icon', 'aria-hidden': 'true' });
+    ic.innerHTML = arrow;
+    const label = style === 'percent' ? `${fmt.format(n)}%` : fmt.format(n);
+    wrap.append(ic);
+    wrap.append(h('span', { class: 'sg-renderer-delta-value' }, document.createTextNode(label)));
+    return wrap;
+  };
+}
+
 /* ---------- progress bar -------------------------------------------- */
 
 export function progressBar({ color = 'green', showValue = false } = {}) {
@@ -623,6 +674,7 @@ registerRenderer('number',         number());
 registerRenderer('compact-number', compactNumber());
 registerRenderer('file-size',      fileSize());
 registerRenderer('boolean',        boolean());
+registerRenderer('delta',          delta());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -630,4 +682,5 @@ export const renderers = {
   date, datetime, relativeTime, duration,
   number, compactNumber, fileSize,
   boolean,
+  delta,
 };

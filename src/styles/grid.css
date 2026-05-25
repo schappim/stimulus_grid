@@ -891,6 +891,25 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-bool.is-false { color: #d1d5db; }    /* muted grey — keeps the table calm */
 .sg-grid .sg-renderer-bool-null { color: var(--sg-fg-muted, #9ca3af); }
 
+/* Delta / change — signed value with up/down arrow + green/red text.
+   Right-aligned via the .sg-renderer-number class the renderer adds to
+   the cell. Arrow + label share the same colour via currentColor. */
+.sg-grid .sg-renderer-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.sg-grid .sg-renderer-delta-icon {
+  display: inline-flex;
+  width: 9px; height: 9px;
+}
+.sg-grid .sg-renderer-delta-icon svg { width: 9px; height: 9px; display: block; }
+.sg-grid .sg-renderer-delta.is-up   { color: #047857; }   /* emerald-700 */
+.sg-grid .sg-renderer-delta.is-down { color: #b91c1c; }   /* red-700 */
+.sg-grid .sg-renderer-delta.is-flat { color: var(--sg-fg-muted, #6b7280); }
+
 /* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
 .sg-grid .sg-pill {
   display: inline-flex;

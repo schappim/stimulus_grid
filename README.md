@@ -261,6 +261,7 @@ without conflict.
 | `compact-number` | big numbers | `1.2K` / `3.4M` / `1.2B` (or `1.2 million` with `compactDisplay: 'long'`) |
 | `file-size` | byte counts | Bytes → `KiB` / `MiB` / `GiB` (binary by default); pass `{ binary: false }` for `KB` / `MB` / `GB` |
 | `boolean` | true / false / null | Green check / muted X / dash; recognises `true`, `1`, `"yes"`, `"on"`, etc.; `{ falseStyle: 'hidden' }` blanks false; `{ nullLabel: 'N/A' }` overrides the dash |
+| `delta` | WoW / MoM / change | Signed value with up/down arrow + green/red text; `style: 'percent'` (default) / `'number'` / `'currency'`; `{ inverted: true }` flips colours for churn/error-rate columns |
 
 ```html
 <th data-controller="header-cell" data-header-cell-field-value="email"

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>23 — Delta renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>23 — Delta / change renderer</h1>
+  <p class="lede">
+    The dashboard staple: <code>+12.5%</code> green with an up arrow,
+    <code>-3.2%</code> red with a down arrow, <code>0%</code> muted with a
+    right arrow. Pre-registered as a percent renderer; pass
+    <code>style: 'number'</code> for raw deltas, <code>style:
+    'currency'</code> for money changes, or <code>inverted: true</code> for
+    columns where positive is bad (churn, error rate).
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="metric"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="240">Metric</th>
+          <th data-controller="header-cell" data-header-cell-field-value="value"
+              data-header-cell-cell-renderer-value="number"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">This week</th>
+          <th data-controller="header-cell" data-header-cell-field-value="wow"
+              data-header-cell-cell-renderer-value="delta"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">WoW</th>
+          <th data-controller="header-cell" data-header-cell-field-value="mom"
+              data-header-cell-cell-renderer-value="delta"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">MoM</th>
+          <th data-controller="header-cell" data-header-cell-field-value="revenue_change"
+              data-header-cell-cell-renderer-value="delta-money"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Δ revenue</th>
+          <th data-controller="header-cell" data-header-cell-field-value="churn_change"
+              data-header-cell-cell-renderer-value="delta-inverted"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Δ churn</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Variants:</strong> the <em>Δ revenue</em> column is
+    <code>delta({ style: 'currency' })</code>; the <em>Δ churn</em> column
+    is <code>delta({ inverted: true })</code> — a decrease in churn is
+    green, an increase is red. <code>showSign: false</code> hides the
+    explicit <code>+</code> if it reads as visual noise in your context.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('delta-money',    renderers.delta({ style: 'currency' }));
+    registerRenderer('delta-inverted', renderers.delta({ inverted: true }));
+
+    const ROWS = [
+      { id: 1, metric: 'Active users',           value: 18420, wow:  4.2, mom:  12.5, revenue_change:  18420, churn_change: -0.4 },
+      { id: 2, metric: 'Trial signups',          value: 1380,  wow: 12.8, mom:  31.0, revenue_change:   3200, churn_change:  0   },
+      { id: 3, metric: 'Conversion %',           value: 4.2,   wow: -0.6, mom:   0.9, revenue_change:    140, churn_change: -1.2 },
+      { id: 4, metric: 'Churn %',                value: 2.1,   wow:  0.3, mom:  -0.4, revenue_change:      0, churn_change:  0.6 },
+      { id: 5, metric: 'Error rate (5xx)',       value: 0.04,  wow: -23.0, mom: -54.0, revenue_change:      0, churn_change: -2.1 },
+      { id: 6, metric: 'NPS',                    value: 41,    wow:  0,   mom:   3,   revenue_change:      0, churn_change:  0.1 },
+      { id: 7, metric: 'MRR',                    value: 184000, wow: 2.4, mom:  9.2, revenue_change:   16800, churn_change: -0.8 },
+      { id: 8, metric: 'Self-serve cancellations', value: 92,  wow:  -8,   mom:  -22, revenue_change:  -1240, churn_change: -0.3 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
