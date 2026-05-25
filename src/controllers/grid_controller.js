@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort, aggregateRange } from '../lib/model.js';
+import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort, aggregateRange, buildHeaderLayout } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
 
@@ -42,6 +42,8 @@ export default class GridController extends Controller {
     pivotMode:           { type: Boolean, default: false },                            // reshape into a pivot table (rowGroupCols × pivotCols)
     pivotCols:           { type: Array,   default: [] },                               // fields whose unique values become columns
     sidePanel:           { type: Boolean, default: false },                            // right-side tool panel for groups/pivots/values
+    columnGroups:        { type: Array,   default: [] },                               // multi-row headers: [{headerName, children:[field,...]}]
+    pinnedBottomRow:     { type: Boolean, default: false },                            // sticky bottom row with grand totals (from aggFuncs)
   };
 
   initialize() {
@@ -764,12 +766,74 @@ export default class GridController extends Controller {
   _renderHeader() {
     if (!this._thead) return;
     const visible = this._visibleCols();
+
+    // Compute the header matrix. With no groups + no pivot-multi-row, depth=1
+    // and we fall through to the simple single-row path that preserves
+    // header-cell controllers in their natural slots. depth>1 takes the
+    // multi-row path that stacks group headers above the leaf row.
+    const layout = buildHeaderLayout(visible, this._headerLayoutOpts());
+    if (layout.depth > 1) {
+      this._renderHeaderMultiRow(visible, layout);
+    } else {
+      this._renderHeaderSingleRow(visible);
+    }
+    this._renderColgroup(visible);
+  }
+
+  // Aggregate the options we hand to buildHeaderLayout (auto-derived pivot
+  // groups when in pivot mode, plus any user-declared columnGroups).
+  _headerLayoutOpts() {
+    const opts = { columnGroups: this.columnGroupsValue || null };
+    if (this.state.pivot?.mode && this._displayList?.pivot) {
+      opts.pivotCols = (this.state.pivot.cols || [])
+        .map((f) => this._colByField(f))
+        .filter(Boolean);
+      opts.valueConfigs = Object.entries(this.state.group.aggs || {})
+        .map(([field, aggFunc]) => ({ col: this._colByField(field), aggFunc }))
+        .filter((vc) => vc.col);
+    }
+    return opts;
+  }
+
+  _renderColgroup(visible) {
+    let colgroup = this._table.querySelector('colgroup');
+    if (!colgroup) {
+      colgroup = el('colgroup');
+      this._table.insertBefore(colgroup, this._thead);
+    }
+    const cols = Array.from(colgroup.children);
+    visible.forEach((col, i) => {
+      let colNode = cols[i];
+      if (!colNode) { colNode = el('col'); colgroup.appendChild(colNode); }
+      colNode.style.width = col.width ? col.width + 'px' : '';
+    });
+    while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
+  }
+
+  _renderHeaderSingleRow(visible) {
+    // Hoist any registered <th>s out of deeper rows into the first row BEFORE
+    // collapsing — otherwise removing the deeper <tr>s would detach those
+    // <th>s, fire header-cell#disconnect, and silently drop their cols from
+    // state.columnDefs. Synthetic group-header <th>s (no field attr) can die
+    // with their row.
+    if (this._thead.children.length > 1) {
+      const firstRow = this._thead.firstElementChild;
+      for (let i = 1; i < this._thead.children.length; i++) {
+        const tr = this._thead.children[i];
+        Array.from(tr.children).forEach((th) => {
+          if (th.hasAttribute('data-header-cell-field-value') || th.hasAttribute('data-field')) {
+            firstRow.appendChild(th);
+          }
+        });
+      }
+      while (this._thead.children.length > 1) this._thead.lastElementChild.remove();
+    }
     const row = this._thead.querySelector('tr') || (() => {
       const r = el('tr'); this._thead.appendChild(r); return r;
     })();
 
     const existingThs = new Map();
-    Array.from(row.querySelectorAll('th')).forEach((th) => {
+    Array.from(this._thead.querySelectorAll('th')).forEach((th) => {
       const colId = th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field');
       if (colId) existingThs.set(colId, th);
     });
@@ -802,10 +866,21 @@ export default class GridController extends Controller {
           }, [el('div', { class: 'sg-header-content' }, [
             el('span', { class: 'sg-header-label' }, col.headerName || col.field || ''),
           ])]);
+        } else {
+          // A th coming back from a previous multi-row layout may carry stale
+          // rowspan from when it lived in row 0 — clear it.
+          th.removeAttribute('rowspan');
+          th.removeAttribute('colspan');
         }
         ths.push(th);
       }
       row.replaceChildren(...ths);
+    } else {
+      // Same order; still strip any stale span attrs.
+      Array.from(row.children).forEach((th) => {
+        th.removeAttribute('rowspan');
+        th.removeAttribute('colspan');
+      });
     }
     // Apply visibility every render (covers visibility-only changes where the
     // order didn't shift).
@@ -814,39 +889,110 @@ export default class GridController extends Controller {
       if (f != null) th.style.display = visibleFieldSet.has(f) ? '' : 'none';
     });
 
-    // Always refresh the colgroup so col widths reflect current state.
-    let colgroup = this._table.querySelector('colgroup');
-    if (!colgroup) {
-      colgroup = el('colgroup');
-      this._table.insertBefore(colgroup, this._thead);
-    }
-    const cols = Array.from(colgroup.children);
-    visible.forEach((col, i) => {
-      let colNode = cols[i];
-      if (!colNode) { colNode = el('col'); colgroup.appendChild(colNode); }
-      colNode.style.width = col.width ? col.width + 'px' : '';
-    });
-    while (colgroup.children.length > visible.length) colgroup.lastElementChild.remove();
-
     // Always update each th's state-driven attrs + chrome (no structure churn).
     const pin = this._pinOffsets();
     for (const col of visible) {
       const th = row.querySelector(`th[data-header-cell-field-value="${cssEscape(col.field)}"]`)
         || row.querySelector(`th[data-field="${cssEscape(col.field)}"]`);
       if (!th) continue;
-      const sortEntry = this.state.sortModel.find((s) => s.colId === col.field);
-      setAttrs(th, {
-        'data-sortable': col.sortable ? 'true' : null,
-        'data-filterable': col.filter ? 'true' : null,
-        'data-filter-active': this.state.filterModel[col.field] ? 'true' : null,
-        'data-sort': sortEntry?.sort || null,
-        'data-pinned': col.pinned || null,
-      });
-      if (col.width) th.style.width = col.width + 'px';
-      th.style.left = col.pinned === 'left' ? pin.left[col.field] + 'px' : '';
-      th.style.right = col.pinned === 'right' ? pin.right[col.field] + 'px' : '';
-      this._ensureHeaderChrome(th, col, sortEntry);
+      this._applyLeafThState(th, col, pin);
     }
+  }
+
+  // Multi-row header: <thead> gets `layout.depth` rows of group headers
+  // followed by the leaf headers, then one hidden row holding any registered
+  // <th>s that aren't currently visible (so their controllers stay mounted).
+  _renderHeaderMultiRow(visible, layout) {
+    const existingThs = new Map();
+    Array.from(this._thead.querySelectorAll('th')).forEach((th) => {
+      const colId = th.getAttribute('data-header-cell-field-value') || th.getAttribute('data-field');
+      if (colId) existingThs.set(colId, th);
+    });
+
+    const trs = [];
+    const visibleFieldSet = new Set(visible.map((c) => c.field));
+    const pin = this._pinOffsets();
+
+    for (const rowCells of layout.rows) {
+      const tr = el('tr');
+      for (const cell of rowCells) {
+        if (cell.kind === 'group') {
+          tr.appendChild(el('th', {
+            class: 'sg-header-group',
+            colspan: String(cell.colspan),
+            'data-group-header': 'true',
+          }, cell.label || ''));
+          continue;
+        }
+        // Leaf: reuse the existing <th> if there is one so the header-cell
+        // controller stays connected; otherwise synthesize a fresh one for
+        // synthetic cols (group / pivot result).
+        const col = cell.col;
+        let th = existingThs.get(col.field);
+        if (!th) {
+          th = el('th', {
+            'data-field': col.field,
+            'data-synth': 'true',
+          }, [el('div', { class: 'sg-header-content' }, [
+            el('span', { class: 'sg-header-label' }, cell.label || col.headerName || col.field || ''),
+          ])]);
+        }
+        // When the col's effective label changed (e.g. pivot grouping pulled a
+        // shorter label out), update the existing label span.
+        if (cell.label) {
+          const labelSpan = th.querySelector('.sg-header-label');
+          if (labelSpan && labelSpan.textContent !== cell.label) labelSpan.textContent = cell.label;
+        }
+        th.setAttribute('rowspan', String(cell.rowspan));
+        th.removeAttribute('colspan');
+        th.style.display = '';
+        tr.appendChild(th);
+        this._applyLeafThState(th, col, pin);
+      }
+      trs.push(tr);
+    }
+
+    // Hidden registered cols live in a final, display:none row so their
+    // header-cell controllers don't disconnect. The trs above only carry
+    // visible cols; the hidden row mops up the rest.
+    const usedFields = new Set();
+    layout.rows.forEach((r) => r.forEach((c) => {
+      if (c.kind === 'leaf') usedFields.add(c.col.field);
+    }));
+    const hiddenRegistered = this.state.columnDefs.filter(
+      (c) => !visibleFieldSet.has(c.field) && !usedFields.has(c.field),
+    );
+    if (hiddenRegistered.length) {
+      const hiddenTr = el('tr', { class: 'sg-hidden-header-row' });
+      for (const col of hiddenRegistered) {
+        let th = existingThs.get(col.field);
+        if (!th) th = el('th', { 'data-field': col.field, 'data-synth': 'true' });
+        th.removeAttribute('rowspan');
+        th.removeAttribute('colspan');
+        hiddenTr.appendChild(th);
+      }
+      trs.push(hiddenTr);
+    }
+
+    this._thead.replaceChildren(...trs);
+  }
+
+  // Shared leaf-th state updates (sort/filter/pin attrs + chrome). Called from
+  // both the single-row and multi-row paths so the per-leaf behaviour stays
+  // identical regardless of header depth.
+  _applyLeafThState(th, col, pin) {
+    const sortEntry = this.state.sortModel.find((s) => s.colId === col.field);
+    setAttrs(th, {
+      'data-sortable': col.sortable ? 'true' : null,
+      'data-filterable': col.filter ? 'true' : null,
+      'data-filter-active': this.state.filterModel[col.field] ? 'true' : null,
+      'data-sort': sortEntry?.sort || null,
+      'data-pinned': col.pinned || null,
+    });
+    if (col.width) th.style.width = col.width + 'px';
+    th.style.left = col.pinned === 'left' ? pin.left[col.field] + 'px' : '';
+    th.style.right = col.pinned === 'right' ? pin.right[col.field] + 'px' : '';
+    this._ensureHeaderChrome(th, col, sortEntry);
   }
 
   _ensureHeaderChrome(th, col, sortEntry) {
@@ -965,7 +1111,41 @@ export default class GridController extends Controller {
     } else {
       windowed.forEach((row, i) => fragment.appendChild(this._buildRow(row, cols, existing, rowNumOf(i))));
     }
+    // Pinned bottom row (grand totals) — appended last so its sticky-bottom
+    // CSS pins it to the viewport floor under all scrolled rows. Suppressed
+    // in pivot mode because the synthetic "(All)" row already serves the
+    // grand-totals role at the top.
+    if (this.pinnedBottomRowValue
+        && this._displayList.grandTotals
+        && !this._displayList.pivot) {
+      fragment.appendChild(this._buildPinnedBottomRow(cols));
+    }
     this._tbody.replaceChildren(fragment);
+  }
+
+  _buildPinnedBottomRow(cols) {
+    const tr = el('tr', { class: 'sg-pinned-bottom-row', 'aria-label': 'Grand totals' });
+    const pin = this._pinOffsets();
+    const totals = this._displayList.grandTotals || {};
+    let labelPlaced = false;
+    for (const col of cols) {
+      const td = el('td', { 'data-col-id': col.field, 'data-pinned': col.pinned || null });
+      if (col.pinned === 'left') td.style.left = pin.left[col.field] + 'px';
+      else if (col.pinned === 'right') td.style.right = pin.right[col.field] + 'px';
+      const v = totals[col.field];
+      if (v != null) {
+        td.classList.add('sg-agg-cell');
+        td.textContent = this._formatAggregate(v);
+      } else if (!labelPlaced && !col._isCheckbox && !col._isRowNumber) {
+        // Drop a single "Total" tag in the first label-eligible blank cell
+        // (skips the row-number / checkbox gutter so it lands on real data).
+        td.classList.add('sg-pinned-bottom-label');
+        td.textContent = 'Total';
+        labelPlaced = true;
+      }
+      tr.appendChild(td);
+    }
+    return tr;
   }
 
   _buildRow(row, cols, existing, rowNum) {
@@ -1191,6 +1371,21 @@ export default class GridController extends Controller {
     this.setColumnAggFunc(field, aggFunc);
   }
   removeValueColumn(field) { this.setColumnAggFunc(field, null); }
+
+  // ----- Column header groups + pinned bottom row -----
+
+  setColumnGroups(groups) {
+    this.columnGroupsValue = Array.isArray(groups) ? groups : [];
+    this.scheduleRender('columns');
+    emit(this.element, 'grid:columnGroupsChanged', { columnGroups: this.columnGroupsValue });
+  }
+  getColumnGroups() { return Array.isArray(this.columnGroupsValue) ? this.columnGroupsValue.slice() : []; }
+
+  setPinnedBottomRow(on) {
+    this.pinnedBottomRowValue = !!on;
+    this.scheduleRender('cells');
+  }
+  isPinnedBottomRow() { return !!this.pinnedBottomRowValue; }
 
   _buildGroupRow(row, cols, existing) {
     const id = `__g:${row.groupId}`;

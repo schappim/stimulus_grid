@@ -90,6 +90,14 @@ export function createGridApi(grid) {
     removeValueColumn(field) { grid.removeValueColumn(field); },
     getValueColumns() { return grid.getValueColumns(); },
 
+    // ---- Column header groups (multi-row headers) ----
+    setColumnGroups(groups) { grid.setColumnGroups(groups); },
+    getColumnGroups() { return grid.getColumnGroups(); },
+
+    // ---- Pinned bottom row (sticky grand totals) ----
+    setPinnedBottomRow(on) { grid.setPinnedBottomRow(on); },
+    isPinnedBottomRow() { return grid.isPinnedBottomRow(); },
+
     // ---- Export ----
     getDataAsCsv(opts = {}) { return grid.getDataAsCsv(opts); },
     exportDataAsCsv(opts = {}) { return grid.exportDataAsCsv(opts); },

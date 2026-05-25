@@ -456,6 +456,111 @@ export function buildPivotModel({ rows, rowGroupCols = [], pivotCols, valueConfi
   return { columns, displayList: out, tree, combos };
 }
 
+/* -------- Header layout (multi-row column header groups) --------
+ *
+ * Build an N×K matrix of header cells with colspan/rowspan, given the visible
+ * columns and either user-declared `columnGroups` or auto-derived pivot groups
+ * (built from each pivot col's `pivotKeys` + `valueField`/`aggFunc`). The
+ * algorithm is intentionally simple — compute a "path" through the header rows
+ * for each col (a sequence of group/leaf descriptors), then walk the matrix
+ * row-by-row merging consecutive cols whose path-prefixes match.
+ *
+ * Pivot path shapes:
+ *   1 pivot col, 1 value  → [leaf(pivotValue)]                       depth 1
+ *   1 pivot col, M value  → [group(pivotValue), leaf(agg(field))]    depth 2
+ *   N pivot cols, 1 value → [group, …, group, leaf(lastPivotValue)]  depth N
+ *   N pivot cols, M value → [group, …, group, group, leaf(agg(f))]   depth N+1
+ *
+ * User-declared groups (v1: one level): each visible col can appear under at
+ * most one group, declared as { headerName, children:[fieldNames] }. */
+
+function colHeaderPath(col, { pivotCols = [], valueConfigs = [], columnGroups = null } = {}) {
+  if (col._isPivot && pivotCols.length && col.pivotKeys) {
+    return pivotColHeaderPath(col, pivotCols, valueConfigs);
+  }
+  if (columnGroups && Array.isArray(columnGroups) && columnGroups.length
+      && !col._isGroupCol && !col._isCheckbox && !col._isRowNumber) {
+    for (const g of columnGroups) {
+      if (g?.children && g.children.includes(col.field)) {
+        return [
+          { kind: 'group', id: `g:${g.headerName}`, label: g.headerName },
+          { kind: 'leaf', col },
+        ];
+      }
+    }
+  }
+  return [{ kind: 'leaf', col }];
+}
+
+function pivotColHeaderPath(col, pivotCols, valueConfigs) {
+  const multiValue = (valueConfigs?.length || 0) > 1;
+  const path = [];
+  for (let i = 0; i < pivotCols.length; i++) {
+    const field = pivotCols[i].field;
+    const val = col.pivotKeys[field];
+    const isLastPivot = i === pivotCols.length - 1;
+    // Last pivot field becomes the leaf when there's only one value config —
+    // (saves a row, since "sum(gold)" is redundant when there's nothing else).
+    if (isLastPivot && !multiValue) {
+      path.push({ kind: 'leaf', col, label: val == null ? '(Blank)' : String(val) });
+      return path;
+    }
+    path.push({
+      kind: 'group',
+      id: `p:${i}:${val == null ? '' : String(val)}`,
+      label: val == null ? '(Blank)' : String(val),
+    });
+  }
+  // Multi-value: the bottom row holds the value-field/agg as the leaf label.
+  path.push({ kind: 'leaf', col, label: `${col.aggFunc}(${col.valueField})` });
+  return path;
+}
+
+// Walk row-by-row, merging runs of cols whose path[0..r] match (same group ids
+// up to row r). Leaves that land above the bottom row carry rowspan to fill
+// the remainder.
+export function buildHeaderLayout(visibleCols, opts = {}) {
+  if (!visibleCols.length) return { rows: [[]], depth: 1 };
+  const paths = visibleCols.map((c) => colHeaderPath(c, opts).slice());
+  const depth = Math.max(1, ...paths.map((p) => p.length));
+  const rows = [];
+
+  for (let r = 0; r < depth; r++) {
+    const row = [];
+    let c = 0;
+    while (c < paths.length) {
+      const p = paths[c];
+      if (r >= p.length || p[r] === null) { c += 1; continue; }
+      const cell = p[r];
+      if (cell.kind === 'leaf') {
+        row.push({ kind: 'leaf', col: cell.col, label: cell.label, rowspan: depth - r, colspan: 1 });
+        // Cells below this leaf in the same column are already covered.
+        for (let rr = r + 1; rr < depth; rr++) p[rr] = null;
+        c += 1;
+        continue;
+      }
+      // Group cell — extend the run as long as the prefix + current id match.
+      let end = c + 1;
+      while (end < paths.length) {
+        const pn = paths[end];
+        if (r >= pn.length || !pn[r] || pn[r].kind !== 'group' || pn[r].id !== cell.id) break;
+        let prefixMatches = true;
+        for (let pr = 0; pr < r; pr++) {
+          const a = p[pr]?.id ?? null;
+          const b = pn[pr]?.id ?? null;
+          if (a !== b) { prefixMatches = false; break; }
+        }
+        if (!prefixMatches) break;
+        end += 1;
+      }
+      row.push({ kind: 'group', label: cell.label, colspan: end - c, rowspan: 1 });
+      c = end;
+    }
+    rows.push(row);
+  }
+  return { rows, depth };
+}
+
 /* -------- Top-level pipeline -------- */
 
 export function buildDisplayList(state) {
@@ -535,7 +640,11 @@ export function buildDisplayList(state) {
   }
 
   const paged = applyPagination(rows, state.pagination);
-  return { filteredSorted: rows, ...paged };
+  // Compute grand totals on the flat path too (when aggModel has any entries),
+  // so a pinned bottom row can render even outside grouped/pivot views.
+  const grandTotals = state.aggModel && Object.keys(state.aggModel).length
+    ? computeAggregates(rows, state.aggModel, columnsByField) : null;
+  return { filteredSorted: rows, grandTotals, ...paged };
 }
 
 /* -------- Virtual window -------- */

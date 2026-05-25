@@ -15,6 +15,7 @@ import {
   collectPivotKeys,
   buildPivotColumns,
   buildPivotModel,
+  buildHeaderLayout,
 } from '../src/lib/model.js';
 
 /* ----------------------------------------------------------------------------
@@ -728,5 +729,158 @@ describe('buildPivotModel', () => {
     // (All), Brazil, Canada, USA — 4 group rows, no leaves
     expect(out.pageRows).toHaveLength(4);
     expect(out.pageRows.every((r) => r.__sgGroup)).toBe(true);
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * Header layout: column groups (user-declared) + pivot-derived multi-row
+ * ------------------------------------------------------------------------- */
+
+describe('buildHeaderLayout', () => {
+  // Tiny helpers so the test assertions read clearly.
+  const leaf = (field, label, rowspan = 1) =>
+    ({ kind: 'leaf', col: expect.objectContaining({ field }), rowspan, colspan: 1, ...(label != null ? { label } : {}) });
+  const group = (label, colspan) =>
+    ({ kind: 'group', label, colspan, rowspan: 1 });
+
+  it('returns a single row of leaves when there are no groups (depth 1)', () => {
+    const cols = [{ field: 'a' }, { field: 'b' }, { field: 'c' }];
+    const { rows, depth } = buildHeaderLayout(cols);
+    expect(depth).toBe(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveLength(3);
+    rows[0].forEach((cell, i) => {
+      expect(cell.kind).toBe('leaf');
+      expect(cell.col.field).toBe('abc'[i]);
+      expect(cell.rowspan).toBe(1);
+    });
+  });
+
+  it('merges consecutive cols sharing a user-declared group (depth 2)', () => {
+    const cols = [
+      { field: 'name' },
+      { field: 'gold' }, { field: 'silver' }, { field: 'bronze' },
+      { field: 'age' },
+    ];
+    const groups = [{ headerName: 'Medals', children: ['gold', 'silver', 'bronze'] }];
+    const { rows, depth } = buildHeaderLayout(cols, { columnGroups: groups });
+    expect(depth).toBe(2);
+    // Top row: name (leaf with rowspan=2), Medals group (colspan=3), age (leaf with rowspan=2)
+    expect(rows[0]).toEqual([
+      leaf('name', undefined, 2),
+      group('Medals', 3),
+      leaf('age', undefined, 2),
+    ]);
+    // Bottom row: gold, silver, bronze
+    expect(rows[1]).toEqual([leaf('gold'), leaf('silver'), leaf('bronze')]);
+  });
+
+  it('does not merge non-contiguous cols even when they share a group', () => {
+    // gold and bronze share the Medals group but silver in between is not in it.
+    const cols = [{ field: 'gold' }, { field: 'silver' }, { field: 'bronze' }];
+    const groups = [{ headerName: 'Medals', children: ['gold', 'bronze'] }];
+    const { rows, depth } = buildHeaderLayout(cols, { columnGroups: groups });
+    expect(depth).toBe(2);
+    // Top: Medals(1), silver(rowspan=2), Medals(1)
+    expect(rows[0]).toEqual([group('Medals', 1), leaf('silver', undefined, 2), group('Medals', 1)]);
+    expect(rows[1]).toEqual([leaf('gold'), leaf('bronze')]);
+  });
+
+  it('auto-derives a one-level pivot header for a single pivot col + multi-value', () => {
+    // Pivot col = sport; value configs = gold+silver. Each pivot synth col has
+    // pivotKeys + valueField + aggFunc populated.
+    const groupCol = { field: '__group', _isGroupCol: true };
+    const pCols = [
+      { field: '__p|sport=Swim|gold:sum',   _isPivot: true, pivotKeys: { sport: 'Swim'   }, valueField: 'gold',   aggFunc: 'sum' },
+      { field: '__p|sport=Swim|silver:sum', _isPivot: true, pivotKeys: { sport: 'Swim'   }, valueField: 'silver', aggFunc: 'sum' },
+      { field: '__p|sport=Athl|gold:sum',   _isPivot: true, pivotKeys: { sport: 'Athl'   }, valueField: 'gold',   aggFunc: 'sum' },
+      { field: '__p|sport=Athl|silver:sum', _isPivot: true, pivotKeys: { sport: 'Athl'   }, valueField: 'silver', aggFunc: 'sum' },
+    ];
+    const valueConfigs = [{ col: { field: 'gold' }, aggFunc: 'sum' }, { col: { field: 'silver' }, aggFunc: 'sum' }];
+    const { rows, depth } = buildHeaderLayout([groupCol, ...pCols], {
+      pivotCols: [{ field: 'sport' }], valueConfigs,
+    });
+    expect(depth).toBe(2);
+    expect(rows[0]).toEqual([
+      leaf('__group', undefined, 2),
+      group('Swim', 2),
+      group('Athl', 2),
+    ]);
+    // Bottom row labels are `agg(field)` strings.
+    expect(rows[1][0].label).toBe('sum(gold)');
+    expect(rows[1][1].label).toBe('sum(silver)');
+    expect(rows[1][2].label).toBe('sum(gold)');
+    expect(rows[1][3].label).toBe('sum(silver)');
+  });
+
+  it('auto-derives an N-row pivot header for N pivot cols + 1 value', () => {
+    // Pivot cols = [year, medal]; the last pivot field becomes the leaf label.
+    const pCols = [
+      { field: 'p1', _isPivot: true, pivotKeys: { year: 2020, medal: 'Gold'   }, valueField: 'count', aggFunc: 'sum' },
+      { field: 'p2', _isPivot: true, pivotKeys: { year: 2020, medal: 'Silver' }, valueField: 'count', aggFunc: 'sum' },
+      { field: 'p3', _isPivot: true, pivotKeys: { year: 2021, medal: 'Gold'   }, valueField: 'count', aggFunc: 'sum' },
+    ];
+    const valueConfigs = [{ col: { field: 'count' }, aggFunc: 'sum' }];
+    const { rows, depth } = buildHeaderLayout(pCols, {
+      pivotCols: [{ field: 'year' }, { field: 'medal' }], valueConfigs,
+    });
+    expect(depth).toBe(2);
+    // Top row: 2020 (colspan=2), 2021 (colspan=1)
+    expect(rows[0]).toEqual([group('2020', 2), group('2021', 1)]);
+    // Bottom row: leaves with last-pivot-col-value as label
+    expect(rows[1].map((c) => c.label)).toEqual(['Gold', 'Silver', 'Gold']);
+  });
+
+  it('emits a 3-row layout for 2 pivot cols + multi-value (year → medal → agg)', () => {
+    const pCols = [
+      { field: 'a', _isPivot: true, pivotKeys: { year: 2020, medal: 'Gold' }, valueField: 'count', aggFunc: 'sum' },
+      { field: 'b', _isPivot: true, pivotKeys: { year: 2020, medal: 'Gold' }, valueField: 'count', aggFunc: 'avg' },
+      { field: 'c', _isPivot: true, pivotKeys: { year: 2021, medal: 'Gold' }, valueField: 'count', aggFunc: 'sum' },
+    ];
+    const valueConfigs = [
+      { col: { field: 'count' }, aggFunc: 'sum' },
+      { col: { field: 'count' }, aggFunc: 'avg' },
+    ];
+    const { rows, depth } = buildHeaderLayout(pCols, {
+      pivotCols: [{ field: 'year' }, { field: 'medal' }], valueConfigs,
+    });
+    expect(depth).toBe(3);
+    expect(rows[0]).toEqual([group('2020', 2), group('2021', 1)]);
+    expect(rows[1]).toEqual([group('Gold', 2), group('Gold', 1)]);
+    expect(rows[2].map((c) => c.label)).toEqual(['sum(count)', 'avg(count)', 'sum(count)']);
+  });
+
+  it('does not merge same-labelled groups under different parents', () => {
+    // Two cols both at year=2020 with medal=Gold; one col at year=2021 with medal=Gold.
+    // The two "Gold" groups in row 1 must not merge across the year boundary.
+    const pCols = [
+      { field: 'a', _isPivot: true, pivotKeys: { year: 2020, medal: 'Gold' }, valueField: 'c', aggFunc: 'sum' },
+      { field: 'b', _isPivot: true, pivotKeys: { year: 2020, medal: 'Gold' }, valueField: 'c', aggFunc: 'avg' },
+      { field: 'c', _isPivot: true, pivotKeys: { year: 2021, medal: 'Gold' }, valueField: 'c', aggFunc: 'sum' },
+      { field: 'd', _isPivot: true, pivotKeys: { year: 2021, medal: 'Gold' }, valueField: 'c', aggFunc: 'avg' },
+    ];
+    const valueConfigs = [
+      { col: { field: 'c' }, aggFunc: 'sum' },
+      { col: { field: 'c' }, aggFunc: 'avg' },
+    ];
+    const { rows } = buildHeaderLayout(pCols, {
+      pivotCols: [{ field: 'year' }, { field: 'medal' }], valueConfigs,
+    });
+    expect(rows[0]).toEqual([group('2020', 2), group('2021', 2)]);   // separate parents
+    expect(rows[1]).toEqual([group('Gold', 2), group('Gold', 2)]);   // do NOT merge across years
+  });
+
+  it('returns depth 1 when neither pivot nor user groups produce nesting', () => {
+    // Single pivot col + single value config = depth 1 (existing flat headers).
+    const pCols = [
+      { field: 'a', _isPivot: true, pivotKeys: { sport: 'Swim' }, valueField: 'g', aggFunc: 'sum' },
+      { field: 'b', _isPivot: true, pivotKeys: { sport: 'Athl' }, valueField: 'g', aggFunc: 'sum' },
+    ];
+    const { rows, depth } = buildHeaderLayout(pCols, {
+      pivotCols: [{ field: 'sport' }],
+      valueConfigs: [{ col: { field: 'g' }, aggFunc: 'sum' }],
+    });
+    expect(depth).toBe(1);
+    expect(rows[0].map((c) => c.label)).toEqual(['Swim', 'Athl']);
   });
 });
