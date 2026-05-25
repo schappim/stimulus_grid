@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>104 — Barcode renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>104 — Barcode renderer</h1>
+  <p class="lede">
+    Inline SVG Code-128 barcode. Sibling to the existing
+    <code>qr</code> renderer. Pure-JS encoder (no deps); covers the
+    common short alphanumeric SKU / serial case.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="product" data-header-cell-width-value="220">Product</th>
+        <th data-controller="header-cell" data-header-cell-field-value="sku" data-header-cell-cell-renderer-value="barcode" data-header-cell-width-value="240">Barcode (SKU)</th>
+        <th data-controller="header-cell" data-header-cell-field-value="qty" data-header-cell-type-value="number" data-header-cell-width-value="100">Qty</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { product: 'Mech keyboard – ANSI', sku: 'KB-ANSI-001', qty: 42 },
+      { product: 'USB-C hub',            sku: 'HUB-USBC-77', qty: 18 },
+      { product: 'Desk mat – walnut',    sku: 'DM-WL-2026',   qty: 7  },
+      { product: 'Cable clips x4',       sku: 'CCLIP-04',    qty: 250 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

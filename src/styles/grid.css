@@ -3788,3 +3788,30 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   background: #fef2f2;
   color: #b91c1c;
 }
+
+/* ----- addresses --------------------------------------------------- */
+.sg-grid .sg-renderer-address {
+  display: inline-block;
+  font-size: 12px;
+  color: #1f2937;
+  line-height: 1.4;
+}
+.sg-grid .sg-renderer-address-multi { white-space: normal; }
+.sg-grid .sg-address-line { display: inline; }
+.sg-grid .sg-address-sep { color: #9ca3af; }
+
+/* ----- barcode ----------------------------------------------------- */
+.sg-grid .sg-renderer-barcode {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #111;
+}
+.sg-grid .sg-renderer-barcode svg { display: block; }
+.sg-grid .sg-renderer-barcode-text {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #374151;
+}

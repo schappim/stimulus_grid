@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>98 — US address renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>98 — US address renderer</h1>
+  <p class="lede">Display-only sibling to <code>address-au</code>. Object input: <code>{ street, street2, city, state, zip }</code>.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="name" data-header-cell-width-value="160">Name</th>
+        <th data-controller="header-cell" data-header-cell-field-value="address" data-header-cell-cell-renderer-value="address-us" data-header-cell-width-value="440">Address</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const data = [
+      { name: 'Astrid Hale',   address: { street: '1600 Pennsylvania Ave NW',  city: 'Washington', state: 'DC', zip: '20500' } },
+      { name: 'Marcus Chen',   address: { street: '350 Fifth Avenue', street2: 'Suite 4200', city: 'New York', state: 'NY', zip: '10118' } },
+      { name: 'Priya Patel',   address: { street: '1 Infinite Loop', city: 'Cupertino', state: 'CA', zip: '95014' } },
+      { name: 'Verbatim',      address: '942 Powell St, San Francisco, CA 94108' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>

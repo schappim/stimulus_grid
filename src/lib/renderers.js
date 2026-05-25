@@ -6332,6 +6332,213 @@ export function isbn({} = {}) {
   };
 }
 
+/* ---------- postal-code (country-aware formatting) -----------------
+ *
+ * Country-aware postal-code renderer. Pass `country` from a column or
+ * per-row via `countryField: 'country'` for sibling-cell lookup. AU
+ * pads to 4 digits, US shows 5-or-5+4 zip, UK splits SW1A 1AA into two
+ * groups, CA inserts the space between the 3-char halves. */
+function formatPostalCode(value, country) {
+  const raw = String(value).trim();
+  const cc = (country || '').toString().toUpperCase();
+  const digits = raw.replace(/\D/g, '');
+  switch (cc) {
+    case 'AU': case 'AUSTRALIA':
+      return digits.length === 4 ? digits : raw;
+    case 'US': case 'USA': case 'UNITED STATES':
+      if (digits.length === 5) return digits;
+      if (digits.length === 9) return `${digits.slice(0,5)}-${digits.slice(5)}`;
+      return raw;
+    case 'CA': case 'CANADA': {
+      const t = raw.replace(/\s+/g, '').toUpperCase();
+      return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(t) ? `${t.slice(0,3)} ${t.slice(3)}` : raw;
+    }
+    case 'GB': case 'UK': case 'UNITED KINGDOM': {
+      const t = raw.replace(/\s+/g, '').toUpperCase();
+      const m = /^([A-Z]{1,2}\d[A-Z\d]?)(\d[A-Z]{2})$/.exec(t);
+      return m ? `${m[1]} ${m[2]}` : raw;
+    }
+    default:
+      return raw;
+  }
+}
+
+export function postalCode({
+  country = null,
+  countryField = 'country',
+} = {}) {
+  return ({ value, row, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-postal-cell');
+    const cc = country || (row && countryField ? row[countryField] : null);
+    const display = formatPostalCode(value, cc);
+    return h('span', { class: 'sg-renderer-uuid', title: display },
+      h('code', { class: 'sg-renderer-uuid-mono' }, document.createTextNode(display)));
+  };
+}
+
+/* ---------- address-us (US address renderer) ------------------------
+ *
+ * Mirror of address-au but without the heavy popover editor — display
+ * only, with the conventional two-line "Street / City, ST ZIP" layout.
+ * Value can be a string (rendered verbatim) or an object with
+ * `street`, `street2`, `city`, `state`, `zip`. */
+function normaliseAddressUs(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return { _raw: value.trim() };
+  if (typeof value !== 'object') return null;
+  return {
+    street: value.street || value.address1 || '',
+    street2: value.street2 || value.address2 || '',
+    city: value.city || '',
+    state: (value.state || '').toUpperCase(),
+    zip: value.zip || value.postcode || value.postal_code || '',
+  };
+}
+
+export function addressUs({ empty = '' } = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-address-cell');
+    const a = normaliseAddressUs(value);
+    if (!a) return empty;
+    if (a._raw) {
+      return h('span', { class: 'sg-renderer-address' }, document.createTextNode(a._raw));
+    }
+    const wrap = h('div', { class: 'sg-renderer-address sg-renderer-address-us' });
+    const street = [a.street, a.street2].filter(Boolean).join(', ');
+    if (street) wrap.append(h('span', { class: 'sg-address-line' }, document.createTextNode(street)));
+    const tail = [a.city, a.state].filter(Boolean).join(', ') + (a.zip ? ` ${a.zip}` : '');
+    if (tail.trim()) {
+      if (street) wrap.append(h('span', { class: 'sg-address-sep' }, document.createTextNode(' · ')));
+      wrap.append(h('span', { class: 'sg-address-line' }, document.createTextNode(tail.trim())));
+    }
+    return wrap;
+  };
+}
+
+/* ---------- address-generic (any-country plain renderer) ------------
+ *
+ * Renders a `{ line1, line2, city, region, postal_code, country }` shape
+ * into a single-line address with sensible separators. Falls back to a
+ * verbatim string when given one. */
+function normaliseAddressGeneric(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string') return { _raw: v.trim() };
+  if (typeof v !== 'object') return null;
+  return {
+    line1: v.line1 || v.address1 || v.street || '',
+    line2: v.line2 || v.address2 || v.street2 || '',
+    city:  v.city || '',
+    region: v.region || v.state || '',
+    postal_code: v.postal_code || v.postcode || v.zip || '',
+    country: v.country || '',
+  };
+}
+
+export function addressGeneric({ empty = '', multiline = false } = {}) {
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-address-cell');
+    const a = normaliseAddressGeneric(value);
+    if (!a) return empty;
+    if (a._raw) return h('span', { class: 'sg-renderer-address' }, document.createTextNode(a._raw));
+    const lines = [];
+    if (a.line1) lines.push(a.line1);
+    if (a.line2) lines.push(a.line2);
+    const tail = [a.city, a.region, a.postal_code].filter(Boolean).join(' ');
+    if (tail) lines.push(tail);
+    if (a.country) lines.push(a.country);
+    if (multiline) {
+      const wrap = h('div', { class: 'sg-renderer-address sg-renderer-address-multi' });
+      lines.forEach((l, i) => {
+        if (i > 0) wrap.append(h('br'));
+        wrap.append(document.createTextNode(l));
+      });
+      return wrap;
+    }
+    return h('span', { class: 'sg-renderer-address' },
+      document.createTextNode(lines.join(' · ')));
+  };
+}
+
+/* ---------- barcode (Code-128 inline SVG) ---------------------------
+ *
+ * Renders an inline Code-128 barcode for short alphanumeric strings.
+ * Implements only Code-128B (printable ASCII 32-126) — covers the
+ * common SKU / serial / tracking-id case without a heavy dep. For
+ * EAN-13 / UPC etc., use a dedicated lib. */
+const CODE128_PATTERNS = [
+  '11011001100','11001101100','11001100110','10010011000','10010001100',
+  '10001001100','10011001000','10011000100','10001100100','11001001000',
+  '11001000100','11000100100','10110011100','10011011100','10011001110',
+  '10111001100','10011101100','10011100110','11001110010','11001011100',
+  '11001001110','11011100100','11001110100','11101101110','11101001100',
+  '11100101100','11100100110','11101100100','11100110100','11100110010',
+  '11011011000','11011000110','11000110110','10100011000','10001011000',
+  '10001000110','10110001000','10001101000','10001100010','11010001000',
+  '11000101000','11000100010','10110111000','10110001110','10001101110',
+  '10111011000','10111000110','10001110110','11101110110','11010001110',
+  '11000101110','11011101000','11011100010','11011101110','11101011000',
+  '11101000110','11100010110','11101101000','11101100010','11100011010',
+  '11101111010','11001000010','11110001010','10100110000','10100001100',
+  '10010110000','10010000110','10000101100','10000100110','10110010000',
+  '10110000100','10011010000','10011000010','10000110100','10000110010',
+  '11000010010','11001010000','11110111010','11000010100','10001111010',
+  '10100111100','10010111100','10010011110','10111100100','10011110100',
+  '10011110010','11110100100','11110010100','11110010010','11011011110',
+  '11011110110','11110110110','10101111000','10100011110','10001011110',
+  '10111101000','10111100010','11110101000','11110100010','10111011110',
+  '10111101110','11101011110','11110101110','11010000100','11010010000',
+  '11010011100',
+];
+const CODE128B_OFFSET = 32; // ASCII 32 (' ') = pattern index 0 in Code-128 B
+const CODE128_START_B  = 104;
+const CODE128_STOP     = 106;
+
+function code128Patterns(text) {
+  const codes = [CODE128_START_B];
+  let checksum = CODE128_START_B;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code < 32 || code > 126) continue;     // skip non-printable
+    const val = code - CODE128B_OFFSET;
+    codes.push(val);
+    checksum += val * (i + 1);
+  }
+  codes.push(checksum % 103);
+  codes.push(CODE128_STOP);
+  return codes.map((c) => CODE128_PATTERNS[c]).join('') + '11';
+}
+
+export function barcode({
+  height = 32,
+  showText = true,
+  moduleWidth = 1.4,
+} = {}) {
+  return ({ value, td }) => {
+    if (isBlank(value)) return '';
+    if (td) td.classList.add('sg-renderer-barcode-cell');
+    const text = String(value);
+    const bits = code128Patterns(text);
+    const width = bits.length * moduleWidth;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-label="barcode ${text}">`;
+    let x = 0;
+    let body = '';
+    for (let i = 0; i < bits.length; i++) {
+      if (bits[i] === '1') {
+        body += `<rect x="${x}" y="0" width="${moduleWidth}" height="${height}" fill="currentColor"/>`;
+      }
+      x += moduleWidth;
+    }
+    const wrap = h('span', { class: 'sg-renderer-barcode', title: text });
+    wrap.innerHTML = `${svg}${body}</svg>`;
+    if (showText) {
+      wrap.append(h('span', { class: 'sg-renderer-barcode-text' },
+        document.createTextNode(text)));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- iban (International Bank Account Number) ---------------
  *
  * Renders IBAN in standard 4-char groups (e.g. "GB29 NWBK 6016 1331
@@ -6855,6 +7062,10 @@ registerRenderer('ssn',               ssn());
 registerRenderer('ein',               ein());
 registerRenderer('vat',               vat());
 registerRenderer('nin',               nin());
+registerRenderer('postal-code',       postalCode());
+registerRenderer('address-us',        addressUs());
+registerRenderer('address-generic',   addressGeneric());
+registerRenderer('barcode',           barcode());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -7425,4 +7636,5 @@ export const renderers = {
   avatarStack, presence, assignee,
   uuid, gitSha, macAddress, licenseKey, vin, isbn,
   iban, swift, ssn, ein, vat, nin,
+  postalCode, addressUs, addressGeneric, barcode,
 };

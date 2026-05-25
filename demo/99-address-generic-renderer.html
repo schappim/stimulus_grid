@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>99 — Generic address renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>99 — Generic address renderer</h1>
+  <p class="lede">Country-agnostic address renderer for international rows. Same input shape; <code>multiline: true</code> stacks lines for a postcard-style layout.</p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead><tr>
+        <th data-controller="header-cell" data-header-cell-field-value="name" data-header-cell-width-value="160">Name</th>
+        <th data-controller="header-cell" data-header-cell-field-value="address" data-header-cell-cell-renderer-value="address-generic" data-header-cell-width-value="380">Address (one line)</th>
+        <th data-controller="header-cell" data-header-cell-field-value="address2" data-header-cell-cell-renderer-value="addr-multi" data-header-cell-width-value="240">Multiline</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('addr-multi', renderers.addressGeneric({ multiline: true }));
+
+    const a1 = { line1: '12 rue de Rivoli',     city: 'Paris',     region: 'IDF',   postal_code: '75004', country: 'France' };
+    const a2 = { line1: 'Bahnhofstrasse 23',     city: 'Zurich',                     postal_code: '8001',  country: 'Switzerland' };
+    const a3 = { line1: '4-1-1 Marunouchi',      city: 'Chiyoda-ku', region: 'Tokyo', postal_code: '100-0005', country: 'Japan' };
+    const data = [
+      { name: 'Bistrot Léon',  address: a1, address2: a1 },
+      { name: 'Café Helvetia', address: a2, address2: a2 },
+      { name: 'Tokyo Office',  address: a3, address2: a3 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+  </script>
+</body>
+</html>
