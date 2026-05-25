@@ -2817,6 +2817,67 @@ function readableForeground(bg) {
   return isLightRgb(rgb) ? '#1f2937' : '#ffffff';
 }
 
+/* ---------- time (HH:MM[:SS]) ---------------------------------------
+ *
+ * `date` / `datetime` already exist; this is the time-of-day-only sibling.
+ * Accepts:
+ *   - "HH:MM" / "HH:MM:SS" / "HH:MM:SS.sss"  (parsed verbatim)
+ *   - a full ISO date / Date object         (HH:MM[:SS] extracted)
+ *   - a number of seconds since midnight    (e.g. 3661 → 01:01:01)
+ *
+ *   <th data-header-cell-cell-renderer-value="time">Start</th>
+ *
+ * `style: '12h'` for 1:30 PM display; `seconds: true` adds the trailing
+ * `:SS` block. Locale is honoured via `Intl.DateTimeFormat` when present. */
+function toTime(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date) {
+    if (Number.isNaN(v.valueOf())) return null;
+    return { h: v.getHours(), m: v.getMinutes(), s: v.getSeconds() };
+  }
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    // Seconds since midnight; > 86400 wraps.
+    const total = ((v % 86400) + 86400) % 86400;
+    return { h: Math.floor(total / 3600), m: Math.floor((total % 3600) / 60), s: Math.floor(total % 60) };
+  }
+  const s = String(v).trim();
+  // Pure HH:MM[:SS][.sss] — no date part.
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/.exec(s);
+  if (m) {
+    return { h: parseInt(m[1], 10), m: parseInt(m[2], 10), s: m[3] ? parseInt(m[3], 10) : 0 };
+  }
+  // Fall back to Date parsing — covers "2026-05-25T09:14:48Z" etc.
+  const d = new Date(s);
+  if (Number.isNaN(d.valueOf())) return null;
+  return { h: d.getHours(), m: d.getMinutes(), s: d.getSeconds() };
+}
+
+export function time({
+  style = '24h',                 // '24h' | '12h'
+  seconds = false,
+  locale = undefined,
+} = {}) {
+  return ({ value }) => {
+    const t = toTime(value);
+    if (!t) return '';
+    if (style === '12h') {
+      // Use Intl for the AM/PM marker so it localises (en-US: AM/PM,
+      // ja-JP: 午前/午後). Build a Date so we don't reimplement Intl.
+      const d = new Date(0); d.setHours(t.h, t.m, t.s);
+      const fmt = new Intl.DateTimeFormat(locale, {
+        hour: 'numeric',
+        minute: '2-digit',
+        ...(seconds ? { second: '2-digit' } : {}),
+        hour12: true,
+      });
+      return fmt.format(d);
+    }
+    const pad = (n) => String(n).padStart(2, '0');
+    const tail = seconds ? `:${pad(t.s)}` : '';
+    return `${pad(t.h)}:${pad(t.m)}${tail}`;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2858,6 +2919,7 @@ registerRenderer('markdown',       markdown());
 registerRenderer('json',           json());
 registerRenderer('linked-record',  linkedRecord());
 registerRenderer('coloured-tags',  colouredTags());
+registerRenderer('time',           time());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2868,5 +2930,6 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, audioAttachment,
+  checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
+  audioAttachment,
 };

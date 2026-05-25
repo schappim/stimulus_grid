@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>42 — Time renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>42 — Time renderer (HH:MM[:SS])</h1>
+  <p class="lede">
+    Time-of-day-only sibling to <code>date</code> / <code>datetime</code>.
+    Accepts <code>"HH:MM"</code>, <code>"HH:MM:SS"</code>, a full ISO
+    timestamp, a JavaScript <code>Date</code>, or a number of seconds
+    since midnight. Three columns show 24h, 12h, and 12h+seconds variants.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="appointment"
+              data-header-cell-width-value="220"
+              data-header-cell-sortable-value="true">Appointment</th>
+          <th data-controller="header-cell" data-header-cell-field-value="start"
+              data-header-cell-cell-renderer-value="time"
+              data-header-cell-width-value="100">Start (24h)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="start"
+              data-header-cell-cell-renderer-value="time-12h"
+              data-header-cell-width-value="120">Start (12h)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="duration_s"
+              data-header-cell-cell-renderer-value="time-secs"
+              data-header-cell-width-value="120">Duration</th>
+          <th data-controller="header-cell" data-header-cell-field-value="logged"
+              data-header-cell-cell-renderer-value="time-12h-secs"
+              data-header-cell-width-value="160">Logged at</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Inputs accepted (top → bottom of the demo):</strong>
+    <code>"09:30"</code>, <code>"14:00:00"</code>,
+    <code>Date</code> object, <code>"2026-05-25T11:45:18Z"</code>,
+    and seconds-since-midnight as a plain number for the Duration column.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('time-12h', renderers.time({ style: '12h' }));
+    registerRenderer('time-secs', renderers.time({ seconds: true }));
+    registerRenderer('time-12h-secs', renderers.time({ style: '12h', seconds: true }));
+
+    const ROWS = [
+      { id: 1, appointment: 'Standup',           start: '09:30',                    duration_s: 900,  logged: '2026-05-25T09:30:18Z' },
+      { id: 2, appointment: 'PR review block',   start: '10:00',                    duration_s: 2700, logged: '2026-05-25T10:02:44Z' },
+      { id: 3, appointment: 'Customer call',     start: '14:00:00',                 duration_s: 1800, logged: '2026-05-25T14:00:09Z' },
+      { id: 4, appointment: 'Lunch',             start: new Date(2026, 4, 25, 12, 30), duration_s: 3600, logged: '2026-05-25T12:31:00Z' },
+      { id: 5, appointment: 'Lift cycle 4',      start: '17:15',                    duration_s: 5400, logged: '2026-05-25T17:14:48Z' },
+      { id: 6, appointment: 'Pickup kids',       start: '15:45',                    duration_s: 600,  logged: '2026-05-25T15:46:11Z' },
+      { id: 7, appointment: 'End-of-day wrap',   start: '18:00',                    duration_s: 1200, logged: '2026-05-25T18:01:30Z' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
