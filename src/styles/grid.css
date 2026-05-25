@@ -837,3 +837,165 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-tree-chevron svg { width: 100%; height: 100%; display: block; }
 .sg-grid .sg-tree-chevron[data-expanded="true"] { transform: rotate(90deg); }
 .sg-grid .sg-tree-chevron-leaf { visibility: hidden; cursor: default; }
+
+/* ---- Built-in cell renderers --------------------------------------------
+   Colour families used by .sg-pill, .sg-fill-*, etc. Tuned for legibility
+   on both light and dark cell backgrounds; override at the grid root if
+   you have a custom palette. No Tailwind dependency. */
+.sg-grid {
+  --sg-pill-gray-bg:    #e5e7eb;   --sg-pill-gray-fg:   #1f2937;
+  --sg-pill-red-bg:     #fecaca;   --sg-pill-red-fg:    #7f1d1d;
+  --sg-pill-orange-bg:  #fed7aa;   --sg-pill-orange-fg: #7c2d12;
+  --sg-pill-yellow-bg:  #fef08a;   --sg-pill-yellow-fg: #713f12;
+  --sg-pill-green-bg:   #bbf7d0;   --sg-pill-green-fg:  #14532d;
+  --sg-pill-blue-bg:    #bfdbfe;   --sg-pill-blue-fg:   #1e3a8a;
+  --sg-pill-indigo-bg:  #c7d2fe;   --sg-pill-indigo-fg: #312e81;
+  --sg-pill-purple-bg:  #e9d5ff;   --sg-pill-purple-fg: #581c87;
+  --sg-pill-pink-bg:    #fbcfe8;   --sg-pill-pink-fg:   #831843;
+}
+
+/* Right-align numeric renderers and use tabular numerals so columns of
+   currency / percent line up at the decimal. */
+.sg-grid td.sg-renderer-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Links inside cells inherit the grid's accent colour but stay subtle —
+   no underline at rest, on hover. */
+.sg-grid .sg-renderer-link {
+  color: var(--sg-icon-accent);
+  text-decoration: none;
+}
+.sg-grid .sg-renderer-link:hover { text-decoration: underline; }
+.sg-grid .sg-renderer-invalid { color: #b91c1c; }
+.sg-grid .sg-renderer-mono { font-variant-numeric: tabular-nums; }
+
+/* Status pills — used by statusPill(colorMap, iconMap). One per cell. */
+.sg-grid .sg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--sg-pill-gray-bg);
+  color: var(--sg-pill-gray-fg);
+}
+.sg-grid .sg-pill-icon {
+  display: inline-flex;
+  width: 11px;
+  height: 11px;
+  align-items: center;
+  justify-content: center;
+}
+.sg-grid .sg-pill-icon svg { width: 11px; height: 11px; display: block; }
+.sg-grid .sg-pill-label { display: inline-block; }
+.sg-grid .sg-pill-gray   { background: var(--sg-pill-gray-bg);   color: var(--sg-pill-gray-fg); }
+.sg-grid .sg-pill-red    { background: var(--sg-pill-red-bg);    color: var(--sg-pill-red-fg); }
+.sg-grid .sg-pill-orange { background: var(--sg-pill-orange-bg); color: var(--sg-pill-orange-fg); }
+.sg-grid .sg-pill-yellow { background: var(--sg-pill-yellow-bg); color: var(--sg-pill-yellow-fg); }
+.sg-grid .sg-pill-green  { background: var(--sg-pill-green-bg);  color: var(--sg-pill-green-fg); }
+.sg-grid .sg-pill-blue   { background: var(--sg-pill-blue-bg);   color: var(--sg-pill-blue-fg); }
+.sg-grid .sg-pill-indigo { background: var(--sg-pill-indigo-bg); color: var(--sg-pill-indigo-fg); }
+.sg-grid .sg-pill-purple { background: var(--sg-pill-purple-bg); color: var(--sg-pill-purple-fg); }
+.sg-grid .sg-pill-pink   { background: var(--sg-pill-pink-bg);   color: var(--sg-pill-pink-fg); }
+
+/* Progress bar — used by progressBar({color, showValue}). */
+.sg-grid .sg-renderer-progress-wrap {
+  display: flex; align-items: center; gap: 8px;
+}
+.sg-grid .sg-renderer-progress {
+  flex: 1;
+  background: #e5e7eb;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.sg-grid .sg-renderer-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.18s ease;
+}
+.sg-grid .sg-renderer-progress-label {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sg-fg-muted);
+  min-width: 32px;
+  text-align: right;
+}
+.sg-grid .sg-fill-gray   { background: #9ca3af; }
+.sg-grid .sg-fill-red    { background: #ef4444; }
+.sg-grid .sg-fill-orange { background: #f97316; }
+.sg-grid .sg-fill-yellow { background: #eab308; }
+.sg-grid .sg-fill-green  { background: #10b981; }
+.sg-grid .sg-fill-blue   { background: #3b82f6; }
+.sg-grid .sg-fill-indigo { background: #6366f1; }
+.sg-grid .sg-fill-purple { background: #8b5cf6; }
+.sg-grid .sg-fill-pink   { background: #ec4899; }
+
+/* Star rating — used by starRating({max}). Half-star uses two layered SVGs
+   in some implementations; we ship a single half-fill glyph instead. */
+.sg-grid .sg-renderer-stars {
+  display: inline-flex; align-items: center; gap: 1px;
+  color: #d1d5db;             /* empty-star fill */
+}
+.sg-grid .sg-renderer-star { display: inline-flex; width: 13px; height: 13px; }
+.sg-grid .sg-renderer-star svg { width: 13px; height: 13px; display: block; }
+.sg-grid .sg-renderer-star.is-full,
+.sg-grid .sg-renderer-star.is-half { color: #f59e0b; }   /* amber */
+.sg-grid .sg-renderer-star.is-half { position: relative; }
+.sg-grid .sg-renderer-star.is-half::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 50%;
+  background: #d1d5db;
+  -webkit-mask: var(--sg-half-mask) center/cover no-repeat;
+          mask: var(--sg-half-mask) center/cover no-repeat;
+  pointer-events: none;
+}
+
+/* Tags — used by tags({separator}). */
+.sg-grid .sg-renderer-tags {
+  display: inline-flex; flex-wrap: wrap; gap: 4px;
+  align-items: center;
+}
+.sg-grid .sg-renderer-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sg-pill-gray-bg);
+  color: var(--sg-pill-gray-fg);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Country flag — used by countryFlag({showCode}). */
+.sg-grid .sg-renderer-country {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sg-grid .sg-renderer-flag { font-size: 16px; line-height: 1; }
+.sg-grid .sg-renderer-country-code { font-size: 12px; color: var(--sg-fg-muted); }
+
+/* Avatar — used by avatar({lookup, nameField, avatarField, windowKey}). */
+.sg-grid .sg-renderer-avatar {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sg-grid .sg-renderer-avatar-img {
+  border-radius: 999px; flex-shrink: 0; object-fit: cover;
+}
+.sg-grid .sg-renderer-avatar-initials {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--sg-pill-indigo-bg);
+  color: var(--sg-pill-indigo-fg);
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-avatar-name { font-size: inherit; }

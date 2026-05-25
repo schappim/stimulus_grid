@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>19 — Built-in cell renderers | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1300px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .tip {
+      margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+      border-left: 3px solid #2563eb; color: #1e3a8a; font-size: 13px;
+    }
+    code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: .9em; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>19 — Built-in cell renderers</h1>
+  <p class="lede">
+    A renderer is a small function: <code>({value, row, col, td}) → HTMLElement | string</code>.
+    Ten built-ins ship pre-registered (<code>email</code>, <code>url</code>,
+    <code>phone</code>, <code>currency</code>, <code>percent</code>,
+    <code>progress-bar</code>, <code>star-rating</code>, <code>tags</code>,
+    <code>country-flag</code>, <code>abn</code>, <code>avatar</code>), plus a
+    <code>statusPill</code> builder for any badge-style status column. Reference
+    them by name from <code>data-header-cell-cell-renderer-value</code>.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="34"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-cell-renderer-value="avatar"
+              data-header-cell-width-value="200">User</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-cell-renderer-value="email"
+              data-header-cell-width-value="220">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="phone"
+              data-header-cell-cell-renderer-value="phone"
+              data-header-cell-width-value="140">Phone</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-cell-renderer-value="country-flag"
+              data-header-cell-width-value="80">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="website"
+              data-header-cell-cell-renderer-value="url"
+              data-header-cell-width-value="180">Website</th>
+          <th data-controller="header-cell" data-header-cell-field-value="abn"
+              data-header-cell-cell-renderer-value="abn"
+              data-header-cell-width-value="160">ABN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ltv"
+              data-header-cell-cell-renderer-value="currency"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="100">LTV</th>
+          <th data-controller="header-cell" data-header-cell-field-value="completion"
+              data-header-cell-cell-renderer-value="progress-bar"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="140">Onboarding</th>
+          <th data-controller="header-cell" data-header-cell-field-value="usage"
+              data-header-cell-cell-renderer-value="percent"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="80">Usage</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rating"
+              data-header-cell-cell-renderer-value="star-rating"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="110">Rating</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tags"
+              data-header-cell-cell-renderer-value="tags"
+              data-header-cell-width-value="200">Tags</th>
+          <th data-controller="header-cell" data-header-cell-field-value="subscription"
+              data-header-cell-cell-renderer-value="subscription"
+              data-header-cell-width-value="120">Subscription</th>
+          <th data-controller="header-cell" data-header-cell-field-value="fulfillment"
+              data-header-cell-cell-renderer-value="fulfillment"
+              data-header-cell-width-value="140">Fulfillment</th>
+          <th data-controller="header-cell" data-header-cell-field-value="channel"
+              data-header-cell-cell-renderer-value="sales-channel"
+              data-header-cell-width-value="130">Channel</th>
+          <th data-controller="header-cell" data-header-cell-field-value="shipping"
+              data-header-cell-cell-renderer-value="shipping-method"
+              data-header-cell-width-value="120">Shipping</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>How it's wired:</strong> the ten plain renderers (no config) are
+    pre-registered at import — just reference them by name. The four status
+    columns (Subscription / Fulfillment / Channel / Shipping) use the
+    <code>statusPill(colorMap, iconMap?)</code> builder; the registration
+    block is at the top of the page script. Avatar reads from
+    <code>window.__sgUsers</code> by default; here we feed a plain
+    <code>name</code> string and let it fall back to initials.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // -- Register the four status-pill renderers ----------------------------
+    // statusPill(colorMap, iconMap?, opts?) — color keys are lower-cased
+    // before lookup, so input data can be sloppy. Pass icon names from the
+    // built-in set (check, check-circle, x-circle, clock, truck, dot, circle,
+    // half-circle, alert, cart) OR pass a raw SVG string per status.
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('subscription', renderers.statusPill({
+      subscribed:       'green',
+      unsubscribed:     'yellow',
+      'not-subscribed': 'gray',
+    }));
+    registerRenderer('fulfillment', renderers.statusPill({
+      fulfilled:    'gray',
+      delivered:    'green',
+      'in-transit': 'blue',
+      partial:      'orange',
+      pending:      'yellow',
+      unfulfilled:  'yellow',
+      rejected:     'red',
+    }, {
+      fulfilled:    'check-circle',
+      delivered:    'check-circle',
+      'in-transit': 'truck',
+      partial:      'half-circle',
+      pending:      'clock',
+      unfulfilled:  'clock',
+      rejected:     'x-circle',
+    }));
+    registerRenderer('sales-channel', renderers.statusPill({
+      shopify:   'green',
+      etsy:      'orange',
+      ebay:      'gray',
+      amazon:    'yellow',
+      pos:       'indigo',
+      wholesale: 'purple',
+    }, {
+      shopify:   'cart', etsy: 'cart', ebay: 'cart',
+      amazon:    'cart', pos: 'cart', wholesale: 'cart',
+    }));
+    registerRenderer('shipping-method', renderers.statusPill({
+      standard: 'gray',
+      express:  'yellow',
+      pickup:   'blue',
+    }, {
+      standard: 'truck',
+      express:  'truck',
+      pickup:   'dot',
+    }));
+
+    // -- Demo data ----------------------------------------------------------
+    const ROWS = [
+      { id: 1, name: 'Astrid Hale',     email: 'astrid@chickcom.com', phone: '0412345678',
+        country: 'AU', website: 'https://example.com/astrid', abn: '92644920764', ltv: 24830.12,
+        completion: 92, usage: 78, rating: 4.5, tags: 'enterprise,vip,beta',
+        subscription: 'subscribed', fulfillment: 'delivered', channel: 'shopify', shipping: 'express' },
+      { id: 2, name: 'Marcus Chen',     email: 'marcus@example.com', phone: '+61398765432',
+        country: 'AU', website: 'https://shop.example.com/storefront', abn: '53004085616', ltv: 1820.50,
+        completion: 45, usage: 23, rating: 3, tags: 'starter,trial',
+        subscription: 'unsubscribed', fulfillment: 'in-transit', channel: 'etsy', shipping: 'standard' },
+      { id: 3, name: 'Priya Patel',     email: 'priya@example.org', phone: '1300975707',
+        country: 'IN', website: 'https://priya.dev', abn: '11005456209', ltv: 9210.00,
+        completion: 100, usage: 95, rating: 5, tags: 'enterprise',
+        subscription: 'subscribed', fulfillment: 'fulfilled', channel: 'pos', shipping: 'pickup' },
+      { id: 4, name: 'Jamal Owens',     email: 'jamal@notvalid',  phone: '0298765432',
+        country: 'US', website: 'https://owens.consulting', abn: 'INVALID', ltv: 480.00,
+        completion: 18, usage: 12, rating: 2.5, tags: 'lead,evaluating',
+        subscription: 'not-subscribed', fulfillment: 'pending', channel: 'amazon', shipping: 'standard' },
+      { id: 5, name: 'Lena Brooks',     email: 'lena@studio.io', phone: '0412000000',
+        country: 'GB', website: 'https://studio.io', abn: '49093669660', ltv: 5600.00,
+        completion: 71, usage: 64, rating: 4, tags: 'design,partner,vip',
+        subscription: 'subscribed', fulfillment: 'partial', channel: 'ebay', shipping: 'express' },
+      { id: 6, name: 'Tomás Vega',      email: 'tomas@example.es', phone: '+34911234567',
+        country: 'ES', website: 'https://vega.es/portfolio/design', abn: '46086374085', ltv: 14320.99,
+        completion: 86, usage: 88, rating: 4.5, tags: 'design,enterprise',
+        subscription: 'subscribed', fulfillment: 'delivered', channel: 'shopify', shipping: 'express' },
+      { id: 7, name: 'Mei Tanaka',      email: 'mei@example.jp', phone: '0298111111',
+        country: 'JP', website: 'https://mei.jp', abn: '14008672179', ltv: 320.00,
+        completion: 8, usage: 4, rating: 1.5, tags: 'lead',
+        subscription: 'not-subscribed', fulfillment: 'unfulfilled', channel: 'wholesale', shipping: 'pickup' },
+      { id: 8, name: 'Iris Holloway',   email: 'iris@example.com', phone: '0299999999',
+        country: 'US', website: 'https://iris.holloway', abn: '88137145807', ltv: 7400.00,
+        completion: 55, usage: 42, rating: 3.5, tags: 'beta',
+        subscription: 'subscribed', fulfillment: 'rejected', channel: 'shopify', shipping: 'standard' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => {
+      grid.gridApi.setRowData(ROWS);
+    }, { once: true });
+  </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { buildDisplayList, computeWindow, formatValue, getValue, applyFilters, applyQuickFilter, applySort, aggregateRange, buildHeaderLayout } from '../lib/model.js';
 import { createGridApi } from '../lib/api.js';
 import { el, setAttrs, cloneTemplate, emit } from '../lib/dom.js';
+import { getRenderer } from '../lib/renderers.js';
 
 const DEFAULT_ROW_HEIGHT = 32;
 const DEFAULT_PAGE_SIZE = 100;
@@ -1388,6 +1389,9 @@ export default class GridController extends Controller {
 
   _renderCellContent(td, row, col) {
     if (col.cellRenderer) {
+      // Resolve order: <template id="..."> wins; otherwise look up a registered
+      // functional renderer. Falls through to plain text formatting when
+      // neither matches (warned once per unknown name, then forgotten).
       const node = cloneTemplate(col.cellRenderer);
       if (node) {
         // Simple data-binding: any descendant with [data-bind="<key>"] gets the value
@@ -1405,6 +1409,17 @@ export default class GridController extends Controller {
           if (n.dataset.bindAttr) n.setAttribute(n.dataset.bindAttr, value);
         });
         td.appendChild(node);
+        return;
+      }
+      const fn = getRenderer(col.cellRenderer);
+      if (typeof fn === 'function') {
+        const value = getValue(row, col);
+        const formatted = formatValue(row, col);
+        const result = fn({ value, row, col, td, formatted });
+        if (result == null) return;                           // renderer mutated td directly
+        if (typeof result === 'string') { td.innerHTML = result; return; }
+        if (result instanceof Node) { td.appendChild(result); return; }
+        td.textContent = String(result);
         return;
       }
     }
