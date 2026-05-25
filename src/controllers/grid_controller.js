@@ -2935,20 +2935,25 @@ export default class GridController extends Controller {
     this._renderStatusBar();
   }
 
-  // Copy the active cell range to the clipboard as TSV. Cells that contain
-  // tabs, newlines, or double-quotes are wrapped in "…" with embedded "
-  // doubled — the same rule Excel / Sheets / Numbers use, so a multi-line
-  // markdown cell round-trips through the clipboard intact.
+  // Copy the active cell range to the clipboard. For a single-cell copy we
+  // put the raw value on the clipboard so a multi-line markdown / note cell
+  // pastes verbatim into a text editor, email, chat, etc. For multi-cell
+  // ranges we TSV-escape (quote + double up embedded quotes) so the value
+  // still round-trips into Excel / Sheets / Numbers without rows splitting.
   _onCopy = (e) => {
     if (this.state.editing) return;
     const ae = document.activeElement;
     if (ae && /^(input|textarea|select)$/i.test(ae.tagName) && !this.element.contains(ae)) return;
     const rect = this._activeRect();
     if (!rect) return;
-    const tsv = this._cellRangeRows(rect)
-      .map((r) => r.map((v) => tsvEscape(v)).join('\t')).join('\n');
-    if (tsv === '') return;
-    e.clipboardData?.setData('text/plain', tsv);
+    const rows = this._cellRangeRows(rect);
+    if (!rows.length) return;
+    const single = rows.length === 1 && rows[0].length === 1;
+    const text = single
+      ? String(rows[0][0] ?? '')
+      : rows.map((r) => r.map((v) => tsvEscape(v)).join('\t')).join('\n');
+    if (text === '') return;
+    e.clipboardData?.setData('text/plain', text);
     e.preventDefault();
   };
 

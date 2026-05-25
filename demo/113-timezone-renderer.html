@@ -23,7 +23,7 @@
     <table>
       <thead><tr>
         <th data-controller="header-cell" data-header-cell-field-value="user" data-header-cell-width-value="200">User</th>
-        <th data-controller="header-cell" data-header-cell-field-value="tz" data-header-cell-cell-renderer-value="timezone" data-header-cell-width-value="220">Time zone</th>
+        <th data-controller="header-cell" data-header-cell-field-value="tz" data-header-cell-cell-renderer-value="tz-edit" data-header-cell-width-value="220">Time zone</th>
         <th data-controller="header-cell" data-header-cell-field-value="tz" data-header-cell-cell-renderer-value="tz-raw" data-header-cell-width-value="240">Raw</th>
       </tr></thead>
       <tbody></tbody>
@@ -34,6 +34,7 @@
   <script>
     StimulusGrid.start();
     const { registerRenderer, renderers } = StimulusGrid;
+    registerRenderer('tz-edit', renderers.timezone({ editable: true }));
     registerRenderer('tz-raw', renderers.timezone({ withCity: false }));
     const data = [
       { user: 'Astrid Hale', tz: 'Australia/Sydney'    },

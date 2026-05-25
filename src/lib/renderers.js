@@ -6368,10 +6368,24 @@ function sanitizeHtml(input) {
   return tpl.innerHTML;
 }
 
-export function html({} = {}) {
-  return ({ value, td }) => {
+export function html({ editable = false, rows = 8, cols = 60 } = {}) {
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-html-cell');
+      if (editable && !td._sgHtmlBound) {
+        td._sgHtmlBound = true;
+        td._sgTextareaRows = rows;
+        td._sgTextareaCols = cols;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgTextareaHandled) return;
+          e._sgTextareaHandled = true;
+          e.stopPropagation();
+          openTextareaEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
-    if (td) td.classList.add('sg-renderer-html-cell');
     const wrap = h('span', { class: 'sg-renderer-html' });
     wrap.innerHTML = sanitizeHtml(String(value));
     return wrap;
@@ -6894,14 +6908,25 @@ export function mimeIcon({ size = 18 } = {}) {
 export function gallery({
   max = 5,
   thumbSize = 40,
+  popoverThumbSize = 96,
 } = {}) {
-  return ({ value, td }) => {
+  return (ctx) => {
+    const { value, td } = ctx;
     if (td) td.classList.add('sg-renderer-gallery-cell');
     if (isBlank(value)) return '';
     const list = (Array.isArray(value) ? value : [value])
       .map((i) => typeof i === 'string' ? { url: i } : i)
       .filter((i) => i && i.url);
     if (!list.length) return '';
+    if (td && !td._sgGalleryBound) {
+      td._sgGalleryBound = true;
+      td.addEventListener('dblclick', (e) => {
+        if (e._sgGalleryHandled) return;
+        e._sgGalleryHandled = true;
+        e.stopPropagation();
+        openGalleryPopover(td, list, popoverThumbSize);
+      });
+    }
     const wrap = h('span', { class: 'sg-renderer-gallery' });
     const visible = list.slice(0, max);
     for (const img of visible) {
@@ -6925,6 +6950,51 @@ export function gallery({
   };
 }
 
+let activeGalleryPopover = null;
+function closeGalleryPopover() {
+  if (!activeGalleryPopover) return;
+  const { pop, onKey, onDocClick, anchor } = activeGalleryPopover;
+  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('mousedown', onDocClick);
+  pop.remove();
+  activeGalleryPopover = null;
+  refocusGrid(anchor);
+}
+
+function openGalleryPopover(anchor, list, thumb) {
+  closeGalleryPopover();
+  const pop = h('div', { class: 'sg-renderer-gallery-popover', role: 'dialog' });
+  pop.addEventListener('mousedown', (e) => e.stopPropagation());
+  for (const img of list) {
+    const a = h('a', {
+      href: img.url, target: '_blank', rel: 'noopener noreferrer',
+      class: 'sg-renderer-gallery-popover-item',
+      title: img.alt || img.filename || '',
+    });
+    a.append(h('img', {
+      src: img.url, alt: img.alt || '',
+      loading: 'lazy', decoding: 'async',
+      style: `width: ${thumb}px; height: ${thumb}px;`,
+    }));
+    if (img.alt || img.filename) {
+      a.append(h('span', { class: 'sg-renderer-gallery-popover-label' },
+        document.createTextNode(img.alt || img.filename)));
+    }
+    pop.append(a);
+  }
+
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeGalleryPopover(); } }
+  function onDocClick(e) {
+    if (!pop.contains(e.target) && !anchor.contains(e.target)) closeGalleryPopover();
+  }
+  document.addEventListener('keydown', onKey);
+  setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  activeGalleryPopover = { pop, onKey, onDocClick, anchor };
+}
+
 /* ---------- waveform (audio-only viz) ------------------------------
  *
  * Static waveform glyph for audio rows. Expects either an array of
@@ -6945,6 +7015,7 @@ export function waveform({
   height = 24,
   bars = 28,
   color = '#3b82f6',
+  fill = true,
 } = {}) {
   return ({ value, td }) => {
     if (td) td.classList.add('sg-renderer-waveform-cell');
@@ -6967,8 +7038,9 @@ export function waveform({
       const y = (height - bh) / 2;
       body += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${(barW - gap).toFixed(2)}" height="${bh.toFixed(2)}" rx="0.6" fill="${color}"/>`;
     }
-    const wrap = h('span', { class: 'sg-renderer-waveform' });
-    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+    const wrap = h('span', { class: `sg-renderer-waveform${fill ? ' is-fill' : ''}` });
+    const svgW = fill ? '100%' : String(width);
+    wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" width="${svgW}" height="${height}">${body}</svg>`;
     return wrap;
   };
 }
@@ -7478,11 +7550,43 @@ function tzOffsetFor(tz, ref = new Date()) {
   }
 }
 
+const COMMON_TIMEZONES = [
+  'Pacific/Auckland', 'Pacific/Fiji',
+  'Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Perth',
+  'Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Kolkata', 'Asia/Dubai',
+  'Europe/London', 'Europe/Dublin', 'Europe/Paris', 'Europe/Madrid', 'Europe/Berlin', 'Europe/Rome', 'Europe/Amsterdam',
+  'Africa/Johannesburg', 'Africa/Lagos',
+  'America/Sao_Paulo', 'America/Argentina/Buenos_Aires',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu',
+  'UTC',
+];
+
 export function timezone({
   withCity = true,
+  editable = false,
+  options = null,
 } = {}) {
-  return ({ value, td }) => {
-    if (td) td.classList.add('sg-renderer-tz-cell');
+  return (ctx) => {
+    const { value, td } = ctx;
+    if (td) {
+      td.classList.add('sg-renderer-tz-cell');
+      if (editable && !td._sgTzBound) {
+        td._sgTzBound = true;
+        const list = options || COMMON_TIMEZONES;
+        td._sgSelectOpts = list.map((tz) => {
+          const off = tzOffsetFor(tz);
+          const city = tz.split('/').pop().replace(/_/g, ' ');
+          return { value: tz, label: `${city} (${off || '?'}) — ${tz}` };
+        });
+        td._sgSelectClearable = false;
+        td.addEventListener('dblclick', (e) => {
+          if (e._sgSelectHandled) return;
+          e._sgSelectHandled = true;
+          e.stopPropagation();
+          openSelectEditor(td, ctx);
+        });
+      }
+    }
     if (isBlank(value)) return '';
     const tz = String(value);
     const off = tzOffsetFor(tz);
@@ -7725,11 +7829,20 @@ export function miniLineChart({
     const max = Math.max(...all);
     const min = Math.min(...all);
     const span = Math.max(1e-9, max - min);
+    // Inset by stroke half-width so the polyline doesn't clip at the
+    // top (where y=0 for the max sample) or bottom (where y=height for
+    // the min sample). preserveAspectRatio="none" stretches the
+    // viewBox to the cell size but doesn't affect stroke width, so the
+    // inset only needs to account for the unscaled stroke.
+    const pad = 1.2;
+    const yMax = pad;
+    const yMin = height - pad;
+    const yRange = yMin - yMax;
     let body = '';
     for (const s of series) {
       const pts = s.data.map((v, i) => {
         const x = (i / Math.max(1, s.data.length - 1)) * width;
-        const y = height - ((Number(v) - min) / span) * height;
+        const y = yMin - ((Number(v) - min) / span) * yRange;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
       });
       body += `<polyline fill="none" stroke="${s.color}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/>`;

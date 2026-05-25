@@ -23,7 +23,8 @@
     <table>
       <thead><tr>
         <th data-controller="header-cell" data-header-cell-field-value="event" data-header-cell-width-value="240">Event</th>
-        <th data-controller="header-cell" data-header-cell-field-value="when" data-header-cell-cell-renderer-value="countdown" data-header-cell-width-value="200">Countdown</th>
+        <th data-controller="header-cell" data-header-cell-field-value="when" data-header-cell-cell-renderer-value="countdown" data-header-cell-width-value="160">T-minus</th>
+        <th data-controller="header-cell" data-header-cell-field-value="when" data-header-cell-cell-renderer-value="countdown-secs" data-header-cell-width-value="180">With seconds</th>
         <th data-controller="header-cell" data-header-cell-field-value="when" data-header-cell-cell-renderer-value="datetime" data-header-cell-width-value="200">Target</th>
       </tr></thead>
       <tbody></tbody>
@@ -33,6 +34,24 @@
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+    // Always-show-seconds variant: 200ms tick + a formatter that keeps the
+    // `s` field on for the d/h cases so the timer visibly moves even for
+    // far-away targets.
+    registerRenderer('countdown-secs', renderers.countdown({
+      interval: 200,
+      format: (ms) => {
+        if (ms <= 0) return 'expired';
+        const total = Math.floor(ms / 1000);
+        const d = Math.floor(total / 86400);
+        const h = Math.floor((total % 86400) / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        if (d > 0) return `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        return `${m}:${String(s).padStart(2,'0')}`;
+      },
+    }));
     const now = Date.now();
     const data = [
       { event: 'Coffee break',        when: new Date(now + 90 * 1000)         },
