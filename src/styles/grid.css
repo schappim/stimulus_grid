@@ -2347,3 +2347,28 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   content: '− ';
   font-weight: 600;
 }
+
+/* Geo renderer — lat-lng coords + "View on Maps" link, plus optional
+   static-map thumbnail when a `staticMap(lat, lng) => url` is wired up. */
+.sg-grid .sg-renderer-geo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.sg-grid .sg-renderer-geo-thumb {
+  border-radius: 4px;
+  border: 1px solid var(--sg-border, #e5e7eb);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-geo-coords {
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--sg-fg, #1f2937);
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-geo-link {
+  font-size: 11px;
+  white-space: nowrap;
+}

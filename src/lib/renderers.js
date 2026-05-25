@@ -2935,6 +2935,88 @@ export function diff({
   };
 }
 
+/* ---------- geo (latitude / longitude) ------------------------------
+ *
+ * Lat-lng pair, formatted as either decimal degrees ("33.8688, 151.2093")
+ * or sexagesimal DMS ("33°52'07.7\"S 151°12'33.5\"E"), with a small
+ * "View on Maps" link. Plug an optional `staticMap(lat, lng) => url`
+ * function to paint a tile thumbnail beside the coords (Mapbox /
+ * Google Static Maps / OpenStreetMap tiles — your choice of provider).
+ *
+ *   <th data-header-cell-cell-renderer-value="geo">Coordinates</th>
+ *
+ * Value shapes accepted: `[lat, lng]`, `{ lat, lng }` (also `latitude`/
+ * `longitude`, `lon`/`long`), or `"lat,lng"` string. */
+function parseLatLng(v) {
+  if (v == null || v === '') return null;
+  if (Array.isArray(v)) {
+    const lat = Number(v[0]), lng = Number(v[1]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }
+  if (typeof v === 'object') {
+    const lat = Number(v.lat ?? v.latitude);
+    const lng = Number(v.lng ?? v.long ?? v.lon ?? v.longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }
+  const parts = String(v).split(',');
+  if (parts.length !== 2) return null;
+  const lat = Number(parts[0].trim()), lng = Number(parts[1].trim());
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function geoToDMS(decimal, isLat) {
+  const sign = decimal >= 0 ? 1 : -1;
+  const abs = Math.abs(decimal);
+  const deg = Math.floor(abs);
+  const minF = (abs - deg) * 60;
+  const min = Math.floor(minF);
+  const sec = (minF - min) * 60;
+  const dir = isLat ? (sign > 0 ? 'N' : 'S') : (sign > 0 ? 'E' : 'W');
+  return `${deg}°${String(min).padStart(2, '0')}'${sec.toFixed(1)}"${dir}`;
+}
+
+export function geo({
+  decimals = 4,
+  style = 'decimal',                // 'decimal' | 'dms'
+  mapUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`,
+  linkText = 'View on Maps',
+  staticMap = null,                 // (lat, lng) => url
+  staticSize = 72,
+} = {}) {
+  return ({ value }) => {
+    const ll = parseLatLng(value);
+    if (!ll) return '';
+    const wrap = h('span', { class: 'sg-renderer-geo' });
+    if (typeof staticMap === 'function') {
+      const tileUrl = staticMap(ll.lat, ll.lng);
+      if (tileUrl) {
+        wrap.append(h('img', {
+          src: tileUrl, alt: '', class: 'sg-renderer-geo-thumb',
+          width: String(staticSize), height: String(staticSize),
+          loading: 'lazy', decoding: 'async',
+        }));
+      }
+    }
+    const text = style === 'dms'
+      ? `${geoToDMS(ll.lat, true)} ${geoToDMS(ll.lng, false)}`
+      : `${ll.lat.toFixed(decimals)}, ${ll.lng.toFixed(decimals)}`;
+    wrap.append(h('span', { class: 'sg-renderer-geo-coords' }, document.createTextNode(text)));
+    const url = mapUrl(ll.lat, ll.lng);
+    if (url) {
+      const link = h('a', {
+        class: 'sg-renderer-geo-link sg-renderer-link',
+        href: url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        title: 'Open in maps',
+      }, document.createTextNode(linkText));
+      link.addEventListener('click', (e) => e.stopPropagation());
+      wrap.append(link);
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2978,6 +3060,7 @@ registerRenderer('linked-record',  linkedRecord());
 registerRenderer('coloured-tags',  colouredTags());
 registerRenderer('time',           time());
 registerRenderer('diff',           diff());
+registerRenderer('geo',            geo());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2989,5 +3072,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, audioAttachment,
+  diff, geo, audioAttachment,
 };

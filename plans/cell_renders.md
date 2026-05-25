@@ -32,7 +32,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 - [x] **41 — `coloured-tags`** Per-value colour-mapped multi-select chips (Notion / Airtable convention). Sibling to `tags`.
 - [x] **42 — `time`** HH:MM (or HH:MM:SS) — formats a time string or Date. Sibling to `date` / `datetime`.
 - [x] **43 — `diff`** `old → new` before/after rendering. For audit-log columns; configurable arrow / colour.
-- [ ] **44 — `geo`** Lat-lng pair → small "View on Maps" link + DMS / decimal display + optional static-thumb hook.
+- [x] **44 — `geo`** Lat-lng pair → small "View on Maps" link + DMS / decimal display + optional static-thumb hook.
 - [ ] **45 — `qr`** Inline SVG QR code from the cell value. Pure JS (Reed-Solomon + matrix).
 - [ ] **46 — `code`** Monospace code snippet with optional language hint + copy button. No syntax-highlighter dep.
 

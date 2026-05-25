@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>44 — Geo renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>44 — Geo renderer (lat / lng)</h1>
+  <p class="lede">
+    Lat-lng coords with a "View on Maps" link. <em>Decimal</em> shows
+    <code>33.8688, 151.2093</code>; <em>DMS</em> shows the sexagesimal
+    notation surveyors and aviation use. Tile thumbnails are opt-in via
+    a <code>staticMap(lat, lng) → url</code> callback — wire it to your
+    Mapbox / Google Static Maps / OSM provider.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="80"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="coords"
+              data-header-cell-cell-renderer-value="geo"
+              data-header-cell-width-value="320">Coordinates (decimal)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="coords"
+              data-header-cell-cell-renderer-value="geo-dms"
+              data-header-cell-width-value="320">Coordinates (DMS)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="coords"
+              data-header-cell-cell-renderer-value="geo-with-thumb"
+              data-header-cell-width-value="280">With tile thumb</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Input shapes accepted:</strong> <code>[lat, lng]</code>,
+    <code>{ lat, lng }</code> (also <code>{ latitude, longitude }</code>
+    and <code>{ lat, lon }</code>), or a <code>"lat,lng"</code> string.
+    The tile thumbnail uses OSM static tiles via <code>staticmap.io</code>
+    so the demo works without an API key — pin a real provider in production.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('geo-dms', renderers.geo({ style: 'dms' }));
+    registerRenderer('geo-with-thumb', renderers.geo({
+      // OSM static-map endpoint (free, key-less, demo-friendly).
+      staticMap: (lat, lng) =>
+        `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=14&size=72x72&maptype=mapnik&markers=${lat},${lng},red-pushpin`,
+      staticSize: 56,
+      linkText: 'Maps',
+    }));
+
+    const ROWS = [
+      { id: 1, site: 'Sydney Opera House',     coords: [-33.8568, 151.2153] },
+      { id: 2, site: 'Melbourne MCG',          coords: { lat: -37.8200, lng: 144.9834 } },
+      { id: 3, site: 'Brisbane CBD',           coords: '-27.4698, 153.0251' },
+      { id: 4, site: 'Perth (CBD)',            coords: { latitude: -31.9523, longitude: 115.8613 } },
+      { id: 5, site: 'Adelaide',               coords: [-34.9285, 138.6007] },
+      { id: 6, site: 'Hobart (Salamanca)',     coords: { lat: -42.8821, lon: 147.3272 } },
+      { id: 7, site: 'San Francisco (HQ)',     coords: [37.7749, -122.4194] },
+      { id: 8, site: 'Tokyo (Shinjuku)',       coords: [35.6900, 139.6995] },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
