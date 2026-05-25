@@ -4383,6 +4383,27 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-arrival-window.is-overdue { background: #fed7aa; color: #7c2d12; }
 .sg-grid .sg-renderer-arrival-window.is-late    { background: #fecaca; color: #7f1d1d; }
 
+/* Route stop — dot row + "3 of 7" caption. */
+.sg-grid .sg-renderer-route-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.sg-grid .sg-renderer-route-stop-dots { display: inline-flex; gap: 2px; }
+.sg-grid .sg-renderer-route-stop-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+.sg-grid .sg-renderer-route-stop-dot.is-on { background: #2563eb; }
+.sg-grid .sg-renderer-route-stop-label {
+  color: #6b7280;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

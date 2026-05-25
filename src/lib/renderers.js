@@ -9197,6 +9197,37 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- route-stop --------------------------------------------
+ *
+ * Position-in-route indicator for dispatch boards. "Stop 3 of 7" with a
+ * row of dots that fill up to the current position. Useful next to a
+ * day's run of jobs so the dispatcher can see how far through the
+ * route each tech is at a glance.
+ *
+ * Value: { position, total } (1-based) — or [position, total]. */
+export function routeStop({ maxDots = 10 } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let pos = 0, total = 0;
+    if (Array.isArray(value)) { pos = +value[0] || 0; total = +value[1] || 0; }
+    else if (typeof value === 'object') { pos = +value.position || 0; total = +value.total || 0; }
+    else if (typeof value === 'number') pos = value;
+    if (!total || !Number.isFinite(total)) return String(pos || '');
+    const wrap = h('span', { class: 'sg-renderer-route-stop' });
+    const dots = h('span', { class: 'sg-renderer-route-stop-dots' });
+    const visible = Math.min(total, maxDots);
+    for (let i = 1; i <= visible; i++) {
+      dots.append(h('span', {
+        class: `sg-renderer-route-stop-dot${i <= pos ? ' is-on' : ''}`,
+      }));
+    }
+    wrap.append(dots);
+    wrap.append(h('span', { class: 'sg-renderer-route-stop-label' },
+      document.createTextNode(`${pos} of ${total}`)));
+    return wrap;
+  };
+}
+
 export function arrivalWindow({ now = () => new Date() } = {}) {
   const fmt12 = (d) => {
     let h = d.getHours();
@@ -9443,6 +9474,7 @@ registerRenderer('abn-status',        abnStatus());
 registerRenderer('hbcf-cert',         hbcfCert());
 registerRenderer('job-status',        jobStatus());
 registerRenderer('arrival-window',    arrivalWindow());
+registerRenderer('route-stop',        routeStop());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10012,6 +10044,7 @@ wireBuiltin('abn-status',     clip.text);
 wireBuiltin('hbcf-cert',      clip.json);
 wireBuiltin('job-status',     clip.text);
 wireBuiltin('arrival-window', clip.json);
+wireBuiltin('route-stop',     clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10046,5 +10079,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
-  jobStatus, arrivalWindow,
+  jobStatus, arrivalWindow, routeStop,
 };
