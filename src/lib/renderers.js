@@ -9237,6 +9237,24 @@ export function jsaStatus() {
  * Rego plates, rego currency, CTP / green-slip, service-due, fuel
  * cards, odometer readings — the fleet-management vocabulary. */
 
+/* ---------- AU FSM customer / property renderers ------------------
+ *
+ * Customer category, AU cadastral property identifiers (strata-plan,
+ * lot-plan), council areas, suburb formatting — the cell shapes hung
+ * off "where is this work" and "who is paying". */
+
+// Customer category pill. Drives invoice template selection, tax
+// treatment, comms tone, …
+//   value: 'residential' | 'commercial' | 'strata' | 'real-estate'
+//        | 'insurance' | 'builder' | 'government' | 'body-corp'
+export function customerType() {
+  return statusPill({
+    residential: 'blue', commercial: 'indigo', strata: 'purple',
+    'real-estate': 'orange', insurance: 'pink', builder: 'gray',
+    government: 'green', 'body-corp': 'purple',
+  });
+}
+
 /* ---------- odometer ----------------------------------------------
  *
  * Odometer reading — pretty-formatted number with the "km" unit
@@ -10720,6 +10738,7 @@ registerRenderer('ctp-status',        ctpStatus());
 registerRenderer('service-due',       serviceDue());
 registerRenderer('fuel-card',         fuelCard());
 registerRenderer('odometer',          odometer());
+registerRenderer('customer-type',     customerType());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11320,6 +11339,7 @@ wireBuiltin('ctp-status',     clip.json);
 wireBuiltin('service-due',    clip.json);
 wireBuiltin('fuel-card',      clip.json);
 wireBuiltin('odometer',       clip.number);
+wireBuiltin('customer-type',  clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11361,4 +11381,5 @@ export const renderers = {
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
   regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
+  customerType,
 };
