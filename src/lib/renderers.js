@@ -3687,6 +3687,54 @@ export function expand({
   };
 }
 
+/* ---------- units (Intl.NumberFormat unit-style) --------------------
+ *
+ * Distance, temperature, weight, volume, file-system… — anything that
+ * `Intl.NumberFormat({ style: 'unit', unit: '…' })` supports. Locale-
+ * aware: en-US shows "12 km", de-DE shows "12 km" (same here), fr-CA
+ * shows "12 km", ja-JP shows "12 キロメートル" with `unitDisplay: 'long'`.
+ *
+ *   registerRenderer('distance', units({ unit: 'kilometer' }))
+ *   registerRenderer('weight',   units({ unit: 'kilogram', decimals: 1 }))
+ *   registerRenderer('hot',      units({ unit: 'celsius',  decimals: 1 }))
+ *
+ * Supported units include: kilometer / mile / meter / centimeter,
+ * celsius / fahrenheit, kilogram / pound / gram, liter / gallon,
+ * second / minute / hour, gigabyte / megabyte / byte, etc. — full
+ * list: https://github.com/unicode-org/cldr/blob/main/common/validity/unit.xml */
+export function units({
+  unit = 'kilometer',
+  unitDisplay = 'short',
+  decimals,
+  locale = undefined,
+  ...opts
+} = {}) {
+  const fmtOpts = { style: 'unit', unit, unitDisplay, ...opts };
+  if (decimals != null) {
+    fmtOpts.minimumFractionDigits = decimals;
+    fmtOpts.maximumFractionDigits = decimals;
+  }
+  let fmt;
+  try {
+    fmt = new Intl.NumberFormat(locale, fmtOpts);
+  } catch (_) {
+    // Older / restricted runtimes might not know a given CLDR unit.
+    // Fall back to formatting the number alone + appending the raw unit
+    // identifier so the cell still communicates a useful value.
+    const fallbackOpts = decimals != null
+      ? { minimumFractionDigits: decimals, maximumFractionDigits: decimals }
+      : {};
+    fmt = new Intl.NumberFormat(locale, fallbackOpts);
+  }
+  return ({ value, td }) => {
+    if (td) td.classList.add('sg-renderer-number');
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return fmt.format(n);
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3741,6 +3789,7 @@ registerRenderer('rag',            rag());
 registerRenderer('timeline-steps', timelineSteps());
 registerRenderer('mention',        mention());
 registerRenderer('expand',         expand());
+registerRenderer('units',          units());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3753,5 +3802,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, expand, audioAttachment,
+  mention, expand, units, audioAttachment,
 };

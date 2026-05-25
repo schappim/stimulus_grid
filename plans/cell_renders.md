@@ -46,7 +46,7 @@ A checklist of cell renderers to ship into `stimulus_grid`'s built-in
 - [x] **52 — `timeline-steps`** Ordered status progression ("Pending → Shipped → Delivered") with current step highlighted.
 - [x] **53 — `mention`** Parses `@user` and `#tag` inside long text into styled chips.
 - [x] **54 — `expand`** Click-to-expand long text in-place (vs `truncate`'s clip-with-hover-tooltip).
-- [ ] **55 — `units`** Distance / temperature / weight formatter ("12 km", "23 °C", "1.4 kg"). Locale-aware unit conversion.
+- [x] **55 — `units`** Distance / temperature / weight formatter ("12 km", "23 °C", "1.4 kg"). Locale-aware unit conversion.
 - [ ] **56 — `ip-address`** IPv4 / IPv6 validation + monospace formatting + optional country flag from the cell value.
 
 ## Tier 3 — AU-niche identifiers (consistent with `phone(AU)`, `abn`, `address-au`)

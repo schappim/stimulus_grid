@@ -239,6 +239,7 @@ ship pre-registered:
 | `timeline-steps` | Ordered status progression — dots + connecting lines for "Pending → Picked → Shipped → Delivered". Past steps fill solid, current step gets a halo, future steps stay hollow. `steps` is an array of step names; value can be the name (case-insensitive) or the 0-based index. `showLabels: true` adds labels under each dot |
 | `mention` | Parses `@username` and `#tag` markers inside free text into inline indigo (mention) and teal (hashtag) chips. Optional `mentionHref(name)` / `tagHref(tag)` callbacks turn the chips into `<a>` elements opening in a new tab. Marker syntax: `[@#][a-zA-Z0-9_-]+` |
 | `expand` | Click-to-expand long text with an in-cell "Read more" / "Show less" toggle. Different from `truncate` (hover tooltip) and `multi-line` (newline preserve + optional clamp). Two modes: `chars: N` clips by character count, `lines: N` CSS-clamps at N visible lines |
+| `units` | `Intl.NumberFormat({ style: 'unit' })` wrapped per cell — locale-aware distance / temperature / weight / volume / time / file-system formatting. `unit` is any CLDR identifier (kilometer / mile / celsius / fahrenheit / kilogram / pound / liter / hour / gigabyte / …). `unitDisplay` controls short / long / narrow; `decimals` mirrors the other number renderers |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

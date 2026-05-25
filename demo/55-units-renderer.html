@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>55 — Units renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>55 — Units renderer</h1>
+  <p class="lede">
+    <code>Intl.NumberFormat({ style: 'unit' })</code> wrapped in a cell
+    renderer. Locale-aware: switching browser language updates spacing
+    and unit labels. Supports the full CLDR unit set —
+    <code>kilometer</code>, <code>mile</code>, <code>celsius</code>,
+    <code>fahrenheit</code>, <code>kilogram</code>, <code>pound</code>,
+    <code>liter</code>, <code>second</code>, <code>gigabyte</code>, …
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="city"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">City</th>
+          <th data-controller="header-cell" data-header-cell-field-value="km"
+              data-header-cell-cell-renderer-value="units-km"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Distance (km)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="mi"
+              data-header-cell-cell-renderer-value="units-mi"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Distance (mi)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tempC"
+              data-header-cell-cell-renderer-value="units-c"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Temp °C</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tempF"
+              data-header-cell-cell-renderer-value="units-f"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Temp °F</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bag_kg"
+              data-header-cell-cell-renderer-value="units-kg"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="130">Bag weight</th>
+          <th data-controller="header-cell" data-header-cell-field-value="flight_hr"
+              data-header-cell-cell-renderer-value="units-hr"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Flight (hr)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Localised:</strong> the renderer respects the
+    <code>locale</code> option per registration; default (omitted) uses
+    the browser's locale. Try <code>units({ unit: 'celsius', locale:
+    'fr-FR' })</code> to see French formatting ("23 °C" with a hard
+    space).
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('units-km', renderers.units({ unit: 'kilometer' }));
+    registerRenderer('units-mi', renderers.units({ unit: 'mile' }));
+    registerRenderer('units-c',  renderers.units({ unit: 'celsius',    decimals: 1 }));
+    registerRenderer('units-f',  renderers.units({ unit: 'fahrenheit', decimals: 1 }));
+    registerRenderer('units-kg', renderers.units({ unit: 'kilogram',   decimals: 1 }));
+    registerRenderer('units-hr', renderers.units({ unit: 'hour',       decimals: 1 }));
+
+    const ROWS = [
+      { id: 1, city: 'Sydney',     km: 0,    mi: 0,    tempC: 23.4, tempF: 74.1, bag_kg: 0.7, flight_hr: 0 },
+      { id: 2, city: 'Melbourne',  km: 878,  mi: 545,  tempC: 18.6, tempF: 65.5, bag_kg: 1.2, flight_hr: 1.5 },
+      { id: 3, city: 'Auckland',   km: 2156, mi: 1340, tempC: 16.0, tempF: 60.8, bag_kg: 1.4, flight_hr: 3.2 },
+      { id: 4, city: 'Singapore',  km: 6307, mi: 3920, tempC: 30.5, tempF: 86.9, bag_kg: 1.4, flight_hr: 8.2 },
+      { id: 5, city: 'Tokyo',      km: 7822, mi: 4861, tempC: 22.2, tempF: 72.0, bag_kg: 1.4, flight_hr: 9.8 },
+      { id: 6, city: 'London',     km: 16983, mi: 10553, tempC: 14.0, tempF: 57.2, bag_kg: 1.8, flight_hr: 22.6 },
+      { id: 7, city: 'San Francisco', km: 11944, mi: 7421, tempC: 19.4, tempF: 66.9, bag_kg: 1.4, flight_hr: 14.8 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
