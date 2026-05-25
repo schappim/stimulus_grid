@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>160 — HBCF certificate | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>160 — HBCF certificate (NSW Home Building Compensation Fund)</h1>
+  <p class="lede">
+    icare-issued. Mandatory cover for any NSW residential renovation
+    over $20,000. Issued per project — `number` is the cert ID, `class`
+    is the project scope, `expires` is the practical completion date.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="220">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="builder"
+              data-header-cell-width-value="180">Builder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hbcf"
+              data-header-cell-cell-renderer-value="hbcf-cert"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="340">HBCF cert</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, project: '12 Smith St, Bondi reno',  builder: 'Hale Builders',  hbcf: { state: 'NSW', number: 'HBCF-22038', class: 'Reno >$20k', expires: inDays(120) } },
+      { id: 2, project: '88 River Rd, Newtown',     builder: 'Chen Construct', hbcf: { state: 'NSW', number: 'HBCF-44510', class: 'New build',  expires: inDays(45) } },
+      { id: 3, project: 'Unit 4, Manly',            builder: 'Patel Reno',     hbcf: { state: 'NSW', number: 'HBCF-99821', class: 'Reno >$20k', expires: inDays(15) } },
+      { id: 4, project: '17 Pine St, Glebe',        builder: 'Owens Build',    hbcf: { state: 'NSW', number: 'HBCF-77001', class: 'Reno >$20k', expires: inDays(-30) } },
+      { id: 5, project: '5 Ocean Ave, Coogee',      builder: 'Brooks Bros',    hbcf: { state: 'NSW', number: 'HBCF-21008' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

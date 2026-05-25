@@ -9356,6 +9356,7 @@ registerRenderer('test-and-tag',      testAndTag());
 registerRenderer('insurance-cert',    insuranceCert());
 registerRenderer('gst-status',        gstStatus());
 registerRenderer('abn-status',        abnStatus());
+registerRenderer('hbcf-cert',         hbcfCert());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9922,6 +9923,7 @@ wireBuiltin('test-and-tag',   clip.json);
 wireBuiltin('insurance-cert', clip.json);
 wireBuiltin('gst-status',     clip.text);
 wireBuiltin('abn-status',     clip.text);
+wireBuiltin('hbcf-cert',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
