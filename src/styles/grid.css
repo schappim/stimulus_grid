@@ -4482,6 +4482,26 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-variation-delta.is-down { color: #7f1d1d; }
 .sg-grid .sg-renderer-variation-status { font-size: 10px; }
 
+/* Defect / snag — severity pill + title + secondary status. */
+.sg-grid .sg-renderer-defect {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-defect-sev { font-size: 10px; text-transform: uppercase; }
+.sg-grid .sg-renderer-defect-title { color: #1f2937; }
+.sg-grid .sg-renderer-defect-status {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-grid .sg-renderer-defect-status.is-closed { color: #14532d; }
+.sg-grid .sg-renderer-defect-status.is-wip    { color: #1e3a8a; }
+.sg-grid .sg-renderer-defect-status.is-open   { color: #7f1d1d; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *

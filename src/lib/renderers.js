@@ -9197,6 +9197,38 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- defect / snag -----------------------------------------
+ *
+ * Snag-list item. Severity pill + short description.
+ *
+ *   value: { severity, title, status? }
+ *     severity: 'critical' | 'major' | 'minor' | 'cosmetic'
+ *     status:   'open' | 'closed' | 'wip'              (optional)
+ *
+ * Aliased as `snag` because the two terms get used interchangeably
+ * across QA / PC inspection reports. */
+export function defect() {
+  const SEV_COLOR = { critical: 'red', major: 'orange', minor: 'yellow', cosmetic: 'gray' };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = (typeof value === 'object') ? value : { title: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-defect' });
+    const sev = v.severity ? String(v.severity).toLowerCase() : 'minor';
+    const color = SEV_COLOR[sev] || 'gray';
+    wrap.append(h('span', {
+      class: `sg-pill sg-pill-${color} sg-renderer-defect-sev`,
+    }, document.createTextNode(titleCaseStr(sev))));
+    if (v.title) wrap.append(h('span', { class: 'sg-renderer-defect-title' },
+      document.createTextNode(String(v.title))));
+    if (v.status) {
+      const st = String(v.status).toLowerCase();
+      wrap.append(h('span', { class: `sg-renderer-defect-status is-${st}` },
+        document.createTextNode(titleCaseStr(st))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- variation ---------------------------------------------
  *
  * Variation order on a job. ID + dollar delta (signed) + status chip.
@@ -9611,6 +9643,7 @@ registerRenderer('travel-time',       travelTime());
 registerRenderer('technician-slot',   technicianSlot());
 registerRenderer('progress-claim',    progressClaim());
 registerRenderer('variation',         variation());
+registerRenderer('defect',            defect());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10185,6 +10218,7 @@ wireBuiltin('travel-time',    clip.json);
 wireBuiltin('technician-slot', clip.json);
 wireBuiltin('progress-claim', clip.json);
 wireBuiltin('variation',      clip.json);
+wireBuiltin('defect',         clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10220,5 +10254,5 @@ export const renderers = {
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
-  variation,
+  variation, defect,
 };

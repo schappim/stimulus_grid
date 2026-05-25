@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>168 — Defect | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>168 — Defect (severity + title + status)</h1>
+  <p class="lede">
+    Snag / defect item. Severity pill (critical / major / minor /
+    cosmetic) + short title + open/wip/closed status caption. Also
+    registered as <code>snag</code> (demo 169) — same renderer, different
+    name to suit the team's vocabulary.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Item #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="location"
+              data-header-cell-width-value="180">Location</th>
+          <th data-controller="header-cell" data-header-cell-field-value="defect"
+              data-header-cell-cell-renderer-value="defect"
+              data-header-cell-width-value="380">Defect</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, ref: 'D-001', location: 'Main bath',  defect: { severity: 'critical', title: 'Tap leaking continuously', status: 'open' } },
+      { id: 2, ref: 'D-002', location: 'Kitchen',    defect: { severity: 'major',    title: 'Range hood not vented to outside', status: 'wip' } },
+      { id: 3, ref: 'D-003', location: 'Bed 2',      defect: { severity: 'minor',    title: 'Skirting board paint touch-up needed', status: 'open' } },
+      { id: 4, ref: 'D-004', location: 'Front door', defect: { severity: 'cosmetic', title: 'Scuff on door frame', status: 'closed' } },
+      { id: 5, ref: 'D-005', location: 'Pool',       defect: { severity: 'critical', title: 'Pool fence latch height non-compliant', status: 'open' } },
+      { id: 6, ref: 'D-006', location: 'Garage',     defect: { severity: 'major',    title: 'Roller door does not auto-stop', status: 'closed' } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
