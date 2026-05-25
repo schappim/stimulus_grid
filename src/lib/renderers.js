@@ -9197,6 +9197,37 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- materials-pick ----------------------------------------
+ *
+ * Materials pick-list line. Value:
+ *   { sku, name, qty, status }
+ *     status: 'in-stock' | 'backorder' | 'out-of-stock' | 'special-order'
+ *
+ * Renders qty + name (+ sku in tooltip) with a stock-status pill. */
+export function materialsPick() {
+  const STOCK_COLOR = {
+    'in-stock': 'green', 'backorder': 'orange',
+    'out-of-stock': 'red', 'special-order': 'blue',
+  };
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = (typeof value === 'object') ? value : { name: String(value) };
+    const wrap = h('span', { class: 'sg-renderer-materials-pick', title: v.sku || '' });
+    if (v.qty != null) wrap.append(h('span', { class: 'sg-renderer-materials-pick-qty' },
+      document.createTextNode(`×${v.qty}`)));
+    if (v.name) wrap.append(h('span', { class: 'sg-renderer-materials-pick-name' },
+      document.createTextNode(String(v.name))));
+    if (v.status) {
+      const k = String(v.status).toLowerCase();
+      const color = STOCK_COLOR[k] || 'gray';
+      wrap.append(h('span', {
+        class: `sg-pill sg-pill-${color} sg-renderer-materials-pick-stock`,
+      }, document.createTextNode(titleCaseStr(k.replace('-', ' ')))));
+    }
+    return wrap;
+  };
+}
+
 /* ---------- retention --------------------------------------------
  *
  * Retention dollar amount + release-date countdown. Common on
@@ -10148,6 +10179,7 @@ registerRenderer('callout-fee',       calloutFee());
 registerRenderer('payment-terms',     paymentTerms());
 registerRenderer('invoice-status',    invoiceStatus());
 registerRenderer('retention',         retention());
+registerRenderer('materials-pick',    materialsPick());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10730,6 +10762,7 @@ wireBuiltin('callout-fee',    clip.json);
 wireBuiltin('payment-terms',  clip.json);
 wireBuiltin('invoice-status', clip.text);
 wireBuiltin('retention',      clip.json);
+wireBuiltin('materials-pick', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10766,5 +10799,5 @@ export const renderers = {
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
-  retention,
+  retention, materialsPick,
 };

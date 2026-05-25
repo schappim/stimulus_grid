@@ -4705,6 +4705,21 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 .sg-grid .sg-renderer-retention-release.is-soon     { background: #fed7aa; color: #7c2d12; }
 .sg-grid .sg-renderer-retention-release.is-pending  { background: #e5e7eb; color: #374151; }
 
+/* Materials pick — ×qty + name + stock status pill. */
+.sg-grid .sg-renderer-materials-pick {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-materials-pick-qty {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #6b7280;
+}
+.sg-grid .sg-renderer-materials-pick-name { color: #1f2937; }
+.sg-grid .sg-renderer-materials-pick-stock { font-size: 10px; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
