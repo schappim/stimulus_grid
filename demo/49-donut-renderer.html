@@ -33,22 +33,32 @@
         <tr>
           <th data-controller="header-cell" data-header-cell-field-value="goal"
               data-header-cell-width-value="240"
+              data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true">Goal</th>
           <th data-controller="header-cell" data-header-cell-field-value="pct"
               data-header-cell-cell-renderer-value="donut"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Donut</th>
           <th data-controller="header-cell" data-header-cell-field-value="pct"
               data-header-cell-cell-renderer-value="donut-blue"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Blue</th>
           <th data-controller="header-cell" data-header-cell-field-value="pct"
               data-header-cell-cell-renderer-value="donut-inline"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="120">Inline label</th>
           <th data-controller="header-cell" data-header-cell-field-value="pct"
               data-header-cell-cell-renderer-value="donut-large"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="160">Large</th>
           <th data-controller="header-cell" data-header-cell-field-value="pct"
               data-header-cell-cell-renderer-value="percent"
               data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Raw %</th>
         </tr>
       </thead>
@@ -61,6 +71,10 @@
     — <code>blue</code>, <code>green</code>, <code>red</code>,
     <code>orange</code>, <code>purple</code>, <code>pink</code>,
     <code>gray</code>. Or pass any CSS colour string.
+    <br><br>
+    <strong>Editing:</strong> double-click any cell — donut, blue, inline,
+    large, and raw % all bind to the same <code>pct</code> field, so
+    editing one re-renders every donut on that row at once.
   </div>
 
   <script src="../dist/stimulus_grid.js"></script>
