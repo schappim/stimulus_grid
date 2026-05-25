@@ -2730,3 +2730,15 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* BSB — bank-state-branch number + optional bank label. */
+.sg-grid .sg-renderer-bsb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sg-grid .sg-renderer-bsb-bank {
+  color: var(--sg-fg-muted, #6b7280);
+  font-size: 11px;
+  font-weight: 500;
+}

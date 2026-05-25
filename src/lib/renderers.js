@@ -3791,6 +3791,56 @@ export function ipAddress({
   };
 }
 
+/* ---------- AU identifier siblings: bsb / acn / tfn / medicare ------
+ *
+ * Companions to the existing `abn` and `address-au` renderers. Each
+ * follows the same shape: validate → format → optional lookup link.
+ * Invalid values render in red so a bad import surfaces immediately.
+ *
+ *   registerRenderer('bsb',      bsb())
+ *   registerRenderer('acn',      acn())
+ *   registerRenderer('tfn',      tfn())
+ *   registerRenderer('medicare', medicare()) */
+
+// BSB — Bank-State-Branch. 6 digits formatted XXX-XXX; the first 2 digits
+// identify the bank. The lookup map only covers the most common AU banks
+// — pass your own `banks` to extend, or `showBank: false` to suppress
+// the bank-name annotation entirely.
+const BSB_BANKS = {
+  '01': 'ANZ',         '03': 'Westpac',     '06': 'CBA',         '08': 'NAB',
+  '11': 'St.George',   '12': 'BankSA',      '18': 'Macquarie',   '76': 'BoQ',
+  '80': 'Cuscal',      '93': 'RBA',         '94': 'Bendigo',     '96': 'Citibank',
+  '53': 'PayPal AU',   '63': 'Bendigo',     '73': 'AMP',         '92': 'Beyond Bank',
+  '07': 'Westpac',     '09': 'NAB',
+};
+
+export function bsb({
+  banks = BSB_BANKS,
+  showBank = true,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value).trim();
+    const digits = text.replace(/\D/g, '');
+    if (digits.length !== 6) {
+      return h('span', {
+        class: 'sg-renderer-invalid', title: 'Invalid BSB — must be 6 digits',
+      }, document.createTextNode(text));
+    }
+    const formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    const code = digits.slice(0, 2);
+    const bank = banks[code];
+    const wrap = h('span', { class: 'sg-renderer-bsb' });
+    wrap.append(h('span', { class: 'sg-renderer-bsb-number sg-renderer-mono' },
+      document.createTextNode(formatted)));
+    if (showBank && bank) {
+      wrap.append(h('span', { class: 'sg-renderer-bsb-bank' },
+        document.createTextNode(bank)));
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3847,6 +3897,7 @@ registerRenderer('mention',        mention());
 registerRenderer('expand',         expand());
 registerRenderer('units',          units());
 registerRenderer('ip-address',     ipAddress());
+registerRenderer('bsb',            bsb());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3859,5 +3910,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  mention, expand, units, ipAddress, audioAttachment,
+  mention, expand, units, ipAddress, bsb, audioAttachment,
 };
