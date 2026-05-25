@@ -9075,6 +9075,12 @@ export function highRiskLicence(opts = {}) {
   return complianceCard({ prefix: 'HRWL', ...opts });
 }
 
+// VIC Certificate of Electrical Safety (COES). Lodged by REC / LEW
+// after every prescribed electrical job — issued via ESV.
+export function coes(opts = {}) {
+  return complianceCard({ prefix: 'COES', classLabel: 'Electrical Safety', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9225,6 +9231,7 @@ registerRenderer('white-card',        whiteCard());
 registerRenderer('blue-card',         blueCard());
 registerRenderer('wwcc',              wwcc());
 registerRenderer('high-risk-licence', highRiskLicence());
+registerRenderer('coes',              coes());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9779,6 +9786,7 @@ wireBuiltin('white-card',     clip.json);
 wireBuiltin('blue-card',      clip.json);
 wireBuiltin('wwcc',           clip.json);
 wireBuiltin('high-risk-licence', clip.json);
+wireBuiltin('coes',           clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9809,5 +9817,5 @@ export const renderers = {
   html, yaml, xml, autolink, redacted, spoiler,
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
-  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence,
+  tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes,
 };
