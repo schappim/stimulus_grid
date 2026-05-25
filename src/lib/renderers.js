@@ -9102,6 +9102,13 @@ export function vbaLicence(opts = {}) {
   return complianceCard({ prefix: 'VBA', ...opts });
 }
 
+// Gas Work Authorisation / Compliance Certificate. State-issued (ESV
+// VIC, Energy Safe SA, etc.). `class` differentiates Type A (commercial
+// appliances) from Type B (industrial) work scope.
+export function gasCertificate(opts = {}) {
+  return complianceCard({ prefix: 'Gas', classLabel: 'Type A', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9256,6 +9263,7 @@ registerRenderer('coes',              coes());
 registerRenderer('coc',               coc());
 registerRenderer('qbcc-licence',      qbccLicence());
 registerRenderer('vba-licence',       vbaLicence());
+registerRenderer('gas-certificate',   gasCertificate());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9814,6 +9822,7 @@ wireBuiltin('coes',           clip.json);
 wireBuiltin('coc',            clip.json);
 wireBuiltin('qbcc-licence',   clip.json);
 wireBuiltin('vba-licence',    clip.json);
+wireBuiltin('gas-certificate', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9845,5 +9854,5 @@ export const renderers = {
   fraction, scientific, radix, percentile,
   battery, signalBars, volumeIndicator,
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
-  qbccLicence, vbaLicence,
+  qbccLicence, vbaLicence, gasCertificate,
 };
