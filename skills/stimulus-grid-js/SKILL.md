@@ -237,6 +237,7 @@ ship pre-registered:
 | `histogram` | Distribution bars from an array of counts. Sibling to `sparkline({ type: 'bar' })` framed for distributions — each bar carries a `<title>` tooltip ("Bin 3: 12"), `highlightMax: true` fades non-max bars, `binLabels` paints tiny axis ticks. Per-row labels via `{ counts, labels }` cell value |
 | `rag` | Red / amber / green status dot — pure traffic-light signal, no label. Accepts the literal `'red'` / `'amber'` / `'green'` (or synonyms `r`/`a`/`g`, `critical`/`warn`/`ok`, `high`/`medium`/`low`, `detractor`/`passive`/`promoter`), or a numeric value with `thresholds: [redMax, amberMax]`. `inverted: true` flips the mapping for "lower is better" columns. `showLabel: true` adds a small text label beside the dot |
 | `timeline-steps` | Ordered status progression — dots + connecting lines for "Pending → Picked → Shipped → Delivered". Past steps fill solid, current step gets a halo, future steps stay hollow. `steps` is an array of step names; value can be the name (case-insensitive) or the 0-based index. `showLabels: true` adds labels under each dot |
+| `mention` | Parses `@username` and `#tag` markers inside free text into inline indigo (mention) and teal (hashtag) chips. Optional `mentionHref(name)` / `tagHref(tag)` callbacks turn the chips into `<a>` elements opening in a new tab. Marker syntax: `[@#][a-zA-Z0-9_-]+` |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

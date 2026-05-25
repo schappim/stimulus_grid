@@ -3564,6 +3564,58 @@ export function timelineSteps({
   };
 }
 
+/* ---------- mention (@user / #tag chips) ----------------------------
+ *
+ * Parses `@username` and `#tag` markers inside free text into styled
+ * inline chips — chat / activity-feed / notification columns. Optional
+ * `mentionHref(name)` / `tagHref(tag)` callbacks turn the chips into
+ * <a> elements opening in a new tab.
+ *
+ *   registerRenderer('comment', mention({
+ *     mentionHref: (name) => `/users/${name}`,
+ *     tagHref:     (tag)  => `/labels/${tag}`,
+ *   }))
+ *
+ * Markers: `@[a-zA-Z0-9_-]+` and `#[a-zA-Z0-9_-]+`. Anything else
+ * passes through as plain text. */
+const MENTION_RE = /([@#][a-zA-Z0-9_\-]+)/g;
+
+export function mention({
+  mentionHref = null,
+  tagHref = null,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const text = String(value);
+    const wrap = h('span', { class: 'sg-renderer-mentions' });
+    const parts = text.split(MENTION_RE);
+    for (const part of parts) {
+      if (!part) continue;
+      if (part[0] === '@') {
+        const name = part.slice(1);
+        const url = typeof mentionHref === 'function' ? mentionHref(name) : null;
+        wrap.append(buildMentionChip(part, url, 'sg-renderer-mention'));
+      } else if (part[0] === '#') {
+        const tag = part.slice(1);
+        const url = typeof tagHref === 'function' ? tagHref(tag) : null;
+        wrap.append(buildMentionChip(part, url, 'sg-renderer-hashtag'));
+      } else {
+        wrap.append(document.createTextNode(part));
+      }
+    }
+    return wrap;
+  };
+}
+
+function buildMentionChip(text, url, cls) {
+  const node = url
+    ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', class: cls })
+    : h('span', { class: cls });
+  if (url) node.addEventListener('click', (e) => e.stopPropagation());
+  node.append(document.createTextNode(text));
+  return node;
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3616,6 +3668,7 @@ registerRenderer('donut',          donut());
 registerRenderer('histogram',      histogram());
 registerRenderer('rag',            rag());
 registerRenderer('timeline-steps', timelineSteps());
+registerRenderer('mention',        mention());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3628,5 +3681,5 @@ export const renderers = {
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
   diff, geo, qr, code, rating, bullet, donut, histogram, rag, timelineSteps,
-  audioAttachment,
+  mention, audioAttachment,
 };

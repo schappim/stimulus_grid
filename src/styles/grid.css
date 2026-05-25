@@ -2638,3 +2638,26 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   color: var(--sg-fg, #1f2937);
   font-weight: 600;
 }
+
+/* Mention / hashtag — inline chips embedded in free text. Calm tint so
+   the chips don't dominate the row when many of them sit side-by-side. */
+.sg-grid .sg-renderer-mentions { line-height: 1.5; }
+.sg-grid .sg-renderer-mention,
+.sg-grid .sg-renderer-hashtag {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sg-grid .sg-renderer-mention {
+  background: #e0e7ff;     /* indigo-100 */
+  color: #3730a3;          /* indigo-800 */
+}
+.sg-grid .sg-renderer-hashtag {
+  background: #ccfbf1;     /* teal-100 */
+  color: #115e59;          /* teal-800 */
+}
+.sg-grid a.sg-renderer-mention:hover,
+.sg-grid a.sg-renderer-hashtag:hover { filter: brightness(0.96); text-decoration: underline; }

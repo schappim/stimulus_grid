@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>53 — Mention renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>53 — Mention / hashtag renderer</h1>
+  <p class="lede">
+    Parses <code>@username</code> and <code>#tag</code> markers in free
+    text into inline chips. Comment / activity-feed / notification
+    columns. Optional callbacks turn the chips into anchors that open
+    the user / tag in a new tab.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true" data-grid-row-height-value="48">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="actor"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">Actor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="comment"
+              data-header-cell-cell-renderer-value="comment-mentions"
+              data-header-cell-editable-value="true">Comment</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-width-value="140">When</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Editing:</strong> double-click a comment to edit it inline —
+    add or remove <code>@mentions</code> / <code>#hashtags</code> and
+    the chips re-paint on commit.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('comment-mentions', renderers.mention({
+      mentionHref: (name) => `/users/${name}`,
+      tagHref:     (tag)  => `/labels/${tag}`,
+    }));
+
+    const now = Date.now();
+    const ago = (mins) => new Date(now - mins * 60_000).toISOString();
+
+    const ROWS = [
+      { id: 1, actor: 'Astrid Hale',
+        comment: 'Heads-up @marcus — the #recsys-v3 canary is logging a noisy warning. Can someone look before the #postmortem stand-up?',
+        when: ago(3) },
+      { id: 2, actor: 'Marcus Chen',
+        comment: 'On it. cc @priya — I think it lines up with the #pricing-refactor we landed on Tuesday.',
+        when: ago(8) },
+      { id: 3, actor: 'Priya Patel',
+        comment: 'Confirmed. Filed #BUG-1284 with the trace. @astrid you wanted to see this in the next #review-block.',
+        when: ago(15) },
+      { id: 4, actor: 'Jamal Owens',
+        comment: 'Marketing copy refresh draft is up — @lena would love your eyes on the #docs section before Friday.',
+        when: ago(45) },
+      { id: 5, actor: 'Lena Brooks',
+        comment: 'Looks good overall! Two notes inline, mostly tone tweaks. Tagging #design and #docs.',
+        when: ago(78) },
+      { id: 6, actor: 'Tomás Vega',
+        comment: 'Multi-currency invoice work is ~70% — pinging @marcus, @priya. Want a sync before #demo-day?',
+        when: ago(140) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
