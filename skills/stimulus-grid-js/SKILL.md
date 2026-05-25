@@ -235,6 +235,7 @@ ship pre-registered:
 | `bullet` | Stephen Few's bullet chart — qualitative grey bands + black value bar + vertical target tick, all in an inline SVG. `min` / `max` / `target` / `ranges` set the scale and bands; per-row overrides via object cell value `{ value, target, ranges }`. Default bands at 60% and 80% if `ranges` is omitted |
 | `donut` | Single-percentage circular sibling to `progress-bar`. Stroke-dasharray ring from 12 o'clock clockwise. Same palette tokens as `sparkline` (`blue` / `green` / `red` / `orange` / `purple` / `pink` / `gray` or raw CSS colour). `inline: true` for side-by-side label, default is label inside the ring |
 | `histogram` | Distribution bars from an array of counts. Sibling to `sparkline({ type: 'bar' })` framed for distributions — each bar carries a `<title>` tooltip ("Bin 3: 12"), `highlightMax: true` fades non-max bars, `binLabels` paints tiny axis ticks. Per-row labels via `{ counts, labels }` cell value |
+| `rag` | Red / amber / green status dot — pure traffic-light signal, no label. Accepts the literal `'red'` / `'amber'` / `'green'` (or synonyms `r`/`a`/`g`, `critical`/`warn`/`ok`, `high`/`medium`/`low`, `detractor`/`passive`/`promoter`), or a numeric value with `thresholds: [redMax, amberMax]`. `inverted: true` flips the mapping for "lower is better" columns. `showLabel: true` adds a small text label beside the dot |
 
 **Editable renderers.** Every renderer except `sparkline` and the
 `statusPill` family supports inline editing. Set `editable: true` on the

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>51 — RAG renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>51 — RAG renderer (red / amber / green dot)</h1>
+  <p class="lede">
+    Single status dot — pure traffic-light signal. Different shape from
+    <code>statusPill</code> (labelled pill) and <code>boolean</code>
+    (binary check/X). Use it when the column header is the label and the
+    cell just needs to say "good / iffy / bad" at a glance.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="220"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scope"
+              data-header-cell-cell-renderer-value="rag"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="90">Scope</th>
+          <th data-controller="header-cell" data-header-cell-field-value="schedule"
+              data-header-cell-cell-renderer-value="rag"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Schedule</th>
+          <th data-controller="header-cell" data-header-cell-field-value="budget"
+              data-header-cell-cell-renderer-value="rag"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="90">Budget</th>
+          <th data-controller="header-cell" data-header-cell-field-value="quality"
+              data-header-cell-cell-renderer-value="rag-labelled"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="140">Quality</th>
+          <th data-controller="header-cell" data-header-cell-field-value="error_rate"
+              data-header-cell-cell-renderer-value="rag-errors"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Error rate %</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Two value paths:</strong>
+    (1) literal tokens — <code>'red' / 'amber' / 'green'</code> or any of
+    the recognised synonyms (<code>r/a/g</code>, <code>critical/warn/ok</code>,
+    <code>high/medium/low</code>, <code>detractor/passive/promoter</code>);
+    (2) numeric values with <code>thresholds: [redMax, amberMax]</code>.
+    <code>inverted: true</code> flips the mapping for "lower is better"
+    columns like the <em>Error rate</em> column here.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('rag-labelled', renderers.rag({ showLabel: true }));
+    // Error rate: lower is better. 0-1% → green, 1-3% → amber, > 3% → red.
+    registerRenderer('rag-errors', renderers.rag({
+      thresholds: [3, 1],         // with inverted:true these map to "≥3% red, ≥1% amber"
+      inverted: true,
+    }));
+
+    const ROWS = [
+      { id: 1, project: 'Storefront v3',  scope: 'green', schedule: 'green', budget: 'green', quality: 'green', error_rate: 0.4 },
+      { id: 2, project: 'Pricing engine', scope: 'amber', schedule: 'red',   budget: 'amber', quality: 'amber', error_rate: 2.1 },
+      { id: 3, project: 'Mobile app',     scope: 'green', schedule: 'amber', budget: 'green', quality: 'amber', error_rate: 1.4 },
+      { id: 4, project: 'Migration',      scope: 'red',   schedule: 'red',   budget: 'red',   quality: 'red',   error_rate: 5.8 },
+      { id: 5, project: 'Analytics',      scope: 'green', schedule: 'green', budget: 'amber', quality: 'green', error_rate: 0.9 },
+      { id: 6, project: 'Onboarding',     scope: 'amber', schedule: 'green', budget: 'green', quality: 'green', error_rate: 0.2 },
+      { id: 7, project: 'i18n rollout',   scope: 'amber', schedule: 'amber', budget: 'green', quality: 'amber', error_rate: 1.9 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

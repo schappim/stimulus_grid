@@ -2555,3 +2555,24 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   color: var(--sg-fg-muted, #6b7280);
   font-size: 11px;
 }
+
+/* RAG renderer — red/amber/green status dot. Background colour is set
+   inline by the renderer so threshold-driven cells stay accurate
+   regardless of theme overrides; the wrapper is just here for the
+   optional label alignment. */
+.sg-grid .sg-renderer-rag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-grid .sg-renderer-rag-dot {
+  display: inline-block;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset;   /* subtle inner ring */
+  flex-shrink: 0;
+}
+.sg-grid .sg-renderer-rag-label {
+  font-size: 11px;
+  color: var(--sg-fg, #1f2937);
+  font-weight: 500;
+}

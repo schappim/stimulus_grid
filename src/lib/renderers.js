@@ -3445,6 +3445,72 @@ export function histogram({
   };
 }
 
+/* ---------- rag (red / amber / green dot) ---------------------------
+ *
+ * Pure traffic-light status — a single coloured dot, no label. Different
+ * from `statusPill` (which is a labelled pill in any of nine colours):
+ * `rag` is the project-management / risk-dashboard primitive where the
+ * column header IS the label and the cells just need a single
+ * unambiguous colour signal.
+ *
+ *   registerRenderer('risk', rag())   // value: 'red' / 'amber' / 'green'
+ *
+ * Accepts:
+ *   - the literal strings 'red' / 'amber' / 'green' (also 'r' / 'a' / 'g',
+ *     'detractor' / 'passive' / 'promoter', 'critical' / 'warn' / 'ok',
+ *     'high' / 'medium' / 'low')
+ *   - a numeric value paired with `thresholds: [redMax, amberMax]`
+ *     ( v ≤ redMax → red, v ≤ amberMax → amber, else → green )
+ *
+ * `inverted: true` flips the threshold mapping for "lower is better"
+ * columns (e.g. error rates). `showLabel: true` adds a small text label
+ * beside the dot. */
+const RAG_TOKENS = {
+  red:        'red',  r: 'red',  critical: 'red',  high: 'red',  detractor: 'red', danger: 'red',
+  amber:      'amber', a: 'amber', warn:    'amber', medium: 'amber', passive: 'amber', yellow: 'amber',
+  green:      'green', g: 'green', ok:       'green', low:    'green', promoter: 'green', safe: 'green',
+};
+const RAG_COLORS = { red: '#ef4444', amber: '#f59e0b', green: '#10b981' };
+
+export function rag({
+  size = 10,
+  thresholds = null,
+  inverted = false,
+  showLabel = false,
+} = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    let key;
+    if (thresholds && Number.isFinite(Number(value))) {
+      const n = Number(value);
+      const lower = inverted ? thresholds[1] : thresholds[0];
+      const upper = inverted ? thresholds[0] : thresholds[1];
+      if (inverted) {
+        key = n >= lower ? 'red' : n >= upper ? 'amber' : 'green';
+      } else {
+        key = n <= lower ? 'red' : n <= upper ? 'amber' : 'green';
+      }
+    } else {
+      key = RAG_TOKENS[String(value).toLowerCase()] || null;
+      if (!key) return '';
+    }
+    const wrap = h('span', {
+      class: `sg-renderer-rag is-${key}`,
+      title: showLabel ? null : (key.charAt(0).toUpperCase() + key.slice(1)),
+    });
+    wrap.append(h('span', {
+      class: 'sg-renderer-rag-dot',
+      style: `width:${size}px; height:${size}px; background:${RAG_COLORS[key]};`,
+      'aria-label': key,
+    }));
+    if (showLabel) {
+      wrap.append(h('span', { class: 'sg-renderer-rag-label' },
+        document.createTextNode(key.charAt(0).toUpperCase() + key.slice(1))));
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -3495,6 +3561,7 @@ registerRenderer('rating',         rating());
 registerRenderer('bullet',         bullet());
 registerRenderer('donut',          donut());
 registerRenderer('histogram',      histogram());
+registerRenderer('rag',            rag());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -3506,5 +3573,5 @@ export const renderers = {
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
   checkbox, switch: switchRenderer, markdown, json, linkedRecord, colouredTags, time,
-  diff, geo, qr, code, rating, bullet, donut, histogram, audioAttachment,
+  diff, geo, qr, code, rating, bullet, donut, histogram, rag, audioAttachment,
 };
