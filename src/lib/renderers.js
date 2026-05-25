@@ -9122,6 +9122,11 @@ export function refrigerantLicence(opts = {}) {
   return complianceCard({ prefix: 'ARC RHL', ...opts });
 }
 
+// QLD Form 23 — Pool Safety Inspector. QBCC-issued. Renews every 2 years.
+export function poolSafetyCert(opts = {}) {
+  return complianceCard({ prefix: 'PSC', classLabel: 'Pool Safety', ...opts });
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -9279,6 +9284,7 @@ registerRenderer('vba-licence',       vbaLicence());
 registerRenderer('gas-certificate',   gasCertificate());
 registerRenderer('asbestos-licence',  asbestosLicence());
 registerRenderer('refrigerant-licence', refrigerantLicence());
+registerRenderer('pool-safety-cert',  poolSafetyCert());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9840,6 +9846,7 @@ wireBuiltin('vba-licence',    clip.json);
 wireBuiltin('gas-certificate', clip.json);
 wireBuiltin('asbestos-licence', clip.json);
 wireBuiltin('refrigerant-licence', clip.json);
+wireBuiltin('pool-safety-cert', clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9872,4 +9879,5 @@ export const renderers = {
   battery, signalBars, volumeIndicator,
   tradeLicence, whiteCard, blueCard, wwcc, highRiskLicence, coes, coc,
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
+  poolSafetyCert,
 };
