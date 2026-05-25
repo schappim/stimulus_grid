@@ -9237,6 +9237,25 @@ export function jsaStatus() {
  * Rego plates, rego currency, CTP / green-slip, service-due, fuel
  * cards, odometer readings — the fleet-management vocabulary. */
 
+/* ---------- odometer ----------------------------------------------
+ *
+ * Odometer reading — pretty-formatted number with the "km" unit
+ * suffix (set `unit: 'mi'` to override). Whole numbers only on the
+ * grid; fractional km dropped. */
+export function odometer({ unit = 'km', locale = 'en-AU' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    const wrap = h('span', { class: 'sg-renderer-odometer' });
+    wrap.append(h('span', { class: 'sg-renderer-odometer-num' },
+      document.createTextNode(Math.round(n).toLocaleString(locale))));
+    wrap.append(h('span', { class: 'sg-renderer-odometer-unit' },
+      document.createTextNode(unit)));
+    return wrap;
+  };
+}
+
 /* ---------- fuel-card ---------------------------------------------
  *
  * Fuel-card identifier with provider badge + masked card number.
@@ -10700,6 +10719,7 @@ registerRenderer('rego-status',       regoStatus());
 registerRenderer('ctp-status',        ctpStatus());
 registerRenderer('service-due',       serviceDue());
 registerRenderer('fuel-card',         fuelCard());
+registerRenderer('odometer',          odometer());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11299,6 +11319,7 @@ wireBuiltin('rego-status',    clip.json);
 wireBuiltin('ctp-status',     clip.json);
 wireBuiltin('service-due',    clip.json);
 wireBuiltin('fuel-card',      clip.json);
+wireBuiltin('odometer',       clip.number);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -11339,5 +11360,5 @@ export const renderers = {
   swmsStatus, jsaStatus, toolboxTalk, ppeChecklist, incidentSeverity, hazardRating,
   siteInduction,
   tradeType, skillEndorsement, subcontractor, crew,
-  regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard,
+  regoPlate, regoStatus, ctpStatus, serviceDue, fuelCard, odometer,
 };

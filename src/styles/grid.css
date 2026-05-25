@@ -4923,6 +4923,21 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
 }
 .sg-grid .sg-renderer-fuel-card-number { color: #1f2937; }
 
+/* Odometer — tabular number + unit suffix. */
+.sg-grid .sg-renderer-odometer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-odometer-num { font-weight: 600; color: #1f2937; }
+.sg-grid .sg-renderer-odometer-unit {
+  color: #6b7280;
+  font-size: 10px;
+  text-transform: lowercase;
+}
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
