@@ -95,7 +95,7 @@
       { id: 4, title: 'Replace lobby coffee machine',
         notes: '~~Order more pods~~ — going for a real espresso machine. Vendor shortlist:\n- **Rocket Appartamento** (~$2.5k)\n- *La Marzocco Linea Mini* ($6.4k, overkill)\n- ECM Synchronika ($3.6k)',
         author: 'Mei Tanaka' },
-      // Splitting `</script>` into two pieces avoids the outer <script>
+      // Splitting `<\/script>` into two pieces avoids the outer <script>
       // block closing early — HTML parsers don't honour JS string context.
       { id: 5, title: 'XSS sanity check: <script>alert(1)<\/script>',
         notes: 'The cell renders the literal text — no script executes, no markup leaks. The escape happens **before** the markdown pass, so `<` becomes `&lt;` before the regex even sees the string.',
