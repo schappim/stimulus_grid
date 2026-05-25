@@ -32,21 +32,32 @@
         <tr>
           <th data-controller="header-cell" data-header-cell-field-value="response"
               data-header-cell-width-value="280"
+              data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true">Customer response</th>
           <th data-controller="header-cell" data-header-cell-field-value="stars"
               data-header-cell-cell-renderer-value="rating-star"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="130">Stars</th>
           <th data-controller="header-cell" data-header-cell-field-value="hearts"
               data-header-cell-cell-renderer-value="rating-heart"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="130">Hearts</th>
           <th data-controller="header-cell" data-header-cell-field-value="thumb"
               data-header-cell-cell-renderer-value="rating-thumb"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="80">Thumb</th>
           <th data-controller="header-cell" data-header-cell-field-value="csat"
               data-header-cell-cell-renderer-value="rating-smiley"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="80">CSAT</th>
           <th data-controller="header-cell" data-header-cell-field-value="nps"
               data-header-cell-cell-renderer-value="rating-nps"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="90">NPS</th>
         </tr>
       </thead>
@@ -60,6 +71,12 @@
     rendered as a grey silhouette behind a coloured silhouette clipped
     to the fractional width — same recipe as <code>star-rating</code>,
     so any precision (halves, quarters, tenths) renders cleanly.
+    <br><br>
+    <strong>Editing:</strong> double-click any rating cell to edit it
+    inline. Stars / hearts accept fractional values (try
+    <code>3.5</code>); thumb takes <code>-1 / 0 / 1</code>; smiley wants
+    <code>1-5</code>; NPS wants <code>0-10</code>. The glyph re-renders
+    live on commit.
   </div>
 
   <script src="../dist/stimulus_grid.js"></script>

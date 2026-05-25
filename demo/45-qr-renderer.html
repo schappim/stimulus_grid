@@ -35,15 +35,19 @@
         <tr>
           <th data-controller="header-cell" data-header-cell-field-value="label"
               data-header-cell-width-value="220"
+              data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true">Label</th>
           <th data-controller="header-cell" data-header-cell-field-value="code"
               data-header-cell-cell-renderer-value="qr"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="120">QR</th>
           <th data-controller="header-cell" data-header-cell-field-value="code"
               data-header-cell-cell-renderer-value="qr-with-text"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="300">QR + value</th>
           <th data-controller="header-cell" data-header-cell-field-value="code"
-              data-header-cell-cell-renderer-value="qr-large">Large preview</th>
+              data-header-cell-cell-renderer-value="qr-large"
+              data-header-cell-editable-value="true">Large preview</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -56,6 +60,10 @@
     placeholder rather than emitting a broken matrix. Common cell
     payloads — URLs, invoice IDs, SKUs, Wi-Fi credentials — fit
     comfortably in v1–v5.
+    <br><br>
+    <strong>Editing:</strong> double-click any cell — the QR re-encodes
+    live on commit. Each of the three QR columns binds to the same
+    <code>code</code> field, so editing one updates all of them.
   </div>
 
   <script src="../dist/stimulus_grid.js"></script>
