@@ -133,9 +133,13 @@ aggregations + column visibility through the public `gridApi`),
 headers from `pivot_cols` so this is for non-pivot grids),
 `pinned_bottom_row:` (default false — sticky bottom row holding grand totals
 computed from the grid class's `agg_funcs`, over the currently filtered
-leaves). The partial renders the table, columns, rows, pagination nav, and
-the `turbo_stream_from` subscription. Wrap or style `.sgr-panel` to give it
-a height.
+leaves), `persist_key:` (default `""`; when set, the grid auto-saves/restores
+column order/width/pin/visibility + groups/pivot/values + sort/filter to
+`localStorage["sgrid:" + persistKey]`). Right-click any column header to
+open a quick-actions menu (pin / autosize / group / pivot / aggregate /
+hide) — no extra setup required. The partial renders the table, columns,
+rows, pagination nav, and the `turbo_stream_from` subscription. Wrap or
+style `.sgr-panel` to give it a height.
 
 ## What you get out of the box
 

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>15 — Column menu &amp; persisted state | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 540px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .sep { width:1px; align-self:stretch; background:#e5e7eb; margin:0 4px; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff; border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    pre.state { background:#0f172a; color:#e2e8f0; padding:10px 12px; border-radius:4px; font-size:11px; overflow:auto; max-height:160px; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>15 — Right-click column menu &amp; persisted state</h1>
+  <p class="lede">
+    <strong>Right-click any column header</strong> for quick actions: pin /
+    autosize / group by / pivot by / aggregate / hide. The grid also has
+    <code>data-grid-persist-key-value="demo-15"</code>, so every change you
+    make — sort, filter, pin, hide, group, pivot, value aggregations, the
+    pinned bottom row toggle — round-trips through
+    <code>localStorage</code>. Reload the page and your layout sticks.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-data-url-value="./data/athletes.json"
+       data-grid-side-panel-value="true"
+       data-grid-status-bar-value="true"
+       data-grid-pinned-bottom-row-value="true"
+       data-grid-agg-funcs-value='{"gold":"sum","silver":"sum","bronze":"sum","age":"avg"}'
+       data-grid-persist-key-value="demo-15">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="athlete"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Athlete</th>
+          <th data-controller="header-cell" data-header-cell-field-value="age"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Age</th>
+          <th data-controller="header-cell" data-header-cell-field-value="country"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="170">Country</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sport"
+              data-header-cell-sortable-value="true" data-header-cell-filter-value="text"
+              data-header-cell-width-value="170">Sport</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gold"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Gold</th>
+          <th data-controller="header-cell" data-header-cell-field-value="silver"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Silver</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bronze"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number" data-header-cell-width-value="80">Bronze</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <button id="reset">Clear stored state &amp; reload</button>
+    <button id="show-state">Show current state</button>
+    <span class="sep"></span>
+    <span id="stat" class="stat"></span>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong> right-click <em>Country</em> → <em>Group by Country</em>,
+    then right-click <em>Gold</em> → <em>Aggregate: sum</em>, drag a column
+    or resize one, hit reload. Everything sticks. Click <em>Clear stored
+    state &amp; reload</em> to start fresh.
+  </div>
+  <pre class="state" id="state" hidden></pre>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid    = document.querySelector('.panel');
+    const stat    = document.getElementById('stat');
+    const stateEl = document.getElementById('state');
+
+    const update = () => {
+      const api = grid.gridApi;
+      if (!api) return;
+      const s = api.getColumnState();
+      const parts = [];
+      const visible = s.cols.filter((c) => !c.hidden).length;
+      parts.push(`${visible}/${s.cols.length} cols visible`);
+      if (s.rowGroupCols.length) parts.push(`grouped by ${s.rowGroupCols.join(' → ')}`);
+      if (s.pivot.mode)          parts.push(`pivoting on ${s.pivot.cols.join(', ')}`);
+      if (s.values.length)       parts.push(`values: ${s.values.map((v) => `${v.aggFunc}(${v.field})`).join(', ')}`);
+      if (s.sortModel.length)    parts.push(`sorted ${s.sortModel.map((m) => `${m.colId} ${m.sort}`).join(', ')}`);
+      stat.textContent = `[persist-key: ${api.getPersistKey()}]  ·  ` + parts.join('  ·  ');
+    };
+
+    grid.addEventListener('grid:ready', update);
+    [
+      'grid:columnMoved','grid:columnPinned','grid:columnResized','grid:columnVisible',
+      'grid:columnRowGroupChanged','grid:columnPivotChanged','grid:pivotModeChanged',
+      'grid:columnValueChanged','grid:columnGroupsChanged','grid:sortChanged',
+      'grid:filterChanged','grid:columnStateApplied',
+    ].forEach((e) => grid.addEventListener(e, update));
+
+    document.getElementById('reset').onclick = () => {
+      grid.gridApi.clearPersistedState();
+      location.reload();
+    };
+    document.getElementById('show-state').onclick = () => {
+      stateEl.hidden = false;
+      stateEl.textContent = JSON.stringify(grid.gridApi.getColumnState(), null, 2);
+    };
+  </script>
+</body>
+</html>

@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -149,6 +149,7 @@ column on the left. Collapsed here to country subtotals:
 | `side-panel` | render a right-side tool panel for drag-driven row groups / pivots / value aggregations + column visibility (default `false`) |
 | `column-groups` | JSON array of multi-row header groups: `[{"headerName":"Medals","children":["gold","silver","bronze"]}]`. Pivot mode auto-derives nested headers from `pivot-cols` + `agg-funcs`; this attribute is for non-pivot grids |
 | `pinned-bottom-row` | render a sticky bottom row holding grand totals over the currently filtered leaves, computed from `agg-funcs` (default `false`) |
+| `persist-key` | when non-empty, auto-save/restore column order, widths, pinning, visibility, row groups, pivot, value aggregations, header groups, sort, filter and pinned-bottom-row toggle to `localStorage["sgrid:" + persistKey]` |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -176,6 +177,7 @@ Available after the `grid:ready` event. Highlights:
 - **Value columns** (aggregations — shared with grouping): `setValueColumns([{field,aggFunc}])`, `addValueColumn(field, aggFunc?)`, `removeValueColumn`, `getValueColumns`
 - **Column header groups:** `setColumnGroups([{headerName, children:[field,...]}])`, `getColumnGroups()`
 - **Pinned bottom row:** `setPinnedBottomRow(on)`, `isPinnedBottomRow()`
+- **Column state:** `getColumnState()` returns a JSON-serializable snapshot (cols + groups + pivot + values + sort + filter + pinnedBottomRow); `applyColumnState(state)` restores it; with `persist-key` set, `clearPersistedState()` wipes the saved blob and `getPersistKey()` reads back the key
 
 ## Events (dispatched on the grid element)
 
@@ -187,7 +189,8 @@ Available after the `grid:ready` event. Highlights:
 `grid:columnRowGroupChanged` · `grid:groupToggled` ·
 `grid:columnPivotChanged` (`{pivotCols}`) · `grid:pivotModeChanged` (`{pivot}`) ·
 `grid:columnValueChanged` (`{valueCols}`) ·
-`grid:columnGroupsChanged` (`{columnGroups}`).
+`grid:columnGroupsChanged` (`{columnGroups}`) ·
+`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -435,6 +438,58 @@ single-row header, header groups kick in automatically:
 The two "Gold" sub-headers under different parent years don't collapse — runs
 only merge when the **full path** matches up to the row above. **Events:**
 `grid:columnGroupsChanged` (`{columnGroups}`). See **[demo 14](demo/14-header-groups-pinned-totals.html)** for the user-declared groups + pinned totals.
+
+## Right-click column menu & persisted state
+
+A power-user shortcut over everything the side panel and the columns API
+already do. **Right-click any column header** for a popup with pin / autosize
+/ group / pivot / aggregate / hide. **`persist-key`** auto-saves the layout
+every time the user changes it and restores on the next page load — no app
+glue required.
+
+![stimulus_grid right-click column menu open on the Gold header, showing Pin left/right, Autosize, Group by Gold, Pivot by Gold, Aggregate (sum/avg/count/min/max with "sum" marked active), Hide column, Show all columns; the underlying grid is grouped by country with sport / age / gold / silver / bronze and the side panel visible on the right](docs/images/grid-column-menu.png)
+
+The menu opens via the native `contextmenu` event on a leaf header. Items
+are emitted only when they make sense for that column + the current grid
+state, so the menu stays short:
+
+- **Pin left / Pin right / Unpin** — depending on the col's current pin
+- **Autosize this column / Autosize all columns**
+- **Group by {col} / Ungroup {col}**
+- **Pivot by {col} / Remove {col} from pivot** (turns pivot mode on if needed)
+- **Aggregate: sum / avg / count / min / max** (shown for numeric cols or
+  cols already carrying an aggregation; the active agg is marked with `✓`).
+  **Remove aggregation** appears once an agg is set
+- **Hide column / Show all columns**
+
+Outside-click / `Escape` / window scroll / resize all close the menu.
+Synthetic columns (row-number gutter, checkbox column, auto-Group, pivot
+result) suppress the menu — they're owned by the grid and shouldn't be
+poked through this surface. **Event:** `grid:columnMenuOpened` (`{colId}`)
+fires every time the menu opens so analytics / docs overlays can hook in.
+
+```html
+<div data-controller="grid"
+     data-grid-row-data-url-value="/athletes.json"
+     data-grid-persist-key-value="reports.athletes">
+  <!-- …columns… -->
+</div>
+```
+
+`persist-key` round-trips column order, widths, pinning, visibility, row
+groups, pivot mode + pivot cols, value aggregations, header groups,
+pinned-bottom-row, sort, filter and quick filter through
+`localStorage["sgrid:" + persistKey]`. Writes are debounced 200 ms and
+flushed synchronously on `beforeunload` (so a Cmd+R right after a change
+doesn't drop state). Subscribers re-render off a single
+`grid:columnStateApplied` event instead of every granular change event,
+so the side panel + status bar update in one shot. Drive the same flow
+manually with `gridApi.getColumnState()` / `applyColumnState(state)`,
+and reset with `clearPersistedState()` (e.g. behind a "reset layout"
+button).
+
+See **[demo 15](demo/15-context-menu-persisted-state.html)** for both
+features wired together — right-click around, reload, watch it stick.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 

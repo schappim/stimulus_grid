@@ -78,7 +78,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-pivot-mode-value` (default `false`) · `data-grid-pivot-cols-value` (JSON array of fields whose unique values become columns) ·
 `data-grid-side-panel-value` (default `false` — render the right-side drag-driven groups/pivots/values panel) ·
 `data-grid-column-groups-value` (JSON array of multi-row header groups: `[{headerName, children:[field,...]}]`) ·
-`data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`).
+`data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`) ·
+`data-grid-persist-key-value` (default `""`; when set, the grid auto-saves/restores its layout to `localStorage["sgrid:" + persistKey]`).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -112,6 +113,8 @@ api.setValueColumns([{ field:"gold", aggFunc:"sum" }])          // cell aggregat
 api.getPivotColumns(); api.getValueColumns(); api.isPivotMode() // read pivot/value state
 api.setColumnGroups([{ headerName:"Medals", children:["gold","silver","bronze"] }])  // multi-row headers
 api.setPinnedBottomRow(true)                                    // sticky grand-totals row at the bottom
+api.getColumnState()                                             // JSON-serializable snapshot (cols, groups, pivot, values, sort, filter, …)
+api.applyColumnState(state); api.clearPersistedState()           // restore + wipe the localStorage blob
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -128,7 +131,8 @@ status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:paginationChanged` · `grid:columnMoved`/`Pinned`/`Resized`/`Visible` ·
 `grid:columnRowGroupChanged` · `grid:groupToggled` ·
 `grid:pivotModeChanged` (`{pivot}`) · `grid:columnPivotChanged` (`{pivotCols}`) ·
-`grid:columnValueChanged` (`{valueCols}`) · `grid:columnGroupsChanged` (`{columnGroups}`).
+`grid:columnValueChanged` (`{valueCols}`) · `grid:columnGroupsChanged` (`{columnGroups}`) ·
+`grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -327,6 +331,36 @@ the currently filtered leaves; it's suppressed in pivot mode because the
 `(All)` totals row already serves that role at the top. Event:
 `grid:columnGroupsChanged` (`{columnGroups}`). v1 limits user-declared
 groups to one level; pivot-derived groups can be arbitrarily deep.
+
+## Right-click column menu & persisted state
+
+**Right-click any leaf header** opens a popup with: Pin left/right/Unpin,
+Autosize, Group/Ungroup, Pivot/Unpivot, Aggregate (sum/avg/count/min/max
+with the active one marked `✓`) and Remove aggregation, Hide column, Show
+all columns. Items only appear when they make sense for the col + grid
+state. Synthetic cols (gutter, checkbox, auto-Group, pivot result) don't
+get the menu. Event: `grid:columnMenuOpened` (`{colId}`).
+
+`data-grid-persist-key-value` enables auto-save/restore through
+`localStorage["sgrid:" + persistKey]`:
+
+```html
+<div data-controller="grid" data-grid-persist-key-value="reports.athletes">
+```
+
+```js
+api.getColumnState()        // captures everything below into a JSON-safe object
+api.applyColumnState(state) // restores; fires grid:columnStateApplied
+api.clearPersistedState()   // wipes the saved blob
+```
+
+The serialised state covers col order/width/pinning/visibility, row groups,
+pivot mode + pivot cols, value aggregations, header groups, the pinned
+bottom row toggle, sort, filter and quick filter. Writes are debounced 200
+ms and flushed on `beforeunload` so a Cmd+R right after a change doesn't
+drop state. Subscribers re-render off one `grid:columnStateApplied` event
+instead of every granular event, so the side panel + status bar update in
+one shot.
 
 ## Gotchas
 
