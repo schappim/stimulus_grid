@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>190 — CTP status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>190 — CTP status (Green Slip currency)</h1>
+  <p class="lede">
+    Compulsory Third Party / Green Slip currency. Sister to
+    <a href="./189-rego-status-renderer.html">rego-status</a> — both
+    live side-by-side on every fleet card. Some states bundle CTP into
+    rego (VIC/QLD/WA/SA/TAS), others (NSW) require a separate policy
+    that often expires on a different date.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="200">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="plate"
+              data-header-cell-cell-renderer-value="rego-plate"
+              data-header-cell-width-value="160">Plate</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rego"
+              data-header-cell-cell-renderer-value="rego-status"
+              data-header-cell-width-value="180">Rego</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ctp"
+              data-header-cell-cell-renderer-value="ctp-status"
+              data-header-cell-width-value="200">CTP</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, vehicle: 'HiLux #1',  plate: { state: 'NSW', plate: 'ABK 42T' }, rego: inDays(220), ctp: inDays(220) },
+      { id: 2, vehicle: 'Ranger #2', plate: { state: 'NSW', plate: 'BCD 88P' }, rego: inDays(45),  ctp: inDays(60) },
+      { id: 3, vehicle: 'D-Max #3',  plate: { state: 'NSW', plate: 'ZZ 99 X' }, rego: inDays(8),   ctp: inDays(2) },
+      { id: 4, vehicle: 'Triton #4', plate: { state: 'NSW', plate: 'TR 4321' }, rego: inDays(-3),  ctp: inDays(-7) },
+      { id: 5, vehicle: 'LC79 #5',   plate: { state: 'NSW', plate: 'LC 79 NW' }, rego: null,        ctp: null },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

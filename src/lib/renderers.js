@@ -10611,6 +10611,7 @@ registerRenderer('subcontractor',     subcontractor());
 registerRenderer('crew',              crew());
 registerRenderer('rego-plate',        regoPlate());
 registerRenderer('rego-status',       regoStatus());
+registerRenderer('ctp-status',        ctpStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -11207,6 +11208,7 @@ wireBuiltin('subcontractor',  clip.json);
 wireBuiltin('crew',           clip.json);
 wireBuiltin('rego-plate',     clip.json);
 wireBuiltin('rego-status',    clip.json);
+wireBuiltin('ctp-status',     clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
