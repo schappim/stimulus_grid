@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>175 — Retention | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>175 — Retention (commercial-build held-back amount)</h1>
+  <p class="lede">
+    Retention dollar amount + release-date countdown. Standard 5–10% on
+    commercial progress claims, held until the end of the defects
+    liability period.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="240">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="claim"
+              data-header-cell-width-value="140">Claim #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="retention"
+              data-header-cell-cell-renderer-value="retention"
+              data-header-cell-width-value="260">Retention</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+    const ROWS = [
+      { id: 1, project: 'Bondi Reno (Hale Builders)',     claim: 'PC-001', retention: { amount: 4800,  releaseDate: inDays(330) } },
+      { id: 2, project: 'Vega Studio Fitout',             claim: 'PC-003', retention: { amount: 2200,  releaseDate: inDays(45) } },
+      { id: 3, project: 'Coogee Holdings Tower',          claim: 'PC-006', retention: { amount: 120000,releaseDate: inDays(20) } },
+      { id: 4, project: 'Manly Reno (Patel Renovations)', claim: 'PC-005', retention: { amount: 3500,  releaseDate: inDays(-15) } },
+      { id: 5, project: 'Glebe House Build',              claim: 'PC-008', retention: { amount: 24000, releaseDate: inDays(180) } },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

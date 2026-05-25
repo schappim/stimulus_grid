@@ -9197,6 +9197,38 @@ export function jobStatus() {
  *   { start, end }              ISO datetime / Date / parseable string
  *   [start, end]                tuple form
  *   string                      printed as-is (no colour band) */
+/* ---------- retention --------------------------------------------
+ *
+ * Retention dollar amount + release-date countdown. Common on
+ * commercial-build progress claims (5-10% held back per claim until
+ * defects liability period ends).
+ *
+ *   value: { amount, releaseDate } */
+export function retention({ currency = 'AUD', locale = 'en-AU' } = {}) {
+  return ({ value }) => {
+    if (isBlank(value)) return '';
+    const v = (typeof value === 'object') ? value : { amount: Number(value) };
+    const amt = +v.amount;
+    if (!Number.isFinite(amt)) return '';
+    const wrap = h('span', { class: 'sg-renderer-retention' });
+    wrap.append(h('span', { class: 'sg-renderer-retention-amount' },
+      document.createTextNode(amt.toLocaleString(locale, { style: 'currency', currency }))));
+    if (v.releaseDate) {
+      const days = daysUntil(v.releaseDate);
+      if (days != null) {
+        const cls = days < 0 ? 'is-released' : days < 30 ? 'is-soon' : 'is-pending';
+        const text = days < 0 ? 'released'
+                   : days === 0 ? 'releases today'
+                   : days < 60  ? `releases in ${days}d`
+                   : `releases in ${Math.round(days / 30)}mo`;
+        wrap.append(h('span', { class: `sg-renderer-retention-release ${cls}` },
+          document.createTextNode(text)));
+      }
+    }
+    return wrap;
+  };
+}
+
 /* ---------- invoice-status ----------------------------------------
  *
  * Invoice lifecycle pill. Canonical states:
@@ -9994,6 +10026,7 @@ registerRenderer('job-photo',         jobPhoto());
 registerRenderer('callout-fee',       calloutFee());
 registerRenderer('payment-terms',     paymentTerms());
 registerRenderer('invoice-status',    invoiceStatus());
+registerRenderer('retention',         retention());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -10575,6 +10608,7 @@ wireBuiltin('job-photo',      clip.json);
 wireBuiltin('callout-fee',    clip.json);
 wireBuiltin('payment-terms',  clip.json);
 wireBuiltin('invoice-status', clip.text);
+wireBuiltin('retention',      clip.json);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -10611,4 +10645,5 @@ export const renderers = {
   gstStatus, abnStatus, hbcfCert,
   jobStatus, arrivalWindow, routeStop, travelTime, technicianSlot, progressClaim,
   variation, defect, signature, jobPhoto, calloutFee, paymentTerms, invoiceStatus,
+  retention,
 };

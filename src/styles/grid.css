@@ -4682,6 +4682,28 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   opacity: 0.9;
 }
 
+/* Retention — $ + release-date countdown. */
+.sg-grid .sg-renderer-retention {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.sg-grid .sg-renderer-retention-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #1f2937;
+}
+.sg-grid .sg-renderer-retention-release {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.sg-grid .sg-renderer-retention-release.is-released { background: #dcfce7; color: #14532d; }
+.sg-grid .sg-renderer-retention-release.is-soon     { background: #fed7aa; color: #7c2d12; }
+.sg-grid .sg-renderer-retention-release.is-pending  { background: #e5e7eb; color: #374151; }
+
 /* Trade-licence popover editor — 4-field grid (state / number / class /
  * expiry). Same chrome family as the address-au editor.
  *
