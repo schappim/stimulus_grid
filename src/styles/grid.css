@@ -3066,3 +3066,48 @@ body.sg-row-dragging, body.sg-row-dragging * { cursor: grabbing !important; }
   font-size: 12px;
   font-style: italic;
 }
+
+/* ----- slider ------------------------------------------------------ */
+.sg-grid .sg-renderer-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.sg-grid .sg-renderer-slider-input {
+  flex: 1;
+  min-width: 60px;
+  cursor: pointer;
+  height: 16px;
+}
+.sg-grid .sg-renderer-slider-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #374151;
+  white-space: nowrap;
+  min-width: 28px;
+  text-align: right;
+}
+.sg-grid .sg-renderer-slider-placeholder {
+  color: var(--sg-fg-muted, #9ca3af);
+  font-style: italic;
+}
+.sg-grid .sg-renderer-slider-range-stack {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 16px;
+}
+.sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input {
+  position: absolute;
+  width: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+.sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+.sg-grid .sg-renderer-slider-range-stack .sg-renderer-slider-input::-moz-range-thumb {
+  pointer-events: auto;
+}

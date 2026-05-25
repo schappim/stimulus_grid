@@ -4743,6 +4743,120 @@ function closeComboboxEditor() {
   activeComboboxEditor = null;
 }
 
+/* ---------- slider (inline range input) ----------------------------
+ *
+ * Cell renders as a horizontal range track with a value bubble at the
+ * far right. Drag the thumb to change the value live; releasing commits
+ * via grid:cellValueChanged. Use for numeric columns where a precise
+ * decimal isn't important but a sense of "how full" matters — volume,
+ * confidence, satisfaction, allocation %.
+ *
+ *   registerRenderer('confidence', renderers.slider({
+ *     min: 0, max: 100, step: 5, format: (v) => `${v}%`,
+ *   }));
+ *
+ * Range mode (`range: true`) accepts a `[low, high]` array value and
+ * renders two thumbs. Per-cell config (`cellRendererConfig: { min, max,
+ * step, range }`) honoured for Rails-driven columns. */
+export function slider({
+  min = 0,
+  max = 100,
+  step = 1,
+  format = null,
+  color = '#3b82f6',
+  editable = true,
+  range = false,
+  showValue = true,
+} = {}) {
+  return (ctx) => {
+    const { value, row, col, api, td } = ctx;
+    const cfg = ctx?.col?.cellRendererConfig || {};
+    const lo = cfg.min ?? min;
+    const hi = cfg.max ?? max;
+    const sp = cfg.step ?? step;
+    const isRange = cfg.range ?? range;
+    const fmt = format || ((v) => String(v));
+    const show = cfg.showValue ?? showValue;
+    const accent = cfg.color || color;
+    const ed = cfg.editable ?? editable;
+
+    if (td) td.classList.add('sg-renderer-slider-cell');
+
+    if (isBlank(value) && !isRange) {
+      return h('span', { class: 'sg-renderer-slider-placeholder' },
+        document.createTextNode('—'));
+    }
+
+    const wrap = h('div', { class: 'sg-renderer-slider' });
+
+    function dispatch(next) {
+      const oldValue = row && col?.field != null ? row[col.field] : null;
+      if (row && col?.field != null) row[col.field] = next;
+      if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+      const grid = td?.closest('[data-controller~="grid"]');
+      if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+        bubbles: true,
+        detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+      }));
+    }
+
+    if (isRange) {
+      const [a, b] = Array.isArray(value) ? value : [lo, hi];
+      const lowInput = h('input', {
+        type: 'range', class: 'sg-renderer-slider-input sg-renderer-slider-range-low',
+        min: lo, max: hi, step: sp, value: a,
+        disabled: ed ? null : '',
+        style: `accent-color: ${accent};`,
+      });
+      const highInput = h('input', {
+        type: 'range', class: 'sg-renderer-slider-input sg-renderer-slider-range-high',
+        min: lo, max: hi, step: sp, value: b,
+        disabled: ed ? null : '',
+        style: `accent-color: ${accent};`,
+      });
+      const label = h('span', { class: 'sg-renderer-slider-value' },
+        document.createTextNode(`${fmt(a)} – ${fmt(b)}`));
+      function commit() {
+        let l = Number(lowInput.value); let r = Number(highInput.value);
+        if (l > r) [l, r] = [r, l];
+        label.textContent = `${fmt(l)} – ${fmt(r)}`;
+        dispatch([l, r]);
+      }
+      function preview() {
+        let l = Number(lowInput.value); let r = Number(highInput.value);
+        if (l > r) [l, r] = [r, l];
+        label.textContent = `${fmt(l)} – ${fmt(r)}`;
+      }
+      [lowInput, highInput].forEach((i) => {
+        i.addEventListener('click', (e) => e.stopPropagation());
+        i.addEventListener('input', preview);
+        i.addEventListener('change', commit);
+      });
+      const stack = h('div', { class: 'sg-renderer-slider-range-stack' });
+      stack.append(lowInput, highInput);
+      wrap.append(stack);
+      if (show) wrap.append(label);
+    } else {
+      const n = Number(value);
+      const safe = Number.isFinite(n) ? n : lo;
+      const input = h('input', {
+        type: 'range', class: 'sg-renderer-slider-input',
+        min: lo, max: hi, step: sp, value: safe,
+        disabled: ed ? null : '',
+        style: `accent-color: ${accent};`,
+      });
+      const label = h('span', { class: 'sg-renderer-slider-value' },
+        document.createTextNode(fmt(safe)));
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('input', () => { label.textContent = fmt(Number(input.value)); });
+      input.addEventListener('change', () => dispatch(Number(input.value)));
+      wrap.append(input);
+      if (show) wrap.append(label);
+    }
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -4816,6 +4930,7 @@ registerRenderer('audio-attachment', audioAttachment());
 registerRenderer('select',           select());
 registerRenderer('multiselect',       multiselect());
 registerRenderer('combobox',          combobox());
+registerRenderer('slider',            slider());
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -4830,5 +4945,5 @@ export const renderers = {
   mention, expand, units, ipAddress, bsb, acn, tfn, medicare,
   audio, video, reactions, commentCount, ordinal, plural, empty, creditCard,
   loadingShimmer, audioAttachment,
-  select, multiselect, combobox,
+  select, multiselect, combobox, slider,
 };

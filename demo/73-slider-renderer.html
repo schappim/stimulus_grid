@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>73 — Slider / range editor | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>73 — Slider / range editor</h1>
+  <p class="lede">
+    Inline native <code>&lt;input type="range"&gt;</code> editor with a
+    value bubble. Drag the thumb to change the value live; release to
+    commit. <code>range: true</code> mode renders two thumbs and stores
+    a <code>[low, high]</code> array.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="160">Issue</th>
+          <th data-controller="header-cell" data-header-cell-field-value="confidence"
+              data-header-cell-cell-renderer-value="slider-confidence"
+              data-header-cell-width-value="240">Confidence</th>
+          <th data-controller="header-cell" data-header-cell-field-value="effort"
+              data-header-cell-cell-renderer-value="slider-effort"
+              data-header-cell-width-value="220">Effort (pts)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="budget"
+              data-header-cell-cell-renderer-value="slider-budget"
+              data-header-cell-width-value="260">Budget range ($k)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    Confidence uses <code>format: (v) =&gt; v + '%'</code>; Effort is a
+    discrete <code>step: 1, max: 13</code> Fibonacci-friendly scale;
+    Budget is range-mode storing <code>[low, high]</code>.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    registerRenderer('slider-confidence', renderers.slider({
+      min: 0, max: 100, step: 5,
+      format: (v) => `${v}%`,
+      color: '#10b981',
+    }));
+    registerRenderer('slider-effort', renderers.slider({
+      min: 0, max: 13, step: 1,
+      format: (v) => `${v} pts`,
+      color: '#f59e0b',
+    }));
+    registerRenderer('slider-budget', renderers.slider({
+      min: 0, max: 100, step: 5,
+      range: true,
+      format: (v) => `$${v}k`,
+      color: '#3b82f6',
+    }));
+
+    const data = [
+      { id: 1, name: 'Replace pgbouncer',            confidence: 80, effort: 5,  budget: [10, 30] },
+      { id: 2, name: 'OAuth rollout',                confidence: 60, effort: 8,  budget: [40, 60] },
+      { id: 3, name: 'Migrate to Postgres 16',       confidence: 45, effort: 13, budget: [60, 100] },
+      { id: 4, name: 'New onboarding emails',        confidence: 95, effort: 2,  budget: [0, 5]   },
+      { id: 5, name: 'Vendor SOC2 audit',            confidence: 70, effort: 3,  budget: [20, 40] },
+      { id: 6, name: 'Migrate webhook subscribers',  confidence: 30, effort: 8,  budget: [30, 80] },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(data), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => console.log('cell change:', e.detail));
+  </script>
+</body>
+</html>
