@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>35 — Audio attachment renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 520px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .tip ul { margin: 6px 0 0 18px; padding: 0; }
+    .tip li { margin: 3px 0; }
+    .meta-row { display:flex; gap:12px; align-items:center; margin: 10px 0 0;
+                color:#6b7280; font-size:12px; }
+    .meta-row .pill { background:#eef2ff; color:#3730a3; padding: 3px 8px;
+                      border-radius: 999px; font-weight:600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>35 — Audio attachment renderer</h1>
+  <p class="lede">
+    Call-recording column for a CRM-style log. Each cell renders as a
+    compact play-circle icon next to the filename;
+    <strong>double-click</strong> the icon (or single-click) to open a
+    popover with a play/pause toggle, a draggable scrub bar, current /
+    total time, and ±10s skip buttons. The popover uses
+    <a href="https://howlerjs.com/" target="_blank" rel="noopener">howler.js</a>
+    when present on <code>window.Howl</code> and falls back to the native
+    <code>&lt;audio&gt;</code> element otherwise — same UI either way.
+  </p>
+
+  <p class="lede">
+    The other columns are pulled from the
+    <a href="20-date-renderers.html">date renderers demo</a> —
+    <code>datetime</code> (when the call happened),
+    <code>duration</code> (call length), and <code>relative-time</code>
+    (last contact) — so you can see the renderer composing with the rest
+    of the built-in library.
+  </p>
+
+  <div class="meta-row">
+    <span class="pill" id="backend-pill">howler.js</span>
+    <span>Loaded from <code>cdnjs</code>. Remove the script tag and the
+      renderer transparently falls back to native <code>&lt;audio&gt;</code>.</span>
+  </div>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-row-height-value="40"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="170">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="called_at"
+              data-header-cell-cell-renderer-value="datetime"
+              data-header-cell-type-value="datetime"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="200">Called at</th>
+          <th data-controller="header-cell" data-header-cell-field-value="recording"
+              data-header-cell-cell-renderer-value="audio-attachment"
+              data-header-cell-width-value="270">Recording</th>
+          <th data-controller="header-cell" data-header-cell-field-value="duration_sec"
+              data-header-cell-cell-renderer-value="duration-clock"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="110">Length</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last_contact"
+              data-header-cell-cell-renderer-value="relative-time"
+              data-header-cell-type-value="datetime"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Last contact</th>
+          <th data-controller="header-cell" data-header-cell-field-value="outcome"
+              data-header-cell-cell-renderer-value="call-outcome"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Outcome</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Try this:</strong>
+    <ul>
+      <li><strong>Double-click</strong> any <em>Recording</em> icon (or single-click) — the player popover opens anchored to the cell.</li>
+      <li>Click anywhere on the scrub bar to seek; drag the thumb to scrub continuously.</li>
+      <li>Use <strong>← / →</strong> for 5s seeks while the scrub bar is focused (Shift = 30s), <strong>Home / End</strong> jump to start / end, <strong>Space</strong> plays / pauses.</li>
+      <li>Press <strong>Esc</strong> or click outside the popover to close it. Opening a second recording closes the first — only one player is active at a time.</li>
+      <li>Sort by <em>Length</em> or <em>Last contact</em> to see the recordings rearrange.</li>
+    </ul>
+  </div>
+
+  <!-- howler.js — optional but recommended for cross-browser consistency.
+       If you remove this <script> tag the renderer falls back to native
+       <audio> with no other changes. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const { registerRenderer, renderers } = StimulusGrid;
+
+    // Clock-style duration variant (M:SS / H:MM:SS) sourced from seconds —
+    // same recipe used in the date-renderers demo.
+    registerRenderer('duration-clock', renderers.duration({ unit: 'sec', style: 'clock' }));
+
+    // Small status pill for the call outcome column.
+    registerRenderer('call-outcome', renderers.statusPill({
+      'quoted':       'green',
+      'follow-up':    'yellow',
+      'no-answer':    'gray',
+      'voicemail':    'blue',
+      'closed-won':   'green',
+      'closed-lost':  'red',
+      'in-progress':  'indigo',
+    }));
+
+    // Reflect which audio backend the renderer will use — purely cosmetic.
+    document.getElementById('backend-pill').textContent =
+      (typeof window.Howl === 'function') ? 'howler.js' : 'native <audio>';
+
+    // Public-domain sample MP3s. In production, swap these for your own
+    // recordings (signed S3 URLs, Active Storage variants, etc.).
+    const SAMPLES = [
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+    ];
+
+    const now = Date.now();
+    const min = 60 * 1000, hr = 60 * min, day = 24 * hr;
+
+    function recording(url, calledAt, durationSec, opts = {}) {
+      // We pass a structured value to the audio-attachment renderer; the
+      // filename + byte_size + duration show through to the popover header
+      // before the audio's metadata loads.
+      const stamp = new Date(calledAt).toISOString().slice(0, 10);
+      return {
+        url,
+        filename: opts.filename || `call-${opts.shortName || 'recording'}-${stamp}.mp3`,
+        duration: durationSec,
+        byte_size: opts.byte_size || Math.round(durationSec * 32_000), // ~32 KB/s estimate
+      };
+    }
+
+    const ROWS = [
+      { id: 1, customer: 'Marcus Chen',  outcome: 'quoted',
+        called_at:    new Date(now - 12 * min).toISOString(),
+        last_contact: new Date(now - 12 * min).toISOString(),
+        duration_sec: 204,
+        recording: recording(SAMPLES[0], now - 12 * min, 204, { shortName: 'chen', byte_size: 3_280_000 }) },
+      { id: 2, customer: 'Priya Patel',  outcome: 'follow-up',
+        called_at:    new Date(now - 4  * hr).toISOString(),
+        last_contact: new Date(now - 4  * hr).toISOString(),
+        duration_sec: 528,
+        recording: recording(SAMPLES[1], now - 4 * hr, 528, { shortName: 'patel', byte_size: 8_900_000 }) },
+      { id: 3, customer: 'Astrid Hale',  outcome: 'closed-won',
+        called_at:    new Date(now - 26 * hr).toISOString(),
+        last_contact: new Date(now - 26 * hr).toISOString(),
+        duration_sec: 367,
+        recording: recording(SAMPLES[2], now - 26 * hr, 367, { shortName: 'hale', byte_size: 5_870_000 }) },
+      { id: 4, customer: 'Tomás Vega',   outcome: 'no-answer',
+        called_at:    new Date(now - 2  * day).toISOString(),
+        last_contact: new Date(now - 2  * day).toISOString(),
+        duration_sec: 18,
+        recording: recording(SAMPLES[3], now - 2 * day, 18,  { shortName: 'vega', byte_size: 290_000 }) },
+      { id: 5, customer: 'Lena Brooks',  outcome: 'voicemail',
+        called_at:    new Date(now - 3  * day).toISOString(),
+        last_contact: new Date(now - 3  * day).toISOString(),
+        duration_sec: 42,
+        recording: recording(SAMPLES[4], now - 3 * day, 42,  { shortName: 'brooks', byte_size: 680_000 }) },
+      { id: 6, customer: 'Jamal Owens',  outcome: 'in-progress',
+        called_at:    new Date(now - 5  * day).toISOString(),
+        last_contact: new Date(now - 5  * day).toISOString(),
+        duration_sec: 612,
+        recording: recording(SAMPLES[5], now - 5 * day, 612, { shortName: 'owens', byte_size: 9_790_000 }) },
+      { id: 7, customer: 'Mei Tanaka',   outcome: 'closed-lost',
+        called_at:    new Date(now - 11 * day).toISOString(),
+        last_contact: new Date(now - 11 * day).toISOString(),
+        duration_sec: 84,
+        recording: recording(SAMPLES[6], now - 11 * day, 84, { shortName: 'tanaka', byte_size: 1_340_000 }) },
+      { id: 8, customer: 'Sione Tuilagi', outcome: 'quoted',
+        called_at:    new Date(now - 23 * day).toISOString(),
+        last_contact: new Date(now - 23 * day).toISOString(),
+        duration_sec: 295,
+        recording: recording(SAMPLES[7], now - 23 * day, 295, { shortName: 'tuilagi', byte_size: 4_720_000 }) },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

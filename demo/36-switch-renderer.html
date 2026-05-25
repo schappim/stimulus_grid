@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>36 — Switch renderer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .log { margin-top: 12px; padding: 8px 12px; background: #0f172a; color: #d1d5db;
+           border-radius: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace;
+           max-height: 120px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>36 — Switch renderer (interactive)</h1>
+  <p class="lede">
+    On/off sliding pill toggle — same data contract as <code>checkbox</code>,
+    just a different control affordance. The middle (parked-thumb) state is
+    the null / "we don't know yet" position; first click moves it to <em>on</em>.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="200"
+              data-header-cell-sortable-value="true">Feature flag</th>
+          <th data-controller="header-cell" data-header-cell-field-value="enabled"
+              data-header-cell-cell-renderer-value="switch"
+              data-header-cell-width-value="100">Enabled</th>
+          <th data-controller="header-cell" data-header-cell-field-value="canary"
+              data-header-cell-cell-renderer-value="switch"
+              data-header-cell-width-value="90">Canary</th>
+          <th data-controller="header-cell" data-header-cell-field-value="owner"
+              data-header-cell-width-value="160"
+              data-header-cell-sortable-value="true">Owner</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rolled_out"
+              data-header-cell-cell-renderer-value="percent"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Rollout %</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>When to reach for <code>switch</code> vs <code>checkbox</code>:</strong>
+    a checkbox reads as "select this item / confirm this fact"; a switch reads
+    as "turn this thing on or off". Feature flags, notification preferences,
+    and settings panels almost always want the switch.
+  </div>
+
+  <div class="log" id="log">Click any switch to see the change event…</div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const ROWS = [
+      { id: 1, name: 'new_billing_engine',  owner: 'Astrid Hale',   enabled: true,  canary: false, rolled_out: 100 },
+      { id: 2, name: 'recsys_v3',            owner: 'Priya Patel',  enabled: true,  canary: true,  rolled_out: 35 },
+      { id: 3, name: 'multi_currency',       owner: 'Tomás Vega',   enabled: false, canary: false, rolled_out: 0 },
+      { id: 4, name: 'inline_pdf_export',    owner: 'Lena Brooks',  enabled: null,  canary: null,  rolled_out: 0 },
+      { id: 5, name: 'react_native_app',     owner: 'Marcus Chen',  enabled: false, canary: true,  rolled_out: 12 },
+      { id: 6, name: 'qr_invoice_payments',  owner: 'Mei Tanaka',   enabled: true,  canary: false, rolled_out: 80 },
+      { id: 7, name: 'realtime_collab',      owner: 'Jamal Owens',  enabled: null,  canary: true,  rolled_out: 0 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    const log  = document.getElementById('log');
+
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      const { colId, rowId, oldValue, newValue } = e.detail;
+      log.textContent = `[${new Date().toLocaleTimeString()}] row ${rowId} · ${colId}: ${oldValue} → ${newValue}\n` + log.textContent;
+    });
+  </script>
+</body>
+</html>

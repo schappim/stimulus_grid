@@ -2440,6 +2440,51 @@ function closeAudioPlayer() {
   activeAudioPlayer = null;
 }
 
+/* ---------- switch (interactive boolean, pill style) ----------------
+ *
+ * Same data semantics as `checkbox` — same `truthy` recogniser, same
+ * commit-and-dispatch contract — but rendered as a sliding on/off pill
+ * (iOS / Material). Useful when the column reads better as a control
+ * affordance ("Enabled? On / Off") than as a logical flag (`true /
+ * false`). Null / undefined renders the pill in a neutral middle
+ * position with a dimmed thumb. */
+export function switchRenderer({
+  truthy = defaultIsTruthy,
+  disabled = false,
+} = {}) {
+  return (ctx) => {
+    const { value, row, col, api, td } = ctx;
+    if (td) td.classList.add('sg-renderer-switch-cell');
+    const isNull = value == null || value === '';
+    const checked = !isNull && truthy(value);
+    const wrap = h('button', {
+      type: 'button',
+      class: `sg-renderer-switch${checked ? ' is-on' : ''}${isNull ? ' is-null' : ''}`,
+      role: 'switch',
+      'aria-checked': isNull ? 'mixed' : (checked ? 'true' : 'false'),
+      'aria-label': col?.field || 'toggle',
+      disabled: disabled ? '' : null,
+    });
+    wrap.append(h('span', { class: 'sg-renderer-switch-thumb', 'aria-hidden': 'true' }));
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (disabled) return;
+      // Null cycles to true on first click — feels more useful than cycling
+      // null → false → true (two clicks to "turn on" is annoying).
+      const next = isNull ? true : !checked;
+      const oldValue = row && col?.field != null ? row[col.field] : null;
+      if (row && col?.field != null) row[col.field] = next;
+      if (api?.applyTransaction) api.applyTransaction({ update: [row] });
+      const grid = td?.closest('[data-controller~="grid"]');
+      if (grid) grid.dispatchEvent(new CustomEvent('grid:cellValueChanged', {
+        bubbles: true,
+        detail: { rowId: row?.id ?? row?._sg_id, colId: col?.field, oldValue, newValue: next },
+      }));
+    });
+    return wrap;
+  };
+}
+
 // Pre-register every parameter-less built-in under its plain name so users can
 // reference them without an explicit registerRenderer() call at boot. Anything
 // that *needs* config (statusPill, currency w/ non-USD, percent w/ scale) is
@@ -2476,6 +2521,7 @@ registerRenderer('multi-line',     multiLine());
 registerRenderer('attachments',    attachments());
 registerRenderer('address-au',     addressAu());
 registerRenderer('checkbox',       checkbox());
+registerRenderer('switch',         switchRenderer());
 registerRenderer('audio-attachment', audioAttachment());
 
 export const renderers = {
@@ -2486,5 +2532,5 @@ export const renderers = {
   boolean, delta,
   truncate, copyable, image, colorSwatch, sparkline,
   heatmap, mask, highlight, multiLine, attachments, addressAu,
-  checkbox, audioAttachment,
+  checkbox, switch: switchRenderer, audioAttachment,
 };
