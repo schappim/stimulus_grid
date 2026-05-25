@@ -108,7 +108,9 @@ via `element.gridApi.setRowData([...])`.
 ## Screenshots
 
 **Spreadsheet-style cell selection** — click for an active cell, click-drag or
-shift-click for a range; `Cmd/Ctrl+C` copies the selection as TSV.
+shift-click for a range; `Cmd/Ctrl+C` copies the selection as TSV;
+`Cmd/Ctrl+V` pastes TSV back, parsing each cell through the column
+renderer's `parseValue` (a single value tiles across the selection).
 
 ![A block of cells selected by dragging, the active cell outlined and the range filled blue](docs/images/grid-cell-selection.png)
 
@@ -171,7 +173,7 @@ a clean right edge.
 Available after the `grid:ready` event. Highlights:
 
 - **Data:** `setRowData(rows)`, `getRowData()`, `applyTransaction({add,update,remove})`, `setRowCount(total)` / `getRowCount()` (server-side)
-- **Cell selection:** `getCellSelection()` (active + range), `getCellRangeValues()`, `getRangeAggregates()` (`{count,sum,avg,min,max}` for the current range, or `null`) — click for an active cell, drag/shift+click for a range, `Cmd/Ctrl+C` copies it as TSV
+- **Cell selection:** `getCellSelection()` (active + range), `getCellRangeValues()`, `getRangeAggregates()` (`{count,sum,avg,min,max}` for the current range, or `null`) — click for an active cell, drag/shift+click for a range, `Cmd/Ctrl+C` copies it as TSV, `Cmd/Ctrl+V` pastes back (each renderer's `copyValue` / `parseValue` keeps structured cells — selects, multi-selects, dates, JSON, addresses — round-trippable; rejected cells surface as `grid:pasteRejected`)
 - **Columns:** `setColumnDefs`, `getColumnDefs`, `setColumnVisible`, `setColumnPinned`, `setColumnWidth`, `moveColumn`, `autoSizeColumn`, `autoSizeAllColumns`, `sizeColumnsToFit`
 - **Sort:** `setSortModel`, `getSortModel`
 - **Filter:** `setFilterModel`, `getFilterModel`, `setColumnFilter`, `setQuickFilter`, `getQuickFilter`
