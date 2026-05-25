@@ -5500,6 +5500,7 @@ export function colorPicker({
   palette = DEFAULT_COLOR_PALETTE,
   shape = 'circle',
   showLabel = false,
+  size = 14,
   editable = true,
   empty = '—',
 } = {}) {
@@ -5509,6 +5510,7 @@ export function colorPicker({
     const pal = cfg.palette || palette;
     const sp = cfg.shape ?? shape;
     const sl = cfg.showLabel ?? showLabel;
+    const sz = cfg.size ?? size;
     const ed = cfg.editable ?? editable;
 
     if (td) {
@@ -5528,9 +5530,13 @@ export function colorPicker({
 
     if (isBlank(value)) return empty;
     const wrap = h('span', { class: 'sg-renderer-swatch' });
+    // .sg-renderer-swatch-chip in CSS intentionally has no fixed size — the
+    // colorSwatch renderer also sets width/height inline per-cell. Without
+    // these the chip collapses to a dot.
+    const extra = String(value).toLowerCase() === '#ffffff' ? ' border: 1px solid #d1d5db;' : '';
     wrap.append(h('span', {
       class: `sg-renderer-swatch-chip is-${sp}`,
-      style: `background: ${value}; ${value.toLowerCase() === '#ffffff' ? 'border: 1px solid #d1d5db;' : ''}`,
+      style: `width: ${sz}px; height: ${sz}px; background: ${value};${extra}`,
       title: value,
     }));
     if (sl) {
