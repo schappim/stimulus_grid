@@ -25,6 +25,12 @@
                      inner [data-controller="grid"] in the template is
                      auto-seeded from row.send(detail_rows_key)
     detail_row_height: minimum panel height in px (default 240)
+    tree_data: true|false (default false) — treat rows as a self-referential
+               parent_id tree; mutually exclusive with row groups / pivot
+    tree_parent_field: row field naming the parent's id (default "parent_id")
+    tree_display_field: column whose cell carries the indent + chevron
+                       (default: first non-gutter column)
+    tree_default_expanded: -1 all expanded · 0 only roots · N first-N levels
 %>
 <%
   resource     = grid.class.resource_name
@@ -90,6 +96,16 @@
   detail_rows_key   = local_assigns.fetch(:detail_rows_key, nil)
   detail_row_height = local_assigns.fetch(:detail_row_height, nil)
 
+  # Tree data: rows reference each other via parent_id (or whichever field
+  # tree_parent_field names). Mutually exclusive with row groups + pivot.
+  # The grid flattens the tree, decorates one column (tree_display_field)
+  # with an indent + chevron, and routes chevron clicks back through the
+  # public gridApi.
+  tree_data            = local_assigns.fetch(:tree_data, false)
+  tree_parent_field    = local_assigns.fetch(:tree_parent_field, nil)
+  tree_display_field   = local_assigns.fetch(:tree_display_field, nil)
+  tree_default_expanded = local_assigns.fetch(:tree_default_expanded, nil)
+
   # Client endpoints are built from the configured mount path (default "/grids"),
   # so namespacing the engine (e.g. StimulusGridRails.mount_path = "/admin/grids")
   # is reflected here without depending on the engine's route-helper name. :row_id
@@ -119,6 +135,10 @@
      <% if detail_template %>data-grid-detail-template-value="<%= detail_template %>"<% end %>
      <% if detail_rows_key %>data-grid-detail-rows-key-value="<%= detail_rows_key %>"<% end %>
      <% if detail_row_height %>data-grid-detail-row-height-value="<%= detail_row_height %>"<% end %>
+     data-grid-tree-data-value="<%= tree_data %>"
+     <% if tree_parent_field %>data-grid-tree-parent-field-value="<%= tree_parent_field %>"<% end %>
+     <% if tree_display_field %>data-grid-tree-display-field-value="<%= tree_display_field %>"<% end %>
+     <% if tree_default_expanded %>data-grid-tree-default-expanded-value="<%= tree_default_expanded %>"<% end %>
      data-grid-sync-server-side-value="<%= server_side %>"
      data-grid-sync-resource-value="<%= resource %>"
      data-grid-sync-cells-path-template-value="<%= "#{base}/:resource/:row_id/cells/:column" %>"

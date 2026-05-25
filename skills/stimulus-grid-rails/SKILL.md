@@ -346,6 +346,46 @@ Events bubble: when listening on the outer grid, scope handlers with
 `if (e.target !== grid) return` or the nested grid's `grid:ready` /
 `grid:rowDataChanged` will fire your outer handlers too.
 
+## Tree data (`acts_as_tree`-style `parent_id`)
+
+`tree_data: true` flattens a self-referential hierarchy: each row's
+`parent_id` (or whichever field `tree_parent_field` names) wires the
+tree, and the grid renders it as an indented list with chevrons on one
+configured column. Distinct from row groups (which synthesise a hierarchy
+from column values); here every row is a real entity.
+
+```ruby
+# Org chart fed straight from acts_as_tree / belongs_to :parent.
+class EmployeesController < ApplicationController
+  def index
+    @grid = EmployeeGrid.new(user: current_user)
+    @rows = Employee.order(:id)
+  end
+end
+```
+
+```erb
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid: @grid, rows: @rows,
+      tree_data:           true,
+      tree_parent_field:   "parent_id",
+      tree_display_field:  "name",
+      tree_default_expanded: -1,
+    } %>
+```
+
+Locals: `tree_data:`, `tree_parent_field:` (default `"parent_id"`),
+`tree_display_field:` (default: first non-gutter column),
+`tree_default_expanded:` (`-1` all · `0` only roots · `N` first-N levels).
+The grid class is unchanged from a flat list — columns + editability +
+broadcasts work the same way.
+
+Filter pulls a row's full ancestor chain in (so search results show the
+path), and a matching parent pulls its full subtree in. Sort entries
+reorder siblings within each parent — tree shape is preserved. Cycles,
+self-parents, and orphan rows become roots. Mutually exclusive with
+`row_group_cols` and `pivot_mode`.
+
 ## Pivot mode (with sortable pivot columns)
 
 `pivot_mode: true` reshapes the data into a pivot table — `row_group_cols`

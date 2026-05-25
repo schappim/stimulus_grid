@@ -59,6 +59,10 @@ export default class GridController extends Controller {
     detailTemplate:      { type: String,  default: '' },                                // id of a <template> cloned into each expanded detail row
     detailRowsKey:       { type: String,  default: '' },                                // master-row field holding the array of nested detail rows
     detailRowHeight:     { type: Number,  default: 240 },                              // CSS pixel height for the detail-row shell
+    treeData:            { type: Boolean, default: false },                            // treat rowData as a self-referential parent/child tree
+    treeParentField:     { type: String,  default: 'parent_id' },                       // row field naming the parent row's id (default 'parent_id')
+    treeDisplayField:    { type: String,  default: '' },                                // column whose cell carries the indent + chevron (default: first non-gutter col)
+    treeDefaultExpanded: { type: Number,  default: -1 },                               // -1 all expanded · 0 only roots · N first-N levels expanded
   };
 
   initialize() {
@@ -95,6 +99,9 @@ export default class GridController extends Controller {
     // gridApi handle per mounted nested detail grid, keyed by master row id.
     // Lets us cleanly tear them down on collapse / data refresh.
     this._detailGrids = new Map();
+    // Tree data: per-row expand/collapse overrides keyed by stringified row id.
+    // A row absent from this Map falls back to state.tree.defaultExpanded.
+    this._treeExpanded = new Map();
   }
 
   connect() {
@@ -124,6 +131,16 @@ export default class GridController extends Controller {
     this.state.pivot = {
       mode: !!this.pivotModeValue,
       cols: Array.isArray(this.pivotColsValue) ? this.pivotColsValue.slice() : [],
+    };
+
+    // Tree-data model: a self-referential parent_id hierarchy that doesn't
+    // depend on column-value grouping. Mutually exclusive with rowGroupCols
+    // and pivotMode (both assume a flat dataset).
+    this.state.tree = {
+      enabled: !!this.treeDataValue,
+      parentField: this.treeParentFieldValue || 'parent_id',
+      displayField: this.treeDisplayFieldValue || '',
+      defaultExpanded: this.treeDefaultExpandedValue,
     };
 
     // Snapshot any user-supplied initial markup before we restructure.
@@ -802,7 +819,7 @@ export default class GridController extends Controller {
     const dirty = this._dirty;
     this._dirty = new Set();
     // Anything affecting rows requires recomputing the display list.
-    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.has('group') || dirty.has('pivot') || dirty.size === 0) {
+    if (dirty.has('data') || dirty.has('filter') || dirty.has('sort') || dirty.has('page') || dirty.has('group') || dirty.has('pivot') || dirty.has('tree') || dirty.size === 0) {
       this._displayList = buildDisplayList({
         rowData: this.state.rowData,
         columnDefs: this.state.columnDefs,
@@ -817,9 +834,13 @@ export default class GridController extends Controller {
         isGroupExpanded: this._isGroupExpanded,
         pivotMode: this.state.pivot.mode,
         pivotCols: this.state.pivot.cols,
+        treeData: this.state.tree?.enabled,
+        treeParentField: this.state.tree?.parentField,
+        isTreeRowExpanded: this._isTreeRowExpanded,
+        getRowId: (r) => this._rowId(r),
       });
     }
-    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group') || dirty.has('pivot')) this._renderHeader();
+    if (dirty.has('columns') || dirty.has('sort') || dirty.has('filter') || dirty.has('selection') || dirty.has('group') || dirty.has('pivot') || dirty.has('tree')) this._renderHeader();
     this._renderBody();
     this._renderPagination();
     this._renderStatusBar();
@@ -1252,6 +1273,12 @@ export default class GridController extends Controller {
     const pin = this._pinOffsets();
     const selKeys = this._selKeys || { active: null, range: null };
     const rowKey = String(this._rowId(row));
+    // Tree-data metadata for this row (or null when treeData is off / row isn't in
+    // the current visible tree). Picked up once per row so we can decorate the
+    // tree column without re-checking inside the per-col loop.
+    const treeMeta = this._displayList?.treeMeta;
+    const treeInfo = treeMeta ? treeMeta.get(rowKey) : null;
+    const treeColField = treeInfo ? this._treeDisplayColField() : null;
     for (const col of cols) {
       const key = `${rowKey}:${col.field}`;
       const td = el('td', {
@@ -1324,7 +1351,38 @@ export default class GridController extends Controller {
       } else {
         this._renderCellContent(td, row, col);
       }
+      // Tree-data decoration: indent + (optional) expand chevron on the
+      // configured tree column. Done AFTER _renderCellContent so the chevron
+      // and indent sit alongside the cell's normal content (text / renderer).
+      if (treeInfo && col.field === treeColField) {
+        this._decorateTreeCell(td, treeInfo);
+      }
       tr.appendChild(td);
+    }
+  }
+
+  // Prepend an indent spacer + a chevron (when the row has children) to the
+  // tree column's <td>. The chevron carries data-tree-toggle so the body
+  // click handler can route it back to toggleTreeRow without conflicting
+  // with cell selection or row click handlers.
+  _decorateTreeCell(td, treeInfo) {
+    td.classList.add('sg-tree-cell');
+    td.setAttribute('data-tree-level', String(treeInfo.level));
+    td.style.paddingLeft = `${8 + treeInfo.level * 18}px`;
+    if (treeInfo.hasChildren) {
+      const caret = el('span', {
+        class: 'sg-tree-chevron',
+        'data-tree-toggle': 'true',
+        'data-expanded': treeInfo.expanded ? 'true' : 'false',
+        'aria-hidden': 'true',
+      });
+      caret.innerHTML = CHEVRON_SVG;
+      td.insertBefore(caret, td.firstChild);
+    } else {
+      // Leaf: empty spacer where the chevron would be so cell text aligns
+      // with siblings that DO have children.
+      const spacer = el('span', { class: 'sg-tree-chevron sg-tree-chevron-leaf', 'aria-hidden': 'true' });
+      td.insertBefore(spacer, td.firstChild);
     }
   }
 
@@ -2054,6 +2112,14 @@ export default class GridController extends Controller {
       this.toggleDetailRow(rowId);
       return;
     }
+    // Tree-data chevron: same idea — swallow the click so it doesn't trigger
+    // cell/row selection on the row whose tree state we're toggling.
+    const treeToggle = e.target.closest?.('[data-tree-toggle="true"]');
+    if (treeToggle && tr.contains(treeToggle)) {
+      const rowId = this._coerceRowId(tr.dataset.rowId);
+      this.toggleTreeRow(rowId);
+      return;
+    }
     // Clicks inside an active editor must not trigger selection. Selection
     // toggles render the row, which rebuilds the cell and destroys the live
     // <input>, so the user can't position their cursor in the editor.
@@ -2145,6 +2211,10 @@ export default class GridController extends Controller {
         return;   // don't start a cell selection from the gutter
       }
     }
+    // Tree chevron: a mousedown on it shouldn't also start a cell-selection
+    // drag on the underlying cell. The click handler picks up the actual
+    // toggle in _onBodyClick.
+    if (e.target.closest?.('[data-tree-toggle="true"]')) return;
     const cell = this._cellAt(e.target);
     if (!cell) return;
     const mod = e.metaKey || e.ctrlKey;
@@ -2756,6 +2826,104 @@ export default class GridController extends Controller {
     this.scheduleRender('columns');
   }
   isMasterDetail() { return !!this.masterDetailValue; }
+
+  // ----- Tree data (self-referential parent_id) -----
+  //
+  // The model layer flattens the tree and hands us back a Map of per-row
+  // metadata (level, hasChildren, expanded). The controller owns the
+  // expanded/collapsed override Map; the model just calls back through
+  // `isTreeRowExpanded` to ask which state a given row is in. Everything
+  // else (filter, sort, paginate) flows through the normal pipeline.
+
+  _isTreeRowExpanded = (rowId, level) => {
+    const key = String(rowId);
+    if (this._treeExpanded.has(key)) return this._treeExpanded.get(key);
+    const def = this.state.tree?.defaultExpanded ?? -1;
+    if (def < 0) return true;          // -1 → all expanded
+    return level < def;
+  };
+
+  toggleTreeRow(rowId) {
+    if (!this.state.tree?.enabled) return;
+    const key = String(rowId);
+    const cur = this._isTreeRowExpanded(key, 0);
+    this._treeExpanded.set(key, !cur);
+    this.scheduleRender('tree');
+    const row = this.state.rowData.find((r) => String(this._rowId(r)) === key);
+    emit(this.element, cur ? 'grid:treeRowCollapsed' : 'grid:treeRowExpanded', { rowId, row });
+  }
+
+  expandTreeRow(rowId) {
+    if (!this.state.tree?.enabled) return;
+    const key = String(rowId);
+    if (this._isTreeRowExpanded(key, 0)) return;
+    this._treeExpanded.set(key, true);
+    this.scheduleRender('tree');
+    const row = this.state.rowData.find((r) => String(this._rowId(r)) === key);
+    emit(this.element, 'grid:treeRowExpanded', { rowId, row });
+  }
+
+  collapseTreeRow(rowId) {
+    if (!this.state.tree?.enabled) return;
+    const key = String(rowId);
+    if (!this._isTreeRowExpanded(key, 0)) return;
+    this._treeExpanded.set(key, false);
+    this.scheduleRender('tree');
+    const row = this.state.rowData.find((r) => String(this._rowId(r)) === key);
+    emit(this.element, 'grid:treeRowCollapsed', { rowId, row });
+  }
+
+  expandAllTreeRows() {
+    if (!this.state.tree?.enabled) return;
+    this._treeExpanded.clear();           // back to default-expanded (-1 → all)
+    this.state.tree.defaultExpanded = -1;
+    this.scheduleRender('tree');
+  }
+
+  collapseAllTreeRows() {
+    if (!this.state.tree?.enabled) return;
+    this._treeExpanded.clear();
+    this.state.tree.defaultExpanded = 0;  // 0 → only roots, all children collapsed
+    this.scheduleRender('tree');
+  }
+
+  getTreeExpandedRowIds() {
+    // Stable, JSON-safe snapshot of rows currently explicitly expanded.
+    // Rows resting on defaultExpanded aren't listed (the snapshot is for
+    // "what did the user click open").
+    return Array.from(this._treeExpanded.entries())
+      .filter(([, v]) => v === true)
+      .map(([k]) => k);
+  }
+
+  setTreeData(on) {
+    const next = !!on;
+    if (this.treeDataValue === next) return;
+    this.treeDataValue = next;
+    this.state.tree.enabled = next;
+    if (!next) this._treeExpanded.clear();
+    this.scheduleRender('tree');
+    emit(this.element, 'grid:treeDataChanged', { treeData: next });
+  }
+  isTreeData() { return !!this.state.tree?.enabled; }
+
+  setTreeParentField(field) {
+    const next = field || 'parent_id';
+    if (this.state.tree.parentField === next) return;
+    this.state.tree.parentField = next;
+    this.treeParentFieldValue = next;
+    this.scheduleRender('tree');
+  }
+
+  // Which leaf column hosts the tree indent + chevron? Defaults to the first
+  // visible non-synthetic, non-gutter column when treeDisplayField isn't set.
+  _treeDisplayColField() {
+    const explicit = this.state.tree?.displayField;
+    if (explicit) return explicit;
+    const visible = this._visibleCols();
+    const first = visible.find((c) => !c._isCheckbox && !c._isRowNumber && !c._isGroupCol && !c._isMasterExpand);
+    return first?.field || null;
+  }
 
   // Build the detail <tr>: one cell spanning the full visible width, holding a
   // padded shell that hosts either a cloned <template> or a default summary

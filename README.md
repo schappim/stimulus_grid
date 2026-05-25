@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), and a public
+resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), and a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -151,6 +151,7 @@ column on the left. Collapsed here to country subtotals:
 | `pinned-bottom-row` | render a sticky bottom row holding grand totals over the currently filtered leaves, computed from `agg-funcs` (default `false`) |
 | `persist-key` | when non-empty, auto-save/restore column order, widths, pinning, visibility, row groups, pivot, value aggregations, header groups, sort, filter and pinned-bottom-row toggle to `localStorage["sgrid:" + persistKey]` |
 | `master-detail` / `detail-template` / `detail-rows-key` / `detail-row-height` | enable expandable detail rows beneath each master row. `detail-template` is the id of a `<template>` cloned into each detail panel; `detail-rows-key` is the master-row field holding the nested rows array (auto-seeds an inner `[data-controller="grid"]` inside the template). `detail-row-height` is the panel's minimum pixel height (default `240`) |
+| `tree-data` / `tree-parent-field` / `tree-display-field` / `tree-default-expanded` | treat `rowData` as a self-referential parent/child tree (default `false`). `tree-parent-field` names the row attribute holding the parent's id (default `"parent_id"`). `tree-display-field` picks which column hosts the indent + chevron (default: first non-gutter column). `tree-default-expanded` is `-1` all · `0` only roots · `N` first-N levels. Mutually exclusive with row groups + pivot mode |
 
 ## Column attributes (`data-header-cell-*-value`, on each `<th>`)
 
@@ -180,6 +181,7 @@ Available after the `grid:ready` event. Highlights:
 - **Pinned bottom row:** `setPinnedBottomRow(on)`, `isPinnedBottomRow()`
 - **Column state:** `getColumnState()` returns a JSON-serializable snapshot (cols + groups + pivot + values + sort + filter + pinnedBottomRow); `applyColumnState(state)` restores it; with `persist-key` set, `clearPersistedState()` wipes the saved blob and `getPersistKey()` reads back the key
 - **Master/detail:** `setMasterDetail(on)`, `isMasterDetail()`, `expandDetailRow(rowId)`, `collapseDetailRow(rowId)`, `toggleDetailRow(rowId)`, `expandAllDetails()`, `collapseAllDetails()`, `getDetailExpandedRowIds()`
+- **Tree data:** `setTreeData(on)`, `isTreeData()`, `setTreeParentField(field)`, `expandTreeRow(rowId)`, `collapseTreeRow(rowId)`, `toggleTreeRow(rowId)`, `expandAllTreeRows()`, `collapseAllTreeRows()`, `getTreeExpandedRowIds()`
 
 ## Events (dispatched on the grid element)
 
@@ -194,7 +196,9 @@ Available after the `grid:ready` event. Highlights:
 `grid:columnGroupsChanged` (`{columnGroups}`) ·
 `grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`) ·
 `grid:detailRowExpanded` / `grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
-`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`).
+`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`) ·
+`grid:treeRowExpanded` / `grid:treeRowCollapsed` (`{rowId, row}`) ·
+`grid:treeDataChanged` (`{treeData}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -623,6 +627,75 @@ template clones into the DOM and the inner grid (if any) has its
 See **[demo 16](demo/16-master-detail.html)** for the full orders ↔
 line-items example with `expand all` / `collapse all` controls and a
 status read-out.
+
+## Tree data (self-referential `parent_id`)
+
+Rows describe a real hierarchy via `parent_id` (org chart, file tree, BOM,
+comment thread). The grid flattens the tree into a display list, draws an
+indent + chevron on a configured **tree column**, and routes chevron
+clicks back through the public `gridApi`. Unlike **row grouping** (which
+synthesises a hierarchy from column values), tree data treats every row
+as a real entity — leaves and branches share the same column layout.
+
+![stimulus_grid in tree mode — an org chart with CEO at the root, two VPs indented one level, engineering managers under VP Engineering, and individual contributors at the deepest level; each row with children has a chevron pointing down; leaves reserve an empty chevron slot so all names line up](docs/images/grid-tree-data.png)
+
+```html
+<div data-controller="grid"
+     data-grid-tree-data-value="true"
+     data-grid-tree-parent-field-value="parent_id"
+     data-grid-tree-display-field-value="name">
+  <table>
+    <thead>
+      <tr>
+        <th data-controller="header-cell" data-header-cell-field-value="name"
+            data-header-cell-sortable-value="true">Name</th>
+        <th data-controller="header-cell" data-header-cell-field-value="title">Title</th>
+        <th data-controller="header-cell" data-header-cell-field-value="salary"
+            data-header-cell-type-value="number">Salary</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  const grid = document.querySelector("[data-controller='grid']")
+  grid.addEventListener("grid:ready", () => grid.gridApi.setRowData([
+    { id: 1, parent_id: null, name: "CEO",            title: "CEO",            salary: 480 },
+    { id: 2, parent_id: 1,    name: "VP Engineering", title: "VP Engineering", salary: 320 },
+    { id: 3, parent_id: 2,    name: "Senior Engineer", title: "Senior Engineer", salary: 175 },
+  ]))
+</script>
+```
+
+| Attribute | Value |
+|---|---|
+| `tree-data` | `true` to flatten `rowData` as a tree (default `false`). Mutually exclusive with row groups + pivot mode |
+| `tree-parent-field` | row field naming the parent row's id (default `"parent_id"`). A `null`/missing/self/orphan parent makes the row a root |
+| `tree-display-field` | which column hosts the indent + chevron (default: first non-gutter column) |
+| `tree-default-expanded` | `-1` all expanded · `0` only roots · `N` first-N levels expanded (default `-1`) |
+
+**Behaviour notes.**
+
+- **Filter pulls ancestors in.** When `quickFilter` or a column filter is
+  active, a matching row keeps its **full ancestor chain** visible (so the
+  user always sees the path to the match) and a matching *parent* keeps
+  its **entire subtree** visible (so "this folder matched" shows what's
+  inside). All kept rows are force-expanded for the duration of the filter.
+- **Sort works per-sibling-set.** A `sortModel` reorders children within
+  each parent — the tree shape is preserved.
+- **No row mutation.** Per-row tree metadata (level / hasChildren /
+  expanded) lives in a sidecar `treeMeta` Map keyed by row id;
+  `JSON.stringify(row)` won't surface any of the grid's scaffolding.
+- **Cycles + orphans handled.** A `parent_id` referring to a missing /
+  cyclical / self row makes the row a root.
+- **Mutually exclusive** with `row-group-cols` and `pivot-mode` — those
+  assume a flat dataset.
+
+**Events:** `grid:treeRowExpanded` / `grid:treeRowCollapsed` (`{rowId, row}`),
+`grid:treeDataChanged` (`{treeData}`). See **[demo 18](demo/18-tree-data.html)**
+for a worked org-chart example with expand/collapse, search-with-ancestor-
+preservation, and salary-desc sibling sort.
 
 ## Rails & Hotwire (`stimulus_grid_rails`)
 

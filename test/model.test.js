@@ -17,6 +17,7 @@ import {
   buildPivotModel,
   buildHeaderLayout,
   isPivotField,
+  buildTreeDisplayList,
 } from '../src/lib/model.js';
 
 /* ----------------------------------------------------------------------------
@@ -1048,5 +1049,213 @@ describe('buildHeaderLayout', () => {
     });
     expect(depth).toBe(1);
     expect(rows[0].map((c) => c.label)).toEqual(['Swim', 'Athl']);
+  });
+});
+
+/* ----------------------------------------------------------------------------
+ * Tree data (self-referential parent_id)
+ * ------------------------------------------------------------------------- */
+
+// A canonical org chart: 1 CEO → 2 VPs → engineers / designers / pm. Three
+// levels deep, with a cross-functional `bridge` orphan to exercise the
+// missing-parent path.
+const orgRows = [
+  { id: 1,  name: 'CEO',             parent_id: null, dept: 'Exec',    salary: 500 },
+  { id: 2,  name: 'VP Engineering',  parent_id: 1,    dept: 'Eng',     salary: 320 },
+  { id: 3,  name: 'VP Design',       parent_id: 1,    dept: 'Design',  salary: 310 },
+  { id: 4,  name: 'Eng Manager A',   parent_id: 2,    dept: 'Eng',     salary: 220 },
+  { id: 5,  name: 'Eng Manager B',   parent_id: 2,    dept: 'Eng',     salary: 215 },
+  { id: 6,  name: 'Engineer 1',      parent_id: 4,    dept: 'Eng',     salary: 150 },
+  { id: 7,  name: 'Engineer 2',      parent_id: 4,    dept: 'Eng',     salary: 155 },
+  { id: 8,  name: 'Engineer 3',      parent_id: 5,    dept: 'Eng',     salary: 145 },
+  { id: 9,  name: 'Senior Designer', parent_id: 3,    dept: 'Design',  salary: 200 },
+  { id: 10, name: 'Designer',        parent_id: 3,    dept: 'Design',  salary: 130 },
+  // Orphan: parent_id points at a non-existent row; should become a root.
+  { id: 11, name: 'Bridge PM',       parent_id: 99,   dept: 'PM',      salary: 180 },
+];
+const nameCol = { field: 'name', type: 'text' };
+const salaryCol = { field: 'salary', type: 'number' };
+
+describe('buildTreeDisplayList', () => {
+  it('flattens roots → children in DFS order with level annotations', () => {
+    const { displayList, treeMeta } = buildTreeDisplayList({ rows: orgRows });
+    const trail = displayList.map((r) => [r.id, treeMeta.get(String(r.id)).level]);
+    // CEO (level 0) → VP Eng (1) → Eng Mgrs + Engineers under each, then VP Design + designers, then orphan PM.
+    expect(trail[0]).toEqual([1, 0]);
+    expect(trail[trail.length - 1]).toEqual([11, 0]);             // orphan emitted as a root
+    // Engineers under Eng Mgr A are 1 deeper than the VPs.
+    const eng1 = treeMeta.get('6');
+    expect(eng1.level).toBe(3);
+    expect(eng1.hasChildren).toBe(false);
+    expect(eng1.expanded).toBe(false);
+  });
+
+  it('marks rows with children as hasChildren and otherwise leaves false', () => {
+    const { treeMeta } = buildTreeDisplayList({ rows: orgRows });
+    expect(treeMeta.get('1').hasChildren).toBe(true);     // CEO has 2 VPs
+    expect(treeMeta.get('2').hasChildren).toBe(true);     // VP Eng has managers
+    expect(treeMeta.get('6').hasChildren).toBe(false);    // Engineer 1 is a leaf
+    expect(treeMeta.get('11').hasChildren).toBe(false);   // orphan PM, no kids
+  });
+
+  it('honours isExpanded(): collapsed branches drop their descendants', () => {
+    const { displayList } = buildTreeDisplayList({
+      rows: orgRows,
+      isExpanded: (id) => id === '1' || id === '3',    // CEO + VP Design only
+    });
+    const names = displayList.map((r) => r.name);
+    // CEO + its 2 VPs + VP Design's two reports + orphan. NO Eng Mgrs / engineers.
+    expect(names).toEqual([
+      'CEO', 'VP Engineering', 'VP Design', 'Senior Designer', 'Designer',
+      'Bridge PM',
+    ]);
+  });
+
+  it('sorts siblings via siblingComparator at every level', () => {
+    const { displayList } = buildTreeDisplayList({
+      rows: orgRows,
+      siblingComparator: (a, b) => Number(b.salary) - Number(a.salary),   // desc by salary
+    });
+    // VPs reordered: VP Eng (320) before VP Design (310) — already the input
+    // order. The real test is engineers under Eng Mgr A: Engineer 2 (155) > Engineer 1 (150).
+    const idx = (id) => displayList.findIndex((r) => r.id === id);
+    expect(idx(7)).toBeLessThan(idx(6));
+    // Senior Designer (200) before Designer (130) under VP Design.
+    expect(idx(9)).toBeLessThan(idx(10));
+  });
+
+  it('filter: keeps matching row AND its ancestor chain (and its subtree)', () => {
+    // Match "Engineer 2" deep in the tree — should pull CEO → VP Eng → Eng Mgr A → Engineer 2.
+    const { displayList, treeMeta } = buildTreeDisplayList({
+      rows: orgRows,
+      passesFilter: (r) => r.name === 'Engineer 2',
+    });
+    const ids = displayList.map((r) => r.id);
+    expect(ids).toEqual([1, 2, 4, 7]);
+    // When the filter is active, every kept row is force-expanded so the match
+    // is reachable; user-supplied isExpanded is ignored on this path.
+    expect(treeMeta.get('1').expanded).toBe(true);
+    expect(treeMeta.get('2').expanded).toBe(true);
+    expect(treeMeta.get('4').expanded).toBe(true);
+  });
+
+  it('filter: a matching parent pulls its full subtree into view', () => {
+    // Match "VP Engineering" — its entire engineering subtree should be visible,
+    // plus its ancestor CEO. VP Design + designers should NOT appear.
+    const { displayList } = buildTreeDisplayList({
+      rows: orgRows,
+      passesFilter: (r) => r.name === 'VP Engineering',
+    });
+    const ids = new Set(displayList.map((r) => r.id));
+    // Ancestors: 1 (CEO). The matching row: 2 (VP Eng). Subtree: 4,5,6,7,8.
+    expect([...ids].sort((a, b) => a - b)).toEqual([1, 2, 4, 5, 6, 7, 8]);
+    // VP Design and its subtree must not appear when the filter only matched VP Eng.
+    expect(ids.has(3)).toBe(false);
+    expect(ids.has(9)).toBe(false);
+    expect(ids.has(10)).toBe(false);
+  });
+
+  it('handles cycles without infinite recursion (A → B → A)', () => {
+    const cyclic = [
+      { id: 1, parent_id: 2, name: 'A' },
+      { id: 2, parent_id: 1, name: 'B' },
+      { id: 3, parent_id: null, name: 'C' },
+    ];
+    // Neither A nor B has a "true root" — but the cycle should not loop;
+    // we still emit each row at least once and the lone root C appears.
+    const { displayList } = buildTreeDisplayList({ rows: cyclic });
+    const names = displayList.map((r) => r.name);
+    expect(names).toContain('C');
+    // The two cyclic rows are reachable through the cycle's first walk; the
+    // exact ordering is implementation-defined, but neither row should be
+    // emitted twice and the walk must terminate.
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('orphan rows (parent_id refers to a missing row) are treated as roots', () => {
+    const { displayList, treeMeta } = buildTreeDisplayList({ rows: orgRows });
+    // The orphan PM (id: 11) should sit at level 0 alongside the CEO.
+    expect(treeMeta.get('11').level).toBe(0);
+    expect(displayList.some((r) => r.id === 11)).toBe(true);
+  });
+
+  it('returns empty list + empty meta when given no rows', () => {
+    const { displayList, treeMeta } = buildTreeDisplayList({ rows: [] });
+    expect(displayList).toEqual([]);
+    expect(treeMeta.size).toBe(0);
+  });
+
+  it('respects a custom getRowId + parentField', () => {
+    const rows = [
+      { uid: 'a', parent: null, label: 'Root' },
+      { uid: 'b', parent: 'a',  label: 'Child' },
+    ];
+    const { displayList, treeMeta } = buildTreeDisplayList({
+      rows, getRowId: (r) => r.uid, parentField: 'parent',
+    });
+    expect(displayList.map((r) => r.label)).toEqual(['Root', 'Child']);
+    expect(treeMeta.get('b').level).toBe(1);
+  });
+});
+
+describe('buildDisplayList (tree data)', () => {
+  it('returns a tree-shaped page when state.treeData is true', () => {
+    const out = buildDisplayList({
+      columnDefs: [nameCol, salaryCol, { field: 'parent_id' }, { field: 'id' }],
+      rowData: orgRows,
+      filterModel: {}, quickFilter: '', sortModel: [],
+      pagination: { enabled: false },
+      treeData: true, treeParentField: 'parent_id',
+      getRowId: (r) => r.id,
+    });
+    expect(out.tree).toBe(true);
+    expect(out.treeData).toBe(true);
+    expect(out.treeMeta).toBeInstanceOf(Map);
+    // 11 source rows → 11 emitted (everything expanded by default).
+    expect(out.pageRows).toHaveLength(11);
+    expect(out.pageRows[0].id).toBe(1);
+  });
+
+  it('quickFilter on a tree pulls ancestors of matching rows into the page', () => {
+    const out = buildDisplayList({
+      columnDefs: [nameCol, { field: 'parent_id' }, { field: 'id' }],
+      rowData: orgRows,
+      filterModel: {}, quickFilter: 'designer', sortModel: [],
+      pagination: { enabled: false },
+      treeData: true, treeParentField: 'parent_id',
+      getRowId: (r) => r.id,
+    });
+    const ids = out.pageRows.map((r) => r.id);
+    // Senior Designer (id: 9) + Designer (id: 10) match "designer".
+    // Ancestor chain: CEO (1) → VP Design (3). Engineering branch suppressed.
+    expect(ids).toEqual([1, 3, 9, 10]);
+  });
+
+  it('sortModel reorders siblings inside each tree level', () => {
+    const out = buildDisplayList({
+      columnDefs: [nameCol, salaryCol, { field: 'parent_id' }, { field: 'id' }],
+      rowData: orgRows,
+      filterModel: {}, quickFilter: '',
+      sortModel: [{ colId: 'salary', sort: 'desc' }],
+      pagination: { enabled: false },
+      treeData: true, treeParentField: 'parent_id',
+      getRowId: (r) => r.id,
+    });
+    // Under Eng Mgr A: Engineer 2 (155) before Engineer 1 (150).
+    const idxOf = (id) => out.pageRows.findIndex((r) => r.id === id);
+    expect(idxOf(7)).toBeLessThan(idxOf(6));
+  });
+
+  it('falls back to the flat path when treeData is off', () => {
+    const out = buildDisplayList({
+      columnDefs: [nameCol, { field: 'parent_id' }, { field: 'id' }],
+      rowData: orgRows,
+      filterModel: {}, quickFilter: '', sortModel: [],
+      pagination: { enabled: false },
+      treeData: false,
+    });
+    expect(out.tree).toBeUndefined();
+    expect(out.treeMeta).toBeUndefined();
+    expect(out.pageRows).toHaveLength(orgRows.length);
   });
 });

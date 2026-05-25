@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>18 — Tree data (parent_id) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1140px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 580px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .toolbar button {
+      background:#fff; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px;
+      font: inherit; cursor:pointer;
+    }
+    .toolbar button:hover { background:#f3f4f6; }
+    .toolbar input[type="search"] {
+      padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 4px; font: inherit; min-width: 240px;
+    }
+    .sep { width:1px; align-self:stretch; background:#e5e7eb; margin:0 4px; }
+    .stat { color:#6b7280; font-size:13px; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff; border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+    .dept-Exec   { color:#7c2d12; font-weight:600; }
+    .dept-Eng    { color:#1e40af; }
+    .dept-Design { color:#9d174d; }
+    .dept-PM     { color:#065f46; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>18 — Tree data (self-referential <code>parent_id</code>)</h1>
+  <p class="lede">
+    Rows describe a real hierarchy via <code>parent_id</code> (org chart, file
+    tree, BOM, comment thread) — not a group synthesised from a column value.
+    The grid flattens the tree into a display list, draws an indent + chevron
+    on the configured tree column, and routes clicks back through the public
+    <code>gridApi</code>. Filter/sort still apply: search pulls a row's full
+    ancestor chain into view so the path to the match is preserved.
+  </p>
+
+  <div class="panel"
+       data-controller="grid"
+       data-grid-tree-data-value="true"
+       data-grid-tree-parent-field-value="parent_id"
+       data-grid-tree-display-field-value="name"
+       data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="320">Name</th>
+          <th data-controller="header-cell" data-header-cell-field-value="title"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="220">Title</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dept"
+              data-header-cell-sortable-value="true" data-header-cell-width-value="120">Dept</th>
+          <th data-controller="header-cell" data-header-cell-field-value="salary"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Salary (k)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reports"
+              data-header-cell-type-value="number" data-header-cell-sortable-value="true"
+              data-header-cell-width-value="100">Reports</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Search the tree (matches pull their parents in)…">
+    <span class="sep"></span>
+    <button id="expand-all">Expand all</button>
+    <button id="collapse-all">Collapse roots only</button>
+    <span class="sep"></span>
+    <span id="stat" class="stat">…</span>
+  </div>
+
+  <div class="tip">
+    <strong>How it's wired:</strong> rows carry <code>parent_id</code> →
+    <code>buildTreeDisplayList</code> walks the tree, sorts each sibling
+    group, and emits a flat display list plus a sidecar <code>treeMeta</code>
+    Map (no row mutation). The controller's renderer looks each row up and,
+    when there's a match, prepends an indent + chevron on the
+    <code>tree-display-field</code> column. Cycles and orphans are handled —
+    a row with a missing parent becomes a root.
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    // Org chart: CEO → VPs → managers → ICs. parent_id wires the hierarchy;
+    // the grid does the rest. Salaries / report counts are illustrative.
+    const ROWS = [
+      { id: 1,  parent_id: null, name: 'Astrid Hale',      title: 'CEO',              dept: 'Exec',   salary: 480, reports: 2 },
+      { id: 2,  parent_id: 1,    name: 'Marcus Chen',      title: 'VP Engineering',   dept: 'Eng',    salary: 320, reports: 4 },
+      { id: 3,  parent_id: 1,    name: 'Priya Patel',      title: 'VP Design',        dept: 'Design', salary: 305, reports: 3 },
+      { id: 4,  parent_id: 2,    name: 'Lia Martins',      title: 'Engineering Mgr',  dept: 'Eng',    salary: 215, reports: 3 },
+      { id: 5,  parent_id: 2,    name: 'Owen Park',        title: 'Engineering Mgr',  dept: 'Eng',    salary: 218, reports: 2 },
+      { id: 6,  parent_id: 4,    name: 'Sara Khan',        title: 'Senior Engineer',  dept: 'Eng',    salary: 175, reports: 0 },
+      { id: 7,  parent_id: 4,    name: 'Theo Yang',        title: 'Engineer',         dept: 'Eng',    salary: 145, reports: 0 },
+      { id: 8,  parent_id: 4,    name: 'Maya Reed',        title: 'Engineer',         dept: 'Eng',    salary: 142, reports: 0 },
+      { id: 9,  parent_id: 5,    name: 'Daniel Cruz',      title: 'Senior Engineer',  dept: 'Eng',    salary: 170, reports: 0 },
+      { id: 10, parent_id: 5,    name: 'Hannah Stein',     title: 'Engineer',         dept: 'Eng',    salary: 138, reports: 0 },
+      { id: 11, parent_id: 3,    name: 'Tomás Vega',       title: 'Design Lead',      dept: 'Design', salary: 195, reports: 1 },
+      { id: 12, parent_id: 11,   name: 'Lena Brooks',      title: 'Senior Designer',  dept: 'Design', salary: 155, reports: 0 },
+      { id: 13, parent_id: 3,    name: 'Mei Tanaka',       title: 'Researcher',       dept: 'Design', salary: 148, reports: 0 },
+      { id: 14, parent_id: 1,    name: 'Jamal Owens',      title: 'VP Product',       dept: 'PM',     salary: 290, reports: 2 },
+      { id: 15, parent_id: 14,   name: 'Iris Holloway',    title: 'Senior PM',        dept: 'PM',     salary: 175, reports: 0 },
+      { id: 16, parent_id: 14,   name: 'Noah Albright',    title: 'PM',               dept: 'PM',     salary: 140, reports: 0 },
+    ];
+
+    const grid = document.querySelector('.panel');
+    const stat = document.getElementById('stat');
+
+    grid.addEventListener('grid:ready', () => {
+      grid.gridApi.setRowData(ROWS);
+      updateStat();
+    }, { once: true });
+
+    ['grid:treeRowExpanded', 'grid:treeRowCollapsed', 'grid:rowDataChanged']
+      .forEach((evt) => grid.addEventListener(evt, updateStat));
+
+    function updateStat() {
+      const api = grid.gridApi;
+      if (!api) return;
+      const total = ROWS.length;
+      const visible = grid.querySelectorAll('tbody tr[data-row-id]').length;
+      const expanded = api.getTreeExpandedRowIds().length;
+      stat.textContent = `${visible} visible / ${total} total · ${expanded} explicitly expanded`;
+    }
+
+    // Quick-filter wired through the public API. Tree mode preserves
+    // ancestors of matches, so typing "designer" surfaces the full
+    // CEO → VP Design → Design Lead → Senior Designer path.
+    document.getElementById('search').addEventListener('input', (e) => {
+      grid.gridApi.setQuickFilter(e.target.value);
+      requestAnimationFrame(updateStat);
+    });
+
+    document.getElementById('expand-all').onclick    = () => { grid.gridApi.expandAllTreeRows();    requestAnimationFrame(updateStat); };
+    document.getElementById('collapse-all').onclick  = () => { grid.gridApi.collapseAllTreeRows();  requestAnimationFrame(updateStat); };
+  </script>
+</body>
+</html>

@@ -352,6 +352,77 @@ own broadcast stream.
 | `detail_rows_key:` | master-row attribute (or method) whose value (`as_json`'d) is serialised onto the row's `<tr>` and seeded into the inner grid |
 | `detail_row_height:` | minimum detail-panel height in px (default `240`) |
 
+## Tree data (`acts_as_tree`-style `parent_id`)
+
+`tree_data: true` flattens a self-referential hierarchy: each row carries a
+`parent_id` referencing another row's id, and the grid renders the result
+as an indented tree with expand/collapse chevrons on one column. The
+canonical Rails case is **`acts_as_tree`** or **Ancestry** models — org
+charts, categories, comment threads, file trees.
+
+```ruby
+# app/models/employee.rb
+class Employee < ApplicationRecord
+  belongs_to :manager, class_name: "Employee", foreign_key: :parent_id, optional: true
+  has_many :reports, class_name: "Employee", foreign_key: :parent_id
+end
+
+# app/controllers/employees_controller.rb
+class EmployeesController < ApplicationController
+  def index
+    @grid = EmployeeGrid.new(user: current_user)
+    @rows = Employee.order(:id)        # all rows; the grid does the tree-ification
+  end
+end
+```
+
+```erb
+<%# app/views/employees/index.html.erb %>
+<%= render partial: "stimulus_grid_rails/grids/grid", locals: {
+      grid: @grid, rows: @rows,
+      tree_data:           true,
+      tree_parent_field:   "parent_id",
+      tree_display_field:  "name",
+      tree_default_expanded: -1,         # -1 all · 0 only roots · N first-N levels
+    } %>
+```
+
+The grid class is unchanged from a flat list — declare your columns
+normally:
+
+```ruby
+class EmployeeGrid < ApplicationGrid
+  resource :employee
+  column :name,    type: :string, editable: true
+  column :title,   type: :string, editable: true
+  column :salary,  type: :integer, editable: true
+  column :dept,    type: :string
+end
+```
+
+| Local | Meaning |
+|---|---|
+| `tree_data:` | `true` to flatten as a tree; `false` (default) renders normally |
+| `tree_parent_field:` | the row attribute naming the parent's id (default `"parent_id"`) |
+| `tree_display_field:` | which column hosts the indent + chevron (default: first non-gutter column) |
+| `tree_default_expanded:` | `-1` all expanded · `0` only roots · `N` first-N levels |
+
+**Behaviour notes.**
+
+- Mutually exclusive with `row_group_cols` and `pivot_mode` (both assume a
+  flat dataset).
+- A quick-filter or column-filter match keeps the row's full ancestor
+  chain visible (so you see the path to the match) AND, when the match
+  hits a *parent*, keeps its full subtree visible. Kept rows are
+  force-expanded while filter is active.
+- Sort entries reorder siblings within each parent — the tree shape is
+  preserved.
+- Cycles, self-parents and orphan rows (parent_id pointing at a missing
+  id) become roots.
+- All Rails live-edit capabilities (validation, optimistic updates,
+  broadcasts, undo/redo) work unchanged — a tree row is a normal row
+  underneath.
+
 ## Pivot mode (with sortable pivot columns)
 
 `pivot_mode: true` reshapes the data into a pivot table — `row_group_cols`

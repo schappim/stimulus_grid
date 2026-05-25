@@ -611,6 +611,136 @@ export function buildHeaderLayout(visibleCols, opts = {}) {
   return { rows, depth };
 }
 
+/* -------- Tree data (self-referential parent_id) --------
+ *
+ * Flatten a tree built from `parent_id`-style references into a display list of
+ * the original row objects, plus a parallel `treeMeta` Map keyed by row id with
+ * `{ level, hasChildren, expanded }`. We DON'T mutate user rows — the metadata
+ * lives entirely in the sidecar Map, so callers can `JSON.stringify(row)` and
+ * not see any of our scaffolding.
+ *
+ * Filter: a row is "kept" when it directly passes `passesFilter(row)` OR any
+ * descendant does. So a search hit deep in the tree pulls its full ancestor
+ * chain into the visible list (the user always sees the path to the match) —
+ * AND, when a parent matches, its full subtree is shown (an intuitive "this
+ * folder matched, here's what's inside"). When `passesFilter` is `null`, every
+ * row passes (no filter active).
+ *
+ * Sort: siblings at each level are sorted by `siblingComparator(a, b)` when
+ * supplied; otherwise input order is preserved.
+ *
+ * Cycles: detected via an ancestor chain set; a row already on the current
+ * chain is skipped (so A → B → A produces a single A → B path, not infinite
+ * recursion). Rows whose `parent_id` points at a non-existent / self id are
+ * treated as roots.
+ */
+export function buildTreeDisplayList({
+  rows,
+  parentField = 'parent_id',
+  getRowId = (r) => r?.id,
+  passesFilter = null,
+  siblingComparator = null,
+  isExpanded = () => true,
+} = {}) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { displayList: [], treeMeta: new Map() };
+  }
+
+  const idOf = (r) => {
+    const id = getRowId(r);
+    return id == null ? null : String(id);
+  };
+
+  // Index rows by id and bucket children by parent id.
+  const byId = new Map();
+  for (const r of rows) {
+    const id = idOf(r);
+    if (id != null) byId.set(id, r);
+  }
+  const childrenByParent = new Map();
+  const roots = [];
+  for (const r of rows) {
+    const id = idOf(r);
+    const pid = r?.[parentField];
+    const pidStr = pid == null ? null : String(pid);
+    // Roots: missing parent, self-referential, or parent id that isn't in the
+    // dataset (orphan). Orphan-as-root means the user sees the row even if its
+    // parent is filtered out upstream or just missing.
+    if (pidStr == null || pidStr === id || !byId.has(pidStr)) {
+      roots.push(r);
+    } else {
+      if (!childrenByParent.has(pidStr)) childrenByParent.set(pidStr, []);
+      childrenByParent.get(pidStr).push(r);
+    }
+  }
+
+  // Pre-compute direct matches when a filter is active; otherwise everything
+  // is kept and we skip the per-row callback.
+  const directMatch = passesFilter
+    ? new Map(rows.map((r) => [idOf(r), !!passesFilter(r)]))
+    : null;
+
+  // descendantMatch[id] = does this row (or any descendant) directly match?
+  // Computed lazily with cycle-safe DFS. Used to keep parents of matches in.
+  const descendantMatch = new Map();
+  const computeDescendantMatch = (r, chain) => {
+    const id = idOf(r);
+    if (id == null) return false;
+    if (descendantMatch.has(id)) return descendantMatch.get(id);
+    if (chain.has(id)) return false;            // cycle — stop the walk
+    chain.add(id);
+    let m = !!directMatch.get(id);
+    const childs = childrenByParent.get(id) || [];
+    for (const c of childs) m = computeDescendantMatch(c, chain) || m;
+    chain.delete(id);
+    descendantMatch.set(id, m);
+    return m;
+  };
+  if (directMatch) {
+    for (const r of roots) computeDescendantMatch(r, new Set());
+  }
+
+  const displayList = [];
+  const treeMeta = new Map();
+
+  // `ancestorMatched` is true when any ancestor of the current row directly
+  // matched the filter — in that case its entire subtree is shown ("this
+  // folder matched, here's what's inside"). When false, we still show a row
+  // if it (or a descendant) matches, so the path to a deeper match is
+  // preserved.
+  const walk = (siblings, level, chain, ancestorMatched) => {
+    const kept = directMatch
+      ? siblings.filter((r) => ancestorMatched || descendantMatch.get(idOf(r)))
+      : siblings.slice();
+    if (siblingComparator) kept.sort(siblingComparator);
+    for (const r of kept) {
+      const id = idOf(r);
+      if (id == null || chain.has(id)) continue;
+      const allChildren = childrenByParent.get(id) || [];
+      const childAncestorMatched = ancestorMatched
+        || (directMatch ? !!directMatch.get(id) : false);
+      const visibleChildren = directMatch
+        ? allChildren.filter((c) => childAncestorMatched || descendantMatch.get(idOf(c)))
+        : allChildren;
+      const hasChildren = visibleChildren.length > 0;
+      // When a filter is active, force every kept row open so matches deeper
+      // in the tree stay reachable without manual expansion. Otherwise honour
+      // the caller's isExpanded predicate.
+      const expanded = hasChildren && (directMatch ? true : !!isExpanded(id, level));
+      treeMeta.set(id, { level, hasChildren, expanded });
+      displayList.push(r);
+      if (expanded) {
+        chain.add(id);
+        walk(visibleChildren, level + 1, chain, childAncestorMatched);
+        chain.delete(id);
+      }
+    }
+  };
+  walk(roots, 0, new Set(), false);
+
+  return { displayList, treeMeta };
+}
+
 /* -------- Top-level pipeline -------- */
 
 export function buildDisplayList(state) {
@@ -628,12 +758,78 @@ export function buildDisplayList(state) {
 
   const columnsByField = Object.fromEntries(state.columnDefs.map((c) => [c.field, c]));
   const visibleCols = state.columnDefs.filter((c) => !c.hidden && !c._isCheckbox);
+
+  // Tree data mode: rows reference each other via parent_id (or whichever
+  // field `treeParentField` names). The tree itself is the source of truth, so
+  // filter/sort run *inside* the flatten — filtering with ancestor preservation
+  // (matches pull their parents into view), sort applied per-sibling-set. This
+  // path is mutually exclusive with pivot mode and explicit rowGroupCols (both
+  // assume a flat dataset).
+  const groupFieldsForTree = (state.rowGroupCols || []).filter((f) => columnsByField[f]);
+  if (state.treeData && !state.pivotMode && groupFieldsForTree.length === 0) {
+    const parentField = state.treeParentField || 'parent_id';
+    const filterEntries = Object.entries(state.filterModel || {}).filter(([, f]) => f != null);
+    const q = state.quickFilter ? String(state.quickFilter).toLowerCase() : '';
+    const filterActive = filterEntries.length > 0 || q !== '';
+    const rowPasses = filterActive
+      ? (row) => {
+          for (const [colId, f] of filterEntries) {
+            const col = columnsByField[colId];
+            if (col && !passesFilter(row, col, f)) return false;
+          }
+          if (q) {
+            let any = false;
+            for (const col of visibleCols) {
+              const v = formatValue(row, col);
+              if (v && String(v).toLowerCase().includes(q)) { any = true; break; }
+            }
+            if (!any) return false;
+          }
+          return true;
+        }
+      : null;
+    const sortEntries = Array.isArray(state.sortModel) ? state.sortModel : [];
+    const siblingComparator = sortEntries.length
+      ? (a, b) => {
+          for (const { colId, sort } of sortEntries) {
+            const col = columnsByField[colId];
+            if (!col) continue;
+            const va = getValue(a, col);
+            const vb = getValue(b, col);
+            const cmp = typeof col.comparator === 'function'
+              ? col.comparator(va, vb, a, b)
+              : defaultComparator(va, vb, col.type);
+            if (cmp !== 0) return sort === 'desc' ? -cmp : cmp;
+          }
+          return 0;
+        }
+      : null;
+    const getRowId = state.getRowId || ((r) => r?.id);
+    const { displayList, treeMeta } = buildTreeDisplayList({
+      rows: state.rowData,
+      parentField,
+      getRowId,
+      passesFilter: rowPasses,
+      siblingComparator,
+      isExpanded: state.isTreeRowExpanded || (() => true),
+    });
+    const paged = applyPagination(displayList, state.pagination);
+    return {
+      tree: true,
+      treeData: true,
+      treeMeta,
+      treeParentField: parentField,
+      filteredSorted: displayList,
+      ...paged,
+    };
+  }
+
   let rows = state.rowData;
   rows = applyFilters(rows, state.filterModel, columnsByField);
   rows = applyQuickFilter(rows, state.quickFilter, visibleCols);
   rows = applySort(rows, state.sortModel, columnsByField);
 
-  const groupFields = (state.rowGroupCols || []).filter((f) => columnsByField[f]);
+  const groupFields = groupFieldsForTree;
 
   // Pivot mode: reshape into a wide layout, with rowGroupCols on the vertical
   // axis and unique pivot combos on the horizontal. Requires at least one

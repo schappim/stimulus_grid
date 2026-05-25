@@ -112,6 +112,17 @@ export function createGridApi(grid) {
     setPinnedBottomRow(on) { grid.setPinnedBottomRow(on); },
     isPinnedBottomRow() { return grid.isPinnedBottomRow(); },
 
+    // ---- Tree data (self-referential parent_id) ----
+    setTreeData(on) { grid.setTreeData(on); },
+    isTreeData() { return grid.isTreeData(); },
+    setTreeParentField(field) { grid.setTreeParentField(field); },
+    expandTreeRow(rowId) { grid.expandTreeRow(rowId); },
+    collapseTreeRow(rowId) { grid.collapseTreeRow(rowId); },
+    toggleTreeRow(rowId) { grid.toggleTreeRow(rowId); },
+    expandAllTreeRows() { grid.expandAllTreeRows(); },
+    collapseAllTreeRows() { grid.collapseAllTreeRows(); },
+    getTreeExpandedRowIds() { return grid.getTreeExpandedRowIds(); },
+
     // ---- Master/detail ----
     setMasterDetail(on) { grid.setMasterDetail(on); },
     isMasterDetail() { return grid.isMasterDetail(); },

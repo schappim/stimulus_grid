@@ -80,7 +80,8 @@ Each row needs a stable id. Default field is `id`; override with
 `data-grid-column-groups-value` (JSON array of multi-row header groups: `[{headerName, children:[field,...]}]`) ·
 `data-grid-pinned-bottom-row-value` (default `false` — sticky bottom row with grand totals computed from `agg-funcs`) ·
 `data-grid-persist-key-value` (default `""`; when set, the grid auto-saves/restores its layout to `localStorage["sgrid:" + persistKey]`) ·
-`data-grid-master-detail-value` (default `false` — enable expandable detail rows) · `data-grid-detail-template-value` (id of a `<template>` cloned into each detail panel) · `data-grid-detail-rows-key-value` (master-row field holding nested rows; auto-seeds an inner `[data-controller="grid"]` inside the template) · `data-grid-detail-row-height-value` (minimum panel height in px, default `240`).
+`data-grid-master-detail-value` (default `false` — enable expandable detail rows) · `data-grid-detail-template-value` (id of a `<template>` cloned into each detail panel) · `data-grid-detail-rows-key-value` (master-row field holding nested rows; auto-seeds an inner `[data-controller="grid"]` inside the template) · `data-grid-detail-row-height-value` (minimum panel height in px, default `240`) ·
+`data-grid-tree-data-value` (default `false` — treat `rowData` as a self-referential `parent_id` tree) · `data-grid-tree-parent-field-value` (default `"parent_id"`) · `data-grid-tree-display-field-value` (which column hosts the indent + chevron; default first non-gutter col) · `data-grid-tree-default-expanded-value` (`-1` all · `0` only roots · `N` first-N levels).
 
 ## Column attributes (on each `<th data-controller="header-cell">`)
 
@@ -119,6 +120,9 @@ api.getColumnState()                                             // JSON-seriali
 api.applyColumnState(state); api.clearPersistedState()           // restore + wipe the localStorage blob
 api.setMasterDetail(true); api.expandDetailRow(rowId)             // toggle detail panels per master row
 api.toggleDetailRow(rowId); api.collapseAllDetails(); api.getDetailExpandedRowIds()
+api.setTreeData(true); api.setTreeParentField("parent_id")        // self-referential tree (org chart, file tree)
+api.expandTreeRow(rowId); api.toggleTreeRow(rowId)
+api.expandAllTreeRows(); api.collapseAllTreeRows(); api.getTreeExpandedRowIds()
 ```
 
 `applyTransaction` matches rows by id — pass objects carrying the same id type as
@@ -138,7 +142,9 @@ status-bar aggregates change) · `grid:filterChanged` · `grid:sortChanged` ·
 `grid:columnValueChanged` (`{valueCols}`) · `grid:columnGroupsChanged` (`{columnGroups}`) ·
 `grid:columnMenuOpened` (`{colId}`) · `grid:columnStateApplied` (`{state}`) ·
 `grid:detailRowExpanded`/`grid:detailRowCollapsed` (`{rowId, masterRow}`) ·
-`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`).
+`grid:detailRowMounted` (`{rowId, masterRow, detailEl, nestedGridApi}`) ·
+`grid:treeRowExpanded`/`grid:treeRowCollapsed` (`{rowId, row}`) ·
+`grid:treeDataChanged` (`{treeData}`).
 
 ```js
 grid.addEventListener("grid:ready", (e) => e.detail.api.setRowData(rows))
@@ -434,6 +440,48 @@ api.expandDetailRow(orderId); api.toggleDetailRow(orderId)
 api.expandAllDetails(); api.collapseAllDetails()
 api.getDetailExpandedRowIds()
 ```
+
+## Tree data (self-referential `parent_id`)
+
+`tree-data` flattens rows whose `parent_id` (or whichever field
+`tree-parent-field` names) wires the hierarchy — org charts, file trees,
+BOMs, comment threads. Distinct from row grouping (which synthesises a
+hierarchy from column values); here each row is a real entity. Leaves and
+branches share the same column layout.
+
+```html
+<div data-controller="grid"
+     data-grid-tree-data-value="true"
+     data-grid-tree-parent-field-value="parent_id"
+     data-grid-tree-display-field-value="name">
+```
+
+```js
+api.setTreeData(true); api.setTreeParentField("parent_id")
+api.expandTreeRow(rowId); api.toggleTreeRow(rowId)
+api.expandAllTreeRows(); api.collapseAllTreeRows()
+api.getTreeExpandedRowIds()
+```
+
+- The configured `tree-display-field` column gets an indent + chevron per
+  row; leaves reserve an empty chevron slot so columns align across rows.
+  Default is the first non-gutter column.
+- `tree-default-expanded`: `-1` all expanded · `0` only roots · `N` first-N levels.
+- **Filter behaviour:** a quick-filter or column-filter match keeps the
+  row's full ancestor chain visible (you always see the path to the
+  match), and a matching parent keeps its full subtree visible. Kept rows
+  are force-expanded while a filter is active.
+- **Sort:** `sortModel` reorders siblings inside each parent; tree shape
+  is preserved.
+- **No row mutation.** Tree metadata (level / hasChildren / expanded)
+  lives in a sidecar `treeMeta` Map on the display list; user rows stay
+  clean for `JSON.stringify`.
+- **Cycles + orphans** are tolerated: a missing/cyclic/self parent makes
+  the row a root.
+- **Mutually exclusive** with `row-group-cols` and `pivot-mode` — both
+  assume a flat dataset.
+- Events: `grid:treeRowExpanded`/`grid:treeRowCollapsed`
+  (`{rowId, row}`), `grid:treeDataChanged` (`{treeData}`).
 
 ## Gotchas
 
