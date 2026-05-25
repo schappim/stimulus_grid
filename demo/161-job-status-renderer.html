@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>161 — Job status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>161 — Job status (FSM workflow pill)</h1>
+  <p class="lede">
+    The canonical tradie workflow:
+    <em>quoted → scheduled → dispatched → on-site → completed → invoiced
+    → paid</em>, plus off-path states <em>on-hold</em>, <em>cancelled</em>,
+    <em>no-show</em>. Built on <code>statusPill</code>, so colour map and
+    icons can be overridden per app.
+  </p>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="job-status"
+              data-header-cell-width-value="200">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="160">Tech</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id: 1, ref: 'J-1042', customer: 'Bondi Pavilion',  status: 'quoted',     tech: '—' },
+      { id: 2, ref: 'J-1043', customer: 'Vega Studio',     status: 'scheduled',  tech: 'Astrid Hale' },
+      { id: 3, ref: 'J-1044', customer: 'Coogee Holdings', status: 'dispatched', tech: 'Marcus Chen' },
+      { id: 4, ref: 'J-1045', customer: 'Manly Reno Co',   status: 'on-site',    tech: 'Priya Patel' },
+      { id: 5, ref: 'J-1046', customer: 'Glebe Builders',  status: 'completed',  tech: 'Jamal Owens' },
+      { id: 6, ref: 'J-1047', customer: 'Pyrmont Pubs',    status: 'invoiced',   tech: 'Lena Brooks' },
+      { id: 7, ref: 'J-1048', customer: 'Newtown Bakery',  status: 'paid',       tech: 'Tomás Vega' },
+      { id: 8, ref: 'J-1049', customer: 'Surry Hills Cafe',status: 'on-hold',    tech: 'Astrid Hale' },
+      { id: 9, ref: 'J-1050', customer: 'Mosman Doctors',  status: 'cancelled',  tech: '—' },
+      { id:10, ref: 'J-1051', customer: 'Annandale Yoga',  status: 'no-show',    tech: 'Marcus Chen' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>

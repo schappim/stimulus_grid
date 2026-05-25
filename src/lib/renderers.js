@@ -9159,6 +9159,27 @@ export function hbcfCert(opts = {}) {
   return complianceCard({ prefix: 'HBCF', ...opts });
 }
 
+/* ---------- AU FSM dispatch / job workflow renderers ----------------
+ *
+ * Job lifecycle pills, customer-promised arrival windows, route
+ * positions, milestone progress claims, defects, invoice status — the
+ * vocabulary of every tradie dispatch board. */
+
+// Job lifecycle status pill. Canonical workflow:
+//   quoted → scheduled → dispatched → on-site → completed → invoiced → paid
+// plus off-path states: on-hold / cancelled / no-show.
+export function jobStatus() {
+  return statusPill({
+    quoted: 'gray', scheduled: 'blue', dispatched: 'indigo', 'on-site': 'purple',
+    completed: 'green', invoiced: 'orange', paid: 'green',
+    'on-hold': 'yellow', cancelled: 'red', 'no-show': 'red',
+  }, {
+    quoted: 'circle', scheduled: 'clock', dispatched: 'truck', 'on-site': 'dot',
+    completed: 'check-circle', invoiced: 'cart', paid: 'check-circle',
+    'on-hold': 'clock', cancelled: 'x-circle', 'no-show': 'alert',
+  });
+}
+
 /* ---------- insurance-cert ----------------------------------------
  *
  * Insurance Certificate of Currency. Shape differs from the other
@@ -9357,6 +9378,7 @@ registerRenderer('insurance-cert',    insuranceCert());
 registerRenderer('gst-status',        gstStatus());
 registerRenderer('abn-status',        abnStatus());
 registerRenderer('hbcf-cert',         hbcfCert());
+registerRenderer('job-status',        jobStatus());
 
 /* ---------- built-in clipboard wiring -------------------------------
  *
@@ -9924,6 +9946,7 @@ wireBuiltin('insurance-cert', clip.json);
 wireBuiltin('gst-status',     clip.text);
 wireBuiltin('abn-status',     clip.text);
 wireBuiltin('hbcf-cert',      clip.json);
+wireBuiltin('job-status',     clip.text);
 
 export const renderers = {
   email, url, phone, currency, percent, progressBar, starRating, tags,
@@ -9958,4 +9981,5 @@ export const renderers = {
   qbccLicence, vbaLicence, gasCertificate, asbestosLicence, refrigerantLicence,
   poolSafetyCert, testAndTag, insuranceCert,
   gstStatus, abnStatus, hbcfCert,
+  jobStatus,
 };
