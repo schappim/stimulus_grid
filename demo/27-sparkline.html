@@ -78,7 +78,7 @@
     StimulusGrid.start();
     const { registerRenderer, renderers } = StimulusGrid;
     registerRenderer('spark-area', renderers.sparkline({ type: 'area' }));
-    registerRenderer('spark-bar',  renderers.sparkline({ type: 'bar', baseline: 0 }));
+    registerRenderer('spark-bar',  renderers.sparkline({ type: 'bar' }));   // auto-scale (default)
     registerRenderer('spark-red',  renderers.sparkline({ type: 'area', color: 'red' }));
 
     // Deterministic-ish sample series so the screenshot is stable.
@@ -92,21 +92,26 @@
       return out;
     };
 
+    // Weekly bars are short (8 points) and meant to read at a glance, so we
+    // explicitly hand them a noticeable up/down/up shape — not raw "noise
+    // around the mean" data that would render as seven similar columns.
+    const weekly = (...vals) => vals;
+
     const ROWS = [
       { id: 1, metric: 'Active users',     current: 18420,  trend: series(30, 12, 800, 17000),  trend_area: series(30, 12, 800, 17000),
-        trend_bar: series(8, 12, 800, 17000), trend_red: series(30, 7, 6, 12),  delta_pct: 4.2 },
+        trend_bar: weekly(12200, 13100, 14900, 13400, 16200, 17900, 17400, 18420), trend_red: series(30, 7, 6, 12),  delta_pct: 4.2 },
       { id: 2, metric: 'MRR',              current: 184000, trend: series(30, 88, 6000, 170000), trend_area: series(30, 88, 6000, 170000),
-        trend_bar: series(8, 88, 6000, 170000), trend_red: series(30, 33, 4, 8), delta_pct: 2.4 },
+        trend_bar: weekly(155000, 158000, 161000, 168000, 174000, 178000, 181000, 184000), trend_red: series(30, 33, 4, 8), delta_pct: 2.4 },
       { id: 3, metric: 'Trial signups',    current: 1380,   trend: series(30, 240, 120, 1100),   trend_area: series(30, 240, 120, 1100),
-        trend_bar: series(8, 240, 120, 1100), trend_red: series(30, 99, 3, 5),   delta_pct: 12.8 },
+        trend_bar: weekly(820, 740, 900, 1050, 1180, 980, 1240, 1380), trend_red: series(30, 99, 3, 5),   delta_pct: 12.8 },
       { id: 4, metric: 'Conversion %',     current: 4.2,    trend: series(30, 5, 1.1, 4.0),     trend_area: series(30, 5, 1.1, 4.0),
-        trend_bar: series(8, 5, 1.1, 4.0),  trend_red: series(30, 14, 8, 14),   delta_pct: -0.6 },
+        trend_bar: weekly(5.4, 5.1, 4.8, 4.6, 4.4, 4.5, 4.3, 4.2),     trend_red: series(30, 14, 8, 14),   delta_pct: -0.6 },
       { id: 5, metric: 'Error rate',       current: 0.04,   trend: series(30, 18, 3, 8),         trend_area: series(30, 18, 3, 8),
-        trend_bar: series(8, 18, 3, 8),    trend_red: series(30, 1, 30, 40),    delta_pct: -23.0 },
+        trend_bar: weekly(18, 22, 17, 13, 11, 8, 5, 4),                trend_red: series(30, 1, 30, 40),    delta_pct: -23.0 },
       { id: 6, metric: 'Avg response (ms)', current: 142,   trend: series(30, 320, 22, 140),    trend_area: series(30, 320, 22, 140),
-        trend_bar: series(8, 320, 22, 140), trend_red: series(30, 41, 18, 30),  delta_pct: -0.4 },
+        trend_bar: weekly(168, 172, 158, 161, 149, 144, 138, 142),     trend_red: series(30, 41, 18, 30),  delta_pct: -0.4 },
       { id: 7, metric: 'Self-serve cancels', current: 92,   trend: series(30, 77, 18, 95),     trend_area: series(30, 77, 18, 95),
-        trend_bar: series(8, 77, 18, 95),   trend_red: series(30, 51, 22, 55),  delta_pct: -8.0 },
+        trend_bar: weekly(122, 138, 116, 104, 98, 95, 88, 92),         trend_red: series(30, 51, 22, 55),  delta_pct: -8.0 },
     ];
 
     const grid = document.querySelector('.panel');
