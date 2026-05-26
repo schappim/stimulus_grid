@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>222 — Stock-level pill | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Stock-level pill — where the item lives right now, plus quantity.
+       Critical for pre-job briefings: 'is the part in the van or do we
+       need to swing past the warehouse?' */
+    .stk {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .stk .loc {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; font-size: 11px;
+    }
+    .stk .qty {
+      padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(0,0,0,.07);
+      font-variant-numeric: tabular-nums;
+    }
+    .stk[data-loc="van"]    .loc { background:#16a34a; }
+    .stk[data-loc="van"]        { background:#dcfce7; color:#166534; }
+    .stk[data-loc="wh"]     .loc { background:#0284c7; }
+    .stk[data-loc="wh"]         { background:#e0f2fe; color:#075985; }
+    .stk[data-loc="on-order"] .loc { background:#7c3aed; }
+    .stk[data-loc="on-order"]    { background:#f3e8ff; color:#6b21a8; }
+    .stk[data-loc="oos"]    .loc { background:#dc2626; }
+    .stk[data-loc="oos"]        { background:#fee2e2; color:#991b1b; }
+    .stk[data-loc="branch"] .loc { background:#ea580c; }
+    .stk[data-loc="branch"]     { background:#ffedd5; color:#7c2d12; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>222 — Stock-level pill</h1>
+  <p class="lede">
+    Where the item is right now, plus the quantity at that location.
+    <em>Van</em> = on the truck for immediate use; <em>Warehouse</em> =
+    central store; <em>Branch</em> = at the supplier's branch on call;
+    <em>On order</em> = inbound; <em>Out of stock</em> = need to substitute.
+  </p>
+
+  <template id="stk-renderer">
+    <span class="stk" data-bind-attr="data-loc">
+      <span class="loc" data-bind="locLabel"></span>
+      <span class="qty" data-bind="qtyLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="120">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="320">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="location"
+              data-header-cell-cell-renderer-value="stk-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Stock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="qty"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Qty</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reorderAt"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Reorder @</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Track location and quantity in separate fields — a saved view of
+    <em>"Below reorder point"</em> just compares <code>qty &lt; reorderAt</code>
+    regardless of where the stock lives.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = {
+      van:'Van', wh:'Warehouse', branch:'Branch', 'on-order':'On order', oos:'OOS',
+    };
+    const derive = (row) => ({
+      ...row,
+      locLabel: LABEL[row.location] ?? row.location,
+      qtyLabel: row.qty != null ? String(row.qty) : '—',
+    });
+    const SEED = [
+      { id:1, sku:'PVC-DWV-100-90',  part:'100mm DWV 90° bend',            location:'van',     qty:14, reorderAt:8 },
+      { id:2, sku:'GPO-DBL-WHT',     part:'Clipsal C2025 double GPO',      location:'van',     qty: 4, reorderAt:6 },
+      { id:3, sku:'RCBO-SP-16A',     part:'NHP RCBO 1P+N 16A 30mA',        location:'wh',      qty:22, reorderAt:6 },
+      { id:4, sku:'COP-15-X-30',     part:'15mm copper x 3m straight',     location:'wh',      qty:60, reorderAt:20 },
+      { id:5, sku:'TPS-2.5MM-100',   part:'TPS 2.5mm² flat 100m drum',     location:'on-order',qty: 0, reorderAt:4 },
+      { id:6, sku:'GAS-RG10',        part:'Refrigerant R-410A 10kg cylinder', location:'branch', qty:3, reorderAt:2 },
+      { id:7, sku:'SILVERSEAL-280',  part:'Sika MS Polymer 280ml white',   location:'oos',     qty: 0, reorderAt:6 },
+      { id:8, sku:'BRACKETS-Z-50',   part:'Z-bracket 50mm galv',           location:'van',     qty:38, reorderAt:20 },
+      { id:9, sku:'COC-PT-PAD',      part:'Carbon-copy CoC pad',           location:'wh',      qty:12, reorderAt:4 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['location','qty'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
