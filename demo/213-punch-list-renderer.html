@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>213 — Punch-list summary | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Punch-list summary — open / total + severity tint + tiny progress bar.
+       The tint follows the WORST-open severity (so a row with one open
+       critical reads red even if everything else is minor). */
+    .punch {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 2px 8px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .punch[data-sev="none"]     { background:#dcfce7; color:#166534; }
+    .punch[data-sev="minor"]    { background:#fef3c7; color:#92400e; }
+    .punch[data-sev="major"]    { background:#fed7aa; color:#9a3412; }
+    .punch[data-sev="critical"] { background:#fee2e2; color:#991b1b; }
+    .punch .bar {
+      position: relative;
+      width: 70px; height: 6px; border-radius: 3px;
+      background: rgba(0,0,0,.1); overflow: hidden;
+    }
+    .punch .fill {
+      position:absolute; inset: 0 auto 0 0;
+      background: currentColor; opacity: .8;
+      border-radius: 3px;
+    }
+    .sev-key {
+      display: inline-flex; gap: 4px; align-items: center;
+      font-size: 11px; color: #6b7280; margin-left: 8px;
+    }
+    .sev-key .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .7; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>213 — Punch-list summary</h1>
+  <p class="lede">
+    Compact "N open of M total" with a severity tint (worst-open wins) and
+    a thin progress bar of closed items. The dispatcher gets a glanceable
+    handover-readiness across a portfolio of projects.
+  </p>
+
+  <template id="punch-renderer">
+    <span class="punch" data-bind-attr="data-sev">
+      <span data-bind="ratio"></span>
+      <span class="bar"><span class="fill"></span></span>
+      <span class="sev-key" data-bind="worstLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="220">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="open"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="90">Open</th>
+          <th data-controller="header-cell" data-header-cell-field-value="total"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="90">Total</th>
+          <th data-controller="header-cell" data-header-cell-field-value="worst"
+              data-header-cell-cell-renderer-value="punch-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Punch list</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The renderer reads three pre-computed fields — <code>ratio</code>,
+    <code>worst</code>, <code>worstLabel</code> — derived once from the
+    underlying list of items. Editing any of <em>open</em> / <em>total</em>
+    / <em>worst</em> re-derives them so the bar stays in sync.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const WORST = { none:'all clear', minor:'minor', major:'major', critical:'critical' };
+    const derive = (row) => {
+      const open = Math.max(0, Number(row.open || 0));
+      const total = Math.max(open, Number(row.total || 0));
+      const worst = open === 0 ? 'none' : (WORST[row.worst] ? row.worst : 'minor');
+      const closed = total - open;
+      const pct = total ? Math.round((closed / total) * 100) : 0;
+      return {
+        ...row, open, total, worst,
+        ratio: open === 0 ? `${total}/${total} closed` : `${open}/${total} open`,
+        worstLabel: open === 0 ? 'all clear' : `worst: ${WORST[worst]}`,
+        __pct: pct,
+      };
+    };
+    const SEED = [
+      { id:1, project:'Bondi Pavilion — Stage 2',   open: 0, total:18, worst:'none'     },
+      { id:2, project:'Coogee Holdings — fitout',   open: 4, total:32, worst:'minor'    },
+      { id:3, project:'Manly Reno — bath redo',     open: 9, total:24, worst:'major'    },
+      { id:4, project:'Surry Hills Cafe — barista', open:11, total:20, worst:'critical' },
+      { id:5, project:'Vega Studio — fitout',       open: 1, total:46, worst:'minor'    },
+      { id:6, project:'Pyrmont Pubs — kitchen',     open: 6, total: 9, worst:'major'    },
+      { id:7, project:'Newtown Bakery — extraction',open: 0, total:12, worst:'none'     },
+      { id:8, project:'Glebe Builders — façade',    open: 2, total:55, worst:'minor'    },
+      { id:9, project:'Mosman Doctors — consult',   open: 3, total:14, worst:'critical' },
+      { id:10,project:'Annandale Yoga — studio',    open: 0, total: 8, worst:'none'     },
+    ];
+    const ROWS = SEED.map(derive);
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['open','total','worst'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    // Paint progress fills as a percent of closed items.
+    const paintBars = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.punch').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        const fill = node.querySelector('.fill');
+        if (fill && row) fill.style.width = `${row.__pct ?? 0}%`;
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBars));
+    new MutationObserver(paintBars).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
