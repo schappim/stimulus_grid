@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>231 — Subbie progress claim (SoP Act) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Sub-contractor progress claim — Security of Payment Act protected
+       claim. Distinct from internal progress-claim (#166): SoP timing is
+       statutory (10 / 15 BD for payment schedule depending on state) and
+       missing it forfeits the head-contractor's right to dispute. */
+    .sop {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+    }
+    .sop .ref {
+      padding: 2px 8px; border-radius: 4px;
+      background: #0f172a; color: #fff;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+    }
+    .sop[data-s="ok"]       { background:#dcfce7; color:#166534; }
+    .sop[data-s="warn"]     { background:#fef3c7; color:#92400e; }
+    .sop[data-s="breach"]   { background:#fee2e2; color:#991b1b; }
+    .sop[data-s="scheduled"]{ background:#e0e7ff; color:#3730a3; }
+    .sop[data-s="paid"]     { background:#dcfce7; color:#14532d; }
+    .due-state {
+      padding: 1px 8px; border-radius: 999px;
+      background: rgba(0,0,0,.07);
+      font-size: 11px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>231 — Subbie progress claim (Security of Payment Act)</h1>
+  <p class="lede">
+    Sub-contractor claim under the SoP Act. The clock is statutory — the
+    head-contractor has a fixed number of business days to issue a
+    payment schedule, and missing it forfeits the right to dispute. The
+    chip flags <em>ok</em>, <em>warn</em> (≤ 2 BD left), <em>breach</em>
+    (schedule overdue), <em>scheduled</em>, <em>paid</em>.
+  </p>
+
+  <template id="sop-renderer">
+    <span class="sop" data-bind-attr="data-s">
+      <span class="ref" data-bind="claimRef"></span>
+      <span class="due-state" data-bind="dueLabel"></span>
+      <span data-bind="schedState"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="subbie"
+              data-header-cell-width-value="200">Sub-contractor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="220">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-width-value="120">Claim ex</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="sop-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">SoP claim</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scheduleDue"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="150">Sched due</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Edit the <em>Sched due</em> date to re-band the chip — pushing it into
+    the past flips the row to <em>breach</em>. Pair with the SLA pill (#204)
+    on the project itself for a 2-clock view of contractual exposure.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const derive = (row) => {
+      if (row.schedState === 'paid')      return { ...row, status:'paid',      dueLabel:'PAID',   __ok:'paid' };
+      if (row.schedState === 'scheduled') return { ...row, status:'scheduled', dueLabel:'SCHED',  __ok:'scheduled' };
+      const d = Math.round((new Date(row.scheduleDue) - today()) / dayMs);
+      let band, label;
+      if (d < 0)         { band='breach'; label = `${Math.abs(d)} BD over`; }
+      else if (d <= 2)   { band='warn';   label = `${d} BD left`; }
+      else               { band='ok';     label = `${d} BD left`; }
+      return { ...row, status:band, dueLabel:label, __ok:band };
+    };
+    const inDays = (n) => { const d = today(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, subbie:'Linear Plumbing',     project:'Bondi Pavilion S2',  amount:'$ 38,400', claimRef:'PC-04', schedState:'open',      scheduleDue: inDays(7)  },
+      { id:2, subbie:'Volt Electrical',     project:'Bondi Pavilion S2',  amount:'$ 22,100', claimRef:'PC-04', schedState:'open',      scheduleDue: inDays(1)  },
+      { id:3, subbie:'CrispLine Painting',  project:'Coogee fitout',      amount:'$ 12,800', claimRef:'PC-02', schedState:'open',      scheduleDue: inDays(-3) },
+      { id:4, subbie:'Aqua Glaze Tiling',   project:'Manly bath redo',    amount:'$  6,500', claimRef:'PC-01', schedState:'scheduled', scheduleDue: inDays(0)  },
+      { id:5, subbie:'OnTime Concrete',     project:'Vega Studio fitout', amount:'$ 48,200', claimRef:'PC-05', schedState:'paid',      scheduleDue: inDays(-10)},
+      { id:6, subbie:'Smith Carpentry',     project:'Pyrmont kitchen',    amount:'$ 14,000', claimRef:'PC-03', schedState:'open',      scheduleDue: inDays(2)  },
+      { id:7, subbie:'NSW Glass & Glazing', project:'Glebe façade',       amount:'$ 28,400', claimRef:'PC-06', schedState:'scheduled', scheduleDue: inDays(-1) },
+      { id:8, subbie:'Refrigeration Plus',  project:'Surry Hills barista',amount:'$ 11,600', claimRef:'PC-01', schedState:'open',      scheduleDue: inDays(5)  },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'scheduleDue') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
