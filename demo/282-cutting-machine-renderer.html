@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>282 — Key-cutting machine source | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .mc { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .mc .brand { padding: 2px 8px; color:#fff; }
+    .mc .model { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .mc[data-b="silca"]   .brand { background:#1d4ed8; }
+    .mc[data-b="jma"]     .brand { background:#16a34a; }
+    .mc[data-b="ilco"]    .brand { background:#7c3aed; }
+    .mc[data-b="keyline"] .brand { background:#ea580c; }
+    .mc[data-b="miracle"] .brand { background:#dc2626; }
+    .serial { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+              background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>282 — Key-cutting machine source</h1>
+  <p class="lede">
+    Links a cut key back to the bench it was cut on. When a customer
+    rings two weeks later saying "this key won't turn", knowing whether
+    it came off the laser Futura, the manual Bravo, or the apprentice's
+    benchtop duplicator is the first thing the workshop needs.
+  </p>
+
+  <template id="mc-renderer">
+    <span class="mc">
+      <span class="brand" data-bind="brand"></span>
+      <span class="model" data-bind="model"></span>
+    </span>
+    <span class="serial" data-bind="serial"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="key"
+              data-header-cell-width-value="220">Cut key</th>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-cell-renderer-value="mc-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Machine</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cutAt"
+              data-header-cell-width-value="180">Cut at</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Workshops often run two of the same machine — keep the serial in
+    its own pill so a tech can walk to <em>that specific</em> Futura
+    and reproduce the cut. The pill is what's stencilled on the
+    machine, not a derived ID.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, key:'CK-014 spare',     brand:'silca',   model:'Bravo Maxima',    serial:'SN 2014-0814', cutAt:'2026-05-20 11:14' },
+      { id:2, key:'2014 Commodore',   brand:'silca',   model:'Futura Pro',      serial:'SN 2019-1207', cutAt:'2026-05-21 09:02' },
+      { id:3, key:'CK-088 (apt 3)',   brand:'silca',   model:'Triax e-code',    serial:'SN 2021-0455', cutAt:'2026-05-22 14:36' },
+      { id:4, key:'BiLock R10 — auth',brand:'silca',   model:'Quattrocode',     serial:'SN 2018-0211', cutAt:'2026-05-23 10:11' },
+      { id:5, key:'TOY43 spare',      brand:'jma',     model:'Multicode',       serial:'SN 2020-0090', cutAt:'2026-05-23 12:48' },
+      { id:6, key:'Garage roller',    brand:'ilco',    model:'064',             serial:'SN 1998-0033', cutAt:'2026-05-24 08:55' },
+      { id:7, key:'NSN14 spare',      brand:'keyline', model:'Ninja Total',     serial:'SN 2022-0701', cutAt:'2026-05-24 16:02' },
+      { id:8, key:'EVVA 3KS+',        brand:'miracle', model:'A9',              serial:'SN 2017-0190', cutAt:'2026-05-25 09:30' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.mc').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-b', row.brand);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

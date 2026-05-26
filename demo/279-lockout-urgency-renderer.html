@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>279 — Lockout urgency tier | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .lu { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .lu .tier { padding: 2px 8px; color:#fff; }
+    .lu .ctx  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .lu[data-t="P0"] .tier { background:#dc2626; animation: pulse 1.2s ease-in-out infinite; }
+    .lu[data-t="P1"] .tier { background:#ea580c; }
+    .lu[data-t="P2"] .tier { background:#f59e0b; }
+    .lu[data-t="P3"] .tier { background:#475569; }
+    @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+    .eta { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>279 — Lockout urgency tier</h1>
+  <p class="lede">
+    Lockouts arrive over the phone with wildly different stakes. The
+    tier is locksmith-specific — different from a generic job priority
+    cell because it carries dispatch rules: child or pet locked in a
+    car (P0) bumps every other booking; at-night residential (P1) gets
+    after-hours rates; routine spare-key cuts wait their turn.
+  </p>
+
+  <template id="lu-renderer">
+    <span class="lu">
+      <span class="tier" data-bind="tier"></span>
+      <span class="ctx"  data-bind="ctx"></span>
+    </span>
+    <span class="eta" data-bind="etaLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="caller"
+              data-header-cell-width-value="220">Caller</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tier"
+              data-header-cell-cell-renderer-value="lu-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Urgency</th>
+          <th data-controller="header-cell" data-header-cell-field-value="suburb"
+              data-header-cell-width-value="160">Suburb</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    P0 should also drive a callback path — if the locksmith is more than
+    20 min away, the dispatcher rings Fire &amp; Rescue. The cell is
+    just the decision boundary, not the SOP.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, caller:'Jane M.',         tier:'P0', ctx:'child in car',           etaLabel:'≤ 15 min', suburb:'Bondi' },
+      { id:2, caller:'Tom W.',          tier:'P0', ctx:'dog in hot car',         etaLabel:'≤ 15 min', suburb:'Coogee' },
+      { id:3, caller:'Sandra L.',       tier:'P1', ctx:'locked out, 11 pm',      etaLabel:'≤ 45 min', suburb:'Surry Hills' },
+      { id:4, caller:'PubCo HQ',        tier:'P1', ctx:'staff locked out, open shift', etaLabel:'≤ 30 min', suburb:'Pyrmont' },
+      { id:5, caller:'Carl R.',         tier:'P2', ctx:'locked out, daylight',   etaLabel:'≤ 2 hr',   suburb:'Newtown' },
+      { id:6, caller:'Strata cleaner',  tier:'P2', ctx:'cleaner needs entry',    etaLabel:'≤ 2 hr',   suburb:'Glebe' },
+      { id:7, caller:'Pa Ng.',          tier:'P3', ctx:'spare key cut',          etaLabel:'next day', suburb:'Mosman' },
+      { id:8, caller:'Yvonne K.',       tier:'P3', ctx:'rekey appt — booked',    etaLabel:'next week',suburb:'Bondi' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.lu').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-t', row.tier);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

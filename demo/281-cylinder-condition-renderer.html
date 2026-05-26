@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>281 — Cylinder condition on arrival | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .cd { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .cd .icon { padding: 2px 6px; background:#0f172a; color:#fff;
+                width: 22px; text-align:center; }
+    .cd .cond { padding: 2px 8px; color:#fff; }
+    .cd[data-c="intact"] .cond { background:#16a34a; }
+    .cd[data-c="picked"] .cond { background:#f59e0b; }
+    .cd[data-c="bumped"] .cond { background:#ea580c; }
+    .cd[data-c="drilled"] .cond { background:#b91c1c; }
+    .cd[data-c="snapped"] .cond { background:#7c2d12; }
+    .cd[data-c="frozen"]  .cond { background:#1d4ed8; }
+    .cd[data-c="seized"]  .cond { background:#475569; }
+    .quote { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+             background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>281 — Cylinder condition on arrival</h1>
+  <p class="lede">
+    The physical state of the lock at the moment the locksmith arrives.
+    Drives whether the job line reads <em>"open + rekey"</em> or
+    <em>"drill out + replace + repair strike plate"</em> — and gives
+    the customer something concrete on the invoice when they ring back
+    asking why the bill wasn't $99.
+  </p>
+
+  <template id="cd-renderer">
+    <span class="cd">
+      <span class="icon" data-bind="glyph"></span>
+      <span class="cond" data-bind="cond"></span>
+    </span>
+    <span class="quote" data-bind="quoteImpact"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="280">Job</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cond"
+              data-header-cell-cell-renderer-value="cd-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Condition on arrival</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="120">Tech</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Photograph the lock <em>before</em> doing anything. The cell answers
+    "what state was it in?", the photo answers "prove it" — different
+    columns, complementary jobs.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ICON = { intact:'✓', picked:'P', bumped:'B', drilled:'D', snapped:'S', frozen:'❄', seized:'•' };
+    const IMPACT = {
+      intact:  'open + rekey',
+      picked:  'open + rekey; check pins for damage',
+      bumped:  'rekey; suggest anti-bump pins',
+      drilled: 'replace cylinder + strike plate',
+      snapped: 'replace cylinder + door rebate check',
+      frozen:  'thaw + lube; replace if cracked',
+      seized:  'replace cylinder + cam',
+    };
+    const SEED = [
+      { id:1, job:'Bondi residential AKL',      cond:'snapped', tech:'AH' },
+      { id:2, job:'Coogee unit — lost keys',    cond:'intact',  tech:'RP' },
+      { id:3, job:'Surry Hills 11 pm lockout',  cond:'drilled', tech:'JW' },
+      { id:4, job:'Pyrmont Pubs — back door',   cond:'picked',  tech:'AH' },
+      { id:5, job:'Glebe — break-in followup',  cond:'snapped', tech:'MS' },
+      { id:6, job:'Newtown — winter door',      cond:'frozen',  tech:'CN' },
+      { id:7, job:'Mosman — seized deadbolt',   cond:'seized',  tech:'LP' },
+      { id:8, job:'Crown St jeweller — covert', cond:'bumped',  tech:'SO' },
+    ];
+    const ROWS = SEED.map(r => ({ ...r, glyph: ICON[r.cond] || '?', quoteImpact: IMPACT[r.cond] }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.cd').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-c', row.cond);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
