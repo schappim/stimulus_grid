@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>233 — Cost code / phase code | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Cost code / phase code — Master Builders / NACE / WBS-style coded
+       chip. The code is the primary identifier (P&L groups on it); the
+       label is a human gloss. */
+    .cc {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .cc .code {
+      padding: 2px 8px; color: #fff;
+      letter-spacing: .03em;
+    }
+    .cc .desc {
+      padding: 2px 8px;
+      background: #f8fafc; color: #1f2937;
+      font-family: system-ui, sans-serif;
+      font-weight: 600;
+    }
+    .cc[data-fam="01"] .code { background:#0f766e; }
+    .cc[data-fam="02"] .code { background:#0284c7; }
+    .cc[data-fam="03"] .code { background:#7c3aed; }
+    .cc[data-fam="04"] .code { background:#ea580c; }
+    .cc[data-fam="05"] .code { background:#dc2626; }
+    .cc[data-fam="06"] .code { background:#16a34a; }
+    .cc[data-fam="07"] .code { background:#ca8a04; }
+    .cc[data-fam="99"] .code { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>233 — Cost code / phase code</h1>
+  <p class="lede">
+    Hierarchical cost codes — Master Builders, NACE, or your own WBS.
+    The first pair groups the family (preliminaries, demolition, frames,
+    services, finishes, …) which is enough to colour-code the chip.
+    P&amp;L roll-ups happen on the code; the label is for humans.
+  </p>
+
+  <template id="cc-renderer">
+    <span class="cc" data-bind-attr="data-fam">
+      <span class="code" data-bind="code"></span>
+      <span class="desc" data-bind="codeDesc"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="line"
+              data-header-cell-width-value="120">Line #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="item"
+              data-header-cell-width-value="260">Item</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="cc-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Cost code</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-width-value="120">Amount</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Codes are kept in <code>NN-NN-NN</code> form so the data layer
+    matches GL chart-of-accounts straight off — no parsing required.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fam = (c) => String(c || '').slice(0,2);
+    const ROWS = [
+      { id:1, line:'L-001', item:'Site fencing & temp toilet',         code:'01-10-00', codeDesc:'Preliminaries', amount:'$ 4,800' },
+      { id:2, line:'L-002', item:'Strip-out walls & soft demo',        code:'02-20-00', codeDesc:'Demolition',     amount:'$ 2,800' },
+      { id:3, line:'L-003', item:'Wall framing & blocking',            code:'03-10-00', codeDesc:'Carpentry',      amount:'$ 7,600' },
+      { id:4, line:'L-004', item:'Rough-in plumbing',                  code:'04-30-00', codeDesc:'Plumbing',       amount:'$ 5,400' },
+      { id:5, line:'L-005', item:'Rough-in electrical',                code:'04-40-00', codeDesc:'Electrical',     amount:'$ 6,200' },
+      { id:6, line:'L-006', item:'HVAC ductwork',                      code:'04-50-00', codeDesc:'HVAC',           amount:'$ 9,100' },
+      { id:7, line:'L-007', item:'Wet-area waterproofing',             code:'05-10-00', codeDesc:'Waterproofing',  amount:'$ 1,950' },
+      { id:8, line:'L-008', item:'Tiling & grouting',                  code:'06-30-00', codeDesc:'Tiling',         amount:'$ 4,400' },
+      { id:9, line:'L-009', item:'Painting & fit-off',                 code:'07-30-00', codeDesc:'Finishes',       amount:'$ 3,200' },
+      { id:10,line:'L-010', item:'Practical-completion cleaning',      code:'99-00-00', codeDesc:'Hand-over',      amount:'$   850' },
+    ].map(r => ({ ...r, fam: fam(r.code) }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Paint the data-fam attribute (computed from the code prefix).
+    const paintFam = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.cc').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) node.setAttribute('data-fam', fam(row.code));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintFam));
+    new MutationObserver(paintFam).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
