@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>202 — Mobile-optimised grid | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    :root { --gutter: 20px; }
+    html, body { margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px var(--gutter) calc(24px + env(safe-area-inset-bottom));
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 4px; font-size: 22px; }
+    p.lede { color: #6b7280; margin-top: 0; font-size: 14px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip {
+      margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+      border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Toolbar ───────────────────────────────────────────────────────── */
+    .toolbar {
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      margin: 14px 0 10px;
+    }
+    .quick-filter {
+      flex: 1 1 200px; min-width: 0;
+      font: inherit; font-size: 16px;            /* 16px = no iOS zoom on focus */
+      padding: 10px 12px;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      background: #fff;
+      -webkit-appearance: none; appearance: none;
+    }
+    .quick-filter:focus { outline: 2px solid #2563eb; outline-offset: -1px; border-color: transparent; }
+    .seg {
+      display: inline-flex; background: #f3f4f6;
+      border-radius: 8px; padding: 2px;
+    }
+    .seg button {
+      font: inherit; font-size: 13px;
+      padding: 8px 12px;
+      border: 0; background: transparent;
+      border-radius: 6px; color: #4b5563; cursor: pointer;
+      min-height: 36px;
+    }
+    .seg button[aria-pressed="true"] { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+    .stat { color:#6b7280; font-size:13px; margin-left:auto; }
+
+    /* ── Grid panel ────────────────────────────────────────────────────── */
+    .panel { height: 560px; }
+
+    /* ── Customer-card renderer (used in BOTH layouts; CSS scopes it) ──── */
+    .cust-card {
+      display: grid; gap: 2px 12px;
+      grid-template-columns: 40px 1fr auto;
+      grid-template-areas:
+        "avatar name   meta"
+        "avatar sub    pill";
+      align-items: center;
+      width: 100%;
+    }
+    .cust-card .avatar {
+      grid-area: avatar;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #eef2ff; color: #4338ca;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 14px;
+    }
+    .cust-card .name { grid-area: name; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cust-card .sub  { grid-area: sub;  color: #6b7280; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cust-card .meta { grid-area: meta; color: #6b7280; font-size: 12px; white-space: nowrap; }
+    .cust-card .pill { grid-area: pill; justify-self: end; }
+
+    .status-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 600; letter-spacing: .02em;
+    }
+    .status-pill[data-status="active"]   { background:#dcfce7; color:#14532d; }
+    .status-pill[data-status="trial"]    { background:#fef3c7; color:#92400e; }
+    .status-pill[data-status="overdue"]  { background:#fee2e2; color:#991b1b; }
+    .status-pill[data-status="churned"]  { background:#e5e7eb; color:#374151; }
+
+    .plan-chip {
+      display:inline-block; padding:1px 8px; border-radius: 9px;
+      font-size: 11px; font-weight: 600;
+      background:#eef2ff; color:#3730a3;
+    }
+    .plan-chip[data-plan="Pro"]      { background:#dbeafe; color:#1e40af; }
+    .plan-chip[data-plan="Business"] { background:#f3e8ff; color:#581c87; }
+    .plan-chip[data-plan="Free"]     { background:#f3f4f6; color:#374151; }
+
+    /* ── Mobile / narrow-viewport rules ────────────────────────────────── */
+    /* The grid swaps between two layouts driven by the .panel[data-mode] flag,
+       which JS keeps in sync with a matchMedia listener. The CSS below then
+       just styles each mode. */
+
+    .panel[data-mode="mobile"] {
+      height: calc(100dvh - 200px);            /* fill viewport on small screens */
+      min-height: 380px;
+    }
+    .panel[data-mode="mobile"] thead { display: none; }   /* no column-header strip */
+    .panel[data-mode="mobile"] td { padding: 12px 14px; }  /* taller rows = easier tap */
+    .panel[data-mode="mobile"] tbody tr { min-height: 64px; }
+
+    /* In mobile mode, infinite-scroll replaces the pagination bar. */
+    body[data-grid-mode="mobile"] .sg-pagination { display: none; }
+    .infinite-hint {
+      display: none;
+      text-align: center; padding: 14px;
+      color: #6b7280; font-size: 13px;
+    }
+    body[data-grid-mode="mobile"] .infinite-hint { display: block; }
+    .infinite-hint[data-state="done"]::before    { content: '— end of list —'; }
+    .infinite-hint[data-state="loading"]::before { content: 'Loading more…'; }
+
+    @media (max-width: 640px) {
+      body { padding-left: 14px; padding-right: 14px; }
+      h1 { font-size: 20px; }
+      .toolbar { position: sticky; top: 0; background: #fff; z-index: 5;
+                 padding: 8px 0; margin-top: 4px;
+                 box-shadow: 0 1px 0 #e5e7eb; }
+      .stat { display: none; }
+      .seg { width: 100%; }
+      .seg button { flex: 1; }
+      .cust-card .meta { display: none; }       /* meta moves into sub at narrow */
+      .panel { width: calc(100% + 28px); margin-left: -14px; }  /* edge-to-edge */
+    }
+
+    /* On taps, give the active row a subtle press state */
+    @media (hover: none) {
+      .panel[data-mode="mobile"] tbody tr:active { background: #f3f4f6; }
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>202 — Mobile-optimised grid</h1>
+  <p class="lede">
+    The same grid, two layouts. On a wide screen you get a full table — name,
+    plan, status, MRR, last seen — with normal pagination. On a narrow screen
+    (≤ 640px, or use the toggle) the table collapses to a single tap-friendly
+    card column and the pager is replaced by <strong>infinite scroll</strong>:
+    as you near the bottom of the list, the next chunk of rows auto-loads. No
+    horizontal scroll, no pinch-zoom, no iOS-zoom-on-focus.
+  </p>
+
+  <!-- One template handles both: at desktop width it appears in a "summary"
+       column that's hidden, at mobile width it's the only visible column. -->
+  <template id="cust-card-renderer">
+    <span class="cust-card">
+      <span class="avatar" data-bind="initials"></span>
+      <span class="name" data-bind="name"></span>
+      <span class="sub"  data-bind="sub"></span>
+      <span class="meta" data-bind="meta"></span>
+      <span class="pill">
+        <span class="status-pill" data-bind="status" data-bind-attr="data-status"></span>
+      </span>
+    </span>
+  </template>
+
+  <template id="plan-renderer">
+    <span class="plan-chip" data-bind="plan" data-bind-attr="data-plan"></span>
+  </template>
+
+  <template id="status-renderer">
+    <span class="status-pill" data-bind="status" data-bind-attr="data-status"></span>
+  </template>
+
+  <div class="toolbar">
+    <input id="qf" class="quick-filter" type="search"
+           inputmode="search" autocomplete="off"
+           placeholder="Search customers…" />
+    <div class="seg" role="tablist" aria-label="Layout">
+      <button id="mode-auto" aria-pressed="true">Auto</button>
+      <button id="mode-desktop" aria-pressed="false">Desktop</button>
+      <button id="mode-mobile" aria-pressed="false">Mobile</button>
+    </div>
+    <span class="stat" id="stat">…</span>
+  </div>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-row-selection-value="single"
+       data-grid-cell-selection-value="false"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="25">
+    <table>
+      <thead>
+        <tr>
+          <!-- Card column: visible only in mobile mode. Wide enough to fill row. -->
+          <th data-controller="header-cell" data-header-cell-field-value="summary"
+              data-header-cell-cell-renderer-value="cust-card-renderer"
+              data-header-cell-sortable-value="false"
+              data-header-cell-resizable-value="false"
+              data-header-cell-width-value="1000">Customer</th>
+
+          <!-- Desktop columns: hidden in mobile mode. -->
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="200">Name</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="240">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="plan"
+              data-header-cell-sortable-value="true"
+              data-header-cell-cell-renderer-value="plan-renderer"
+              data-header-cell-width-value="110">Plan</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-sortable-value="true"
+              data-header-cell-cell-renderer-value="status-renderer"
+              data-header-cell-width-value="100">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="mrr"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="number"
+              data-header-cell-width-value="90">MRR</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastSeen"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Last seen</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+
+  <div class="infinite-hint" data-state="loading"></div>
+
+  <p class="tip">
+    <strong>How it works:</strong> a single <code>matchMedia('(max-width: 640px)')</code>
+    listener flips <code>data-mode</code> on the grid and toggles column visibility
+    via <code>gridApi.setColumnVisible</code>. The summary column uses a
+    <code>&lt;template&gt;</code> renderer that composes
+    <code>name + email + status</code> into one tap-friendly card.
+    <br><br>
+    <strong>Infinite scroll:</strong> in mobile mode the
+    <code>&lt;nav.sg-pagination&gt;</code> is hidden and a scroll listener on
+    <code>.sg-body-viewport</code> watches how close the user is to the bottom.
+    When they get within 200 px of it, the page size grows by 20 — effectively
+    appending the next chunk of rows to what's already on screen. Scroll position
+    is preserved (existing rows aren't replaced), so scrolling back up just works.
+    The search input is <code>font-size: 16px</code> to suppress iOS focus-zoom;
+    rows are padded to ≥ 44 px for touch hit-area; the panel respects
+    <code>env(safe-area-inset-bottom)</code> for iPhone home-indicator clearance.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.getElementById('grid');
+    const qf   = document.getElementById('qf');
+    const stat = document.getElementById('stat');
+
+    /* ── Demo data ─────────────────────────────────────────────────────── */
+    const FIRST = ['Aiden','Bianca','Caitlin','Dean','Elena','Finn','Grace','Hugo','Indira','Jack',
+                   'Kira','Liam','Mei','Noah','Olive','Priya','Quinn','Rina','Sam','Tara',
+                   'Ursula','Viv','Wes','Xan','Yusuf','Zara'];
+    const LAST  = ['Hartwell','Sarelius','O’Brien','Tanaka','Patel','Whitfield','Costa','Nguyen',
+                   'Mackenzie','Adekunle','Rossi','Khan','Levy','Park','Singh','Mwangi','Diaz','Walsh'];
+    const PLANS  = ['Free','Pro','Business'];
+    const STATES = ['active','active','active','trial','overdue','churned'];
+    const DOMAINS = ['acme.co','northwind.io','contoso.dev','bondi.com.au','ravenpost.co'];
+
+    const initialsOf = (name) =>
+      name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+    const fmtRelative = (d) => {
+      const diff = Date.now() - d.getTime();
+      const day  = 24 * 3600 * 1000;
+      if (diff < day)         return `${Math.max(1, Math.round(diff/3600/1000))}h ago`;
+      if (diff < 7 * day)     return `${Math.round(diff/day)}d ago`;
+      if (diff < 30 * day)    return `${Math.round(diff/day/7)}w ago`;
+      return `${Math.round(diff/day/30)}mo ago`;
+    };
+    const fmtMoney = (n) => n.toLocaleString('en-AU', { style:'currency', currency:'AUD', maximumFractionDigits: 0 });
+
+    const ROWS = Array.from({ length: 80 }, (_, i) => {
+      const first = FIRST[i % FIRST.length];
+      const last  = LAST[(i * 7) % LAST.length];
+      const name  = `${first} ${last}`;
+      const plan  = PLANS[(i * 3) % PLANS.length];
+      const status = STATES[(i * 5) % STATES.length];
+      const mrr   = status === 'churned' ? 0
+                  : plan === 'Free'      ? 0
+                  : plan === 'Pro'       ? 29 + (i % 5) * 10
+                  :                        99 + (i % 4) * 50;
+      const seenMs = Date.now() - (i * 6 + (i % 11) * 13) * 3600 * 1000;
+      const seen   = new Date(seenMs);
+      const email  = `${first.toLowerCase()}.${last.toLowerCase().replace(/[^a-z]/g, '')}@${DOMAINS[i % DOMAINS.length]}`;
+      const relSeen = fmtRelative(seen);
+      return {
+        id: i + 1,
+        name, email, plan, status, mrr,
+        lastSeen: seen.toISOString().slice(0, 10),
+        // Pre-computed fields the card renderer binds to, so the template
+        // stays a dumb shape and the data layer owns the formatting:
+        initials: initialsOf(name),
+        sub:  `${email} · ${plan}`,
+        meta: mrr ? `${fmtMoney(mrr)}/mo · ${relSeen}` : relSeen,
+      };
+    });
+
+    /* ── Mobile / desktop swap ─────────────────────────────────────────── */
+    const DESKTOP_COLS = ['name','email','plan','status','mrr','lastSeen'];
+    const MOBILE_COL   = 'summary';
+    const DESKTOP_PAGE_SIZE = 25;
+    const MOBILE_CHUNK      = 20;        // initial visible rows on mobile
+    const SCROLL_THRESHOLD  = 200;       // px from bottom before next chunk loads
+
+    const mql = window.matchMedia('(max-width: 640px)');
+    let mode = 'auto';                            // 'auto' | 'desktop' | 'mobile'
+
+    const effectiveMode = () =>
+      mode === 'auto' ? (mql.matches ? 'mobile' : 'desktop') : mode;
+
+    const hint = document.querySelector('.infinite-hint');
+
+    const applyMode = () => {
+      const m = effectiveMode();
+      grid.dataset.mode = m;
+      document.body.dataset.gridMode = m;          // toggles pager / hint via CSS
+      const api = grid.gridApi;
+      if (!api) return;
+      api.setColumnVisible(MOBILE_COL, m === 'mobile');
+      DESKTOP_COLS.forEach((c) => api.setColumnVisible(c, m === 'desktop'));
+      if (m === 'mobile') {
+        // Infinite scroll starts from page 1 with a fixed chunk; we grow the
+        // page-size each time the user nears the bottom of the scroll viewport.
+        api.paginationGoToFirstPage();
+        api.paginationSetPageSize(MOBILE_CHUNK);
+        requestAnimationFrame(() => api.sizeColumnsToFit());
+      } else {
+        api.paginationSetPageSize(DESKTOP_PAGE_SIZE);
+      }
+      updateHint();
+    };
+
+    const updateHint = () => {
+      if (!grid.gridApi) return;
+      const api = grid.gridApi;
+      const shown = api.paginationGetPageSize();
+      const total = api.paginationGetRowCount();
+      hint.dataset.state = shown >= total ? 'done' : 'loading';
+    };
+
+    /* ── Infinite scroll: grow page-size as user nears the bottom ──────── */
+    let scrollViewport = null;
+    let loading = false;
+
+    const onScroll = () => {
+      if (effectiveMode() !== 'mobile') return;
+      if (loading) return;
+      const api = grid.gridApi;
+      if (!api) return;
+      const shown = api.paginationGetPageSize();
+      const total = api.paginationGetRowCount();
+      if (shown >= total) return;       // everything is already on-screen
+
+      const v = scrollViewport;
+      const distanceFromBottom = v.scrollHeight - v.scrollTop - v.clientHeight;
+      if (distanceFromBottom > SCROLL_THRESHOLD) return;
+
+      loading = true;
+      api.paginationSetPageSize(Math.min(shown + MOBILE_CHUNK, total));
+      // Let the grid finish re-rendering before allowing the next bump.
+      requestAnimationFrame(() => {
+        loading = false;
+        updateHint();
+      });
+    };
+
+    const attachScrollListener = () => {
+      scrollViewport = grid.querySelector('.sg-body-viewport');
+      if (!scrollViewport) return;
+      scrollViewport.addEventListener('scroll', onScroll, { passive: true });
+    };
+
+    /* ── Toolbar wiring ────────────────────────────────────────────────── */
+    const segButtons = {
+      auto:    document.getElementById('mode-auto'),
+      desktop: document.getElementById('mode-desktop'),
+      mobile:  document.getElementById('mode-mobile'),
+    };
+    Object.entries(segButtons).forEach(([key, btn]) => {
+      btn.addEventListener('click', () => {
+        mode = key;
+        Object.entries(segButtons).forEach(([k, b]) =>
+          b.setAttribute('aria-pressed', String(k === key)));
+        applyMode();
+      });
+    });
+
+    qf.addEventListener('input', () => grid.gridApi.setQuickFilter(qf.value));
+
+    /* ── Stat line ─────────────────────────────────────────────────────── */
+    const updateStat = () => {
+      const api = grid.gridApi;
+      const total = api.paginationGetRowCount();
+      const page  = api.paginationGetCurrentPage() + 1;
+      const pages = api.paginationGetTotalPages();
+      stat.textContent = `${total} customers · page ${page}/${pages}`;
+    };
+
+    /* ── Boot ──────────────────────────────────────────────────────────── */
+    grid.addEventListener('grid:ready', (e) => {
+      e.detail.api.setRowData(ROWS);
+      attachScrollListener();
+      applyMode();
+      requestAnimationFrame(updateStat);
+    }, { once: true });
+
+    ['grid:rowDataChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach((ev) => grid.addEventListener(ev, () => {
+        updateStat();
+        updateHint();
+      }));
+
+    mql.addEventListener('change', () => { if (mode === 'auto') applyMode(); });
+  </script>
+</body>
+</html>
