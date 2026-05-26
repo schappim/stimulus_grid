@@ -49,9 +49,9 @@
   <h1>235 — Insurance claim # + insurer</h1>
   <p class="lede">
     The insurer brand drives the paperwork shape — IAG portal, Allianz
-    upload, QBE phone-up, Suncorp panel form. The chip shows both at a
-    glance so the coordinator picks the right workflow without reading
-    the customer card.
+    upload, QBE phone-up, Suncorp panel form. <strong>Double-click the
+    insurer chip</strong> to pick a different carrier from a dropdown, or
+    double-click the <em>Claim #</em> cell to retype the reference.
   </p>
 
   <template id="clm-renderer">
@@ -59,6 +59,23 @@
       <span class="ins" data-bind="insLabel"></span>
       <span class="ref" data-bind="claimNo"></span>
     </span>
+  </template>
+
+  <!-- Dropdown editor for the insurer column. Mounted in place of the
+       default text input when the cell goes into edit mode. -->
+  <template id="insurer-editor">
+    <select data-editor-input>
+      <option value="iag">IAG</option>
+      <option value="allianz">Allianz</option>
+      <option value="qbe">QBE</option>
+      <option value="suncorp">Suncorp</option>
+      <option value="youi">Youi</option>
+      <option value="racv">RACV</option>
+      <option value="nrma">NRMA</option>
+      <option value="aami">AAMI</option>
+      <option value="bingle">Bingle</option>
+      <option value="budget">Budget</option>
+    </select>
   </template>
 
   <div class="panel" data-controller="grid">
@@ -69,12 +86,19 @@
               data-header-cell-width-value="200">Job / customer</th>
           <th data-controller="header-cell" data-header-cell-field-value="insurer"
               data-header-cell-cell-renderer-value="clm-renderer"
+              data-header-cell-cell-editor-value="insurer-editor"
               data-header-cell-sortable-value="true"
               data-header-cell-editable-value="true"
-              data-header-cell-width-value="280">Claim</th>
+              data-header-cell-width-value="280">Claim (insurer)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="claimNo"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Claim #</th>
           <th data-controller="header-cell" data-header-cell-field-value="cause"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="160">Cause</th>
           <th data-controller="header-cell" data-header-cell-field-value="auth"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="120">Auth $</th>
         </tr>
       </thead>
@@ -112,6 +136,17 @@
     const ROWS = SEED.map(derive);
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Keep insLabel in sync whenever the insurer slug is picked from the
+    // dropdown. The claim # is plain text — it's edited in place by the
+    // default editor and needs no derivation.
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'insurer') return;
+      const slug = String(e.detail.newValue || '').toLowerCase();
+      if (!LABEL[slug]) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [{ ...row, insurer:slug, insLabel:LABEL[slug] }] });
+    });
   </script>
 </body>
 </html>
