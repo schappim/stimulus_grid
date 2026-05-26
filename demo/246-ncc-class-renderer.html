@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>246 — NCC building class | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* NCC building class — Class 1a–10b under the National Construction
+       Code. Drives fire / structural / accessibility / energy compliance. */
+    .ncc {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .ncc .code {
+      padding: 2px 8px;
+      color: #fff;
+      letter-spacing: .02em;
+    }
+    .ncc .desc {
+      padding: 2px 8px;
+      background: #f8fafc; color: #1f2937;
+      font-family: system-ui, sans-serif;
+      font-weight: 600;
+    }
+    .ncc[data-fam="1"]  .code { background:#16a34a; }
+    .ncc[data-fam="2"]  .code { background:#1d4ed8; }
+    .ncc[data-fam="3"]  .code { background:#7c3aed; }
+    .ncc[data-fam="5"]  .code { background:#ea580c; }
+    .ncc[data-fam="6"]  .code { background:#ca8a04; }
+    .ncc[data-fam="7"]  .code { background:#dc2626; }
+    .ncc[data-fam="8"]  .code { background:#9a3412; }
+    .ncc[data-fam="9"]  .code { background:#0f766e; }
+    .ncc[data-fam="10"] .code { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>246 — NCC building class</h1>
+  <p class="lede">
+    National Construction Code class. <em>1a</em> = single dwelling,
+    <em>2</em> = SOU apartments, <em>5</em> = office, <em>6</em> = shop,
+    <em>9b</em> = assembly. The class is the gatekeeper to which
+    Part of the NCC applies, and which inspections are mandatory.
+  </p>
+
+  <template id="ncc-renderer">
+    <span class="ncc" data-bind-attr="data-fam">
+      <span class="code" data-bind="classCode"></span>
+      <span class="desc" data-bind="classDesc"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="classCode"
+              data-header-cell-cell-renderer-value="ncc-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="320">NCC class</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="320">Compliance note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Multi-class sites (e.g. retail downstairs, residential upstairs)
+    encode both classes on the site record. The chip shows the dominant
+    one; the note column carries the secondary.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const DESC = {
+      '1a':'Single dwelling',           '1b':'Boarding house (<300m²)',
+      '2':'SOU apartments',             '3':'Hostel / hotel',
+      '5':'Office',                     '6':'Shop / café',
+      '7a':'Carpark',                   '7b':'Storage / warehouse',
+      '8':'Factory',                    '9a':'Healthcare',
+      '9b':'Assembly (school, hall)',   '9c':'Aged care',
+      '10a':'Garage / shed',            '10b':'Pool / structure',
+    };
+    const famOf = (c) => String(c).match(/^\d+/)?.[0] ?? '10';
+    const derive = (row) => ({ ...row, classDesc: DESC[row.classCode] ?? '—', __fam: famOf(row.classCode) });
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',           classCode:'1a',  note:'Renovation — BCA Part 3.x applies' },
+      { id:2, site:'4/87 Marine Pde, Coogee',    classCode:'2',   note:'SOU — Part J energy, FED1 sprinklers' },
+      { id:3, site:'90 Pyrmont Bridge Rd',       classCode:'5',   note:'Office fitout — Class 5 lighting POE' },
+      { id:4, site:'5 Crown St, Surry Hills',    classCode:'6',   note:'Mixed 6+2 (café + 2 SOUs above)' },
+      { id:5, site:'Pyrmont Pubs — kitchen',     classCode:'9b',  note:'Assembly — egress + sprinkler review' },
+      { id:6, site:'Surry Hills Cafe — fitout',  classCode:'6',   note:'Existing tenancy — Part J retained' },
+      { id:7, site:'Newtown Bakery — flour silo',classCode:'8',   note:'Factory — DG / flour-dust DSE' },
+      { id:8, site:'Mosman Doctors',             classCode:'9a',  note:'Healthcare — Part E (egress lighting)' },
+      { id:9, site:'Annandale Yoga — studio',    classCode:'9b',  note:'Assembly — occupancy < 100' },
+      { id:10,site:'12 Bay St — pool',           classCode:'10b', note:'Pool fence + safety glazing' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'classCode') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintFam = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ncc').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) node.setAttribute('data-fam', row.__fam || '10');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintFam));
+    new MutationObserver(paintFam).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
