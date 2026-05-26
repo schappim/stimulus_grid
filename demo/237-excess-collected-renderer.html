@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>237 — Excess collected | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Excess collected — the customer's excess obligation. Pending
+       collection is a leak (you don't want to fund the insurer's
+       compulsory deductible from your own pocket). Waived is a
+       commercial decision. */
+    .exc {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .exc .state {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; font-size: 11px;
+    }
+    .exc[data-s="paid"]    { background:#dcfce7; color:#166534; }
+    .exc[data-s="paid"]    .state { background:#16a34a; }
+    .exc[data-s="pending"] { background:#fef3c7; color:#92400e; }
+    .exc[data-s="pending"] .state { background:#ca8a04; }
+    .exc[data-s="waived"]  { background:#e0e7ff; color:#3730a3; }
+    .exc[data-s="waived"]  .state { background:#4f46e5; }
+    .exc[data-s="overdue"] { background:#fee2e2; color:#991b1b; }
+    .exc[data-s="overdue"] .state { background:#dc2626; }
+    .exc[data-s="none"]    { background:#f1f5f9; color:#475569; }
+    .exc[data-s="none"]    .state { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>237 — Excess collected</h1>
+  <p class="lede">
+    The customer's excess obligation — pending collection is a working-
+    capital leak; waived is a commercial decision a coordinator should
+    eyeball before discounting becomes habitual. Edit the
+    <em>collected</em> $ to flip a row from <em>pending</em> to
+    <em>paid</em>.
+  </p>
+
+  <template id="exc-renderer">
+    <span class="exc" data-bind-attr="data-s">
+      <span class="state" data-bind="stateLabel"></span>
+      <span data-bind="amountLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Claim #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="excess"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Excess $</th>
+          <th data-controller="header-cell" data-header-cell-field-value="collected"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Collected</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-cell-renderer-value="exc-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">State</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The "waived" state is set explicitly — the system never <em>derives</em>
+    it from collected = 0. That keeps an accidental "didn't bill it"
+    distinct from a deliberate "wrote it off".
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = { paid:'PAID', pending:'PENDING', waived:'WAIVED', overdue:'OVERDUE', none:'NONE' };
+    const fmt = (n) => '$' + Number(n).toLocaleString('en-AU', { maximumFractionDigits: 0 });
+    const derive = (row) => {
+      const excess = Number(row.excess || 0);
+      const collected = Number(row.collected || 0);
+      let state = row.state;
+      if (state === 'waived') {
+        // explicit — preserve
+      } else if (excess === 0) {
+        state = 'none';
+      } else if (collected >= excess) {
+        state = 'paid';
+      } else if (row.daysOpen > 21) {
+        state = 'overdue';
+      } else {
+        state = 'pending';
+      }
+      const amountLabel = state === 'paid'    ? fmt(collected) :
+                          state === 'waived'  ? `${fmt(excess)} waived` :
+                          state === 'none'    ? '—' :
+                          state === 'overdue' ? `${fmt(excess - collected)} outstanding` :
+                          `${fmt(collected)} of ${fmt(excess)}`;
+      return { ...row, state, stateLabel: LABEL[state], amountLabel };
+    };
+    const SEED = [
+      { id:1, ref:'IAG-2026-44218', customer:'Caitlin Hartwell',     excess: 500, collected: 500, daysOpen:  3, state:'paid' },
+      { id:2, ref:'ALN-9182203',    customer:'Dean Sarelius',        excess: 750, collected:   0, daysOpen:  9, state:'pending' },
+      { id:3, ref:'QBE/PCY-22038A', customer:'Aroha Walker',         excess: 800, collected: 200, daysOpen: 24, state:'overdue' },
+      { id:4, ref:'SC-7740019',     customer:'Sienna Doyle',         excess:1500, collected:   0, daysOpen:  7, state:'waived' },
+      { id:5, ref:'YOU-1119922',    customer:'Noah Park',            excess: 400, collected: 400, daysOpen: 12, state:'paid' },
+      { id:6, ref:'RACV-2025-8014', customer:'Eli Hartwell',         excess:1000, collected: 500, daysOpen:  5, state:'pending' },
+      { id:7, ref:'NRMA-440112',    customer:'Tomás Vega',           excess: 600, collected:   0, daysOpen: 30, state:'overdue' },
+      { id:8, ref:'AAMI-22-3014',   customer:'Imogen Reyes',         excess:1200, collected:1200, daysOpen:  2, state:'paid' },
+      { id:9, ref:'BNG-771203',     customer:'Sofia Ricci',          excess:   0, collected:   0, daysOpen:  1, state:'none' },
+      { id:10,ref:'BUD-4019',       customer:'Yusuf Adekunle',       excess: 700, collected:   0, daysOpen: 18, state:'pending' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['excess','collected','state'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
