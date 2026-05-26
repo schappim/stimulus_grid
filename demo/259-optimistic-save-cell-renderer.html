@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>259 — Optimistic save per cell | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Per-cell save state: idle / saving / saved (fades after ~1.5s) /
+       error (with click-to-retry). The cell stays editable optimistically
+       — we don't block input while a save is in flight. */
+    .sg-grid td[data-save="saving"] {
+      box-shadow: inset 0 -2px 0 #0ea5e9;
+    }
+    .sg-grid td[data-save="saved"]  {
+      box-shadow: inset 0 -2px 0 #16a34a;
+      animation: fadeBorder 1.5s ease-out forwards;
+    }
+    @keyframes fadeBorder { to { box-shadow: inset 0 -2px 0 transparent; } }
+    .sg-grid td[data-save="error"]  {
+      box-shadow: inset 0 -2px 0 #dc2626, inset 0 0 0 1px #fecaca;
+      background: #fef2f2 !important;
+      cursor: pointer;
+    }
+    .sg-grid td[data-save="error"]::after {
+      content: 'retry'; margin-left: 6px;
+      font-size: 10px; font-weight: 700; color: #991b1b;
+      padding: 1px 6px; border-radius: 999px;
+      background: #fee2e2;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>259 — Optimistic save state per cell</h1>
+  <p class="lede">
+    Edit any cell — the bottom edge flashes blue while the (simulated)
+    save is in flight, green when it lands, red if the server rejects.
+    Cells in <em>error</em> state are clickable to retry. Crucially the
+    cell stays editable the whole time — we never block input on save.
+  </p>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Tech</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hours"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Hrs</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    State is tracked in a parallel <code>Map</code> keyed by
+    <code>rowId:colId</code> (not in the row data) — that way it doesn't
+    survive a row re-fetch, which is the right behaviour for "save in
+    flight" UI.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id:1, ref:'J-1001', customer:'Bondi Pavilion',  tech:'Astrid Hale',  hours:7.5, note:'Strata committee meeting Wed' },
+      { id:2, ref:'J-1002', customer:'Coogee Holdings', tech:'Marcus Chen',  hours:4.0, note:'2 GPOs + RCD test' },
+      { id:3, ref:'J-1003', customer:'Manly Reno Co',   tech:'Priya Patel',  hours:6.0, note:'Bath redo — waterproofing day 2' },
+      { id:4, ref:'J-1004', customer:'Surry Hills Cafe',tech:'Lena Brooks',  hours:3.5, note:'Cool-room compressor service' },
+      { id:5, ref:'J-1005', customer:'Vega Studio',     tech:'Tomás Vega',   hours:5.0, note:'Hood extraction — annual' },
+    ];
+    const grid = document.getElementById('grid');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Per-cell save state (rowId:colId → 'saving'|'saved'|'error'|null).
+    const saveState = new Map();
+    const setState = (rowId, colId, s) => {
+      const key = `${rowId}:${colId}`;
+      if (!s) saveState.delete(key); else saveState.set(key, s);
+      paintStates();
+    };
+    const paintStates = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('td[data-col-id]').forEach((td) => {
+        const tr = td.closest('tr');
+        const key = `${tr?.dataset.rowId}:${td.dataset.colId}`;
+        const s = saveState.get(key);
+        if (s) td.setAttribute('data-save', s); else td.removeAttribute('data-save');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintStates));
+
+    // Simulated save: 1-in-7 fails so the demo isn't all-green.
+    const simulateSave = (rowId, colId) => {
+      setState(rowId, colId, 'saving');
+      const fails = Math.random() < 0.14;
+      setTimeout(() => {
+        setState(rowId, colId, fails ? 'error' : 'saved');
+        if (!fails) setTimeout(() => setState(rowId, colId, null), 1500);
+      }, 700 + Math.random() * 700);
+    };
+    grid.addEventListener('grid:cellValueChanged', (e) => simulateSave(e.detail.rowId, e.detail.colId));
+
+    // Click an error cell to retry.
+    grid.addEventListener('click', (e) => {
+      const td = e.target.closest('td[data-save="error"]');
+      if (!td) return;
+      const tr = td.closest('tr');
+      simulateSave(tr.dataset.rowId, td.dataset.colId);
+    });
+  </script>
+</body>
+</html>

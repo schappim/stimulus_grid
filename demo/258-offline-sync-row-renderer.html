@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>258 — Offline / pending-sync per-row | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .toolbar { display:flex; align-items:center; gap: 12px; margin: 14px 0; }
+    .toggle {
+      display:inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px;
+      background: #f1f5f9; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+    }
+    .toggle[data-online="false"] {
+      background: #fee2e2; color: #991b1b;
+    }
+    .toggle .pip {
+      width: 8px; height: 8px; border-radius:50%;
+      background: #16a34a;
+    }
+    .toggle[data-online="false"] .pip { background:#dc2626; }
+    .add {
+      padding: 8px 14px; border-radius: 999px;
+      background:#0ea5e9; color:#fff; border:0; cursor:pointer;
+      font: inherit; font-size: 13px; font-weight: 600;
+    }
+
+    /* Per-row sync indicator. Pending rows render with a left-edge dot
+       and a slightly italicised state, so they read as "not yet
+       confirmed by the server". */
+    .sg-grid tbody tr[data-sync="pending"] td:first-child { box-shadow: inset 3px 0 0 #ea580c; }
+    .sg-grid tbody tr[data-sync="error"]   td:first-child { box-shadow: inset 3px 0 0 #dc2626; }
+    .sg-grid tbody tr[data-sync="pending"] td { background-color: #fff7ed; }
+    .sg-grid tbody tr[data-sync="error"]   td { background-color: #fef2f2; }
+
+    .sync {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    }
+    .sync[data-s="synced"]  { background:#dcfce7; color:#166534; }
+    .sync[data-s="pending"] { background:#fef3c7; color:#92400e; }
+    .sync[data-s="error"]   { background:#fee2e2; color:#991b1b; }
+    .sync .dot {
+      width:6px; height:6px; border-radius:50%;
+      background: currentColor;
+    }
+    .sync[data-s="pending"] .dot { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>258 — Offline / pending-sync per-row</h1>
+  <p class="lede">
+    Toggle <em>offline mode</em>, add a row — it sits in the grid as
+    <em>pending</em> with an orange edge until the connection comes back.
+    Toggle online and the row syncs (or fails, depending on a simulated
+    server error every few attempts). Critical for vans in patchy
+    reception that capture rows long before the next 4G handshake.
+  </p>
+
+  <div class="toolbar">
+    <button class="toggle" id="net" data-online="true">
+      <span class="pip"></span><span data-bind="netLabel">Online</span>
+    </button>
+    <button class="add" id="add">+ Add job (creates pending row)</button>
+  </div>
+
+  <template id="sync-renderer">
+    <span class="sync" data-bind-attr="data-s">
+      <span class="dot"></span>
+      <span data-bind="syncLabel"></span>
+    </span>
+  </template>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Tech</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sync"
+              data-header-cell-cell-renderer-value="sync-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Sync</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pending rows stay in the grid optimistically — the user keeps
+    working. When the network returns the row's <code>sync</code> field
+    flips to <em>synced</em> (or <em>error</em>) and the edge dot
+    disappears.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = { synced:'SYNCED', pending:'PENDING', error:'RETRY' };
+    const mk = (r) => ({ ...r, syncLabel: LABEL[r.sync] });
+    let online = true;
+    const ROWS = [
+      { id:1, ref:'J-1001', customer:'Bondi Pavilion',  tech:'Astrid Hale',  sync:'synced' },
+      { id:2, ref:'J-1002', customer:'Coogee Holdings', tech:'Marcus Chen',  sync:'synced' },
+      { id:3, ref:'J-1003', customer:'Manly Reno Co',   tech:'Priya Patel',  sync:'synced' },
+    ].map(mk);
+
+    const grid = document.getElementById('grid');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Paint per-row sync attribute (data-sync="…") onto each <tr>.
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('tbody tr[data-row-id]').forEach((tr) => {
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr.dataset.rowId);
+        if (row) tr.setAttribute('data-sync', row.sync);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+
+    // Toolbar
+    const net = document.getElementById('net');
+    const setOnline = (v) => {
+      online = v;
+      net.dataset.online = v;
+      net.querySelector('[data-bind="netLabel"]').textContent = v ? 'Online' : 'Offline — capturing locally';
+      if (v) flushPending();
+    };
+    net.addEventListener('click', () => setOnline(!online));
+
+    document.getElementById('add').addEventListener('click', () => {
+      const id = grid.gridApi.getRowData().reduce((m, r) => Math.max(m, r.id), 0) + 1;
+      const row = mk({ id, ref:`J-${1000 + id}`, customer:'New (captured offline)', tech:'me', sync: online ? 'pending' : 'pending' });
+      grid.gridApi.applyTransaction({ add: [row] });
+      if (online) setTimeout(() => settle(row.id), 700);
+    });
+
+    const flushPending = () => {
+      const pending = grid.gridApi.getRowData().filter(r => r.sync !== 'synced');
+      pending.forEach((row, i) => setTimeout(() => settle(row.id), 500 + i * 300));
+    };
+    const settle = (id) => {
+      const row = grid.gridApi.getRowData().find(r => r.id === id);
+      if (!row) return;
+      // 1-in-6 simulated error so the demo isn't 100% sunny-day.
+      const sync = Math.random() < 0.16 ? 'error' : 'synced';
+      grid.gridApi.applyTransaction({ update: [mk({ ...row, sync })] });
+    };
+  </script>
+</body>
+</html>
