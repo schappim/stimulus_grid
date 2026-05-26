@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>236 — Make-safe vs full repair | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Two-stage insurance repair: make-safe (stop the damage spreading)
+       then full repair (restore the asset). The two-pill chip shows both
+       stages side-by-side with current state — Pending / In-progress /
+       Done — so a coordinator sees at a glance whether the make-safe is
+       lodged before the full-repair authority is sought. */
+    .ms {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 700;
+    }
+    .ms .stage {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 1px 4px 1px 4px; border-radius: 6px;
+      font-size: 11px;
+    }
+    .ms .stage .lbl {
+      padding: 1px 7px; border-radius: 4px;
+      color: #fff; letter-spacing: .03em; font-size: 10.5px;
+    }
+    .ms .stage[data-st="pending"] { background:#f1f5f9; color:#475569; }
+    .ms .stage[data-st="pending"] .lbl { background:#94a3b8; }
+    .ms .stage[data-st="progress"]{ background:#fef3c7; color:#92400e; }
+    .ms .stage[data-st="progress"] .lbl { background:#ca8a04; }
+    .ms .stage[data-st="done"]    { background:#dcfce7; color:#166534; }
+    .ms .stage[data-st="done"] .lbl    { background:#16a34a; }
+    .ms .stage[data-st="na"]      { background:#f1f5f9; color:#94a3b8; text-decoration: line-through; }
+    .ms .stage[data-st="na"] .lbl      { background:#cbd5e1; }
+    .ms .arrow { color:#94a3b8; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>236 — Make-safe vs full repair</h1>
+  <p class="lede">
+    Most insurance jobs run in two stages — <em>make-safe</em> (board up
+    the broken window, stop the leak, isolate the live circuit) followed
+    by the <em>full repair</em> once the loss-adjuster has scoped and
+    authorised. The chip displays both side-by-side so the coordinator
+    sees the order-of-operations at a glance.
+  </p>
+
+  <template id="ms-renderer">
+    <span class="ms">
+      <span class="stage" data-bind-attr="data-st" data-stage="ms-stage-a">
+        <span class="lbl">MS</span>
+        <span data-bind="msLabel"></span>
+      </span>
+      <span class="arrow">→</span>
+      <span class="stage" data-bind-attr="data-st" data-stage="ms-stage-b">
+        <span class="lbl">REP</span>
+        <span data-bind="repLabel"></span>
+      </span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="220">Job</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cause"
+              data-header-cell-width-value="160">Cause</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ms"
+              data-header-cell-cell-renderer-value="ms-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Repair phases</th>
+          <th data-controller="header-cell" data-header-cell-field-value="adjuster"
+              data-header-cell-width-value="160">Adjuster</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    "Pending → Pending" is the new-claim shape; "Done → Progress" is the
+    healthy mid-claim shape; "Pending → Progress" is the warning sign — a
+    full-repair underway without a make-safe lodged.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = { pending:'Pending', progress:'In progress', done:'Done', na:'N/A' };
+    const derive = (row) => ({
+      ...row,
+      msLabel: LABEL[row.ms]   ?? row.ms,
+      repLabel: LABEL[row.rep] ?? row.rep,
+    });
+    const SEED = [
+      { id:1, job:'Bondi Pavilion · storm window', cause:'Storm',       ms:'done',     rep:'progress', adjuster:'Mantra Adj.' },
+      { id:2, job:'Coogee · burst flex',           cause:'Burst pipe',  ms:'done',     rep:'done',     adjuster:'Crawford'    },
+      { id:3, job:'Manly Reno · car-strike fence', cause:'Impact',      ms:'progress', rep:'pending',  adjuster:'McLarens'    },
+      { id:4, job:'Surry Hills Cafe · kitchen',    cause:'Fire',        ms:'done',     rep:'pending',  adjuster:'Cunningham'  },
+      { id:5, job:'Vega Studio · break-in',        cause:'Theft',       ms:'done',     rep:'progress', adjuster:'Sedgwick'    },
+      { id:6, job:'Pyrmont Pubs · roof',           cause:'Storm',       ms:'pending',  rep:'pending',  adjuster:'Mantra Adj.' },
+      { id:7, job:'Newtown Bakery · flood',        cause:'Burst pipe',  ms:'progress', rep:'progress', adjuster:'Crawford'    },
+      { id:8, job:'Glebe Builders · façade',       cause:'Storm',       ms:'na',       rep:'done',     adjuster:'Sedgwick'    },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    // Paint per-stage data-st (data-bind-attr only paints once globally).
+    const paintStages = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ms').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const stages = node.querySelectorAll('.stage');
+        stages[0]?.setAttribute('data-st', row.ms);
+        stages[1]?.setAttribute('data-st', row.rep);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintStages));
+    new MutationObserver(paintStages).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
