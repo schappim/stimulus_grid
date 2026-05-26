@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>243 — Storeys / level / unit | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Storeys / level / unit — building geometry chip. Matters for
+       working-at-heights triggers (>2m → harness sign-off), lift access,
+       and material delivery (above L4 means swing-stage / lift booking). */
+    .geo {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .geo .tile {
+      padding: 2px 8px; min-width: 28px; text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .geo .ts { background:#1d4ed8; color:#fff; }
+    .geo .lv { background:#0f766e; color:#fff; }
+    .geo .un { background:#ea580c; color:#fff; }
+    .geo .key { background:#f8fafc; color:#475569; font-family: system-ui, sans-serif; font-weight: 600; }
+
+    .heights {
+      display:inline-block; margin-left:8px;
+      padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .heights[data-h="ok"]    { background:#dcfce7; color:#166534; }
+    .heights[data-h="waho"]  { background:#fef3c7; color:#92400e; }
+    .heights[data-h="lift"]  { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>243 — Storeys / level / unit</h1>
+  <p class="lede">
+    Building-geometry chip: total <em>storeys</em>, the work-<em>level</em>,
+    and the <em>unit</em>. Plus a heights flag that triggers WaHO
+    sign-off above 2 m and a "needs lift / swing-stage" flag above L4.
+  </p>
+
+  <template id="geo-renderer">
+    <span class="geo">
+      <span class="tile key">ST</span>
+      <span class="tile ts" data-bind="storeys"></span>
+      <span class="tile key">LV</span>
+      <span class="tile lv" data-bind="level"></span>
+      <span class="tile key">U</span>
+      <span class="tile un" data-bind="unit"></span>
+    </span>
+    <span class="heights" data-bind="heightsLabel" data-bind-attr-keep></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="240">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="storeys"
+              data-header-cell-cell-renderer-value="geo-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Storeys / Level / Unit</th>
+          <th data-controller="header-cell" data-header-cell-field-value="level"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Level</th>
+          <th data-controller="header-cell" data-header-cell-field-value="unit"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Unit</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Storey total is intentionally distinct from work-level — a 12-storey
+    tower can still have a ground-floor job. The heights pill triggers
+    on the work-level, not the building height.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const lv = Number(row.level);
+      let h = 'ok', label = '<2m';
+      if (lv >= 5)      { h='lift';  label='Needs lift / SWMS'; }
+      else if (lv >= 1) { h='waho';  label='WaHO sign-off'; }
+      return { ...row, heightsLabel: label, __h: h };
+    };
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',          storeys:2, level:0, unit:'—' },
+      { id:2, site:'4/87 Marine Pde, Coogee',   storeys:3, level:1, unit:'4' },
+      { id:3, site:'Bondi Pavilion S2',         storeys:6, level:5, unit:'502' },
+      { id:4, site:'Pyrmont Pubs HQ',           storeys:12,level:8, unit:'Lvl 8 South' },
+      { id:5, site:'5 Crown St, Surry Hills',   storeys:4, level:2, unit:'Mezzanine' },
+      { id:6, site:'33 Glebe Pt Rd, Glebe',     storeys:1, level:0, unit:'—' },
+      { id:7, site:'14/2 King St, Newtown',     storeys:5, level:3, unit:'14' },
+      { id:8, site:'7 Marine Pde, Mosman',      storeys:2, level:1, unit:'—' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['level','unit','storeys'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintH = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.heights').forEach((n) => {
+        const tr = n.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) n.setAttribute('data-h', row.__h || 'ok');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintH));
+    new MutationObserver(paintH).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
