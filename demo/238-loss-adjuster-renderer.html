@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>238 — Loss-adjuster | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Loss-adjuster chip — firm + named adjuster + last-contact recency.
+       Recency drives chasing: an adjuster who hasn't responded in 7+ BD
+       is a workflow-blocker the coordinator needs to ping. */
+    .adj {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .adj .firm {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; font-size: 11px; letter-spacing: .02em;
+    }
+    .adj[data-firm="crawford"]    .firm { background:#0f766e; }
+    .adj[data-firm="sedgwick"]    .firm { background:#1d4ed8; }
+    .adj[data-firm="mclarens"]    .firm { background:#9333ea; }
+    .adj[data-firm="cunningham"]  .firm { background:#ea580c; }
+    .adj[data-firm="mantra"]      .firm { background:#dc2626; }
+    .adj[data-firm="loss-adjust-aus"] .firm { background:#0284c7; }
+    .adj[data-firm="independent"] .firm { background:#475569; }
+
+    .recency {
+      padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .recency[data-r="fresh"] { background:#dcfce7; color:#166534; }
+    .recency[data-r="aged"]  { background:#fef3c7; color:#92400e; }
+    .recency[data-r="stale"] { background:#fee2e2; color:#991b1b; }
+    .recency[data-r="never"] { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>238 — Loss-adjuster + last contact</h1>
+  <p class="lede">
+    Firm-coded adjuster chip with last-contact recency: <em>fresh</em>
+    (&lt; 3 BD), <em>aged</em> (3–7 BD), <em>stale</em> (&gt; 7 BD —
+    chase). The firm chooses the workflow shape, and the named adjuster
+    column carries the human. Edit <em>Last contact</em> to re-band the
+    recency.
+  </p>
+
+  <template id="adj-renderer">
+    <span class="adj" data-bind-attr="data-firm">
+      <span class="firm" data-bind="firmLabel"></span>
+      <span data-bind="name"></span>
+      <span class="recency" data-bind="recencyLabel" data-bind-attr-keep></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="160">Claim #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="firm"
+              data-header-cell-cell-renderer-value="adj-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="380">Adjuster</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastContact"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Last contact</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Independent / sole-trader adjusters render under the
+    <em>independent</em> neutral chip — the firm field is the primary key
+    for the workflow router, not the brand colour.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const FIRM = {
+      crawford:'Crawford', sedgwick:'Sedgwick', mclarens:'McLarens',
+      cunningham:'Cunningham Lindsey', mantra:'Mantra',
+      'loss-adjust-aus':'LA Australia', independent:'Independent',
+    };
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const derive = (row) => {
+      const last = row.lastContact ? new Date(row.lastContact) : null;
+      let r, label;
+      if (!last) { r = 'never'; label = 'no contact'; }
+      else {
+        const d = Math.round((today() - last) / dayMs);
+        if (d <= 0)        { r='fresh'; label = 'today'; }
+        else if (d <= 3)   { r='fresh'; label = `${d}d ago`; }
+        else if (d <= 7)   { r='aged';  label = `${d}d ago`; }
+        else               { r='stale'; label = `${d}d ago`; }
+      }
+      return { ...row, firmLabel: FIRM[row.firm] ?? row.firm, recencyLabel: label, __r: r };
+    };
+    const daysAgo = (n) => { const d = today(); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, ref:'IAG-2026-44218', firm:'crawford',         name:'Aisha Wong',    lastContact: daysAgo(1) },
+      { id:2, ref:'ALN-9182203',    firm:'sedgwick',         name:'Petros Calleja',lastContact: daysAgo(2) },
+      { id:3, ref:'QBE/PCY-22038A', firm:'mclarens',         name:'Hugh Larkin',   lastContact: daysAgo(5) },
+      { id:4, ref:'SC-7740019',     firm:'cunningham',       name:'Mia Carter',    lastContact: daysAgo(10) },
+      { id:5, ref:'YOU-1119922',    firm:'mantra',           name:'Rob Singh',     lastContact: daysAgo(0) },
+      { id:6, ref:'RACV-2025-8014', firm:'loss-adjust-aus',  name:'Daniela Costa', lastContact: daysAgo(14) },
+      { id:7, ref:'NRMA-440112',    firm:'independent',      name:'Theo Park',     lastContact: daysAgo(4) },
+      { id:8, ref:'AAMI-22-3014',   firm:'sedgwick',         name:'Maya Tan',      lastContact: null },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['lastContact','firm'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    // Paint per-row recency band (orthogonal to data-firm).
+    const paintR = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.adj').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.querySelector('.recency')?.setAttribute('data-r', row.__r || 'fresh');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintR));
+    new MutationObserver(paintR).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
