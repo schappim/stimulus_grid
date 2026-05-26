@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>207 — Job priority | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Priority badge — dual vocabulary: technical (P1/P2/P3/P4) and
+       customer-facing (Urgent / Same-day / Next-day / Scheduled).
+       The colour ramp is severity-coded so the eye picks the worst row
+       without reading the text. */
+    .prio {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 2px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      background: #f8fafc;
+    }
+    .prio .badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width: 24px; height: 20px; padding: 0 6px;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 700;
+      color: #fff; letter-spacing: .03em;
+    }
+    .prio[data-p="P1"] .badge { background:#dc2626; }
+    .prio[data-p="P2"] .badge { background:#ea580c; }
+    .prio[data-p="P3"] .badge { background:#ca8a04; }
+    .prio[data-p="P4"] .badge { background:#0d9488; }
+    .prio[data-p="P5"] .badge { background:#475569; }
+    .prio[data-p="P1"] { background:#fef2f2; color:#991b1b; }
+    .prio[data-p="P2"] { background:#fff7ed; color:#9a3412; }
+    .prio[data-p="P3"] { background:#fefce8; color:#854d0e; }
+    .prio[data-p="P4"] { background:#f0fdfa; color:#115e59; }
+    .prio[data-p="P5"] { background:#f1f5f9; color:#475569; }
+    .prio .word { font-size: 11.5px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>207 — Job priority (P1 / P2 / P3 + word)</h1>
+  <p class="lede">
+    Dual-vocabulary priority badge: the <em>technical</em> code (P1–P5)
+    drives the SLA contract, and the <em>customer-facing</em> word
+    (Urgent / Same-day / Next-day / Scheduled / Planned) appears on the
+    portal and SMS. Pair with <code>setRowClassRules</code> so P1 rows
+    pulse and float to the top of dispatch.
+  </p>
+
+  <template id="prio-renderer">
+    <span class="prio" data-bind-attr="data-p">
+      <span class="badge" data-bind="priority"></span>
+      <span class="word" data-bind="priorityWord"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="priority"
+              data-header-cell-cell-renderer-value="prio-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Priority</th>
+          <th data-controller="header-cell" data-header-cell-field-value="description"
+              data-header-cell-width-value="320">Description</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The visible badge is just <code>priority</code>; sort happens on that
+    same column so P1 → P5 sorts naturally. The customer-word is a derived
+    field — keep it in the data layer so SMS templates and quoting use the
+    same string the grid shows.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const WORD = { P1:'Urgent', P2:'Same-day', P3:'Next-day', P4:'Scheduled', P5:'Planned' };
+    const mk = (p) => ({ priority: p, priorityWord: WORD[p] });
+    const ROWS = [
+      { id:1, ref:'J-5101', customer:'Bondi Pavilion',  description:'No power to switchboard — full unit out',     ...mk('P1') },
+      { id:2, ref:'J-5102', customer:'Mosman Doctors',  description:'Burst flexi-hose under vanity — water off',  ...mk('P1') },
+      { id:3, ref:'J-5103', customer:'Coogee Holdings', description:'Hot water out — elderly tenant',              ...mk('P2') },
+      { id:4, ref:'J-5104', customer:'Surry Hills Cafe',description:'Cool-room temp drifting +6°C',                ...mk('P2') },
+      { id:5, ref:'J-5105', customer:'Manly Reno Co',   description:'Replace cracked tile in shower recess',      ...mk('P3') },
+      { id:6, ref:'J-5106', customer:'Newtown Bakery',  description:'Quarterly grease-trap pump-out',              ...mk('P4') },
+      { id:7, ref:'J-5107', customer:'Vega Studio',     description:'Solar PV system 12-month inspection',         ...mk('P4') },
+      { id:8, ref:'J-5108', customer:'Glebe Builders',  description:'Future fit-off — pencil booking',             ...mk('P5') },
+      { id:9, ref:'J-5109', customer:'Pyrmont Pubs',    description:'Roof leak — bucket holding for now',          ...mk('P2') },
+      { id:10,ref:'J-5110', customer:'Annandale Yoga',  description:'GPO add-on for new aircon',                   ...mk('P3') },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    // Keep the customer-facing word in sync when priority is edited.
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'priority') return;
+      const p = String(e.detail.newValue || '').toUpperCase();
+      if (!WORD[p]) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      grid.gridApi.applyTransaction({ update: [{ ...row, priority: p, priorityWord: WORD[p] }] });
+    });
+  </script>
+</body>
+</html>
