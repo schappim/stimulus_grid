@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>227 — Special-order ETA | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Special-order ETA — for items not held in branch stock. The pill
+       shows the courier-tracked ETA, supplier name and a delay flag if
+       the ETA has slipped past the original promise. */
+    .so {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .so .state {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; font-size: 11px; letter-spacing: .02em;
+    }
+    .so[data-state="ordered"]    .state { background:#0284c7; }
+    .so[data-state="dispatched"] .state { background:#7c3aed; }
+    .so[data-state="in-transit"] .state { background:#ea580c; }
+    .so[data-state="delivered"]  .state { background:#16a34a; }
+    .so[data-state="delayed"]    .state { background:#dc2626; }
+    .so[data-state="ordered"]    { background:#e0f2fe; color:#075985; }
+    .so[data-state="dispatched"] { background:#f3e8ff; color:#6b21a8; }
+    .so[data-state="in-transit"] { background:#ffedd5; color:#7c2d12; }
+    .so[data-state="delivered"]  { background:#dcfce7; color:#166534; }
+    .so[data-state="delayed"]    { background:#fee2e2; color:#991b1b; }
+    .so .eta {
+      padding: 1px 7px; border-radius: 999px;
+      background: rgba(0,0,0,.07);
+      font-size: 11px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>227 — Special-order ETA</h1>
+  <p class="lede">
+    For parts not held in branch stock. The chip shows the order
+    state, the courier-tracked ETA, and the supplier — and flips to
+    <em>delayed</em> the moment the ETA slips past the original promise.
+    Edit the <em>ETA</em> cell to push or recover a date.
+  </p>
+
+  <template id="so-renderer">
+    <span class="so" data-bind-attr="data-state">
+      <span class="state" data-bind="stateLabel"></span>
+      <span class="eta"   data-bind="etaLabel"></span>
+      <span data-bind="supplier"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">PO #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="280">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-cell-renderer-value="so-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="340">Special order</th>
+          <th data-controller="header-cell" data-header-cell-field-value="eta"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="150">ETA</th>
+          <th data-controller="header-cell" data-header-cell-field-value="promisedEta"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="150">Promised</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Promised ETA is captured once at PO send and never changes. The
+    delay flag flips on whenever <code>eta > promisedEta</code>, so a
+    saved view <em>"PO running late"</em> picks them up without thresholds.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = {
+      ordered:'ORDERED', dispatched:'DISPATCHED', 'in-transit':'IN TRANSIT',
+      delivered:'DELIVERED', delayed:'DELAYED',
+    };
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const derive = (row) => {
+      const etaD = row.eta ? new Date(row.eta) : null;
+      const promD = row.promisedEta ? new Date(row.promisedEta) : null;
+      let state = row.state;
+      if (state !== 'delivered' && etaD && promD && etaD > promD) state = 'delayed';
+      let etaLabel = '—';
+      if (etaD) {
+        const d = Math.round((etaD - today()) / dayMs);
+        etaLabel = d === 0 ? 'today' : d > 0 ? `in ${d}d` : `${Math.abs(d)}d ago`;
+      }
+      return { ...row, state, stateLabel: LABEL[state] ?? state, etaLabel };
+    };
+    const inDays = (n) => { const d = today(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, ref:'PO-4421', part:'Reliance Tundish 50mm',          supplier:'Reece',         state:'ordered',    eta: inDays(4),  promisedEta: inDays(5) },
+      { id:2, ref:'PO-4422', part:'Mitsubishi Heavy SRK 3.5kW',     supplier:'Beijer',        state:'dispatched', eta: inDays(2),  promisedEta: inDays(2) },
+      { id:3, ref:'PO-4423', part:'Bromic Tungsten Smart-Heat 6kW', supplier:'Bromic',        state:'in-transit', eta: inDays(1),  promisedEta: inDays(0) },
+      { id:4, ref:'PO-4424', part:'Caroma Care Plus toilet suite',  supplier:'Tradelink',     state:'ordered',    eta: inDays(9),  promisedEta: inDays(7) },
+      { id:5, ref:'PO-4425', part:'NHP DIN-rail RCBO 32A 30mA',     supplier:'NHP',           state:'delivered',  eta: inDays(-2), promisedEta: inDays(0) },
+      { id:6, ref:'PO-4426', part:'Aristondo gas water heater',     supplier:'Ariston',       state:'ordered',    eta: inDays(20), promisedEta: inDays(14) },
+      { id:7, ref:'PO-4427', part:'Schneider iC60H MCB 6A C',       supplier:'Schneider',     state:'dispatched', eta: inDays(3),  promisedEta: inDays(3) },
+      { id:8, ref:'PO-4428', part:'Geberit Sigma 70 plate',         supplier:'Geberit AU',    state:'in-transit', eta: inDays(0),  promisedEta: inDays(0) },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['eta','state'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
