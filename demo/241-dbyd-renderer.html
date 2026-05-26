@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>241 — DBYD reference | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* DBYD reference — Dial Before You Dig lodgement. Valid for 28 days.
+       After that, dig at your own risk (literally). Pair this with any
+       excavation / driveway / footings job. */
+    .dbyd {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .dbyd .stamp {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; letter-spacing: .04em;
+    }
+    .dbyd[data-band="valid"]  { background:#dcfce7; color:#166534; }
+    .dbyd[data-band="valid"]  .stamp { background:#16a34a; }
+    .dbyd[data-band="warn"]   { background:#fef3c7; color:#92400e; }
+    .dbyd[data-band="warn"]   .stamp { background:#ca8a04; }
+    .dbyd[data-band="expired"]{ background:#fee2e2; color:#991b1b; }
+    .dbyd[data-band="expired"].stamp { background:#dc2626; }
+    .dbyd[data-band="none"]   { background:#f1f5f9; color:#475569; }
+    .dbyd[data-band="none"]   .stamp { background:#475569; }
+    .dbyd .days {
+      padding: 1px 7px; border-radius: 999px;
+      background: rgba(0,0,0,.07); font-variant-numeric: tabular-nums; font-size: 11px;
+      font-family: system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>241 — DBYD reference</h1>
+  <p class="lede">
+    Dial Before You Dig lodgement reference. A DBYD is valid for 28 days
+    from the request date; warn at &lt; 7 days remaining, red beyond.
+    Pair with any excavation, footings, driveway, or directional-bore
+    job so the supervisor doesn't approve a dig on a stale ticket.
+  </p>
+
+  <template id="dbyd-renderer">
+    <span class="dbyd" data-bind-attr="data-band">
+      <span class="stamp" data-bind="stampLabel"></span>
+      <span data-bind="ref"></span>
+      <span class="days" data-bind="dayLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-cell-renderer-value="dbyd-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="320">DBYD ref</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lodged"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="150">Lodged</th>
+          <th data-controller="header-cell" data-header-cell-field-value="work"
+              data-header-cell-width-value="220">Work</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Re-lodge before any expired job goes ahead — striking an unmarked
+    gas main is a notifiable safety incident and a guaranteed shutdown
+    of the site. Push <em>Lodged</em> backwards into the past to watch
+    the chip flip warn → expired.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const derive = (row) => {
+      if (!row.lodged) return { ...row, stampLabel:'NO-DBYD', dayLabel:'not lodged', __band:'none' };
+      const d = Math.round((today() - new Date(row.lodged)) / dayMs);
+      const left = 28 - d;
+      let band, stamp, dayLabel;
+      if (left > 7)  { band='valid';   stamp='DBYD ✓'; dayLabel = `${left}d left`; }
+      else if (left > 0) { band='warn'; stamp='DBYD ⚠'; dayLabel = `${left}d left`; }
+      else { band='expired'; stamp='DBYD ✗'; dayLabel = `expired ${Math.abs(left)}d`; }
+      return { ...row, stampLabel:stamp, dayLabel, __band:band };
+    };
+    const daysAgo = (n) => { const d = today(); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, site:'14 Bay St, Bondi — footings',       ref:'DB-22-4419112', lodged: daysAgo(2),  work:'House extension' },
+      { id:2, site:'5 Forge Pl, Mascot — bore',         ref:'DB-22-4419118', lodged: daysAgo(8),  work:'Directional bore' },
+      { id:3, site:'90 Pittwater Rd — driveway',        ref:'DB-22-4419121', lodged: daysAgo(22), work:'New driveway' },
+      { id:4, site:'12 Ross St — sewer',                ref:'DB-22-4419133', lodged: daysAgo(30), work:'Sewer replacement' },
+      { id:5, site:'33 Glebe Pt Rd — comms pit',        ref:'DB-22-4419145', lodged: daysAgo(0),  work:'Comms pit install' },
+      { id:6, site:'8 Smith Lane — minor excavation',   ref:'DB-22-4419188', lodged: daysAgo(40), work:'Stormwater drain' },
+      { id:7, site:'21 Crown St — pier holes',          ref:'DB-22-4419201', lodged: daysAgo(5),  work:'Stump replacement' },
+      { id:8, site:'5 Park Rd — fence post hole',       ref:'',              lodged: null,        work:'Fence' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['lodged','ref'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    // Mirror the band onto the chip (data-bind-attr only fires for cell value).
+    const paintBand = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.dbyd').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) node.setAttribute('data-band', row.__band || 'valid');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBand));
+    new MutationObserver(paintBand).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
