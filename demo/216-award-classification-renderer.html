@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>216 — Award classification | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Award classification — Construction Workers (CW1–CW9),
+       Electrical (E1–E5), Plumbing (P1–P6) and so on. The grade tile
+       carries the level number; the cluster tag groups by award. */
+    .aw {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .aw .award {
+      padding: 2px 8px;
+      background: #f1f5f9; color: #1f2937;
+      letter-spacing: .04em;
+    }
+    .aw .grade {
+      padding: 2px 8px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .aw[data-cluster="CW"] .grade { background:#0ea5e9; }
+    .aw[data-cluster="E"]  .grade { background:#ea580c; }
+    .aw[data-cluster="P"]  .grade { background:#16a34a; }
+    .aw[data-cluster="HVAC"] .grade { background:#7c3aed; }
+    .aw[data-cluster="ESI"]  .grade { background:#dc2626; }
+
+    .pay { color:#94a3b8; font-size: 11px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>216 — Award classification</h1>
+  <p class="lede">
+    Award + grade — CW1–CW9 (Construction), E1–E5 (Electrical),
+    P1–P6 (Plumbing), HVAC1–HVAC5, ESI1–ESI8 (Electricity supply industry).
+    Used by every rate-card lookup; pair with the penalty-rate pill (#215)
+    to compose the actual rate.
+  </p>
+
+  <template id="aw-renderer">
+    <span class="aw" data-bind-attr="data-cluster">
+      <span class="award" data-bind="award"></span>
+      <span class="grade" data-bind="grade"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="200">Worker</th>
+          <th data-controller="header-cell" data-header-cell-field-value="trade"
+              data-header-cell-width-value="160">Trade</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cluster"
+              data-header-cell-cell-renderer-value="aw-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Classification</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rate"
+              data-header-cell-width-value="120">Base $/h</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ea"
+              data-header-cell-width-value="200">EA / Award</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The cluster prefix (<code>CW</code> / <code>E</code> / <code>P</code>)
+    and the grade number live in separate fields so payroll keeps
+    classification math (CW3 → CW4 progression) independent of the
+    presentation.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id:1, tech:'Astrid Hale',    trade:'Carpenter',    cluster:'CW',   award:'CW', grade:'CW3',   rate:'$ 38.50', ea:'On-site Award 2020' },
+      { id:2, tech:'Marcus Chen',    trade:'Electrician',  cluster:'E',    award:'E',  grade:'E2',    rate:'$ 42.80', ea:'Electrical Award 2020' },
+      { id:3, tech:'Priya Patel',    trade:'Plumber',      cluster:'P',    award:'P',  grade:'P4',    rate:'$ 39.10', ea:'Plumbing Award 2020' },
+      { id:4, tech:'Jamal Owens',    trade:'HVAC',         cluster:'HVAC', award:'HVAC',grade:'HVAC3',rate:'$ 40.20', ea:'Air-cond & Refrig 2020' },
+      { id:5, tech:'Lena Brooks',    trade:'Carpenter',    cluster:'CW',   award:'CW', grade:'CW5',   rate:'$ 44.00', ea:'On-site Award 2020' },
+      { id:6, tech:'Tomás Vega',     trade:'Linesman',     cluster:'ESI',  award:'ESI',grade:'ESI4',  rate:'$ 51.30', ea:'ESI — Power Award 2020' },
+      { id:7, tech:'Apprentice Y3',  trade:'Plumber',      cluster:'P',    award:'P',  grade:'P-Y3',  rate:'$ 24.10', ea:'NTC apprentice scale' },
+      { id:8, tech:'Apprentice Y1',  trade:'Electrician',  cluster:'E',    award:'E',  grade:'E-Y1',  rate:'$ 16.40', ea:'NTC apprentice scale' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
