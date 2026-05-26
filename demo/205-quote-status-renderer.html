@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>205 — Quote status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Quote-stage funnel — *not* the invoice funnel (#174). A quote can be
+       sent, viewed (the customer opened the PDF), accepted, declined,
+       expired, or revised after a customer counter. */
+    .qstatus {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+    .qstatus::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+    }
+    .qstatus[data-status="draft"]    { background:#f1f5f9; color:#475569; }
+    .qstatus[data-status="sent"]     { background:#dbeafe; color:#1e40af; }
+    .qstatus[data-status="viewed"]   { background:#e0e7ff; color:#3730a3; }
+    .qstatus[data-status="accepted"] { background:#dcfce7; color:#166534; }
+    .qstatus[data-status="declined"] { background:#fee2e2; color:#991b1b; }
+    .qstatus[data-status="expired"]  { background:#fef3c7; color:#92400e; }
+    .qstatus[data-status="revised"]  { background:#f3e8ff; color:#6b21a8; }
+
+    .when { color:#94a3b8; font-size: 11px; margin-left: 4px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>205 — Quote status (sent / viewed / accepted / …)</h1>
+  <p class="lede">
+    The funnel before an invoice exists. <em>Viewed</em> is the high-value
+    signal — most quoting tools track e-mail open / PDF open and the
+    follow-up window is &lt; 48h before the lead cools. Pair this with the
+    SLA pill (#204) to chase quotes that haven't been touched.
+  </p>
+
+  <template id="qstatus-renderer">
+    <span class="qstatus" data-bind="qStatusLabel" data-bind-attr="data-status"></span>
+  </template>
+
+  <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Quote #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-type-value="number"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Total</th>
+          <th data-controller="header-cell" data-header-cell-field-value="qStatus"
+              data-header-cell-cell-renderer-value="qstatus-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="180">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="last"
+              data-header-cell-width-value="180">Last activity</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The renderer takes a controlled vocabulary so a <em>"Quote follow-up"</em>
+    saved view (#H) filters cleanly:
+    <code>qStatus IN (sent, viewed) AND last &lt; -2 days</code>.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id:1, ref:'Q-3091', customer:'Bondi Pavilion',  amount:'$ 14,850',
+        qStatus:'draft',    qStatusLabel:'Draft',       last:'Today 11:02' },
+      { id:2, ref:'Q-3092', customer:'Coogee Holdings', amount:'$  2,340',
+        qStatus:'sent',     qStatusLabel:'Sent',        last:'Yesterday 16:48' },
+      { id:3, ref:'Q-3093', customer:'Manly Reno Co',   amount:'$ 38,720',
+        qStatus:'viewed',   qStatusLabel:'Viewed × 3',  last:'Yesterday 19:11' },
+      { id:4, ref:'Q-3094', customer:'Vega Studio',     amount:'$  1,090',
+        qStatus:'viewed',   qStatusLabel:'Viewed',      last:'2 days ago' },
+      { id:5, ref:'Q-3095', customer:'Surry Hills Cafe',amount:'$  6,210',
+        qStatus:'accepted', qStatusLabel:'Accepted',    last:'2 days ago — sig OK' },
+      { id:6, ref:'Q-3096', customer:'Pyrmont Pubs',    amount:'$ 22,400',
+        qStatus:'accepted', qStatusLabel:'Accepted',    last:'3 days ago' },
+      { id:7, ref:'Q-3097', customer:'Newtown Bakery',  amount:'$    890',
+        qStatus:'declined', qStatusLabel:'Declined',    last:'5 days ago — "too high"' },
+      { id:8, ref:'Q-3098', customer:'Glebe Builders',  amount:'$ 12,100',
+        qStatus:'expired',  qStatusLabel:'Expired',     last:'30 days ago' },
+      { id:9, ref:'Q-3099', customer:'Mosman Doctors',  amount:'$  4,560',
+        qStatus:'revised',  qStatusLabel:'Revised v2',  last:'Today 09:33' },
+      { id:10,ref:'Q-3100', customer:'Annandale Yoga',  amount:'$  3,200',
+        qStatus:'sent',     qStatusLabel:'Sent — no opens', last:'4 days ago' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
