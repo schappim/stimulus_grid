@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>211 — Practical completion / DLP | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* PC / DLP — the build-side handover clock.
+       PC = practical completion declared.
+       DLP = defect-liability-period (typ. 12 mo, sometimes 6 or 24).
+       Pre-PC = job still under construction.
+       Active DLP = on the hook for callbacks.
+       Expired DLP = release of retention available. */
+    .pcd {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .pcd .stage {
+      padding: 1px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; color: #fff;
+    }
+    .pcd[data-stage="pre"]      .stage { background:#94a3b8; }
+    .pcd[data-stage="active"]   .stage { background:#0284c7; }
+    .pcd[data-stage="expiring"] .stage { background:#ea580c; }
+    .pcd[data-stage="expired"]  .stage { background:#16a34a; }
+    .pcd[data-stage="pre"]      { background:#f1f5f9; color:#475569; }
+    .pcd[data-stage="active"]   { background:#e0f2fe; color:#075985; }
+    .pcd[data-stage="expiring"] { background:#fff7ed; color:#9a3412; }
+    .pcd[data-stage="expired"]  { background:#dcfce7; color:#166534; }
+    .pcd .clock { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>211 — Practical completion / DLP countdown</h1>
+  <p class="lede">
+    The build-side handover clock: <em>Pre-PC</em> (under construction),
+    <em>Active DLP</em> (in the defect-liability window — on the hook),
+    <em>Expiring</em> (&lt; 30 days left — chase final defect inspection
+    and retention release), <em>Expired</em> (retention claimable, done).
+    Edit the <em>PC date</em> or <em>DLP months</em> to re-derive the
+    stage.
+  </p>
+
+  <template id="pcd-renderer">
+    <span class="pcd" data-bind-attr="data-stage">
+      <span class="stage" data-bind="stageLabel"></span>
+      <span class="clock" data-bind="clockLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="project"
+              data-header-cell-width-value="220">Project</th>
+          <th data-controller="header-cell" data-header-cell-field-value="stage"
+              data-header-cell-cell-renderer-value="pcd-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">Stage / Clock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pcDate"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="150">PC date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dlpMonths"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">DLP (mo)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="contract"
+              data-header-cell-width-value="180">Contract</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pair this with the retention renderer (#175) — once the DLP clock
+    reads <em>Expired</em>, the held retention is mechanically due. A
+    saved view of <em>"Retention claimable"</em> picks them up automatically.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const addMonths = (iso, m) => { const d = new Date(iso); d.setMonth(d.getMonth() + Number(m||0)); return d; };
+    const recompute = (row) => {
+      if (!row.pcDate) {
+        return { ...row, stage:'pre', stageLabel:'Pre-PC', clockLabel:'PC not declared' };
+      }
+      const dlpEnd = addMonths(row.pcDate, row.dlpMonths);
+      const daysLeft = Math.round((dlpEnd - today()) / dayMs);
+      if (daysLeft > 30)  return { ...row, stage:'active',   stageLabel:'DLP active',   clockLabel:`${daysLeft}d left` };
+      if (daysLeft > 0)   return { ...row, stage:'expiring', stageLabel:'DLP expiring', clockLabel:`${daysLeft}d left` };
+      return                 { ...row, stage:'expired',  stageLabel:'DLP expired',  clockLabel:`${Math.abs(daysLeft)}d ago` };
+    };
+    const inDays = (n) => { const d = today(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, project:'Bondi Pavilion — Stage 2',   pcDate: inDays(-30),  dlpMonths:12, contract:'GC residential' },
+      { id:2, project:'Coogee Holdings — fitout',   pcDate: inDays(-340), dlpMonths:12, contract:'D&C commercial' },
+      { id:3, project:'Manly Reno — bath redo',     pcDate: inDays(-185), dlpMonths: 6, contract:'Lump-sum residential' },
+      { id:4, project:'Surry Hills — barista bar',  pcDate: null,         dlpMonths:12, contract:'Fitout — sub-contract' },
+      { id:5, project:'Vega Studio — fitout',       pcDate: inDays(-700), dlpMonths:24, contract:'Major works' },
+      { id:6, project:'Pyrmont Pubs — kitchen',     pcDate: inDays(-95),  dlpMonths:12, contract:'D&C commercial' },
+      { id:7, project:'Newtown Bakery — extraction',pcDate: inDays(-10),  dlpMonths:12, contract:'Minor works' },
+      { id:8, project:'Glebe Builders — façade',    pcDate: inDays(-160), dlpMonths: 6, contract:'Sub-contract' },
+      { id:9, project:'Mosman Doctors — consult',   pcDate: inDays(-50),  dlpMonths:12, contract:'Lump-sum commercial' },
+      { id:10,project:'Annandale Yoga — studio',    pcDate: inDays(-365), dlpMonths:12, contract:'D&C residential' },
+    ];
+    const ROWS = SEED.map(recompute);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'pcDate' && e.detail.colId !== 'dlpMonths') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [recompute(row)] });
+    });
+  </script>
+</body>
+</html>
