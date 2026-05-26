@@ -27,7 +27,11 @@
       display:inline-flex; align-items:center; justify-content:center;
       width: 18px; height: 18px; border-radius: 50%;
       color: #fff; font-size: 12px; font-weight: 700;
+      line-height: 1;
     }
+    /* The pending '⋯' mid-line ellipsis is mathematically centered, but
+       give it a touch more size so it reads at parity with ✓ / ! / ✗. */
+    .insp[data-r="pending"] .mark { font-size: 15px; letter-spacing: -1px; }
     .insp[data-r="pass"]        { background:#dcfce7; color:#166534; }
     .insp[data-r="pass"]        .mark { background:#16a34a; }
     .insp[data-r="conditional"] { background:#fef3c7; color:#92400e; }
@@ -103,7 +107,7 @@
       pass:        { glyph:'✓', label:'Pass' },
       conditional: { glyph:'!', label:'Conditional' },
       fail:        { glyph:'✗', label:'Fail' },
-      pending:     { glyph:'…', label:'Pending' },
+      pending:     { glyph:'⋯', label:'Pending' },
     };
     const mk = (k, extra='') => ({ result:k, resultGlyph:META[k].glyph, resultLabel:META[k].label + (extra ? ` — ${extra}` : '') });
     const ROWS = [
