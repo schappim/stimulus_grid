@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>234 — Authority-limit pill | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Authority-limit pill — insurance-authorised work has a $ cap before
+       a Variation must be re-approved. The pill shows authorised $$,
+       quoted $$ and the under/over state. */
+    .auth {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 1px 9px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .auth[data-s="under"]   { background:#dcfce7; color:#166534; }
+    .auth[data-s="at"]      { background:#fef3c7; color:#92400e; }
+    .auth[data-s="over"]    { background:#fee2e2; color:#991b1b; }
+    .auth[data-s="none"]    { background:#f1f5f9; color:#475569; }
+    .auth .arrow { color: #94a3b8; font-weight: 500; }
+    .auth .head {
+      padding: 1px 7px; border-radius: 4px;
+      background: rgba(0,0,0,.07);
+      letter-spacing: .03em; font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>234 — Authority-limit pill (insurance work)</h1>
+  <p class="lede">
+    Insurance-authorised jobs have a $ cap above which the contractor
+    must seek a fresh authority before continuing. The pill reads
+    "$1,500 → $1,320" with state <em>under</em> / <em>at</em> (within
+    5%) / <em>over</em>, so a coordinator spots the rows that need a
+    re-authorisation call before any work goes ahead.
+  </p>
+
+  <template id="auth-renderer">
+    <span class="auth" data-bind-attr="data-s">
+      <span class="head">AUTH</span>
+      <span data-bind="authLabel"></span>
+      <span class="arrow">→</span>
+      <span data-bind="quotedLabel"></span>
+      <span data-bind="deltaLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="insurer"
+              data-header-cell-width-value="160">Insurer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="auth"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Authorised</th>
+          <th data-controller="header-cell" data-header-cell-field-value="quoted"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Quoted</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-cell-renderer-value="auth-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Auth state</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The "at" band (within 5% of the cap) is a deliberate buffer — once
+    you're 90%+ of the way through the authority and still finding more
+    work, it's cheaper to call ahead than to argue post-hoc.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fmt = (n) => '$' + Number(n).toLocaleString('en-AU', { maximumFractionDigits: 0 });
+    const derive = (row) => {
+      const a = Number(row.auth || 0);
+      const q = Number(row.quoted || 0);
+      let s = 'none';
+      if (a === 0)      s = 'none';
+      else if (q > a)   s = 'over';
+      else if (q >= a * 0.95) s = 'at';
+      else              s = 'under';
+      const delta = q - a;
+      const deltaLabel = a === 0 ? '' : delta > 0 ? `+${fmt(delta)}` : delta < 0 ? `(${fmt(-delta)} headroom)` : '';
+      return {
+        ...row,
+        state: s,
+        authLabel: a ? fmt(a) : 'no cap',
+        quotedLabel: fmt(q),
+        deltaLabel,
+      };
+    };
+    const SEED = [
+      { id:1, ref:'J-7401', insurer:'IAG',      auth: 1500, quoted: 1320 },
+      { id:2, ref:'J-7402', insurer:'Allianz',  auth: 1000, quoted:  980 },
+      { id:3, ref:'J-7403', insurer:'QBE',      auth: 2200, quoted: 2680 },
+      { id:4, ref:'J-7404', insurer:'Suncorp',  auth:  800, quoted:  790 },
+      { id:5, ref:'J-7405', insurer:'Youi',     auth: 1500, quoted:  420 },
+      { id:6, ref:'J-7406', insurer:'IAG',      auth: 5000, quoted: 5180 },
+      { id:7, ref:'J-7407', insurer:'Allianz',  auth:    0, quoted: 1100 },
+      { id:8, ref:'J-7408', insurer:'RACV',     auth: 3500, quoted: 2950 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['auth','quoted'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
