@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>262 — Safe attack rating | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .atk { display:inline-flex; align-items:stretch; gap:1px;
+           border-radius: 6px; overflow:hidden;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+           box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .atk .std { padding: 2px 6px; background:#0f172a; color:#9ca3af; }
+    .atk .grd { padding: 2px 8px; color:#fff; }
+    .atk[data-band="lo"] .grd { background:#dc2626; }
+    .atk[data-band="md"] .grd { background:#ea580c; }
+    .atk[data-band="hi"] .grd { background:#16a34a; }
+    .atk[data-band="xh"] .grd { background:#7c3aed; }
+    .rti { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>262 — Safe attack rating</h1>
+  <p class="lede">
+    EN 1143-1 (Grade 0–VI) or UL TL/TRTL ratings — what a safe is
+    certified to resist and for how long. The chip carries the
+    standard + grade; the trailing pill is the indicative resistance
+    time in minutes (RTI) for partial / full access.
+  </p>
+
+  <template id="atk-renderer">
+    <span class="atk">
+      <span class="std" data-bind="standard"></span>
+      <span class="grd" data-bind="grade"></span>
+    </span>
+    <span class="rti" data-bind="rti"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="safe"
+              data-header-cell-width-value="280">Safe</th>
+          <th data-controller="header-cell" data-header-cell-field-value="grade"
+              data-header-cell-cell-renderer-value="atk-renderer"
+              data-header-cell-width-value="300">Attack rating</th>
+          <th data-controller="header-cell" data-header-cell-field-value="location"
+              data-header-cell-width-value="220">Location</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    EN gives a single combined grade; UL splits TL (tool) from TR (torch)
+    from TX (explosive). When mapping to insurance, only the lower of
+    the two ratings counts.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // grade → band, RTI minutes
+    const TABLE = {
+      'EN 0':     { band: 'lo', rti: '10/15 min' },
+      'EN I':     { band: 'lo', rti: '15/30 min' },
+      'EN II':    { band: 'md', rti: '30/50 min' },
+      'EN III':   { band: 'md', rti: '50/80 min' },
+      'EN IV':    { band: 'hi', rti: '80/120 min' },
+      'EN V':     { band: 'hi', rti: '120/180 min' },
+      'EN VI':    { band: 'xh', rti: '180+/270 min' },
+      'TL-15':    { band: 'md', rti: '15 min tool' },
+      'TL-30':    { band: 'hi', rti: '30 min tool' },
+      'TL-30x6':  { band: 'hi', rti: '30 min, 6 sides' },
+      'TRTL-30x6':{ band: 'xh', rti: '30 min tool+torch, 6 sides' },
+    };
+    const SEED = [
+      { id:1, safe:'Chubb Air-30',          standard:'EN',  grade:'EN II',     location:'Pyrmont Pubs HQ — counter' },
+      { id:2, safe:'Lokaway LK-2',          standard:'EN',  grade:'EN I',      location:'Bondi Pavilion bar' },
+      { id:3, safe:'CMI Office OFF-1',      standard:'EN',  grade:'EN 0',      location:'12 Bay St back office' },
+      { id:4, safe:'Mutual MTD-3',          standard:'EN',  grade:'EN III',    location:'14 King St strongroom' },
+      { id:5, safe:'AMSEC BWB3025',         standard:'UL',  grade:'TL-30',     location:'Crown St jeweller' },
+      { id:6, safe:'Diebold UL-listed',     standard:'UL',  grade:'TRTL-30x6', location:'Marine Pde branch vault' },
+      { id:7, safe:'CMI Domestic D-2',      standard:'EN',  grade:'EN 0',      location:'33 Glebe Pt Rd pharmacy' },
+    ];
+    const ROWS = SEED.map((r) => ({
+      ...r,
+      rti: TABLE[r.grade]?.rti || '—',
+      __band: TABLE[r.grade]?.band || 'lo',
+    }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.atk').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-band', row.__band);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

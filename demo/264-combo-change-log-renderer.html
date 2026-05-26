@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>264 — Combination change log | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .chg { display:inline-flex; align-items:center; gap:6px;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+    .chg .ago { padding: 2px 8px; border-radius: 4px; color:#fff; }
+    .chg[data-st="ok"]   .ago { background:#16a34a; }
+    .chg[data-st="warn"] .ago { background:#ea580c; }
+    .chg[data-st="overdue"] .ago { background:#dc2626; }
+    .policy { padding: 1px 7px; border-radius: 999px;
+              background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+    .by { color:#64748b; font-size: 11px; font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>264 — Combination change log</h1>
+  <p class="lede">
+    Combination locks decay with staff turnover, not with use. The cell
+    shows how long since the last change against the site's policy
+    interval — banks 6-monthly, government and CIT 12-monthly, the
+    pharmacy on the corner whenever someone quits.
+  </p>
+
+  <template id="chg-renderer">
+    <span class="chg">
+      <span class="ago" data-bind="agoLabel"></span>
+      <span class="policy" data-bind="policyLabel"></span>
+    </span>
+    <span class="by" data-bind="byLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="safe"
+              data-header-cell-width-value="260">Safe</th>
+          <th data-controller="header-cell" data-header-cell-field-value="agoLabel"
+              data-header-cell-cell-renderer-value="chg-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="380">Change log</th>
+          <th data-controller="header-cell" data-header-cell-field-value="vertical"
+              data-header-cell-width-value="160">Vertical</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Policies live with the site, not the lock. A single Lokaway in a
+    multi-tenancy might be on the bank tenant's 6-month policy even
+    though physically identical safes upstairs are on 12.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26');
+    const derive = (row) => {
+      const last = new Date(row.lastChanged);
+      const days = Math.round((TODAY - last) / 86400000);
+      const ratio = days / row.policyDays;
+      const st = ratio >= 1 ? 'overdue' : ratio >= 0.8 ? 'warn' : 'ok';
+      return {
+        ...row,
+        agoLabel: days < 31 ? `${days}d ago` : `${Math.round(days/30)} mo ago`,
+        policyLabel: `policy ${Math.round(row.policyDays/30)} mo`,
+        byLabel: `by ${row.changedBy}`,
+        __st: st,
+      };
+    };
+    const SEED = [
+      { id:1, safe:'Pyrmont Pubs HQ — drop safe',  vertical:'Hospitality', lastChanged:'2025-12-01', policyDays: 365, changedBy:'A. Hua' },
+      { id:2, safe:'Chubb Air-30 — Bondi branch',  vertical:'Banking',     lastChanged:'2026-04-04', policyDays: 180, changedBy:'R. Patel' },
+      { id:3, safe:'CMI Office OFF-1 — 12 Bay',    vertical:'Retail',      lastChanged:'2024-05-10', policyDays: 365, changedBy:'C. Nguyen' },
+      { id:4, safe:'Mutual MTD-3 — King St',       vertical:'Gov',         lastChanged:'2025-08-22', policyDays: 365, changedBy:'D. Okafor' },
+      { id:5, safe:'AMSEC BWB3025 — Crown',        vertical:'Jewellery',   lastChanged:'2026-05-12', policyDays: 180, changedBy:'L. Park' },
+      { id:6, safe:'Diebold vault — Marine Pde',   vertical:'Banking',     lastChanged:'2025-10-01', policyDays: 180, changedBy:'M. Issa' },
+      { id:7, safe:'CMI Domestic D-2 — Glebe',     vertical:'Pharmacy',    lastChanged:'2023-11-30', policyDays: 365, changedBy:'(historic)' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.chg').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-st', row.__st);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

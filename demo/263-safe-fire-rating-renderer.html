@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>263 — Safe fire rating | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .fr { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .fr .mins { padding: 2px 8px; color:#fff; }
+    .fr .media { padding: 2px 8px; color:#fff; }
+    .fr[data-band="30"]  .mins { background:#f59e0b; }
+    .fr[data-band="60"]  .mins { background:#ea580c; }
+    .fr[data-band="120"] .mins { background:#b91c1c; }
+    .fr[data-media="paper"]   .media { background:#475569; }
+    .fr[data-media="media"]   .media { background:#7c3aed; }
+    .fr[data-media="data"]    .media { background:#1d4ed8; }
+    .ul { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+          background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>263 — Safe fire rating</h1>
+  <p class="lede">
+    Minutes-to-failure at standard fire test temperature, plus the
+    interior media spec — <strong>paper</strong> (≤ 177 °C internal),
+    <strong>media</strong> (≤ 65 °C), <strong>data</strong>
+    (≤ 52 °C and humidity-controlled). A "1-hour safe" rated for paper
+    won't protect a hard drive.
+  </p>
+
+  <template id="fr-renderer">
+    <span class="fr">
+      <span class="mins"  data-bind="mins"></span>
+      <span class="media" data-bind="mediaLabel"></span>
+    </span>
+    <span class="ul" data-bind="cert"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="safe"
+              data-header-cell-width-value="280">Safe</th>
+          <th data-controller="header-cell" data-header-cell-field-value="mins"
+              data-header-cell-cell-renderer-value="fr-renderer"
+              data-header-cell-width-value="320">Fire rating</th>
+          <th data-controller="header-cell" data-header-cell-field-value="contents"
+              data-header-cell-width-value="240">Contents</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Mismatched rows (paper-rated safe with media contents, or media-rated
+    safe used for data) are exactly the conversation a locksmith wants
+    to have <em>before</em> the next site survey, not after the fire.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, safe:'CMI HSC-150',     mins:'60 min',  mediaLabel:'paper', cert:'UL-72 350-1H', __band:'60',  __media:'paper', contents:'Cash + paper records' },
+      { id:2, safe:'Sentry SFW123GDF',mins:'30 min',  mediaLabel:'paper', cert:'UL-72 350-30', __band:'30',  __media:'paper', contents:'Personal docs' },
+      { id:3, safe:'FireKing 1-1827', mins:'60 min',  mediaLabel:'media', cert:'UL-72 150-1H', __band:'60',  __media:'media', contents:'Backup tapes' },
+      { id:4, safe:'Phoenix DS3401D', mins:'120 min', mediaLabel:'paper', cert:'EN 1047-1',    __band:'120', __media:'paper', contents:'Legal archive' },
+      { id:5, safe:'Sentry DS3431',   mins:'120 min', mediaLabel:'data',  cert:'UL-72 125-2H', __band:'120', __media:'data',  contents:'NAS drives' },
+      { id:6, safe:'Chubb DataPlus 2',mins:'60 min',  mediaLabel:'data',  cert:'EN 1047-1 DIS60', __band:'60', __media:'data', contents:'Trading logs' },
+      { id:7, safe:'CMI Domestic D-2',mins:'30 min',  mediaLabel:'paper', cert:'AS 3809',      __band:'30',  __media:'paper', contents:'Spare keys + USB (!)' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.fr').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-band', row.__band);
+        node.setAttribute('data-media', row.__media);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

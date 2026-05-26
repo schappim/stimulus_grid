@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>265 — Time-lock window | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* 24h dial showing time-lock open window. Bar represents 0..24 with
+       a coloured open-window plus a "now" tick. */
+    .tl { display:inline-block; position:relative;
+          width: 220px; height: 14px; border-radius: 4px;
+          background:#0f172a; }
+    .tl .open { position:absolute; top:0; bottom:0; background:#16a34a; }
+    .tl .delay{ position:absolute; top:0; bottom:0; background:#f59e0b; }
+    .tl .now  { position:absolute; top:-2px; bottom:-2px; width:2px; background:#ef4444; }
+    .lbl { margin-left: 10px; font-family: ui-monospace, monospace;
+           font-size: 11px; color:#475569; }
+    .state { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+             font-size: 11px; font-weight: 600;
+             background:#dcfce7; color:#166534; }
+    .state[data-st="closed"] { background:#fee2e2; color:#991b1b; }
+    .state[data-st="delay"]  { background:#fef3c7; color:#92400e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>265 — Time-lock window</h1>
+  <p class="lede">
+    ATM and CIT (cash-in-transit) safes don't open on demand — they
+    have a fixed daily window, plus a time delay after the right
+    combination is entered. The dial sits across a 24-hour bar; the
+    red tick is now (rendered against demo time 09:30).
+  </p>
+
+  <template id="tl-renderer">
+    <span class="tl">
+      <span class="delay"></span>
+      <span class="open"></span>
+      <span class="now"></span>
+    </span>
+    <span class="lbl"   data-bind="windowLabel"></span>
+    <span class="state" data-bind="stateLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="safe"
+              data-header-cell-width-value="260">Safe</th>
+          <th data-controller="header-cell" data-header-cell-field-value="windowLabel"
+              data-header-cell-cell-renderer-value="tl-renderer"
+              data-header-cell-width-value="440">Time-lock window</th>
+          <th data-controller="header-cell" data-header-cell-field-value="delayMin"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Delay</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The amber band is the time-delay after the combination is entered;
+    the green band is the daily open window. If the red tick sits in
+    grey, the safe physically can't open until the next window.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const NOW_HR = 9.5; // 09:30
+    const derive = (row) => {
+      const inside = NOW_HR >= row.openStart && NOW_HR <= row.openEnd;
+      const st = !inside ? 'closed' : row.delayMin > 0 ? 'delay' : 'ok';
+      return {
+        ...row,
+        windowLabel: `open ${hr(row.openStart)}–${hr(row.openEnd)}, delay ${row.delayMin}m`,
+        stateLabel: st === 'closed' ? 'outside window' : st === 'delay' ? `delay ${row.delayMin}m` : 'open',
+        __st: st,
+      };
+    };
+    const hr = (h) => `${String(Math.floor(h)).padStart(2,'0')}:${String(Math.round((h%1)*60)).padStart(2,'0')}`;
+    const SEED = [
+      { id:1, safe:'ATM lobby — Bondi Junction',  openStart: 9,  openEnd: 17, delayMin:  5 },
+      { id:2, safe:'CIT drop — Pyrmont Pubs',     openStart: 8,  openEnd: 10, delayMin: 10 },
+      { id:3, safe:'Strongroom — King St branch', openStart:10,  openEnd: 16, delayMin: 15 },
+      { id:4, safe:'Vault — Marine Pde branch',   openStart:10,  openEnd: 15, delayMin: 30 },
+      { id:5, safe:'Office safe — 12 Bay',        openStart: 0,  openEnd: 24, delayMin:  0 },
+      { id:6, safe:'Jeweller — Crown St',         openStart: 9,  openEnd: 18, delayMin: 10 },
+      { id:7, safe:'After-hours night safe',      openStart:18,  openEnd: 23, delayMin:  0 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.tl').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const openL = (row.openStart / 24) * 100;
+        const openW = ((row.openEnd - row.openStart) / 24) * 100;
+        node.querySelector('.open').style.left  = `${openL}%`;
+        node.querySelector('.open').style.width = `${openW}%`;
+        const delayL = openL;
+        const delayW = (row.delayMin / 60 / 24) * 100;
+        const delay  = node.querySelector('.delay');
+        delay.style.left  = `${Math.max(0, delayL - delayW)}%`;
+        delay.style.width = `${delayW}%`;
+        node.querySelector('.now').style.left = `${(NOW_HR/24)*100}%`;
+        const state = tr.querySelector('.state');
+        if (state) state.setAttribute('data-st', row.__st);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

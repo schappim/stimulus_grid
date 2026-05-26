@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>261 — Safe cash rating | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .cash { display:inline-flex; align-items:stretch; gap:1px;
+            border-radius: 6px; overflow:hidden;
+            font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .cash .lbl { padding: 2px 6px; background:#0f172a; color:#9ca3af; }
+    .cash .ov  { padding: 2px 8px; background:#1d4ed8; color:#fff; }
+    .cash .wh  { padding: 2px 8px; background:#0ea5e9; color:#fff; }
+    .ins { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#dcfce7; color:#166534; font-size: 11px; font-weight: 600; }
+    .ins[data-ok="0"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>261 — Safe cash rating</h1>
+  <p class="lede">
+    Two figures that determine what an insurer will cover sitting in the
+    safe — <strong>overnight</strong> (out of business hours) and
+    <strong>working hours</strong> (typically 10× the overnight figure).
+    The chip flips red when the on-site cash exceeds the overnight
+    rating: that's a claim that won't pay.
+  </p>
+
+  <template id="cash-renderer">
+    <span class="cash">
+      <span class="lbl">A$</span>
+      <span class="ov" data-bind="overnight"></span>
+      <span class="wh" data-bind="workhours"></span>
+    </span>
+    <span class="ins" data-bind="insLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="280">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="overnight"
+              data-header-cell-cell-renderer-value="cash-renderer"
+              data-header-cell-width-value="340">Cash rating</th>
+          <th data-controller="header-cell" data-header-cell-field-value="onSite"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="140">On-site $</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Edit the <code>On-site $</code> column to push the rating into the
+    red. Real insurer policies sometimes also have a transit rider —
+    that's a separate cell, not modelled here.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fmt = (n) => '$' + Number(n).toLocaleString();
+    const derive = (row) => {
+      const ok = Number(row.onSite) <= Number(row.overnightAud) ? 1 : 0;
+      return {
+        ...row,
+        overnight: fmt(row.overnightAud) + ' o/n',
+        workhours: fmt(row.overnightAud * 10) + ' w/h',
+        insLabel: ok ? 'within cover' : 'over o/n cover',
+        __ok: ok,
+      };
+    };
+    const SEED = [
+      { id:1, site:'12 Bay Café',              overnightAud:  5000, onSite:  300 },
+      { id:2, site:'Bondi Pavilion bar',       overnightAud: 10000, onSite: 4200 },
+      { id:3, site:'Pyrmont Pubs HQ — counter',overnightAud: 20000, onSite: 8800 },
+      { id:4, site:'5 Crown St kiosk',         overnightAud:  2500, onSite: 3100 },
+      { id:5, site:'Marine Pde grocer',        overnightAud:  5000, onSite: 5400 },
+      { id:6, site:'14 King St — back office', overnightAud: 50000, onSite:12000 },
+      { id:7, site:'33 Glebe Pt Rd pharmacy',  overnightAud: 10000, onSite: 4400 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'onSite') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ins').forEach((ins) => {
+        const tr = ins.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        ins.setAttribute('data-ok', String(row.__ok));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
