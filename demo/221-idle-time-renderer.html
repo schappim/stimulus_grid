@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>221 — Idle / wait-on-materials | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Idle / wait-on-materials — non-billable time, bucketed by reason.
+       The dispatcher uses this to compute true on-tools utilisation. */
+    .idle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .idle .bucket {
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; color: #fff;
+    }
+    .idle .h { font-variant-numeric: tabular-nums; }
+    .idle[data-bucket="materials"] { background:#fef3c7; color:#92400e; }
+    .idle[data-bucket="materials"] .bucket { background:#ca8a04; }
+    .idle[data-bucket="customer"]  { background:#e0e7ff; color:#3730a3; }
+    .idle[data-bucket="customer"]  .bucket { background:#4f46e5; }
+    .idle[data-bucket="weather"]   { background:#dbeafe; color:#1e40af; }
+    .idle[data-bucket="weather"]   .bucket { background:#2563eb; }
+    .idle[data-bucket="access"]    { background:#fed7aa; color:#9a3412; }
+    .idle[data-bucket="access"]    .bucket { background:#ea580c; }
+    .idle[data-bucket="tool"]      { background:#fee2e2; color:#991b1b; }
+    .idle[data-bucket="tool"]      .bucket { background:#dc2626; }
+    .idle[data-bucket="other"]     { background:#f1f5f9; color:#475569; }
+    .idle[data-bucket="other"]     .bucket { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>221 — Idle / wait-on-materials</h1>
+  <p class="lede">
+    Non-billable time, classified by cause: <em>materials</em>,
+    <em>customer not on-site</em>, <em>weather</em>, <em>access</em>,
+    <em>tool failure</em>, <em>other</em>. Aggregating this column by
+    tech / job / week is the only honest way to know your on-tools
+    utilisation.
+  </p>
+
+  <template id="idle-renderer">
+    <span class="idle" data-bind-attr="data-bucket">
+      <span class="bucket" data-bind="bucketLabel"></span>
+      <span class="h" data-bind="durationLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bucket"
+              data-header-cell-cell-renderer-value="idle-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="240">Idle bucket</th>
+          <th data-controller="header-cell" data-header-cell-field-value="minutes"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Minutes</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="240">Note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Restricting the bucket to a controlled vocabulary stops "various",
+    "misc", "down-time" entries that defeat the analysis. Materials waits
+    are a perennial leak — when this bucket is high, supplier negotiations
+    get harder to put off.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = {
+      materials:'Materials', customer:'Customer', weather:'Weather',
+      access:'Access', tool:'Tool', other:'Other',
+    };
+    const derive = (row) => ({
+      ...row,
+      bucketLabel: LABEL[row.bucket] ?? row.bucket,
+      durationLabel: row.minutes >= 60 ? `${(row.minutes/60).toFixed(1)} h` : `${row.minutes} m`,
+    });
+    const SEED = [
+      { id:1, ref:'J-9101', tech:'Astrid Hale',  bucket:'materials',minutes: 35, note:'Trade desk queue at Reece' },
+      { id:2, ref:'J-9102', tech:'Marcus Chen',  bucket:'customer', minutes: 22, note:'Tenant not home for first-attempt' },
+      { id:3, ref:'J-9103', tech:'Priya Patel',  bucket:'weather',  minutes:115, note:'Hail squall — roof work paused' },
+      { id:4, ref:'J-9104', tech:'Jamal Owens',  bucket:'access',   minutes: 18, note:'Lockbox code wrong on first try' },
+      { id:5, ref:'J-9105', tech:'Lena Brooks',  bucket:'tool',     minutes: 50, note:'Drill battery flat — drove to van' },
+      { id:6, ref:'J-9106', tech:'Tomás Vega',   bucket:'materials',minutes:140, note:'Special-order fitting from Marrickville' },
+      { id:7, ref:'J-9107', tech:'Aroha Walker', bucket:'customer', minutes: 65, note:'Strata committee approval call' },
+      { id:8, ref:'J-9108', tech:'Sofia Ricci',  bucket:'other',    minutes: 12, note:'Site induction refresher' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['bucket','minutes'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
