@@ -8,7 +8,7 @@ An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hot
 Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
 attributes, and you get sort, filter, global search, single/multi selection,
 pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide, virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), a library of **built-in cell renderers** (email/URL/phone links, currency, percent, progress bars, star ratings, country flags, ABNs, avatars, status pills), and a public
+resize/reorder/pin/hide (double-click a resize handle to autosize), virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), **separator + merged-cell rows** for quote / invoice / report layouts, and a **library of ~200 built-in cell renderers** — from the core (email/URL/phone, currency, percent, progress bars, star ratings, country flags, ABNs, avatars, status pills, attachments, sparklines, heatmaps, masks, multi-line, address-au) through editor-renderers (select, multiselect, combobox, date/time/date-range/color pickers, slider, textarea) and row-action surfaces (action-button, menu, split-button, row-actions, drag-handle, row-number, expand-toggle) all the way to industry domains (FSM job status, SLA/DLP countdowns, AU compliance certificates — white card / blue card / WWCC / HRWL / COES / QBCC / VBA / refrigerant / asbestos / pool-safety / test-and-tag / insurance currency, BSB / ACN / TFN / Medicare, NMI / DBYD / BAL / NABERS / NCC class, insurance claims & loss adjusters, locksmith keyways / bittings / MKS / safe ratings / transponder chips / MLAA / SCEC, fleet rego & CTP & service-due, and many more) — all pre-registered and reference-able by name, plus a public
 `gridApi` — no React, no build-time config object, no third-party grid framework.
 With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
 edits also **stream live to every connected client over Turbo Streams** (Action
@@ -241,11 +241,14 @@ grid.addEventListener("grid:cellValueChanged", (e) => console.log(e.detail))
 
 ## Built-in cell renderers
 
-Ten functional renderers ship pre-registered — reference them by name from
+**~200 functional renderers ship pre-registered** — reference them by name from
 `data-header-cell-cell-renderer-value`. `cell-renderer` first resolves as a
 `<template>` id (the section above); when no template matches, it falls
 through to the renderer registry, so templates and named renderers coexist
-without conflict.
+without conflict. Run `listRenderers()` (or import it from
+`@ninjaai/stimulus_grid`) for the full registry; the table below covers the
+core / general-purpose set, and the **renderer library index** at the end
+of this section catalogues the rest by domain.
 
 ![grid showing every built-in renderer in one row: avatar with initials, mailto email link, formatted phone, flag + country code, hostname-only URL, ABN with spaces (or red INVALID), USD currency, progress bar, percent, half-star rating, tag chips, plus four status pills — Subscribed/Delivered/Shopify/Express](docs/images/grid-renderers.png)
 
@@ -485,6 +488,112 @@ Native pickers auto-open on dblclick — `color`, `date`, `datetime`,
 `time`, `month`, and `week` editors call `showPicker()` as soon as the
 input mounts, so the user goes straight from "dblclick the cell" to "the
 OS picker is up", no second click required.
+
+### Renderer library index
+
+The table further up covers the core renderers in detail. The rest of the
+library is organised below by category, with the demo number where each is
+showcased. Open `http://localhost:5173/demo/` for the live index, or jump
+straight to a numbered file in `demo/`.
+
+**Editor renderers** (popover / inline editors, single registration each):
+`select` (70), `multiselect` (71), `combobox` (72), `slider` (73),
+`date-picker` (74), `time-picker` (75), `date-range` (76), `color-picker` (77),
+`textarea` (78).
+
+**Row-action surfaces**: `action-button` (79), `menu` (80), `split-button` (81),
+`row-actions` (82), `drag-handle` (83), `row-number` (84), `expand-toggle` (85).
+
+**People & presence**: `avatar-stack` (86), `presence` (87), `assignee` (88),
+`linked-record` (40), `mention` (53), `reactions` (63), `comment-count` (64).
+
+**Content & document**: `markdown` (38), `json` (39), `html` (130), `yaml` (131),
+`xml` (132), `code` (46), `autolink` (133), `diff` (43), `redacted` (134),
+`spoiler` (135), `expand` (54).
+
+**Numbers & math**: `ordinal` (65), `plural` (66), `fraction` (136),
+`scientific` (137), `hex`/`binary`/`octal` (138), `percentile` (139),
+`units` (55).
+
+**Charts in a cell**: `bullet` (48), `donut` (49), `histogram` (50), `gauge` (105),
+`win-loss` (106), `mini-bar-chart` (107), `mini-line-chart` (108), `trend` (109),
+`rag` (51), `timeline-steps` (52), `waveform` (129).
+
+**Time, schedule, lifecycle**: `time` (42), `countdown` (110), `age` (111),
+`fiscal-period` (112), `timezone` (113), `cron` (114).
+
+**Async / data-state cells**: `spinner` (115), `error` (116), `sync-status` (117),
+`stale` (118), `fresh` (119), `loading-shimmer` (69), `empty` (67).
+
+**Links & media**: `favicon` (120), `domain` (121), `social-link` (122),
+`tracking-number` (123), `video-link` (124), `file` (125), `download-link` (126),
+`mime-icon` (127), `gallery` (128), `audio` (61), `video` (62), `qr` (45),
+`geo` (44).
+
+**Geo / identity / regulated**: `mac-address` (100), `vin` (101), `isbn` (102),
+`license-key` (103), `barcode` (104), `iban` (91), `swift` (92), `ssn` (93),
+`ein` (94), `vat` (95), `nin` (UK, 96), `postal-code` (97),
+`address-us` (98), `address-generic` (99), `uuid` (89), `git-sha` (90),
+`credit-card` (68), `ip-address` (56), `bsb` (57), `acn` (58), `tfn` (59),
+`medicare` (60), `email-thread` (200).
+
+**Device telemetry**: `battery` (140), `signal-bars` (141), `volume` (142).
+
+**Australian trade compliance** (143–160): `trade-licence`, `white-card`,
+`blue-card`, `wwcc`, `high-risk-licence`, `coes`, `coc`, `qbcc-licence`,
+`vba-licence`, `gas-certificate`, `asbestos-licence`, `refrigerant-licence`,
+`pool-safety-cert`, `test-and-tag`, `insurance-cert`, `gst-status`,
+`abn-status`, `hbcf-cert`.
+
+**Field service / dispatch** (161–193): `job-status`, `arrival-window`,
+`route-stop`, `travel-time`, `technician-slot`, `progress-claim`, `variation`,
+`defect`/`snag`, `signature`, `job-photo`, `callout-fee`, `payment-terms`,
+`invoice-status`, `retention`, `materials-pick`, `swms-status`, `jsa-status`,
+`toolbox-talk`, `ppe-checklist`, `incident-severity`, `hazard-rating`,
+`site-induction`, `trade-type`, `skill-endorsement`, `subcontractor`, `crew`,
+`rego-plate`, `rego-status`, `ctp-status`, `service-due`, `fuel-card`,
+`odometer`.
+
+**Property / cadastral** (194–199, 242–249): `customer-type`, `strata-plan`,
+`lot-plan`, `council-lga`, `region-classifier`, `suburb-postcode-au`,
+`property-type`, `storeys-level-unit`, `switchboard-phase`, `hot-water-system`,
+`ncc-class`, `bal-rating`, `heritage-flag`, `nabers-stars`, `watermark-rcm` (283),
+`nmi` (240), `dbyd` (241).
+
+**Quote / job workflow** (204–220, 230–239, 284–295): `sla-countdown`,
+`quote-status`, `reattendance-counter`, `job-priority`, `booking-source`,
+`tradie-tags`, `recurring-service`, `pc-dlp-countdown`, `inspection-result`,
+`punch-list`, `timesheet-entry`, `penalty-rate`, `award-classification`,
+`apprentice-supervision`, `visa-work-rights`, `lsl-portable-scheme`,
+`clock-in-geostamp`, `bas-period`, `progress-claim-sop`, `refund-chargeback`,
+`cost-code`, `authority-limit`, `insurance-claim`, `make-safe`,
+`excess-collected`, `loss-adjuster`, `cause-of-loss`, `sms-status`,
+`call-log`, `voicemail`, `portal-last-login`, `reminder-cadence`,
+`group-by-date-sticky`, `saved-views-chips`, `offline-sync-row`,
+`optimistic-save-cell`, `sync-conflict`, `row-freshness`, `quick-add-fab`.
+
+**Inventory & pricing** (221–229): `idle-time`, `stock-level`,
+`allocated-available`, `markup`, `uom-converter`, `supplier-price-rank`,
+`special-order-eta`, `aged-receivables`, `payment-method`.
+
+**Locksmith / physical security** (250–282): `keyway-profile`, `bitting-code`,
+`pin-stack`, `cylinder-size`, `as4145-grade`, `en1303-grid`, `mks-hierarchy`,
+`restricted-patent`, `key-authority-signatory`, `key-holder-register`,
+`key-blank-xref`, `safe-cash-rating`, `safe-attack-rating`, `safe-fire-rating`,
+`combo-change-log`, `time-lock-window`, `transponder-chip`, `cut-style`,
+`fob-frequency`, `all-keys-lost`, `immobiliser-system`, `card-credential`,
+`ansi-fcode`, `failsafe-rex-dps`, `loto-state`, `mlaa-membership`,
+`scec-endorsement`, `probity-check`, `insurance-approved`, `lockout-urgency`,
+`rekey-vs-replace`, `cylinder-condition`, `cutting-machine`.
+
+**Other shapes**: `coloured-tags` (41), `rating` (heart / thumb / smiley / NPS — 47),
+`switch` (sliding on/off pill — 36), `checkbox` (interactive — 35).
+
+Every renderer above is a factory — call it without args for the default
+shape, or pass an options object to tune it (e.g. `currency({ currency:
+'EUR' })`, `rating({ icon: 'heart', max: 5 })`). The same factories are
+re-exported under `renderers.*` for use in `registerRenderer('my-name',
+renderers.X({…}))`.
 
 ## Row grouping & aggregation
 
@@ -1133,15 +1242,79 @@ runnable app is in [`gem/demo`](gem/demo); full docs in
 
 ## Demos
 
-`npm install && npx vite`, then open `http://localhost:5173/demo/` — 30+
-demos covering basics, JSON data, filtering, selection, pagination, editing,
-custom renderers, 10k-row virtual scroll, everything-together, live filtering,
-row grouping with aggregation, the status bar, pivot mode, header groups,
-the right-click column menu, persisted column state, master/detail, tree
-data, the built-in renderer library, attachments, the invoice / quote
-layout (separators + merged cells), Australian addresses with a multi-field
-popover editor, and audio attachments with a Howler-powered scrubbing
-player.
+`npm install && npx vite`, then open `http://localhost:5173/demo/` (the
+root path now redirects there). **295+ demos**, indexed at `demo/index.html`:
+
+- **01–18 — Grid mechanics**: basics, JSON data, filtering, selection,
+  pagination, editing, custom-template renderers, 10k-row virtual scroll,
+  everything-together, live filter, row grouping with aggregation, status
+  bar, pivot mode + side panel, header groups + pinned totals, right-click
+  column menu + persisted state, master/detail (nested grid), sortable
+  pivot columns, and tree data (self-referential `parent_id`).
+- **19–37 — Core renderer library**: the canonical built-ins
+  (email/URL/phone/currency/etc.), date renderers (date / datetime /
+  relative-time / duration), number renderers, boolean, delta, truncate +
+  copyable, image, color swatch, sparkline, heatmap, mask, highlight,
+  multi-line, attachments (Airtable-style), invoice / quote layout
+  (separators + merged cells), Australian addresses with multi-field
+  popover editor, checkbox, switch, and audio attachments with the
+  Howler-powered scrubbing player.
+- **38–99 — Extended renderers**: markdown, JSON, linked-record, coloured
+  tags, time, diff, geo, QR, code, ratings, bullet/donut/histogram/RAG,
+  timeline-steps, mention, expand, units, IP, BSB / ACN / TFN / Medicare,
+  audio / video, reactions, comment-count, ordinal / plural / empty,
+  credit-card, loading-shimmer, plus the editor renderers
+  (select / multiselect / combobox / slider / date-picker / time-picker /
+  date-range / color-picker / textarea), row-action surfaces
+  (action-button / menu / split-button / row-actions / drag-handle /
+  row-number / expand-toggle), avatar-stack / presence / assignee, and
+  identity formats (UUID / git SHA / IBAN / SWIFT / SSN / EIN / VAT / NIN /
+  postal-code / address-us / address-generic).
+- **100–142 — Specialised renderers**: MAC / VIN / ISBN / license-key /
+  barcode, gauge / win-loss / mini-bar / mini-line / trend, countdown /
+  age / fiscal-period / timezone / cron, spinner / error / sync-status /
+  stale / fresh, favicon / domain / social-link / tracking-number /
+  video-link / file / download-link / mime-icon / gallery / waveform,
+  HTML / YAML / XML / autolink / redacted / spoiler / fraction /
+  scientific / radix / percentile, battery / signal-bars / volume.
+- **143–199 — Australian trade compliance, FSM dispatch, vehicle &
+  property**: trade licence cards (white / blue / WWCC / HRWL / COES /
+  COC / QBCC / VBA / gas / asbestos / refrigerant / pool / test-and-tag /
+  insurance currency / GST / ABN / HBCF), job-status / arrival-window /
+  route-stop / travel-time / technician-slot, progress-claim / variation /
+  defect / signature / job-photo, callout-fee / payment-terms / invoice-
+  status / retention / materials-pick, SWMS / JSA / toolbox-talk /
+  PPE-checklist / incident-severity / hazard-rating / site-induction,
+  trade-type / skill-endorsement / subcontractor / crew, rego-plate /
+  rego-status / CTP / service-due / fuel-card / odometer, customer-type /
+  strata / lot-plan / council-LGA / region / suburb-postcode.
+- **200–249 — Communications, headerless / mobile, quote workflow,
+  property & energy**: email-thread, headerless grid, mobile-optimised
+  card layout, today's-jobs mobile screen, SLA countdown, quote-status,
+  reattendance-counter, job-priority, booking-source, tradie-tags,
+  recurring-service, PC/DLP countdown, inspection-result, punch-list,
+  timesheet-entry, penalty-rate, award-classification, apprentice-
+  supervision, visa work-rights, LSL portable scheme, clock-in geo-stamp,
+  idle-time, stock-level / allocated-available / markup / UOM /
+  supplier-price-rank / special-order-ETA / aged-receivables /
+  payment-method, BAS-period, SOP progress-claim, refund-chargeback,
+  cost-code, authority-limit, insurance-claim, make-safe, excess-
+  collected, loss-adjuster, cause-of-loss, NMI, DBYD, property-type,
+  storeys/level/unit, switchboard-phase, hot-water-system, NCC-class,
+  BAL-rating, heritage-flag, NABERS-stars.
+- **250–282 — Locksmith renderers**: keyway-profile, bitting-code,
+  pin-stack, cylinder-size, AS 4145 grade, EN 1303 grid, MKS hierarchy,
+  restricted-patent, key-authority-signatory, key-holder-register,
+  key-blank-xref, safe cash / attack / fire ratings, combo-change-log,
+  time-lock-window, transponder-chip, cut-style, fob-frequency,
+  all-keys-lost, immobiliser-system, card-credential, ANSI F-code,
+  failsafe / REX / DPS, LOTO-state, MLAA membership, SCEC endorsement,
+  probity-check, insurance-approved, lockout-urgency, rekey-vs-replace,
+  cylinder-condition, cutting-machine.
+- **283–295 — Compliance + sync UX**: WaterMark / RCM, SMS status,
+  call-log, voicemail, portal-last-login, reminder-cadence, group-by-date
+  sticky headers, saved-views chips (localStorage), offline-sync per row,
+  optimistic-save per cell, sync-conflict, row-freshness, quick-add FAB.
 
 ## Build
 
