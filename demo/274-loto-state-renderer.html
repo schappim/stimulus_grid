@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>274 — Lockout / tagout state | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .lo { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .lo .st  { padding: 2px 8px; color:#fff; }
+    .lo .who { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .lo[data-s="live"]  .st { background:#16a34a; }
+    .lo[data-s="loto"]  .st { background:#dc2626; }
+    .lo[data-s="hold"]  .st { background:#ea580c; }
+    .since { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+             background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>274 — Lockout / tagout state</h1>
+  <p class="lede">
+    A door (or strike, or controller relay) that's been deliberately
+    taken out of service while work is happening. The cell shows the
+    state, the technician who locked it out, and how long it's been
+    pulled — anything sitting in LOTO for more than a shift is a
+    handover risk.
+  </p>
+
+  <template id="lo-renderer">
+    <span class="lo">
+      <span class="st"  data-bind="stateLabel"></span>
+      <span class="who" data-bind="whoLabel"></span>
+    </span>
+    <span class="since" data-bind="sinceLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="280">Door / asset</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-cell-renderer-value="lo-renderer"
+              data-header-cell-width-value="360">State</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reason"
+              data-header-cell-width-value="220">Reason</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A LOTO isn't a status to <em>set</em> on the access list — it's a
+    physical padlock and a tag. The cell mirrors the physical reality
+    back into the schedule so the front desk doesn't keep trying to
+    badge through a tagged-out door.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26T09:30:00');
+    const derive = (row) => {
+      if (!row.since) return { ...row, stateLabel: row.state, whoLabel: '—',
+                               sinceLabel: '—', __s: row.state };
+      const since = new Date(row.since);
+      const mins  = Math.round((TODAY - since) / 60000);
+      const label = mins < 60 ? `${mins}m` : mins < 1440 ? `${Math.round(mins/60)}h` : `${Math.round(mins/1440)}d`;
+      return {
+        ...row,
+        stateLabel: row.state.toUpperCase(),
+        whoLabel: row.tech || 'unknown',
+        sinceLabel: `${label} ago`,
+        __s: row.state,
+      };
+    };
+    const SEED = [
+      { id:1, door:'L2 main entry',          state:'live', tech:null, since:null,                    reason:'in service' },
+      { id:2, door:'L2 server room',         state:'loto', tech:'MS', since:'2026-05-26T08:10:00',  reason:'strike change' },
+      { id:3, door:'L2 loading dock',        state:'live', tech:null, since:null,                    reason:'in service' },
+      { id:4, door:'L2 store cupboard',      state:'loto', tech:'JW', since:'2026-05-24T16:00:00',  reason:'lock change — awaiting parts' },
+      { id:5, door:'Vault outer',            state:'hold', tech:'AH', since:'2026-05-26T07:55:00',  reason:'combo change in progress' },
+      { id:6, door:'Lobby air-lock A',       state:'live', tech:null, since:null,                    reason:'in service' },
+      { id:7, door:'Lobby air-lock B',       state:'loto', tech:'RP', since:'2026-05-26T09:05:00',  reason:'mag-lock recoil test' },
+      { id:8, door:'IDF cabinet — telco rm', state:'live', tech:null, since:null,                    reason:'in service' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.lo').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-s', row.__s);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>272 — Door function (ANSI F-code) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .fn { display:inline-flex; align-items:center; gap:6px;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+    .fn .icon { width: 18px; height: 18px; display:inline-flex;
+                align-items:center; justify-content:center;
+                border-radius: 4px; background:#0f172a; color:#fff; font-size: 11px; }
+    .fn .code { padding: 2px 8px; border-radius: 4px;
+                background:#1d4ed8; color:#fff; }
+    .fn .desc { color: #475569; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>272 — Door function (ANSI F-code)</h1>
+  <p class="lede">
+    ANSI/BHMA A156.2 function codes are the shortest unambiguous way to
+    describe what a lock <em>does</em>. F01 = passage (no lock), F04 =
+    entry, F09 = storeroom (always locked outside, free egress).
+    Architects spec by F-code; a locksmith confirms the function on
+    site by trying the key, the egress, and the latch.
+  </p>
+
+  <template id="fn-renderer">
+    <span class="fn">
+      <span class="icon" data-bind="glyph"></span>
+      <span class="code" data-bind="fcode"></span>
+      <span class="desc" data-bind="func"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="300">Door</th>
+          <th data-controller="header-cell" data-header-cell-field-value="fcode"
+              data-header-cell-cell-renderer-value="fn-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="400">Function</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hand"
+              data-header-cell-width-value="100">Hand</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Function and hardware are independent — an F09 storeroom function
+    can be implemented as a cylindrical lockset, a mortice lock, or an
+    electric strike. The function is "what the user experiences", not
+    "what's in the box".
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, door:'L2 main entry',           fcode:'F04', func:'Entry / Office lock',     glyph:'E', hand:'LH' },
+      { id:2, door:'Hall to L2',              fcode:'F01', func:'Passage (no lock)',       glyph:'P', hand:'RH' },
+      { id:3, door:'Storeroom — back of house',fcode:'F09', func:'Storeroom (always lkd)', glyph:'S', hand:'LH' },
+      { id:4, door:'Single-occupant WC',      fcode:'F19', func:'Privacy (push-button)',   glyph:'V', hand:'RH' },
+      { id:5, door:'Classroom 2A',            fcode:'F05', func:'Classroom (key locks outside)', glyph:'C', hand:'LH' },
+      { id:6, door:'Vestibule to vault',      fcode:'F13', func:'Hotel guest / dead-bolt', glyph:'H', hand:'RH' },
+      { id:7, door:'Loading dock pedestrian', fcode:'F09', func:'Storeroom (always lkd)',  glyph:'S', hand:'LH' },
+      { id:8, door:'Comms cupboard',          fcode:'F07', func:'Institutional / 2-cylinder', glyph:'I', hand:'RH' },
+      { id:9, door:'Cleaner store',           fcode:'F09', func:'Storeroom (always lkd)',  glyph:'S', hand:'LH' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+  </script>
+</body>
+</html>

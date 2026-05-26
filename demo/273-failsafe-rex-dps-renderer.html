@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>273 — Fail-safe / fail-secure + REX/DPS | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .fl { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .fl .mode { padding: 2px 8px; color:#fff; }
+    .fl[data-m="safe"]   .mode { background:#16a34a; }
+    .fl[data-m="secure"] .mode { background:#dc2626; }
+    .fl .strike { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .sigs { margin-left: 8px; display:inline-flex; gap:4px; }
+    .sigs b { padding: 1px 6px; border-radius: 4px;
+              font-size: 11px; font-weight: 700;
+              background:#e2e8f0; color:#475569; }
+    .sigs b.on { background:#1d4ed8; color:#fff; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>273 — Fail-safe / fail-secure + REX/DPS</h1>
+  <p class="lede">
+    Power-loss behaviour and the door-loop sensors in a single cell.
+    <strong>Fail-safe</strong> unlocks on power loss (egress, fire-rated
+    paths); <strong>fail-secure</strong> stays locked (asset protection,
+    safe rooms). REX/DPS pills light up when those signals are wired
+    back to the controller.
+  </p>
+
+  <template id="fl-renderer">
+    <span class="fl">
+      <span class="mode"   data-bind="mode"></span>
+      <span class="strike" data-bind="strike"></span>
+    </span>
+    <span class="sigs">
+      <b class="rex">REX</b>
+      <b class="dps">DPS</b>
+      <b class="bond">BOND</b>
+      <b class="tamp">TAMP</b>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="280">Door</th>
+          <th data-controller="header-cell" data-header-cell-field-value="mode"
+              data-header-cell-cell-renderer-value="fl-renderer"
+              data-header-cell-width-value="440">Lock + sensors</th>
+          <th data-controller="header-cell" data-header-cell-field-value="path"
+              data-header-cell-width-value="160">Path</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A REX without a DPS is a "magic exit" — the controller will mute
+    the alarm for the REX hold time and then let the door swing open
+    unobserved. Use both for any door that's not free-egress on the
+    inside handle.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, door:'L2 main entry',          mode:'safe',   strike:'mag-lock 600 lb',  rex:1, dps:1, bond:1, tamp:1, path:'fire path' },
+      { id:2, door:'L2 server room',         mode:'secure', strike:'electric strike',  rex:1, dps:1, bond:0, tamp:1, path:'asset' },
+      { id:3, door:'L2 loading dock',        mode:'safe',   strike:'mag-lock 1200 lb', rex:1, dps:1, bond:1, tamp:0, path:'fire path' },
+      { id:4, door:'L2 store cupboard',      mode:'secure', strike:'electric strike',  rex:0, dps:0, bond:0, tamp:0, path:'asset' },
+      { id:5, door:'Vault outer',            mode:'secure', strike:'shear lock',       rex:1, dps:1, bond:1, tamp:1, path:'asset' },
+      { id:6, door:'Lobby air-lock A',       mode:'safe',   strike:'mag-lock 600 lb',  rex:1, dps:1, bond:0, tamp:1, path:'fire path' },
+      { id:7, door:'Lobby air-lock B',       mode:'safe',   strike:'mag-lock 600 lb',  rex:1, dps:1, bond:0, tamp:1, path:'fire path' },
+      { id:8, door:'IDF cabinet — telco rm', mode:'secure', strike:'cabinet lock',     rex:0, dps:1, bond:0, tamp:1, path:'asset' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.fl').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-m', row.mode);
+        const sigs = tr.querySelector('.sigs');
+        if (sigs) {
+          ['rex','dps','bond','tamp'].forEach((k) => {
+            const b = sigs.querySelector(`.${k}`);
+            if (b) b.classList.toggle('on', !!row[k]);
+          });
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
