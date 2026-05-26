@@ -51,6 +51,21 @@
     <span class="qstatus" data-bind="qStatusLabel" data-bind-attr="data-status"></span>
   </template>
 
+  <!-- Editor template: a real <select> so picking a status is a single tap
+       (no need to type the slug). The grid mounts this in place of the
+       default text input when the cell goes into edit mode. -->
+  <template id="qstatus-editor">
+    <select data-editor-input>
+      <option value="draft">Draft</option>
+      <option value="sent">Sent</option>
+      <option value="viewed">Viewed</option>
+      <option value="accepted">Accepted</option>
+      <option value="declined">Declined</option>
+      <option value="expired">Expired</option>
+      <option value="revised">Revised</option>
+    </select>
+  </template>
+
   <div class="panel" data-controller="grid" data-grid-status-bar-value="true">
     <table>
       <thead>
@@ -67,6 +82,8 @@
               data-header-cell-width-value="120">Total</th>
           <th data-controller="header-cell" data-header-cell-field-value="qStatus"
               data-header-cell-cell-renderer-value="qstatus-renderer"
+              data-header-cell-cell-editor-value="qstatus-editor"
+              data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true"
               data-header-cell-width-value="190">Status</th>
           <th data-controller="header-cell" data-header-cell-field-value="sent"
@@ -139,7 +156,19 @@
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
 
+    const LABEL = {
+      draft:'Draft', sent:'Sent', viewed:'Viewed',
+      accepted:'Accepted', declined:'Declined', expired:'Expired', revised:'Revised',
+    };
     grid.addEventListener('grid:cellValueChanged', (e) => {
+      // Editing the status via the dropdown — keep the visible label in sync.
+      if (e.detail.colId === 'qStatus') {
+        const k = String(e.detail.newValue || '').toLowerCase();
+        if (!LABEL[k]) return;
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+        if (row) grid.gridApi.applyTransaction({ update: [{ ...row, qStatus:k, qStatusLabel:LABEL[k] }] });
+        return;
+      }
       if (e.detail.colId !== 'expires') return;
       const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
       if (!row || TERMINAL.has(row.qStatus)) return;
