@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>251 — SMS delivery status | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* SMS status — sent / delivered / read / replied / failed. The
+       'read' state matters: most carriers don't return read receipts
+       on SMS so this is usually inferred from a click on a tracked URL. */
+    .sms {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .sms .ticks {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      color: #fff; font-size: 12px; line-height: 1;
+    }
+    .sms[data-s="queued"]    { background:#f1f5f9; color:#475569; }
+    .sms[data-s="queued"]    .ticks { background:#94a3b8; }
+    .sms[data-s="sent"]      { background:#dbeafe; color:#1e40af; }
+    .sms[data-s="sent"]      .ticks { background:#3b82f6; }
+    .sms[data-s="delivered"] { background:#e0e7ff; color:#3730a3; }
+    .sms[data-s="delivered"] .ticks { background:#4f46e5; }
+    .sms[data-s="read"]      { background:#dcfce7; color:#166534; }
+    .sms[data-s="read"]      .ticks { background:#16a34a; }
+    .sms[data-s="replied"]   { background:#dcfce7; color:#14532d; }
+    .sms[data-s="replied"]   .ticks { background:#15803d; }
+    .sms[data-s="failed"]    { background:#fee2e2; color:#991b1b; }
+    .sms[data-s="failed"]    .ticks { background:#dc2626; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>251 — SMS delivery status</h1>
+  <p class="lede">
+    SMS lifecycle: <em>queued → sent → delivered → read → replied</em>
+    (or <em>failed</em>). Most carriers don't return SMS read receipts
+    so "read" is inferred from a click on a tracked tap-to-pay /
+    review / booking URL.
+  </p>
+
+  <template id="sms-renderer">
+    <span class="sms" data-bind-attr="data-s">
+      <span class="ticks" data-bind="glyph"></span>
+      <span data-bind="stateLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="body"
+              data-header-cell-width-value="320">Message</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-cell-renderer-value="sms-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="160">When</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Failed messages should retry once (carrier reject / number invalid)
+    then escalate to a callback. The pulsing pill on <em>failed</em>
+    surfaces those rows visually.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      queued:    { label:'Queued',    glyph:'·' },
+      sent:      { label:'Sent',      glyph:'✓' },
+      delivered: { label:'Delivered', glyph:'✓✓' },
+      read:      { label:'Read',      glyph:'◉' },
+      replied:   { label:'Replied',   glyph:'↩' },
+      failed:    { label:'Failed',    glyph:'!' },
+    };
+    const derive = (row) => ({ ...row, stateLabel:META[row.state]?.label ?? row.state, glyph:META[row.state]?.glyph ?? '?' });
+    const SEED = [
+      { id:1, customer:'Caitlin Hartwell',   body:'Job J-2104 booked Tue 8–10am. Reply Y to confirm.', state:'replied',   when:'Today 09:12' },
+      { id:2, customer:'Dean Sarelius',      body:'Invoice INV-1003 ready: tap-to-pay link…',        state:'read',      when:'Today 09:21' },
+      { id:3, customer:'Sienna Doyle',       body:'Quote Q-3092 reminder — opens 11 May.',           state:'delivered', when:'Today 10:00' },
+      { id:4, customer:'Aroha Walker',       body:'Tech 10 min away.',                                state:'delivered', when:'Today 10:42' },
+      { id:5, customer:'Noah Park',          body:'Service due — 25 May. Book by reply.',            state:'sent',      when:'Today 10:51' },
+      { id:6, customer:'Eli Hartwell',       body:'Apprentice will accompany — same arrival.',       state:'queued',    when:'Today 10:55' },
+      { id:7, customer:'Imogen Reyes',       body:'2nd reminder — payment plan offered.',            state:'failed',    when:'Today 09:30' },
+      { id:8, customer:'Tomás Vega',         body:'Photos required before invoice — upload here.',   state:'read',      when:'Today 08:48' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'state') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>

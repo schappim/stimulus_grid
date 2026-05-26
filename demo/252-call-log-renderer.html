@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>252 — Call log entry | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Call log entry — direction + duration + recording attached. The
+       direction glyph hints whether the rep or the customer initiated;
+       no-answer / voicemail are first-class outcomes. */
+    .call {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .call .dir {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      color: #fff; font-size: 12px; line-height: 1;
+    }
+    .call .dur { font-variant-numeric: tabular-nums; }
+    .call[data-d="in"]   { background:#dcfce7; color:#166534; }
+    .call[data-d="in"]   .dir { background:#16a34a; }
+    .call[data-d="out"]  { background:#dbeafe; color:#1e40af; }
+    .call[data-d="out"]  .dir { background:#1d4ed8; }
+    .call[data-d="miss"] { background:#fee2e2; color:#991b1b; }
+    .call[data-d="miss"] .dir { background:#dc2626; }
+    .call[data-d="vm"]   { background:#fef3c7; color:#92400e; }
+    .call[data-d="vm"]   .dir { background:#ca8a04; }
+    .rec {
+      margin-left: 6px; padding: 1px 7px; border-radius:999px;
+      background:#0f172a; color:#fff; font-size:10.5px; font-weight:700; letter-spacing:.04em;
+    }
+    .rec[data-r="no"] { background:#cbd5e1; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>252 — Call log entry</h1>
+  <p class="lede">
+    Direction (inbound / outbound / missed / voicemail), duration in
+    <code>mm:ss</code>, and a recording-attached badge. Voicemail is its
+    own direction because it's neither connection nor miss — it's a
+    one-way utterance you have to listen to.
+  </p>
+
+  <template id="call-renderer">
+    <span class="call" data-bind-attr="data-d">
+      <span class="dir" data-bind="glyph"></span>
+      <span class="dur" data-bind="durLabel"></span>
+      <span data-bind="contact"></span>
+    </span>
+    <span class="rec" data-bind="recLabel" data-bind-attr-keep></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="170">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dir"
+              data-header-cell-cell-renderer-value="call-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">Call</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="320">Note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Recordings ought to carry a retention policy — most CRMs keep call
+    audio for 30 / 90 / 180 days then archive. The badge here is a stub
+    you'd hook to a presigned URL.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      in:  { glyph:'↘' }, out: { glyph:'↗' },
+      miss:{ glyph:'×' }, vm:  { glyph:'☎' },
+    };
+    const fmtDur = (s) => s == null ? '—' : `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+    const derive = (row) => ({
+      ...row,
+      glyph: META[row.dir]?.glyph ?? '?',
+      durLabel: fmtDur(row.dur),
+      recLabel: row.recording ? 'REC' : 'no rec',
+      __r: row.recording ? 'yes' : 'no',
+    });
+    const SEED = [
+      { id:1, when:'Today 09:01', dir:'in',   dur: 184, contact:'Caitlin Hartwell',  recording:true,  note:'Quote Q-3091 clarification' },
+      { id:2, when:'Today 09:25', dir:'out',  dur: 122, contact:'Dean Sarelius',     recording:true,  note:'Site walk-through coordination' },
+      { id:3, when:'Today 09:48', dir:'miss', dur:null,  contact:'Sienna Doyle',     recording:false, note:'No answer — left SMS' },
+      { id:4, when:'Today 10:10', dir:'vm',   dur:  31, contact:'Aroha Walker',      recording:true,  note:'VM about access window' },
+      { id:5, when:'Today 10:42', dir:'out',  dur:  88, contact:'Noah Park',         recording:true,  note:'Confirmed Tue arrival' },
+      { id:6, when:'Today 11:03', dir:'in',   dur: 416, contact:'Eli Hartwell',      recording:true,  note:'Inspection — recurring leak' },
+      { id:7, when:'Today 11:30', dir:'out',  dur: 220, contact:'Imogen Reyes',      recording:false, note:'Apprentice scheduling' },
+      { id:8, when:'Today 12:01', dir:'in',   dur:  64, contact:'Tomás Vega',        recording:true,  note:'Photos location check' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paintRec = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.rec').forEach((n) => {
+        const tr = n.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) n.setAttribute('data-r', row.__r);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintRec));
+    new MutationObserver(paintRec).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
