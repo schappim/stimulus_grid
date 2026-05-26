@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>214 — Timesheet entry | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Timesheet entry — start / end / break and the derived net hours.
+       Net hours is a read-only computed cell that re-renders whenever any
+       input changes, so the worker / payroll always see the same number. */
+    .ts {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      background: #f1f5f9; color: #0f172a;
+    }
+    .ts[data-h="ok"]     { background:#dcfce7; color:#166534; }
+    .ts[data-h="long"]   { background:#fef3c7; color:#92400e; }
+    .ts[data-h="over"]   { background:#fee2e2; color:#991b1b; }
+    .ts[data-h="short"]  { background:#e0e7ff; color:#3730a3; }
+    .ts[data-h="zero"]   { background:#f1f5f9; color:#475569; }
+    .ts .h { font-size: 13px; }
+    .ts .m { font-size: 11px; opacity: .7; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>214 — Timesheet entry</h1>
+  <p class="lede">
+    Start time, end time, unpaid break (minutes) and the computed
+    <em>Net hours</em>. The hours cell re-derives on every edit so the
+    reviewer reads one canonical number. Bands: <em>short</em> (&lt;6h),
+    <em>ok</em> (6–9h), <em>long</em> (9–10h), <em>over</em> (&gt;10h —
+    triggers fatigue rules and OT loading).
+  </p>
+
+  <template id="ts-renderer">
+    <span class="ts" data-bind-attr="data-h">
+      <span class="h" data-bind="hoursH"></span>
+      <span class="m" data-bind="hoursM"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="start"
+              data-header-cell-type-value="datetime"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Start</th>
+          <th data-controller="header-cell" data-header-cell-field-value="end"
+              data-header-cell-type-value="datetime"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">End</th>
+          <th data-controller="header-cell" data-header-cell-field-value="breakMin"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Break (min)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="netHours"
+              data-header-cell-type-value="number"
+              data-header-cell-cell-renderer-value="ts-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Net hours</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Net hours is intentionally <em>not</em> editable — it's a derived
+    cell. Pair this with the penalty-rate pill (#215) to drive the pay
+    rate per row and the award-classification chip (#216) for the
+    rate-card lookup.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const s = row.start ? new Date(row.start) : null;
+      const e = row.end   ? new Date(row.end)   : null;
+      if (!s || !e || isNaN(s) || isNaN(e) || e <= s) {
+        return { ...row, netHours:0, hoursH:'0', hoursM:'00m', __band:'zero' };
+      }
+      const minsRaw  = (e - s) / 60000;
+      const minsNet  = Math.max(0, minsRaw - Math.max(0, Number(row.breakMin || 0)));
+      const h        = Math.floor(minsNet / 60);
+      const m        = Math.round(minsNet - h * 60);
+      const netHours = +(minsNet / 60).toFixed(2);
+      let band = 'ok';
+      if (netHours < 6)        band = 'short';
+      else if (netHours > 10)  band = 'over';
+      else if (netHours > 9)   band = 'long';
+      return { ...row, netHours, hoursH:`${h}h`, hoursM:`${String(m).padStart(2,'0')}m`, __band:band };
+    };
+
+    // Force the renderer's attribute lookup to use our derived band.
+    // We swap the column field to a virtual __band by overriding the cell
+    // value via a per-row property the renderer reads.
+    const at = (dateIso, hh, mm) => new Date(`${dateIso}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`).toISOString();
+    const SEED = [
+      { id:1, tech:'Astrid Hale',   date:'2026-05-25', start:at('2026-05-25', 7, 0),  end:at('2026-05-25',15,30), breakMin:30 },
+      { id:2, tech:'Marcus Chen',   date:'2026-05-25', start:at('2026-05-25', 6,30),  end:at('2026-05-25',17, 0), breakMin:45 },
+      { id:3, tech:'Priya Patel',   date:'2026-05-25', start:at('2026-05-25', 8, 0),  end:at('2026-05-25',14, 0), breakMin:0  },
+      { id:4, tech:'Jamal Owens',   date:'2026-05-25', start:at('2026-05-25', 5,30),  end:at('2026-05-25',18, 0), breakMin:60 },
+      { id:5, tech:'Lena Brooks',   date:'2026-05-25', start:at('2026-05-25', 9, 0),  end:at('2026-05-25',12, 0), breakMin:0  },
+      { id:6, tech:'Tomás Vega',    date:'2026-05-25', start:at('2026-05-25', 7,15),  end:at('2026-05-25',16,15), breakMin:30 },
+      { id:7, tech:'Apprentice — Y3',date:'2026-05-25',start:at('2026-05-25', 7,30),  end:at('2026-05-25',15,30), breakMin:30 },
+      { id:8, tech:'Apprentice — Y1',date:'2026-05-25',start:at('2026-05-25', 8, 0),  end:at('2026-05-25',16, 0), breakMin:30 },
+    ];
+    const ROWS = SEED.map(derive);
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['start','end','breakMin'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+
+    // Paint the data-h band attribute after each render.
+    const paintBand = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ts').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) node.setAttribute('data-h', row.__band || 'ok');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBand));
+    new MutationObserver(paintBand).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
