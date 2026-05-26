@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>239 — Cause of loss | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Cause-of-loss — the insurer's controlled vocabulary for the
+       incident type. The icon hints at the cause; the colour groups
+       weather / water / fire / impact / human / other. */
+    .cause {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .cause .icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      font-size: 12px;
+      color: #fff;
+      line-height: 1;
+    }
+    .cause[data-c="storm"]      { background:#dbeafe; color:#1e40af; }
+    .cause[data-c="storm"]      .icon { background:#1e40af; }
+    .cause[data-c="burst"]      { background:#cffafe; color:#155e75; }
+    .cause[data-c="burst"]      .icon { background:#0e7490; }
+    .cause[data-c="impact"]     { background:#fed7aa; color:#9a3412; }
+    .cause[data-c="impact"]     .icon { background:#ea580c; }
+    .cause[data-c="fire"]       { background:#fee2e2; color:#991b1b; }
+    .cause[data-c="fire"]       .icon { background:#dc2626; }
+    .cause[data-c="theft"]      { background:#fef3c7; color:#92400e; }
+    .cause[data-c="theft"]      .icon { background:#ca8a04; }
+    .cause[data-c="malicious"]  { background:#f3e8ff; color:#6b21a8; }
+    .cause[data-c="malicious"]  .icon { background:#7c3aed; }
+    .cause[data-c="hail"]       { background:#e0e7ff; color:#3730a3; }
+    .cause[data-c="hail"]       .icon { background:#4f46e5; }
+    .cause[data-c="other"]      { background:#f1f5f9; color:#475569; }
+    .cause[data-c="other"]      .icon { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>239 — Cause of loss</h1>
+  <p class="lede">
+    Controlled vocabulary for the cause of damage: <em>storm</em>,
+    <em>burst pipe</em>, <em>impact</em>, <em>fire</em>, <em>theft</em>,
+    <em>malicious damage</em>, <em>hail</em>, <em>other</em>. Restricting
+    inputs to this set keeps cohort analysis clean — "winter storm season"
+    can be sliced trustworthily.
+  </p>
+
+  <template id="cause-renderer">
+    <span class="cause" data-bind-attr="data-c">
+      <span class="icon" data-bind="icon"></span>
+      <span data-bind="causeLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="160">Claim #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="140">Incident date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cause"
+              data-header-cell-cell-renderer-value="cause-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Cause</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="320">Incident note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Hail is its own bucket because Australian hail-events drive a
+    different supply-chain (panel-beaters, roof-tile suppliers) than
+    storm-damage in general — coarse-grained "storm" loses that signal.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      storm:      { label:'Storm',          icon:'⛈' },
+      burst:      { label:'Burst pipe',     icon:'💧' },
+      impact:     { label:'Impact',         icon:'⊕' },
+      fire:       { label:'Fire',           icon:'🔥' },
+      theft:      { label:'Theft',          icon:'⊠' },
+      malicious:  { label:'Malicious',      icon:'!' },
+      hail:       { label:'Hail',           icon:'❅' },
+      other:      { label:'Other',          icon:'⋯' },
+    };
+    const derive = (row) => ({ ...row, causeLabel:META[row.cause]?.label ?? row.cause, icon:META[row.cause]?.icon ?? '?' });
+    const SEED = [
+      { id:1, ref:'IAG-2026-44218', when:'25 May 2026', cause:'storm',      note:'Branch through patio cover' },
+      { id:2, ref:'ALN-9182203',    when:'24 May 2026', cause:'burst',      note:'15mm flexi-hose under vanity' },
+      { id:3, ref:'QBE/PCY-22038A', when:'22 May 2026', cause:'impact',     note:'Car reversed into letterbox' },
+      { id:4, ref:'SC-7740019',     when:'19 May 2026', cause:'fire',       note:'Cooktop range fire — extraction destroyed' },
+      { id:5, ref:'YOU-1119922',    when:'18 May 2026', cause:'theft',      note:'Tools from job-site lockup' },
+      { id:6, ref:'RACV-2025-8014', when:'15 May 2026', cause:'malicious',  note:'Window smashed overnight' },
+      { id:7, ref:'NRMA-440112',    when:'12 May 2026', cause:'hail',       note:'Roof flashings dimpled' },
+      { id:8, ref:'AAMI-22-3014',   when:'10 May 2026', cause:'other',      note:'Rodent damage in roof cavity' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'cause') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
