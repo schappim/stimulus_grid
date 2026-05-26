@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>277 — Probity / police-check | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .pr { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .pr .kind { padding: 2px 8px; color:#fff; background:#0f172a; }
+    .pr .age  { padding: 2px 8px; color:#fff; }
+    .pr[data-st="ok"]      .age { background:#16a34a; }
+    .pr[data-st="warn"]    .age { background:#ea580c; }
+    .pr[data-st="expired"] .age { background:#dc2626; }
+    .pr[data-st="pending"] .age { background:#475569; }
+    .gate { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+            font-size: 11px; font-weight: 600;
+            background:#f1f5f9; color:#475569; }
+    .gate[data-g="cleared"]  { background:#dcfce7; color:#166534; }
+    .gate[data-g="blocked"]  { background:#fee2e2; color:#991b1b; }
+    .gate[data-g="restricted"]{ background:#fef3c7; color:#92400e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>277 — Probity / police-check</h1>
+  <p class="lede">
+    Annual probity status for technicians who touch restricted-key
+    systems or SCEC-listed product. Different from a generic licence
+    or insurance certificate — this is renewed every 12 months and
+    directly gates which jobs the dispatcher can hand them.
+  </p>
+
+  <template id="pr-renderer">
+    <span class="pr">
+      <span class="kind" data-bind="kind"></span>
+      <span class="age"  data-bind="ageLabel"></span>
+    </span>
+    <span class="gate" data-bind="gate"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="220">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="kind"
+              data-header-cell-cell-renderer-value="pr-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">Probity</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastJob"
+              data-header-cell-width-value="180">Last sensitive job</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A blocked tech doesn't mean a bad tech — it means the dispatcher
+    needs to route restricted work elsewhere until the new check
+    clears. Most failures here are paperwork (expired ID, address
+    change), not anything found in the search itself.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26');
+    const derive = (row) => {
+      if (!row.issued) return { ...row, ageLabel: 'pending', gate:'restricted', __st:'pending', __g:'restricted' };
+      const issued = new Date(row.issued);
+      const days = Math.round((TODAY - issued) / 86400000);
+      const months = Math.round(days/30);
+      let st, gate;
+      if (days >= 365)       { st = 'expired'; gate = 'blocked'; }
+      else if (days >= 305)  { st = 'warn';    gate = 'restricted'; }
+      else                   { st = 'ok';      gate = 'cleared'; }
+      return { ...row, ageLabel: `${months} mo`, gate, __st:st, __g:gate };
+    };
+    const SEED = [
+      { id:1, name:'Marcus Schappi',  kind:'NPC',     issued:'2025-11-12', lastJob:'BiLock cut — Pubs HQ' },
+      { id:2, name:'Anna Hua',        kind:'NPC',     issued:'2025-09-04', lastJob:'EVVA cut — Pavilion' },
+      { id:3, name:'Reza Patel',      kind:'NV1',     issued:'2025-06-22', lastJob:'Zone 3 vault svc' },
+      { id:4, name:'Jess Whitford',   kind:'NPC',     issued:'2024-12-10', lastJob:'(expired)' },
+      { id:5, name:'Chau Nguyen',     kind:'NPC',     issued:null,         lastJob:'(awaiting first)' },
+      { id:6, name:'Lina Park',       kind:'WWVP',    issued:'2026-01-30', lastJob:'School MK rekey' },
+      { id:7, name:'Sam Okafor',      kind:'NV1',     issued:'2025-03-15', lastJob:'Defence Class B' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.pr').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-st', row.__st);
+        const g = tr.querySelector('.gate');
+        if (g) g.setAttribute('data-g', row.__g);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

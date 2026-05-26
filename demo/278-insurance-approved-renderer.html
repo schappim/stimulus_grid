@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>278 — Insurance-approved badge | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .ins { display:inline-flex; align-items:stretch; gap:1px;
+           border-radius: 6px; overflow:hidden;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+           box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .ins .scheme { padding: 2px 8px; color:#fff; background:#0f172a; }
+    .ins .grade  { padding: 2px 8px; color:#fff; }
+    .ins[data-g="bronze"]  .grade { background:#b45309; }
+    .ins[data-g="silver"]  .grade { background:#94a3b8; color:#0f172a; }
+    .ins[data-g="gold"]    .grade { background:#f59e0b; }
+    .ins[data-g="diamond"] .grade { background:#0ea5e9; }
+    .ins[data-g="cen3"]    .grade { background:#7c3aed; }
+    .ins[data-g="cen4"]    .grade { background:#5b21b6; }
+    .ins[data-g="cen5"]    .grade { background:#3730a3; }
+    .cover { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+             background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>278 — Insurance-approved badge</h1>
+  <p class="lede">
+    Independent attack-resistance grades that map directly onto an
+    insurance cover line. Sold Secure (Bronze → Diamond), CEN attack
+    grade (3–5), Secured by Design — the badge a retailer points at
+    when the customer asks "is it the lock that's covered?".
+  </p>
+
+  <template id="ins-renderer">
+    <span class="ins">
+      <span class="scheme" data-bind="scheme"></span>
+      <span class="grade"  data-bind="grade"></span>
+    </span>
+    <span class="cover" data-bind="cover"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="product"
+              data-header-cell-width-value="280">Product</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scheme"
+              data-header-cell-cell-renderer-value="ins-renderer"
+              data-header-cell-width-value="380">Approval</th>
+          <th data-controller="header-cell" data-header-cell-field-value="useCase"
+              data-header-cell-width-value="200">Use-case</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    These badges are independent of the AS 4145 or EN 1303 stamping —
+    Sold Secure tests the assembled product (lock + door + frame) the
+    way an attacker actually approaches it, not just the cylinder.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const GRADEKEY = {
+      Bronze:'bronze', Silver:'silver', Gold:'gold', Diamond:'diamond',
+      'CEN 3':'cen3', 'CEN 4':'cen4', 'CEN 5':'cen5',
+    };
+    const SEED = [
+      { id:1, product:'Squire SS50CS padlock',  scheme:'Sold Secure',     grade:'Bronze',  useCase:'Garden gate' },
+      { id:2, product:'ABUS Granit 37/80',      scheme:'Sold Secure',     grade:'Diamond', useCase:'Motorcycle' },
+      { id:3, product:'Lockwood Cube 235P',     scheme:'Sold Secure',     grade:'Silver',  useCase:'Domestic dbolt' },
+      { id:4, product:'BiLock QC restricted',   scheme:'Sold Secure',     grade:'Gold',    useCase:'Commercial entry' },
+      { id:5, product:'Mul-T-Lock Hercular',    scheme:'CEN EN 1303',     grade:'CEN 4',   useCase:'High-value commercial' },
+      { id:6, product:'EVVA 4KS+ cylinder',     scheme:'CEN EN 1303',     grade:'CEN 5',   useCase:'Government / utility' },
+      { id:7, product:'Yale Conexis L2 smart',  scheme:'Sold Secure',     grade:'Silver',  useCase:'Smart lock — domestic' },
+      { id:8, product:'Banham M2002',           scheme:'CEN EN 1303',     grade:'CEN 3',   useCase:'Heritage timber door' },
+    ];
+    const ROWS = SEED.map((r) => ({
+      ...r,
+      cover: r.grade.startsWith('CEN') ? 'CEN-rated' : 'home contents Tier ' + r.grade,
+      __g: GRADEKEY[r.grade] || 'silver',
+    }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ins').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-g', row.__g);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

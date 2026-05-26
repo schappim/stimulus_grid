@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>276 — SCEC endorsement | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* SCEC (Security Construction & Equipment Committee) — Aus govt
+       endorsement for products / facilities / endorsed locksmiths.
+       Different chip for product, facility, person. */
+    .scec { display:inline-flex; align-items:stretch; gap:1px;
+            border-radius: 6px; overflow:hidden;
+            font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .scec .kind { padding: 2px 8px; color:#fff; }
+    .scec .lvl  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .scec[data-k="product"]  .kind { background:#1d4ed8; }
+    .scec[data-k="facility"] .kind { background:#7c3aed; }
+    .scec[data-k="person"]   .kind { background:#16a34a; }
+    .clr { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           font-size: 11px; font-weight: 600; }
+    .clr[data-c="zone1"] { background:#dcfce7; color:#166534; }
+    .clr[data-c="zone2"] { background:#fef3c7; color:#92400e; }
+    .clr[data-c="zone3"] { background:#fee2e2; color:#991b1b; }
+    .clr[data-c="zone4"] { background:#0f172a;  color:#fbbf24; }
+    .clr[data-c="zone5"] { background:#1e1b4b;  color:#a78bfa; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>276 — SCEC endorsement</h1>
+  <p class="lede">
+    Australian Government Security Construction & Equipment Committee
+    endorsement. Three things get endorsed: <strong>products</strong>
+    (e.g. SCEC Class C container), <strong>facilities</strong>
+    (Zone 1–5 rooms / strongrooms), and <strong>endorsed
+    locksmiths</strong> — only an endorsed locksmith can touch
+    SCEC-listed product in a Zone 4/5 environment.
+  </p>
+
+  <template id="scec-renderer">
+    <span class="scec">
+      <span class="kind" data-bind="kindLabel"></span>
+      <span class="lvl"  data-bind="lvlLabel"></span>
+    </span>
+    <span class="clr" data-bind="zoneLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="subject"
+              data-header-cell-width-value="260">Subject</th>
+          <th data-controller="header-cell" data-header-cell-field-value="kindLabel"
+              data-header-cell-cell-renderer-value="scec-renderer"
+              data-header-cell-width-value="340">SCEC</th>
+          <th data-controller="header-cell" data-header-cell-field-value="agency"
+              data-header-cell-width-value="200">Agency</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A facility's zone is the headline number on a job sheet — Zone 4
+    means TOP SECRET, Zone 5 is for the very small set of compartmented
+    spaces. Mismatching a SCEC product with a facility zone is a
+    notifiable security event.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, subject:'CMI Class B container — Defence',     kind:'product',  kindLabel:'product',  lvlLabel:'Class B',          zoneLabel:'zone3', __k:'product',  __c:'zone3', agency:'Defence' },
+      { id:2, subject:'Department X strongroom L1',          kind:'facility', kindLabel:'facility', lvlLabel:'Zone 4',           zoneLabel:'zone4', __k:'facility', __c:'zone4', agency:'Dept of X' },
+      { id:3, subject:'Marcus Schappi — endorsed locksmith', kind:'person',   kindLabel:'person',   lvlLabel:'Lvl 2',            zoneLabel:'zone2', __k:'person',   __c:'zone2', agency:'AGD' },
+      { id:4, subject:'Class C lock — model XR-2',           kind:'product',  kindLabel:'product',  lvlLabel:'Class C',          zoneLabel:'zone1', __k:'product',  __c:'zone1', agency:'AGD' },
+      { id:5, subject:'Embassy SCIF chamber',                kind:'facility', kindLabel:'facility', lvlLabel:'Zone 5',           zoneLabel:'zone5', __k:'facility', __c:'zone5', agency:'DFAT' },
+      { id:6, subject:'AHA Lvl-3 endorsed safe-tech',        kind:'person',   kindLabel:'person',   lvlLabel:'Lvl 3 (safe)',     zoneLabel:'zone3', __k:'person',   __c:'zone3', agency:'AGD' },
+      { id:7, subject:'CMI Class A vault door',              kind:'product',  kindLabel:'product',  lvlLabel:'Class A (vault)',  zoneLabel:'zone4', __k:'product',  __c:'zone4', agency:'Defence' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.scec').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-k', row.__k);
+        const clr = tr.querySelector('.clr');
+        if (clr) clr.setAttribute('data-c', row.__c);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

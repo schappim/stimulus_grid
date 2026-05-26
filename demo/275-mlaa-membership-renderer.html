@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>275 — MLAA membership | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .ml { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .ml .tier { padding: 2px 8px; color:#fff; }
+    .ml .num  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .ml[data-tier="associate"] .tier { background:#475569; }
+    .ml[data-tier="auto"]      .tier { background:#1d4ed8; }
+    .ml[data-tier="safe"]      .tier { background:#7c3aed; }
+    .ml[data-tier="master"]    .tier { background:#b45309; }
+    .ml[data-tier="grand"]     .tier { background:#7c2d12; }
+    .exp { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#dcfce7; color:#166534; font-size: 11px; font-weight: 600; }
+    .exp[data-state="warn"]    { background:#fef3c7; color:#92400e; }
+    .exp[data-state="expired"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>275 — MLAA membership</h1>
+  <p class="lede">
+    Master Locksmiths Association of Australasia membership. The tier
+    drives what jobs the tech can legally quote — only Master-class
+    members can sign off on restricted-key authority requests for some
+    manufacturers, and only safe-specialists are insured for vault
+    work.
+  </p>
+
+  <template id="ml-renderer">
+    <span class="ml">
+      <span class="tier" data-bind="tier"></span>
+      <span class="num"  data-bind="memberNo"></span>
+    </span>
+    <span class="exp" data-bind="expLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-width-value="220">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tier"
+              data-header-cell-cell-renderer-value="ml-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">MLAA</th>
+          <th data-controller="header-cell" data-header-cell-field-value="branch"
+              data-header-cell-width-value="180">Branch</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Real membership IDs don't carry tier info — the tier is granted
+    separately by the MLAA board on the back of training and time-in-
+    trade evidence. Keep them as separate columns so renewal of one
+    doesn't silently lapse the other.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26');
+    const derive = (row) => {
+      const exp = new Date(row.expiry);
+      const days = Math.round((exp - TODAY) / 86400000);
+      let state = 'ok', label = '—';
+      if (days < 0)        { state = 'expired'; label = `expired ${Math.abs(days)}d`; }
+      else if (days < 60)  { state = 'warn';    label = `${days}d`; }
+      else                 { state = 'ok';      label = `${Math.round(days/30)} mo`; }
+      return { ...row, expLabel: label, __state: state };
+    };
+    const SEED = [
+      { id:1, name:'Marcus Schappi',  tier:'master',   memberNo:'M-04211', branch:'NSW',  expiry:'2027-03-31' },
+      { id:2, name:'Anna Hua',        tier:'auto',     memberNo:'A-09134', branch:'NSW',  expiry:'2026-08-15' },
+      { id:3, name:'Reza Patel',      tier:'safe',     memberNo:'S-01987', branch:'VIC',  expiry:'2026-06-12' },
+      { id:4, name:'Jess Whitford',   tier:'master',   memberNo:'M-03840', branch:'QLD',  expiry:'2026-05-30' },
+      { id:5, name:'Chau Nguyen',     tier:'associate',memberNo:'L-11220', branch:'NSW',  expiry:'2026-09-01' },
+      { id:6, name:'Lina Park',       tier:'auto',     memberNo:'A-09301', branch:'WA',   expiry:'2025-12-31' },
+      { id:7, name:'Sam Okafor',      tier:'grand',    memberNo:'G-00112', branch:'NSW',  expiry:'2028-02-14' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ml').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-tier', row.tier);
+        const exp = tr.querySelector('.exp');
+        if (exp) exp.setAttribute('data-state', row.__state);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
