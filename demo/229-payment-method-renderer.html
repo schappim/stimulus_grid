@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>229 — Payment method icon | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Payment method icon — provider-branded chip. The badge is the
+       payment-acceptance code; the surcharge note attaches to the
+       methods that pass a fee on. */
+    .pm {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      background: #f8fafc; color: #1f2937;
+    }
+    .pm .badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width: 28px; height: 18px; padding: 0 6px;
+      border-radius: 4px;
+      color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+    }
+    .pm[data-pm="eftpos"]    .badge { background:#0f766e; }
+    .pm[data-pm="card"]      .badge { background:#1e40af; }
+    .pm[data-pm="cash"]      .badge { background:#16a34a; }
+    .pm[data-pm="stripe"]    .badge { background:#635bff; }
+    .pm[data-pm="square"]    .badge { background:#000; }
+    .pm[data-pm="tyro"]      .badge { background:#0ea5e9; }
+    .pm[data-pm="dd"]        .badge { background:#7c3aed; }
+    .pm[data-pm="paypal"]    .badge { background:#003087; }
+    .pm[data-pm="afterpay"]  .badge { background:#b2fce4; color:#0c0c0c; }
+    .pm[data-pm="zip"]       .badge { background:#aa00ff; }
+    .pm[data-pm="cheque"]    .badge { background:#9a3412; }
+    .pm[data-pm="bpay"]      .badge { background:#1d4ed8; }
+
+    .pm .sur {
+      padding: 1px 6px; border-radius: 999px;
+      background: #fef3c7; color: #92400e;
+      font-size: 10.5px; font-weight: 700;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>229 — Payment method icon</h1>
+  <p class="lede">
+    Provider-branded chip — EFTPOS, Card, Cash, Stripe, Square, Tyro,
+    PayPal, BPAY, Direct Debit, AfterPay, Zip, Cheque. The surcharge note
+    auto-attaches to whichever methods are configured to pass through a
+    fee (Stripe / Square / Tyro typically).
+  </p>
+
+  <template id="pm-renderer">
+    <span class="pm" data-bind-attr="data-pm">
+      <span class="badge" data-bind="pmBadge"></span>
+      <span data-bind="pmLabel"></span>
+      <span class="sur" data-bind="surchargeLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Invoice #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-width-value="120">Amount</th>
+          <th data-controller="header-cell" data-header-cell-field-value="method"
+              data-header-cell-cell-renderer-value="pm-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="260">Method</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ref2"
+              data-header-cell-width-value="220">Ref / receipt</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The surcharge note removes itself for methods that don't pass through
+    a fee — keeps the visual noise on the rows where it actually matters.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      eftpos:   { label:'EFTPOS',          badge:'EFTPOS', sur:0   },
+      card:     { label:'Card (in-person)',badge:'CARD',   sur:0   },
+      cash:     { label:'Cash',            badge:'CASH',   sur:0   },
+      stripe:   { label:'Stripe',          badge:'stripe', sur:1.75},
+      square:   { label:'Square',          badge:'square', sur:1.6 },
+      tyro:     { label:'Tyro',            badge:'tyro',   sur:1.4 },
+      dd:       { label:'Direct debit',    badge:'DD',     sur:0   },
+      paypal:   { label:'PayPal',          badge:'PayPal', sur:2.6 },
+      afterpay: { label:'AfterPay',        badge:'AP',     sur:6.0 },
+      zip:      { label:'Zip',             badge:'zip',    sur:5.0 },
+      cheque:   { label:'Cheque',          badge:'CHEQ',   sur:0   },
+      bpay:     { label:'BPAY',            badge:'BPAY',   sur:0   },
+    };
+    const derive = (row) => ({
+      ...row,
+      pmLabel:        META[row.method]?.label  ?? row.method,
+      pmBadge:        META[row.method]?.badge  ?? row.method,
+      surchargeLabel: META[row.method]?.sur    ? `+${META[row.method].sur}%` : '',
+    });
+    const SEED = [
+      { id:1, ref:'INV-1101', customer:'Bondi Pavilion',    amount:'$  1,890', method:'eftpos', ref2:'rrn 1144238' },
+      { id:2, ref:'INV-1102', customer:'Coogee Holdings',   amount:'$    340', method:'cash',   ref2:'recpt 0042' },
+      { id:3, ref:'INV-1103', customer:'Manly Reno Co',     amount:'$  3,200', method:'stripe', ref2:'pi_3M2lzL...' },
+      { id:4, ref:'INV-1104', customer:'Vega Studio',       amount:'$  4,560', method:'tyro',   ref2:'TX-991122' },
+      { id:5, ref:'INV-1105', customer:'Surry Hills Cafe',  amount:'$    980', method:'square', ref2:'sqi_8FAJ...' },
+      { id:6, ref:'INV-1106', customer:'Pyrmont Pubs',      amount:'$ 22,400', method:'dd',     ref2:'mandate ABA0042' },
+      { id:7, ref:'INV-1107', customer:'Newtown Bakery',    amount:'$    420', method:'cheque', ref2:'chq 4012' },
+      { id:8, ref:'INV-1108', customer:'Glebe Builders',    amount:'$ 12,100', method:'bpay',   ref2:'crn 7720040' },
+      { id:9, ref:'INV-1109', customer:'Mosman Doctors',    amount:'$  1,400', method:'paypal', ref2:'PP-19938' },
+      { id:10,ref:'INV-1110', customer:'Annandale Yoga',    amount:'$    245', method:'afterpay',ref2:'AP-99021' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'method') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
