@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>219 — LSL portable scheme | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Portable long-service-leave schemes — state-specific bodies that
+       collect employer levies so a construction worker accrues LSL across
+       different employers. Every state has its own scheme. */
+    .lsl {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .lsl .scheme {
+      padding: 2px 8px; border-radius: 4px;
+      color: #fff; font-size: 11px; letter-spacing: .02em;
+    }
+    .lsl[data-scheme="coinvest"] .scheme { background:#0f766e; }
+    .lsl[data-scheme="qleave"]   .scheme { background:#0284c7; }
+    .lsl[data-scheme="lslcorp"]  .scheme { background:#dc2626; }
+    .lsl[data-scheme="cleave"]   .scheme { background:#7c3aed; }
+    .lsl[data-scheme="actleave"] .scheme { background:#0e7490; }
+    .lsl[data-scheme="myleave"]  .scheme { background:#9a3412; }
+    .lsl[data-scheme="taslsl"]   .scheme { background:#16a34a; }
+    .lsl[data-scheme="ntbcs"]    .scheme { background:#b45309; }
+    .lsl[data-scheme="none"]     .scheme { background:#475569; }
+    .lsl[data-scheme="coinvest"] { background:#ccfbf1; color:#115e59; }
+    .lsl[data-scheme="qleave"]   { background:#e0f2fe; color:#075985; }
+    .lsl[data-scheme="lslcorp"]  { background:#fee2e2; color:#991b1b; }
+    .lsl[data-scheme="cleave"]   { background:#f3e8ff; color:#6b21a8; }
+    .lsl[data-scheme="actleave"] { background:#ecfeff; color:#155e75; }
+    .lsl[data-scheme="myleave"]  { background:#ffedd5; color:#7c2d12; }
+    .lsl[data-scheme="taslsl"]   { background:#dcfce7; color:#166534; }
+    .lsl[data-scheme="ntbcs"]    { background:#fef3c7; color:#78350f; }
+    .lsl[data-scheme="none"]     { background:#f1f5f9; color:#475569; }
+    .lsl .days { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>219 — LSL portable scheme</h1>
+  <p class="lede">
+    Construction-industry portable long-service-leave bodies — workers
+    accrue LSL across different employers because the levy goes to the
+    scheme, not the company. The cell shows which body the worker is
+    registered with and current accrued days.
+  </p>
+
+  <template id="lsl-renderer">
+    <span class="lsl" data-bind-attr="data-scheme">
+      <span class="scheme" data-bind="schemeLabel"></span>
+      <span class="days" data-bind="accruedLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="worker"
+              data-header-cell-width-value="200">Worker</th>
+          <th data-controller="header-cell" data-header-cell-field-value="state"
+              data-header-cell-width-value="80">State</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scheme"
+              data-header-cell-cell-renderer-value="lsl-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="240">Scheme</th>
+          <th data-controller="header-cell" data-header-cell-field-value="memberNo"
+              data-header-cell-width-value="160">Member #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="accrued"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="120">Accrued (d)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Defaults are state-driven (VIC → CoINVEST, QLD → QLeave, NSW → LSL
+    Corp NSW, etc.). Edit <em>Accrued</em> to see the chip update —
+    payroll exports use the scheme code, not the colour.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SCHEMES = {
+      coinvest:'CoINVEST (VIC)', qleave:'QLeave (QLD)',  lslcorp:'LSL Corp (NSW)',
+      cleave:'Construction LSL (WA)', actleave:'ACT Leave', myleave:'MyLeave (SA)',
+      taslsl:'TasBuild', ntbcs:'NTBCS (NT)', none:'Not enrolled',
+    };
+    const derive = (row) => ({
+      ...row,
+      schemeLabel: SCHEMES[row.scheme] ?? row.scheme,
+      accruedLabel: row.accrued != null ? `${row.accrued} d` : '—',
+    });
+    const SEED = [
+      { id:1, worker:'Astrid Hale',  state:'VIC', scheme:'coinvest', memberNo:'CI-3349211', accrued: 87 },
+      { id:2, worker:'Marcus Chen',  state:'NSW', scheme:'lslcorp',  memberNo:'NSW-8842110', accrued: 124 },
+      { id:3, worker:'Priya Patel',  state:'QLD', scheme:'qleave',   memberNo:'QL-9988122', accrued:  42 },
+      { id:4, worker:'Jamal Owens',  state:'WA',  scheme:'cleave',   memberNo:'WA-CL-4421', accrued:  60 },
+      { id:5, worker:'Tomás Vega',   state:'ACT', scheme:'actleave', memberNo:'AL-7790',    accrued:  18 },
+      { id:6, worker:'Aroha Walker', state:'SA',  scheme:'myleave',  memberNo:'ML-3322441', accrued:   8 },
+      { id:7, worker:'Sofia Ricci',  state:'TAS', scheme:'taslsl',   memberNo:'TB-5544',    accrued: 102 },
+      { id:8, worker:'Yusuf Adekun', state:'NT',  scheme:'ntbcs',    memberNo:'NT-2120',    accrued:  30 },
+      { id:9, worker:'Mei Tanaka',   state:'VIC', scheme:'none',     memberNo:'—',          accrued:   0 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'accrued') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
