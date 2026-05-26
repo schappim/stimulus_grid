@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>244 — Switchboard rating + phase | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Switchboard rating (amps) + phase (single / 3-phase). The amp
+       reading drives whether a new circuit needs an upgrade; the phase
+       flag is essential for sizing an EV charger or new aircon. */
+    .sw {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .sw .amp {
+      padding: 2px 8px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .sw .ph {
+      padding: 2px 8px;
+      color: #fff;
+      letter-spacing: .02em;
+    }
+    .sw[data-amp="lo"] .amp { background:#dc2626; }
+    .sw[data-amp="md"] .amp { background:#ea580c; }
+    .sw[data-amp="hi"] .amp { background:#16a34a; }
+    .sw[data-ph="single"] .ph { background:#475569; }
+    .sw[data-ph="3"]      .ph { background:#1d4ed8; }
+    .meta {
+      margin-left: 8px; padding: 1px 8px; border-radius:999px;
+      background:#f1f5f9; color:#475569; font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>244 — Switchboard rating + phase</h1>
+  <p class="lede">
+    Mains amperage and phase configuration. <strong>Lo</strong> (≤ 40 A
+    single-phase) sites can't take an EV charger or a 3.5 kW reverse-cycle
+    without an upgrade; <strong>3-phase</strong> sites can drive heavier
+    loads but the runs cost more. Edit either column to re-derive the
+    sizing band.
+  </p>
+
+  <template id="sw-renderer">
+    <span class="sw">
+      <span class="amp" data-bind="ampLabel"></span>
+      <span class="ph"  data-bind="phaseLabel"></span>
+    </span>
+    <span class="meta" data-bind="meterLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amps"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Amps</th>
+          <th data-controller="header-cell" data-header-cell-field-value="phase"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Phase</th>
+          <th data-controller="header-cell" data-header-cell-field-value="ampLabel"
+              data-header-cell-cell-renderer-value="sw-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Board</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The amperage banding is conservative — a 63 A single-phase board is
+    still <em>md</em> not <em>hi</em>. The intent is to flag the rows
+    that can't host a new high-draw circuit without re-engineering.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const a = Number(row.amps);
+      const band = a <= 40 ? 'lo' : a <= 80 ? 'md' : 'hi';
+      const phase = String(row.phase || 'single').toLowerCase();
+      const ph = phase.startsWith('3') ? '3' : 'single';
+      return {
+        ...row,
+        ampLabel: `${a} A`,
+        phaseLabel: ph === '3' ? '3-phase' : 'Single',
+        __amp: band, __ph: ph,
+      };
+    };
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',           amps: 63, phase:'single', meterLabel:'Smart meter, 2018' },
+      { id:2, site:'4/87 Marine Pde, Coogee',    amps: 40, phase:'single', meterLabel:'Type 5 interval' },
+      { id:3, site:'Bondi Pavilion S2',          amps:160, phase:'3-phase',meterLabel:'CT-connected' },
+      { id:4, site:'Pyrmont Pubs HQ',            amps:400, phase:'3-phase',meterLabel:'CT-connected, 2021' },
+      { id:5, site:'5 Crown St, Surry Hills',    amps: 80, phase:'single', meterLabel:'Accumulation' },
+      { id:6, site:'33 Glebe Pt Rd, Glebe',      amps: 32, phase:'single', meterLabel:'1970s board, fuses' },
+      { id:7, site:'14/2 King St, Newtown',      amps:100, phase:'3-phase',meterLabel:'Smart meter' },
+      { id:8, site:'7 Marine Pde, Mosman',       amps: 80, phase:'3-phase',meterLabel:'Smart meter' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['amps','phase'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintBands = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.sw').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-amp', row.__amp || 'md');
+        node.setAttribute('data-ph',  row.__ph  || 'single');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBands));
+    new MutationObserver(paintBands).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
