@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>247 — BAL rating | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* BAL — Bushfire Attack Level under AS 3959. Six levels; the higher
+       the worse the radiant-heat / ember-attack exposure, and the more
+       expensive every external material gets. */
+    .bal {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .bal .lbl {
+      padding: 2px 8px;
+      background: #f8fafc; color: #1f2937;
+      letter-spacing: .03em;
+    }
+    .bal .val {
+      padding: 2px 8px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .bal[data-b="LOW"]    .val { background:#16a34a; }
+    .bal[data-b="12.5"]   .val { background:#ca8a04; }
+    .bal[data-b="19"]     .val { background:#ea580c; }
+    .bal[data-b="29"]     .val { background:#dc2626; }
+    .bal[data-b="40"]     .val { background:#7f1d1d; }
+    .bal[data-b="FZ"]     .val { background:#000; }
+    .kw {
+      margin-left: 8px; padding: 1px 7px; border-radius:999px;
+      background: #f1f5f9; color: #475569; font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>247 — BAL rating</h1>
+  <p class="lede">
+    Bushfire Attack Level under AS 3959. <em>LOW</em> means no specific
+    BAL construction; <em>BAL-12.5</em>–<em>40</em> step up the
+    radiant-heat exposure (kW/m²); <em>BAL-FZ</em> (Flame Zone) means
+    direct flame contact and is effectively unbuildable in many councils.
+  </p>
+
+  <template id="bal-renderer">
+    <span class="bal" data-bind-attr="data-b">
+      <span class="lbl">BAL</span>
+      <span class="val" data-bind="bal"></span>
+    </span>
+    <span class="kw" data-bind="kwLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bal"
+              data-header-cell-cell-renderer-value="bal-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="260">BAL rating</th>
+          <th data-controller="header-cell" data-header-cell-field-value="surveyor"
+              data-header-cell-width-value="200">Surveyor</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reportDate"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="150">Report date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pair the BAL chip with the heritage / conservation flag (#248) —
+    bushfire-prone <em>and</em> heritage-overlay lots are the most
+    complex (and expensive) builds in the country.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const KW = { LOW:'< 12.5 kW/m²','12.5':'12.5 kW/m²','19':'19 kW/m²','29':'29 kW/m²','40':'40 kW/m²','FZ':'Flame Zone' };
+    const derive = (row) => ({ ...row, kwLabel: KW[row.bal] ?? '—' });
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',           bal:'LOW',  surveyor:'BushFirePros',  reportDate:'2024-11-12' },
+      { id:2, site:'Lot 42, Kangaroo Valley',    bal:'29',   surveyor:'BAL Surveys SE', reportDate:'2025-02-14' },
+      { id:3, site:'Acacia Rd, Faulconbridge',   bal:'40',   surveyor:'BAL Surveys SE', reportDate:'2024-09-22' },
+      { id:4, site:'9 Ridge Rd, Springwood',     bal:'19',   surveyor:'BushFirePros',   reportDate:'2025-01-04' },
+      { id:5, site:'18 Forest Rd, Wollongong',   bal:'12.5', surveyor:'Mountain Surv.', reportDate:'2025-03-19' },
+      { id:6, site:'Lot 8, Mt Wilson',           bal:'FZ',   surveyor:'BAL Surveys SE', reportDate:'2024-08-31' },
+      { id:7, site:'22 Lake Rd, Burradoo',       bal:'12.5', surveyor:'Highlands Surv.',reportDate:'2024-12-02' },
+      { id:8, site:'14 Park Rd, Newtown',        bal:'LOW',  surveyor:'—',              reportDate:'—' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'bal') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>

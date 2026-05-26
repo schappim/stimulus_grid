@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>248 — Heritage / conservation | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Heritage / conservation flag — overlays restrict work scope (façade,
+       roof material, fenestration, signage). Three levels: contributory
+       (within a conservation area), local-listed, state/national-listed. */
+    .her {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .her .glyph {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      color: #fff; font-size: 13px; line-height: 1;
+    }
+    .her[data-h="none"]         { background:#f1f5f9; color:#475569; }
+    .her[data-h="none"]         .glyph { background:#475569; }
+    .her[data-h="contributory"] { background:#fef3c7; color:#92400e; }
+    .her[data-h="contributory"] .glyph { background:#ca8a04; }
+    .her[data-h="local"]        { background:#fed7aa; color:#9a3412; }
+    .her[data-h="local"]        .glyph { background:#ea580c; }
+    .her[data-h="state"]        { background:#fee2e2; color:#991b1b; }
+    .her[data-h="state"]        .glyph { background:#dc2626; }
+    .her[data-h="national"]     { background:#f3e8ff; color:#6b21a8; }
+    .her[data-h="national"]     .glyph { background:#7c3aed; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>248 — Heritage / conservation flag</h1>
+  <p class="lede">
+    Heritage overlays restrict work scope — façade material, roof type,
+    fenestration, signage, even paint colours. Five levels: <em>none</em>,
+    <em>contributory</em> (within a conservation area), <em>local</em>,
+    <em>state</em>, <em>national</em>. The level dictates which authority
+    has to give development consent.
+  </p>
+
+  <template id="her-renderer">
+    <span class="her" data-bind-attr="data-h">
+      <span class="glyph" data-bind="glyph"></span>
+      <span data-bind="heritageLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="280">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="heritage"
+              data-header-cell-cell-renderer-value="her-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="240">Heritage</th>
+          <th data-controller="header-cell" data-header-cell-field-value="authority"
+              data-header-cell-width-value="200">Authority</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="280">Restriction</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    State- and national-listed items can't be touched without delegated
+    consent. Even paint colour on a contributory row is regulated in
+    some LGAs (City of Sydney, Glebe, Surry Hills).
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      none:         { label:'None',          glyph:'·' },
+      contributory: { label:'Contributory',  glyph:'▽' },
+      local:        { label:'Local-listed',  glyph:'◆' },
+      state:        { label:'State-listed',  glyph:'★' },
+      national:     { label:'National',      glyph:'✦' },
+    };
+    const derive = (row) => ({ ...row, heritageLabel:META[row.heritage]?.label ?? row.heritage, glyph:META[row.heritage]?.glyph ?? '?' });
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',          heritage:'none',         authority:'Waverley Council',  note:'—' },
+      { id:2, site:'5 Crown St, Surry Hills',   heritage:'contributory', authority:'City of Sydney',    note:'Paint heritage palette' },
+      { id:3, site:'33 Glebe Pt Rd, Glebe',     heritage:'local',        authority:'City of Sydney',    note:'Roof material restricted' },
+      { id:4, site:'9 Trahlee Rd, Bellevue Hill',heritage:'state',       authority:'NSW Heritage Cncl', note:'Window pattern locked' },
+      { id:5, site:'Royal Botanic Gardens',     heritage:'national',     authority:'National Heritage', note:'Listed garden' },
+      { id:6, site:'Pyrmont Pubs HQ',           heritage:'contributory', authority:'City of Sydney',    note:'Within Pyrmont CA' },
+      { id:7, site:'14 King St, Newtown',       heritage:'local',        authority:'Inner West Cncl',   note:'Federation row' },
+      { id:8, site:'22 Lake Rd, Burradoo',      heritage:'none',         authority:'Wingecarribee',     note:'—' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'heritage') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
