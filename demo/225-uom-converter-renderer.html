@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>225 — UOM converter | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* UOM converter — pick the unit of measure inline; the displayed
+       quantity converts but the SKU's canonical "each" stays fixed in
+       the data layer. */
+    .uom {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+      background: #f8fafc;
+    }
+    .uom .q {
+      padding: 2px 8px;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+    .uom select.unit {
+      appearance: none;
+      border: 0;
+      padding: 2px 22px 2px 8px;
+      background:
+        linear-gradient(45deg, transparent 50%, #475569 50%) calc(100% - 11px) 50% / 5px 5px no-repeat,
+        linear-gradient(135deg, #475569 50%, transparent 50%) calc(100% - 6px) 50% / 5px 5px no-repeat,
+        #e2e8f0;
+      color: #1f2937;
+      font: inherit; font-weight: 700;
+      cursor: pointer;
+    }
+    .uom select.unit:focus { outline: 2px solid #2563eb; outline-offset: -2px; }
+    .uom .canon { color: #94a3b8; font-weight: 500; padding: 2px 8px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>225 — UOM converter</h1>
+  <p class="lede">
+    Pick the unit-of-measure inline — the displayed quantity converts but
+    the SKU's canonical <em>"each"</em> count stays fixed in the data
+    layer. Change <em>m</em> ↔ <em>mm</em> ↔ <em>roll</em> ↔ <em>box</em>
+    without losing the source-of-truth integer count.
+  </p>
+
+  <template id="uom-renderer">
+    <span class="uom">
+      <span class="q" data-bind="qtyDisplay"></span>
+      <select class="unit" data-uom-target></select>
+      <span class="canon" data-bind="canonLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="140">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="280">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="qtyDisplay"
+              data-header-cell-cell-renderer-value="uom-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="280">Qty</th>
+          <th data-controller="header-cell" data-header-cell-field-value="canonical"
+              data-header-cell-width-value="160">Canonical</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The canonical column always renders the raw integer in the SKU's
+    base unit — never trust the display unit for arithmetic. CSV export,
+    purchase orders and stock-take all read <code>each</code>.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Conversion factors expressed as "1 of unit X = N of base".
+    // Length: base = mm. Pack: base = each.
+    const UNITS = {
+      length: [
+        { code:'mm',   label:'mm',     toBase:1     },
+        { code:'cm',   label:'cm',     toBase:10    },
+        { code:'m',    label:'m',      toBase:1000  },
+        { code:'roll', label:'roll',   toBase:30000 }, // 30m roll
+      ],
+      pack: [
+        { code:'each', label:'each',   toBase:1   },
+        { code:'pair', label:'pair',   toBase:2   },
+        { code:'box',  label:'box(12)',toBase:12  },
+        { code:'cart', label:'carton(48)', toBase:48 },
+      ],
+      weight: [
+        { code:'g',  label:'g',  toBase:1    },
+        { code:'kg', label:'kg', toBase:1000 },
+      ],
+    };
+    const fmt = (n) => Number(n).toLocaleString('en-AU', { maximumFractionDigits: 3 });
+    const derive = (row) => {
+      const list = UNITS[row.kind];
+      const u = list.find(x => x.code === row.unit) ?? list[0];
+      const qDisp = row.baseQty / u.toBase;
+      const baseCode = list[0].code;
+      return {
+        ...row,
+        qtyDisplay: `${fmt(qDisp)} ${u.label}`,
+        canonLabel: `= ${fmt(row.baseQty)} ${baseCode}`,
+        canonical: `${row.baseQty} ${baseCode}`,
+      };
+    };
+    const SEED = [
+      { id:1, sku:'CON-25-CLR',  part:'25mm clear conduit',           kind:'length', baseQty: 9000, unit:'m'   },
+      { id:2, sku:'TPS-2.5MM',   part:'TPS 2.5mm² flat',              kind:'length', baseQty:30000, unit:'roll'},
+      { id:3, sku:'COP-15',      part:'15mm copper',                  kind:'length', baseQty: 9000, unit:'m'   },
+      { id:4, sku:'GPO-DBL',     part:'Double GPO',                   kind:'pack',   baseQty:48,    unit:'cart'},
+      { id:5, sku:'GLOVES-NIT-L',part:'Nitrile glove L',              kind:'pack',   baseQty:24,    unit:'pair'},
+      { id:6, sku:'BSI-SEAL',    part:'BSI silicone seal',            kind:'pack',   baseQty:12,    unit:'box' },
+      { id:7, sku:'GROUT-EPX',   part:'Epoxy grout',                  kind:'weight', baseQty:25000, unit:'kg'  },
+      { id:8, sku:'GLUE-SOLV',   part:'Solvent cement',               kind:'weight', baseQty: 4000, unit:'kg'  },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Populate the <select> options after each render, swap units in-place.
+    const populate = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.uom').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const select = node.querySelector('select.unit');
+        if (select.dataset.hydrated !== row.id + ':' + row.unit) {
+          const list = UNITS[row.kind];
+          select.innerHTML = list.map(u =>
+            `<option value="${u.code}"${u.code===row.unit?' selected':''}>${u.label}</option>`).join('');
+          select.dataset.hydrated = row.id + ':' + row.unit;
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, populate));
+    new MutationObserver(populate).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+
+    // Handle unit changes via event delegation.
+    grid.addEventListener('change', (e) => {
+      if (!e.target.matches('select.unit')) return;
+      const tr = e.target.closest('tr');
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+      if (row) grid.gridApi.applyTransaction({ update: [derive({ ...row, unit: e.target.value })] });
+    });
+  </script>
+</body>
+</html>
