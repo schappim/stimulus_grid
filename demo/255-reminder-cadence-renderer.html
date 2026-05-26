@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>255 — Reminder cadence | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Reminder cadence — the dunning ladder: 1st / 2nd / 3rd / Final
+       notice / legal letter / debt-collected. Each rung is a step in
+       escalation and the chip colour reads accordingly. */
+    .rem {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .rem .step {
+      padding: 2px 8px;
+      color: #fff; letter-spacing: .03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .rem .when {
+      padding: 2px 8px;
+      background: #f8fafc; color: #1f2937;
+      font-weight: 600;
+    }
+    .rem[data-s="1"]      .step { background:#0284c7; }
+    .rem[data-s="2"]      .step { background:#ea580c; }
+    .rem[data-s="3"]      .step { background:#dc2626; }
+    .rem[data-s="final"]  .step { background:#7f1d1d; }
+    .rem[data-s="legal"]  .step { background:#000; }
+    .rem[data-s="debt"]   .step { background:#475569; }
+    .rem[data-s="none"]   .step { background:#cbd5e1; color:#1f2937; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>255 — Reminder cadence</h1>
+  <p class="lede">
+    The dunning ladder: <em>none → 1st → 2nd → 3rd → Final → Legal letter
+    → Debt-collected</em>. The book-keeper escalates one rung at a time;
+    a row stuck on <em>Final</em> for &gt; 30 days should be reviewed for
+    the legal step or a write-off.
+  </p>
+
+  <template id="rem-renderer">
+    <span class="rem" data-bind-attr="data-s">
+      <span class="step" data-bind="stepLabel"></span>
+      <span class="when" data-bind="lastSentLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Invoice #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-width-value="120">Amount</th>
+          <th data-controller="header-cell" data-header-cell-field-value="step"
+              data-header-cell-cell-renderer-value="rem-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="240">Reminder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastSent"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="150">Last sent</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Keep the step as a discrete enum, not a count — that way "skip to
+    Final" (large balance, prior bad history) is auditable rather than
+    implied from a stale 2nd notice that was never sent.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const STEP = {
+      none:'No notice', '1':'1st reminder', '2':'2nd reminder', '3':'3rd reminder',
+      final:'Final notice', legal:'Legal letter', debt:'Debt-collected',
+    };
+    const fmtAgo = (iso) => {
+      if (!iso) return 'not sent';
+      const d = Math.round((new Date(new Date().toDateString()) - new Date(iso)) / 86400000);
+      if (d === 0) return 'sent today';
+      if (d === 1) return 'sent yesterday';
+      return `sent ${d}d ago`;
+    };
+    const derive = (row) => ({
+      ...row,
+      stepLabel: STEP[row.step] ?? row.step,
+      lastSentLabel: fmtAgo(row.lastSent),
+    });
+    const daysAgo = (n) => { const d = new Date(new Date().toDateString()); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, ref:'INV-1101', customer:'Bondi Pavilion',    amount:'$  1,890', step:'none',   lastSent:null         },
+      { id:2, ref:'INV-1003', customer:'Manly Reno Co',     amount:'$  3,200', step:'1',      lastSent: daysAgo(3)  },
+      { id:3, ref:'INV-1004', customer:'Vega Studio',       amount:'$  4,560', step:'2',      lastSent: daysAgo(14) },
+      { id:4, ref:'INV-1006', customer:'Pyrmont Pubs',      amount:'$ 22,400', step:'final',  lastSent: daysAgo(45) },
+      { id:5, ref:'INV-1007', customer:'Newtown Bakery',    amount:'$    420', step:'legal',  lastSent: daysAgo(60) },
+      { id:6, ref:'INV-1008', customer:'Glebe Builders',    amount:'$ 12,100', step:'3',      lastSent: daysAgo(28) },
+      { id:7, ref:'INV-1009', customer:'Mosman Doctors',    amount:'$  1,400', step:'debt',   lastSent: daysAgo(120)},
+      { id:8, ref:'INV-1010', customer:'Annandale Yoga',    amount:'$    245', step:'1',      lastSent: daysAgo(7)  },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['step','lastSent'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>

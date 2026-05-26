@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>254 — Customer portal last login | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Customer-portal last login — engagement signal. The pill colours
+       by recency; a "never logged in" customer is a churn-risk signal
+       for paid-portal SaaS or a low-self-service signal for FSM. */
+    .lg {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 1px 6px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .lg .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    .lg[data-r="fresh"]  { background:#dcfce7; color:#166534; }
+    .lg[data-r="active"] { background:#dbeafe; color:#1e40af; }
+    .lg[data-r="aged"]   { background:#fef3c7; color:#92400e; }
+    .lg[data-r="stale"]  { background:#fee2e2; color:#991b1b; }
+    .lg[data-r="never"]  { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>254 — Customer portal last login</h1>
+  <p class="lede">
+    Engagement recency pill: <em>fresh</em> (today), <em>active</em>
+    (&lt; 7d), <em>aged</em> (&lt; 30d), <em>stale</em> (≥ 30d),
+    <em>never</em>. For a self-service portal it's a great
+    win-back-campaign signal; for an FSM portal it's a "customer doesn't
+    know where to find the invoice" tell.
+  </p>
+
+  <template id="lg-renderer">
+    <span class="lg" data-bind-attr="data-r">
+      <span class="dot"></span>
+      <span data-bind="recencyLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="email"
+              data-header-cell-width-value="240">Email</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastLogin"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Last login</th>
+          <th data-controller="header-cell" data-header-cell-field-value="recency"
+              data-header-cell-cell-renderer-value="lg-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="180">Recency</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    "Never logged in" stays neutral grey — it's not a problem state
+    on its own (the customer may not need the portal). Pair with a
+    last-invoice-sent column to surface the rows that <em>should</em>
+    have logged in but haven't.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const dayMs = 86400000;
+    const today = () => new Date(new Date().toDateString());
+    const derive = (row) => {
+      if (!row.lastLogin) return { ...row, recency:'never', recencyLabel:'Never' };
+      const d = Math.round((today() - new Date(row.lastLogin)) / dayMs);
+      let r, label;
+      if (d <= 0)        { r='fresh';  label='Today'; }
+      else if (d < 7)    { r='active'; label=`${d}d ago`; }
+      else if (d < 30)   { r='aged';   label=`${d}d ago`; }
+      else               { r='stale';  label=`${d}d ago`; }
+      return { ...row, recency:r, recencyLabel:label };
+    };
+    const daysAgo = (n) => { const d = today(); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, customer:'Bondi Pavilion',    email:'pm@bondipavilion.com.au',  lastLogin: daysAgo(0)  },
+      { id:2, customer:'Coogee Holdings',   email:'admin@coogeeh.com.au',     lastLogin: daysAgo(3)  },
+      { id:3, customer:'Manly Reno Co',     email:'liam@manlyreno.com.au',    lastLogin: daysAgo(11) },
+      { id:4, customer:'Vega Studio',       email:'finance@vegastudio.com',   lastLogin: daysAgo(45) },
+      { id:5, customer:'Surry Hills Cafe',  email:'sasha@shccafe.com.au',     lastLogin: daysAgo(2)  },
+      { id:6, customer:'Pyrmont Pubs',      email:'liam@pyrmontpubs.com.au',  lastLogin: daysAgo(120)},
+      { id:7, customer:'Newtown Bakery',    email:'rachel@newtownb.com.au',   lastLogin: null         },
+      { id:8, customer:'Glebe Builders',    email:'jay@glebeb.com.au',        lastLogin: daysAgo(18) },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'lastLogin') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>

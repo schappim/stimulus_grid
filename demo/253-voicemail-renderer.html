@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>253 — Voicemail attached | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Voicemail attached — playable in-row. Mini player with play/pause
+       + transcript snippet. The audio is a generic placeholder for the
+       demo; in production this is the recorded VM URL. */
+    .vm {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 1px 4px 1px 4px; border-radius: 8px;
+      background: #f1f5f9;
+      font-size: 12px; font-weight: 600;
+    }
+    .vm .play {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #0ea5e9; color: #fff;
+      border: 0; cursor: pointer;
+      font-size: 13px; line-height: 1;
+    }
+    .vm .play:hover { background:#0284c7; }
+    .vm .play[data-playing="true"] { background:#dc2626; }
+    .vm .dur { font-variant-numeric: tabular-nums; color: #475569; padding: 0 4px; }
+    .vm .tx {
+      color: #1f2937; max-width: 380px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .vm[data-heard="false"] { background:#fee2e2; }
+    .vm[data-heard="false"] .play { background:#dc2626; }
+    .vm[data-heard="true"]  .play { background:#16a34a; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>253 — Voicemail attached</h1>
+  <p class="lede">
+    Inline VM player — tap to play / pause. Heard / unheard state changes
+    the play button colour (red until you've played it; green afterwards).
+    Transcript snippet acts as the row's preview text so a coordinator
+    can skim VMs without playing each one.
+  </p>
+
+  <template id="vm-renderer">
+    <span class="vm" data-bind-attr="data-heard">
+      <button class="play" type="button" data-bind="playGlyph"></button>
+      <span class="dur" data-bind="durLabel"></span>
+      <span class="tx" data-bind="transcript"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="caller"
+              data-header-cell-width-value="200">Caller</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="160">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="heard"
+              data-header-cell-cell-renderer-value="vm-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="540">Voicemail</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The play handler is a stub that toggles the button glyph and the
+    "heard" flag — wire it to a real <code>&lt;audio&gt;</code> with a
+    presigned URL in production.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fmt = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+    const derive = (row) => ({
+      ...row,
+      durLabel: fmt(row.dur),
+      playGlyph: row.playing ? '❚❚' : '▶',
+    });
+    const SEED = [
+      { id:1, caller:'Caitlin Hartwell',  when:'Today 08:42', heard:false, playing:false, dur:31,  transcript:'Hi Marcus, can we push Tuesday to Wednesday — the strata committee meets that night…' },
+      { id:2, caller:'Dean Sarelius',     when:'Today 09:11', heard:true,  playing:false, dur:74,  transcript:'Hey mate, the materials arrived but the silicone is the wrong colour, can you swing past on the way back…' },
+      { id:3, caller:'Sienna Doyle',      when:'Today 10:18', heard:false, playing:false, dur:18,  transcript:'Quick one — the gas inspector wants the cert before 4pm, can you call back?' },
+      { id:4, caller:'Aroha Walker',      when:'Today 10:55', heard:false, playing:false, dur:48,  transcript:'Hi, this is Aroha from CGU — calling about claim PCY-22038A, can you confirm the make-safe is lodged?' },
+      { id:5, caller:'Noah Park',         when:'Yesterday 17:00', heard:true, playing:false, dur:22,  transcript:'Tomorrow’s good, see you then.' },
+      { id:6, caller:'Eli Hartwell',      when:'Yesterday 14:48', heard:true, playing:false, dur:104, transcript:'Apprentice has a TAFE day Friday so the supervision ratio will be off — can we shuffle Friday work to next week?' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Tap-to-play stub: toggle the playing flag + flip heard true.
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.play');
+      if (!btn) return;
+      const tr = btn.closest('tr');
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+      if (!row) return;
+      grid.gridApi.applyTransaction({ update: [derive({
+        ...row,
+        playing: !row.playing,
+        heard: row.heard || !row.playing,
+      })] });
+    });
+  </script>
+</body>
+</html>
