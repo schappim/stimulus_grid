@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>235 — Insurance claim # + insurer | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Claim # + insurer badge — the insurer brand drives expected
+       paperwork: IAG portal vs Allianz workflow vs QBE phone-up. */
+    .clm {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .clm .ins {
+      padding: 2px 8px;
+      color: #fff; letter-spacing: .04em;
+    }
+    .clm .ref {
+      padding: 2px 8px;
+      background: #f8fafc; color: #0f172a;
+    }
+    .clm[data-ins="iag"]     .ins { background:#003366; }
+    .clm[data-ins="allianz"] .ins { background:#003781; }
+    .clm[data-ins="qbe"]     .ins { background:#000; }
+    .clm[data-ins="suncorp"] .ins { background:#ffcc00; color:#000; }
+    .clm[data-ins="youi"]    .ins { background:#ff5500; }
+    .clm[data-ins="racv"]    .ins { background:#00408b; }
+    .clm[data-ins="nrma"]    .ins { background:#0055a4; }
+    .clm[data-ins="aami"]    .ins { background:#e30613; }
+    .clm[data-ins="bingle"]  .ins { background:#ff9b00; color:#000; }
+    .clm[data-ins="budget"]  .ins { background:#005bbf; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>235 — Insurance claim # + insurer</h1>
+  <p class="lede">
+    The insurer brand drives the paperwork shape — IAG portal, Allianz
+    upload, QBE phone-up, Suncorp panel form. The chip shows both at a
+    glance so the coordinator picks the right workflow without reading
+    the customer card.
+  </p>
+
+  <template id="clm-renderer">
+    <span class="clm" data-bind-attr="data-ins">
+      <span class="ins" data-bind="insLabel"></span>
+      <span class="ref" data-bind="claimNo"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="200">Job / customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="insurer"
+              data-header-cell-cell-renderer-value="clm-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Claim</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cause"
+              data-header-cell-width-value="160">Cause</th>
+          <th data-controller="header-cell" data-header-cell-field-value="auth"
+              data-header-cell-width-value="120">Auth $</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Brand colours map to each insurer's public brand mark for fast
+    recognition. The claim number stays in mono — operators frequently
+    transcribe it into portal URLs and CRM notes.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = {
+      iag:'IAG', allianz:'Allianz', qbe:'QBE', suncorp:'Suncorp',
+      youi:'Youi', racv:'RACV', nrma:'NRMA', aami:'AAMI',
+      bingle:'Bingle', budget:'Budget',
+    };
+    const derive = (row) => ({ ...row, insLabel: LABEL[row.insurer] ?? row.insurer });
+    const SEED = [
+      { id:1, job:'Bondi Pavilion · Caitlin',  insurer:'iag',     claimNo:'IAG-2026-44218', cause:'Storm',       auth:'$ 5,800' },
+      { id:2, job:'Coogee Holdings · Sarelius',insurer:'allianz', claimNo:'ALN-9182203',    cause:'Burst pipe',  auth:'$ 2,400' },
+      { id:3, job:'Manly Reno Co · Walker',    insurer:'qbe',     claimNo:'QBE/PCY-22038A', cause:'Impact',      auth:'$ 1,500' },
+      { id:4, job:'Surry Hills Cafe · Doyle',  insurer:'suncorp', claimNo:'SC-7740019',     cause:'Fire',        auth:'$12,400' },
+      { id:5, job:'Vega Studio · Park',        insurer:'youi',    claimNo:'YOU-1119922',    cause:'Theft',       auth:'$   980' },
+      { id:6, job:'Pyrmont Pubs · Hartwell',   insurer:'racv',    claimNo:'RACV-2025-8014', cause:'Storm',       auth:'$ 7,200' },
+      { id:7, job:'Newtown Bakery · Vega',     insurer:'nrma',    claimNo:'NRMA-440112',    cause:'Burst pipe',  auth:'$ 1,800' },
+      { id:8, job:'Glebe Builders · Reyes',    insurer:'aami',    claimNo:'AAMI-22-3014',   cause:'Impact',      auth:'$ 2,100' },
+      { id:9, job:'Mosman Doctors · O’Brien',  insurer:'bingle',  claimNo:'BNG-771203',     cause:'Other',       auth:'$   650' },
+      { id:10,job:'Annandale Yoga · Ricci',    insurer:'budget',  claimNo:'BUD-4019',       cause:'Storm',       auth:'$ 4,400' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
