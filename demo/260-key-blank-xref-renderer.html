@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>260 — Key blank cross-reference | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .blk { display:inline-flex; align-items:center; gap:6px;
+           font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700;
+           cursor: help; }
+    .blk .pri { padding: 2px 8px; border-radius: 4px;
+                background:#0f172a; color:#fff; }
+    .blk .mfg { padding: 1px 6px; border-radius: 999px;
+                background:#f1f5f9; color:#475569; font-weight:600; font-size: 11px; }
+    .xref { margin-left: 8px; color:#64748b; font-size: 11px;
+            font-family: ui-monospace, monospace; }
+    .xref b { color: #0f172a; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>260 — Key blank cross-reference</h1>
+  <p class="lede">
+    A bench helper. Customers walk in with a Silca number, a JMA number,
+    or scratched-off OEM stamping — the cell carries the primary code
+    and the cross-references for the four blank lines a typical
+    locksmith stocks. Hover the chip for the full mapping.
+  </p>
+
+  <template id="blk-renderer">
+    <span class="blk">
+      <span class="pri" data-bind="primary"></span>
+      <span class="mfg" data-bind="primarySource"></span>
+    </span>
+    <span class="xref" data-bind="xrefLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="profile"
+              data-header-cell-width-value="220">Profile</th>
+          <th data-controller="header-cell" data-header-cell-field-value="primary"
+              data-header-cell-cell-renderer-value="blk-renderer"
+              data-header-cell-width-value="480">Blank</th>
+          <th data-controller="header-cell" data-header-cell-field-value="stock"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="100">On hand</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Cross-references are illustrative — the real lookup tables come from
+    Silca's <em>Encode</em>, JMA's <em>TKM</em>, or the Lockwood blank
+    book. The cell exists so the bench tech doesn't have to flip pages
+    while the customer is standing there.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, profile:'Lockwood 5-pin (KW)',     primary:'LW4', primarySource:'Lockwood', silca:'LW4', jma:'LW-4', errebi:'LW4', stock: 38 },
+      { id:2, profile:'Schlage C',               primary:'SC1', primarySource:'Schlage',  silca:'SLG2', jma:'SLG-1', errebi:'SH1', stock: 22 },
+      { id:3, profile:'Schlage E',               primary:'SC4', primarySource:'Schlage',  silca:'SLG4', jma:'SLG-3', errebi:'SH4', stock: 14 },
+      { id:4, profile:'Yale 5-pin',              primary:'Y1',  primarySource:'Yale',     silca:'YA1',  jma:'YA-1',  errebi:'Y1A', stock: 11 },
+      { id:5, profile:'Abus C83 / C73',          primary:'AP4', primarySource:'Abus',     silca:'AB48', jma:'AB-48', errebi:'AB48',stock:  6 },
+      { id:6, profile:'BiLock QC restricted',    primary:'BiL-R10', primarySource:'BiLock',silca:'—',   jma:'—',     errebi:'—',   stock:  2 },
+      { id:7, profile:'EVVA 3KS+ restricted',    primary:'3KSP', primarySource:'EVVA',    silca:'—',   jma:'—',     errebi:'—',   stock:  3 },
+    ];
+    const ROWS = SEED.map((r) => ({
+      ...r,
+      xrefLabel: `Silca:${r.silca} · JMA:${r.jma} · Errebi:${r.errebi}`,
+      __tooltip: `Silca: ${r.silca}\nJMA: ${r.jma}\nErrebi: ${r.errebi}`,
+    }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.blk').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.title = row.__tooltip || '';
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

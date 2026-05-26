@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>257 — Restricted system + patent expiry | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .rs { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .rs .cls { padding: 2px 8px; color:#fff; }
+    .rs .sys { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .rs[data-cls="generic"]    .cls { background:#475569; }
+    .rs[data-cls="patented"]   .cls { background:#1e3a8a; }
+    .rs[data-cls="restricted"] .cls { background:#7c2d12; }
+    .exp { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#dcfce7; color:#166534; font-size: 11px; font-weight: 600; }
+    .exp[data-state="warn"]   { background:#fef3c7; color:#92400e; }
+    .exp[data-state="expired"]{ background:#fee2e2; color:#991b1b; }
+    .exp[data-state="open"]   { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>257 — Restricted system + patent expiry</h1>
+  <p class="lede">
+    Restricted keyways trade on the manufacturer's patent — once it
+    expires anyone can cut a copy. The chip shows the system; the
+    countdown shows how long until the system stops being commercially
+    restricted. Drives whether you can quote a 10-year MKS without a
+    keyway-migration line item.
+  </p>
+
+  <template id="rs-renderer">
+    <span class="rs">
+      <span class="cls" data-bind="cls"></span>
+      <span class="sys" data-bind="system"></span>
+    </span>
+    <span class="exp" data-bind="expLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cls"
+              data-header-cell-cell-renderer-value="rs-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="360">Keyway system</th>
+          <th data-controller="header-cell" data-header-cell-field-value="patentExpiry"
+              data-header-cell-width-value="140">Patent expiry</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Patent dates are illustrative — always confirm against the
+    manufacturer's published register before quoting. Several of the
+    big Australian restricted systems have already lapsed in the last
+    few years, which is why this column matters.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26');
+    const derive = (row) => {
+      let state = 'open', label = 'no patent';
+      if (row.patentExpiry) {
+        const exp = new Date(row.patentExpiry);
+        const days = Math.round((exp - TODAY) / 86400000);
+        if (days < 0)            { state = 'expired'; label = `expired ${Math.abs(days)}d`; }
+        else if (days < 365 * 2) { state = 'warn';    label = `${Math.round(days/30)} mo`; }
+        else                     { state = 'ok';      label = `${Math.round(days/365)} yr`; }
+      }
+      return { ...row, expLabel: label, __state: state };
+    };
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',          cls:'generic',    system:'KW1',         patentExpiry:null },
+      { id:2, site:'Bondi Pavilion S2',         cls:'patented',   system:'Lockwood Twin', patentExpiry:'2031-08-12' },
+      { id:3, site:'Pyrmont Pubs HQ',           cls:'restricted', system:'BiLock QC',     patentExpiry:'2029-04-30' },
+      { id:4, site:'5 Crown St, Surry Hills',   cls:'patented',   system:'Schlage Primus',patentExpiry:'2027-01-15' },
+      { id:5, site:'33 Glebe Pt Rd',            cls:'restricted', system:'EVVA 3KS+',     patentExpiry:'2034-11-01' },
+      { id:6, site:'14 King St, Newtown',       cls:'restricted', system:'Mul-T-Lock MT5+',patentExpiry:'2030-07-22' },
+      { id:7, site:'7 Marine Pde, Mosman',      cls:'patented',   system:'ASSA Twin Combi',patentExpiry:'2026-03-01' },
+      { id:8, site:'24 George St (old fitout)', cls:'patented',   system:'Lockwood Twin-1',patentExpiry:'2024-06-30' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.rs').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-cls', row.cls);
+        const exp = tr.querySelector('.exp');
+        if (exp) exp.setAttribute('data-state', row.__state);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

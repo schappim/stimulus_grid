@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>259 — Key holder register | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .reg { display:inline-flex; align-items:stretch;
+           border-radius: 6px; overflow:hidden;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+           box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .reg .seg { padding: 2px 8px; color:#fff; min-width: 36px; text-align:center; }
+    .reg .issued { background:#1d4ed8; }
+    .reg .returned { background:#16a34a; }
+    .reg .lost { background:#dc2626; }
+    .bar { display:inline-flex; height: 8px; width: 120px; margin-left: 10px;
+           border-radius: 999px; overflow:hidden; background:#e2e8f0; }
+    .bar .b-i { background:#1d4ed8; }
+    .bar .b-r { background:#16a34a; }
+    .bar .b-l { background:#dc2626; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>259 — Key holder register</h1>
+  <p class="lede">
+    Whole-system view of who has what. Three numbers and a tiny stacked
+    bar: how many keys are in the field, how many have been returned to
+    the safe, how many have been declared lost. A lost-bar that grows
+    even slightly is the trigger for a re-key conversation.
+  </p>
+
+  <template id="reg-renderer">
+    <span class="reg">
+      <span class="seg issued"   data-bind="issued"></span>
+      <span class="seg returned" data-bind="returned"></span>
+      <span class="seg lost"     data-bind="lost"></span>
+    </span>
+    <span class="bar">
+      <span class="b-i"></span>
+      <span class="b-r"></span>
+      <span class="b-l"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="system"
+              data-header-cell-width-value="260">System</th>
+          <th data-controller="header-cell" data-header-cell-field-value="issued"
+              data-header-cell-cell-renderer-value="reg-renderer"
+              data-header-cell-width-value="340">Register</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lastAudit"
+              data-header-cell-width-value="160">Last audit</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The numbers refer to keys, not key-holders — one tenancy in a strata
+    might hold three CKs. Click-through from the cell (not implemented
+    in this demo) would normally drill to the per-key holder list.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, system:'12 Bay St — front',          issued: 7, returned: 2, lost: 0, lastAudit:'2026-04-12' },
+      { id:2, system:'Bondi Pavilion — GM',        issued:12, returned: 5, lost: 1, lastAudit:'2026-03-30' },
+      { id:3, system:'Pyrmont Pubs HQ',            issued:24, returned:11, lost: 0, lastAudit:'2026-05-02' },
+      { id:4, system:'Crown St strata',            issued:18, returned: 4, lost: 2, lastAudit:'2025-11-18' },
+      { id:5, system:'Glebe Pt Rd — restricted',   issued: 5, returned: 0, lost: 0, lastAudit:'2026-05-20' },
+      { id:6, system:'King St — security door',    issued: 9, returned: 3, lost: 1, lastAudit:'2026-02-08' },
+      { id:7, system:'Marine Pde — strata MK',     issued:32, returned:14, lost: 3, lastAudit:'2025-09-05' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.reg').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const total = (row.issued + row.returned + row.lost) || 1;
+        const bar = tr.querySelector('.bar');
+        if (bar) {
+          bar.querySelector('.b-i').style.width = `${(row.issued/total)*100}%`;
+          bar.querySelector('.b-r').style.width = `${(row.returned/total)*100}%`;
+          bar.querySelector('.b-l').style.width = `${(row.lost/total)*100}%`;
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

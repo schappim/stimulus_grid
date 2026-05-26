@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>258 — Key authority signatory | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Signatory chip: name, sig-on-file tick, expiry countdown. This
+       is the gate that says whether you can legally cut a restricted
+       key for a request — independent of whether the customer is OK. */
+    .sig { display:inline-flex; align-items:center; gap:6px;
+           padding: 2px 6px 2px 4px; border-radius: 6px;
+           background:#f8fafc; box-shadow: inset 0 0 0 1px #e2e8f0;
+           font-size: 12px; }
+    .sig .ini { width: 22px; height: 22px; border-radius: 50%;
+                background:#1d4ed8; color:#fff;
+                display:inline-flex; align-items:center; justify-content:center;
+                font-size: 10px; font-weight: 700; font-family: ui-monospace, monospace; }
+    .sig .nm { font-weight: 600; color:#0f172a; }
+    .sig .ok { color: #16a34a; font-weight: 700; }
+    .sig .no { color: #dc2626; font-weight: 700; }
+    .exp { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#dcfce7; color:#166534; font-size: 11px; font-weight: 600; }
+    .exp[data-state="warn"]   { background:#fef3c7; color:#92400e; }
+    .exp[data-state="expired"]{ background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>258 — Key authority signatory</h1>
+  <p class="lede">
+    Restricted-key authority lives or dies on one signature. The cell
+    answers "are we allowed to cut this?" — name of the signatory, has
+    the wet-ink form been scanned in, and is the authority still inside
+    its renewal window. A red expiry means the cut goes back in the
+    queue until the customer re-signs.
+  </p>
+
+  <template id="sig-renderer">
+    <span class="sig">
+      <span class="ini" data-bind="initials"></span>
+      <span class="nm"  data-bind="name"></span>
+      <span class="ok"  data-bind="onFile"></span>
+    </span>
+    <span class="exp" data-bind="expLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="system"
+              data-header-cell-width-value="220">Restricted system</th>
+          <th data-controller="header-cell" data-header-cell-field-value="name"
+              data-header-cell-cell-renderer-value="sig-renderer"
+              data-header-cell-width-value="380">Authority signatory</th>
+          <th data-controller="header-cell" data-header-cell-field-value="role"
+              data-header-cell-width-value="180">Role</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A signatory who has left the org is not the same as an expired
+    authority — keep both flags (we model "on file" + "expiry") so a
+    new request can be routed to whoever the company has nominated next.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TODAY = new Date('2026-05-26');
+    const initials = (n) => n.split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+    const derive = (row) => {
+      let state = 'ok', label = '—';
+      if (row.expiry) {
+        const exp = new Date(row.expiry);
+        const days = Math.round((exp - TODAY) / 86400000);
+        if (days < 0)       { state = 'expired'; label = `expired ${Math.abs(days)}d`; }
+        else if (days < 60) { state = 'warn';    label = `${days}d`; }
+        else                { state = 'ok';      label = `${Math.round(days/30)} mo`; }
+      }
+      return {
+        ...row,
+        initials: initials(row.name),
+        onFile: row.onFile ? '✓ on file' : '✗ missing',
+        expLabel: label,
+        __state: state, __onFile: !!row.onFile,
+      };
+    };
+    const SEED = [
+      { id:1, system:'BiLock QC — Bondi Pubs',  name:'Lina Park',       role:'Operations Manager', onFile:true,  expiry:'2027-02-14' },
+      { id:2, system:'EVVA 3KS+ — Pavilion',    name:'Tom Wilcox',      role:'Facilities Lead',    onFile:true,  expiry:'2026-08-30' },
+      { id:3, system:'Lockwood Twin — Surry',   name:'Priya Naidu',     role:'Property Manager',   onFile:false, expiry:'2026-09-01' },
+      { id:4, system:'Mul-T-Lock MT5+ — Glebe', name:'Sam Okafor',      role:'GM',                 onFile:true,  expiry:'2026-06-10' },
+      { id:5, system:'Schlage Primus — Newtown',name:'Hana Sato',       role:'Owner',              onFile:true,  expiry:'2025-12-01' },
+      { id:6, system:'ASSA Twin Combi — Mosman',name:'Greg Thatcher',   role:'Strata Chair',       onFile:false, expiry:null },
+      { id:7, system:'Lockwood Twin — Pyrmont', name:'Jess Whitford',   role:'Building Manager',   onFile:true,  expiry:'2028-05-22' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.sig').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const ok = node.querySelector('.ok');
+        ok.className = row.__onFile ? 'ok' : 'no';
+        const exp = tr.querySelector('.exp');
+        if (exp) exp.setAttribute('data-state', row.__state);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

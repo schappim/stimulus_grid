@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>256 — MKS hierarchy chip | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* MKS hierarchy: GGM > GM > M > SM > CK with depth dots leading up
+       to the level. The chip itself is colour-coded so the master keys
+       jump off the row. */
+    .mks { display:inline-flex; align-items:center; gap:6px;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+    .mks .dots { display:inline-flex; gap:2px; }
+    .mks .dots i { width:6px; height:6px; border-radius:50%; background:#cbd5e1; display:inline-block; }
+    .mks .dots i.on { background:#0f172a; }
+    .mks .chip { padding: 2px 8px; border-radius: 4px; color:#fff; }
+    .mks[data-lv="GGM"] .chip { background:#7c2d12; }
+    .mks[data-lv="GM"]  .chip { background:#b45309; }
+    .mks[data-lv="M"]   .chip { background:#1e3a8a; }
+    .mks[data-lv="SM"]  .chip { background:#1d4ed8; }
+    .mks[data-lv="CK"]  .chip { background:#475569; }
+    .path { color:#475569; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>256 — MKS hierarchy chip</h1>
+  <p class="lede">
+    Position of a key inside a master-key system. <code>GGM</code> opens
+    everything; <code>CK</code> is a single change-key. The chip + dots
+    give an instant read on how much access a missing key actually
+    grants — a missing GM is a re-key event, a missing CK usually isn't.
+  </p>
+
+  <template id="mks-renderer">
+    <span class="mks">
+      <span class="dots">
+        <i></i><i></i><i></i><i></i><i></i>
+      </span>
+      <span class="chip" data-bind="level"></span>
+    </span>
+    <span class="path" data-bind="path"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="key"
+              data-header-cell-width-value="200">Key</th>
+          <th data-controller="header-cell" data-header-cell-field-value="level"
+              data-header-cell-cell-renderer-value="mks-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">Position</th>
+          <th data-controller="header-cell" data-header-cell-field-value="holder"
+              data-header-cell-width-value="180">Holder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-width-value="120">Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Hierarchy depth is fixed at five for the visual — most real Australian
+    commercial systems sit at three (CK → M → GM), but a multi-site
+    landlord schedule will use four.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // depth: 1 = GGM, 2 = GM, 3 = M, 4 = SM, 5 = CK
+    const DEPTH = { GGM:1, GM:2, M:3, SM:4, CK:5 };
+    const SEED = [
+      { id:1, key:'GGM-001',  level:'GGM', path:'site-wide',                       holder:'Building Manager', status:'issued' },
+      { id:2, key:'GM-A',     level:'GM',  path:'GGM › GM-A (Bldg A)',             holder:'Cleaning supervisor', status:'issued' },
+      { id:3, key:'GM-B',     level:'GM',  path:'GGM › GM-B (Bldg B)',             holder:'Concierge', status:'issued' },
+      { id:4, key:'M-A2',     level:'M',   path:'GGM › GM-A › M-A2 (Lvl 2)',       holder:'Tenancy admin', status:'issued' },
+      { id:5, key:'M-A3',     level:'M',   path:'GGM › GM-A › M-A3 (Lvl 3)',       holder:'(vault)', status:'reserved' },
+      { id:6, key:'SM-A2-W',  level:'SM',  path:'GGM › GM-A › M-A2 › SM-W (West)', holder:'Wing-W lead', status:'issued' },
+      { id:7, key:'CK-A2-204',level:'CK',  path:'… › CK-A2-204 (suite 204)',       holder:'Tenant: Lumi Co', status:'issued' },
+      { id:8, key:'CK-B1-114',level:'CK',  path:'… › CK-B1-114 (suite 114)',       holder:'Tenant: Brae Pty', status:'lost' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.mks').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-lv', row.level);
+        const d = DEPTH[row.level] || 5;
+        node.querySelectorAll('.dots i').forEach((dot, i) => {
+          dot.classList.toggle('on', i < d);
+        });
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
