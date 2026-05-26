@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>252 — Pin stack | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .ps { display:inline-flex; align-items:flex-end; gap:3px;
+          padding: 4px; border-radius: 4px;
+          background:#0f172a; box-shadow: inset 0 0 0 1px #1e293b; cursor: help; }
+    .col { display:flex; flex-direction:column-reverse; align-items:center;
+           width:8px; gap:1px; }
+    .pin { width: 8px; border-radius: 1px; }
+    .bot   { background:#fbbf24; }
+    .mst   { background:#a78bfa; }
+    .drv   { background:#9ca3af; }
+    .spool { background:#22d3ee; }
+    .serr  { background:#f87171; }
+    .meta { margin-left: 10px;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-size: 11px; color:#334155; }
+    .sec { margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+           background:#ecfeff; color:#0e7490; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>252 — Pin stack</h1>
+  <p class="lede">
+    Cylinder pinning chart at-a-glance. Yellow = bottom pin (depth),
+    purple = master wafer, grey = driver, cyan = spool, red = serrated.
+    Hover the chambers for the per-chamber security pin profile.
+  </p>
+
+  <template id="ps-renderer">
+    <span class="ps">
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+      <span class="col"><span class="pin bot"></span><span class="pin mst"></span><span class="pin"></span></span>
+    </span>
+    <span class="meta" data-bind="summary"></span>
+    <span class="sec"  data-bind="secLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="cyl"
+              data-header-cell-width-value="220">Cylinder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="summary"
+              data-header-cell-cell-renderer-value="ps-renderer"
+              data-header-cell-width-value="380">Pin stack</th>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-width-value="160">Brand</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The chart is descriptive, not a re-pin worksheet — the real worksheet
+    lives in your MKS software. The intent here is to spot the cylinder
+    in a register where the security pinning has been swapped out.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const TOPNAME = { std:'driver', spool:'spool', serr:'serrated' };
+    const SEED = [
+      { id:1, cyl:'12 Bay St — front',          brand:'Lockwood', b:[1,3,5,2,4,3], m:[0,2,0,3,0,1], t:['std','spool','std','std','serr','spool'] },
+      { id:2, cyl:'12 Bay St — garage',         brand:'Schlage',  b:[2,4,6,2,5,3], m:[0,0,0,0,0,0], t:['std','std','std','std','std','std'] },
+      { id:3, cyl:'Bondi Pavilion S2',          brand:'Lockwood', b:[3,3,5,5,3,3], m:[1,2,3,2,1,1], t:['spool','spool','spool','spool','spool','spool'] },
+      { id:4, cyl:'Pyrmont Pubs HQ — vault',    brand:'Abloy',    b:[6,4,5,2,1,3], m:[0,0,0,0,0,0], t:['serr','serr','serr','serr','serr','serr'] },
+      { id:5, cyl:'5 Crown St — apt 3',         brand:'Lockwood', b:[2,4,3,1,5,4], m:[0,1,0,2,0,0], t:['std','spool','std','std','std','std'] },
+      { id:6, cyl:'33 Glebe Pt Rd — restricted',brand:'BiLock',   b:[4,3,5,2,3,4], m:[0,0,0,0,0,0], t:['spool','spool','spool','spool','spool','spool'] },
+    ];
+    const derive = (r) => {
+      const secCount = r.t.filter(x => x !== 'std').length;
+      return {
+        ...r,
+        summary: `B:${r.b.join('-')}  M:${r.m.join('-')}`,
+        secLabel: secCount ? `${secCount} sec` : 'std',
+        __tooltip: r.t.map((x,i)=>`#${i+1}: ${TOPNAME[x]}`).join(' · '),
+      };
+    };
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ps').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.title = row.__tooltip || '';
+        const cols = node.querySelectorAll('.col');
+        cols.forEach((col, i) => {
+          const [bot, mst, top] = col.querySelectorAll('.pin');
+          bot.style.height = `${4 + (row.b[i]||0)*2}px`;
+          if (row.m[i]) { mst.style.display=''; mst.style.height = `${4 + row.m[i]*2}px`; }
+          else { mst.style.display = 'none'; }
+          top.className = `pin ${row.t[i] === 'std' ? 'drv' : row.t[i]}`;
+          top.style.height = `8px`;
+        });
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

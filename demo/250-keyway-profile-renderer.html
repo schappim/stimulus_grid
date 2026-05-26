@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>250 — Keyway / profile | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .kw { display:inline-flex; align-items:center; gap:6px;
+          font-family: ui-monospace, SFMono-Regular, monospace;
+          font-size: 12px; font-weight: 700; }
+    .kw svg { display:block; }
+    .kw .code { padding: 2px 6px; border-radius: 4px;
+                background:#0f172a; color:#fff; }
+    .kw[data-cls="restricted"] .code { background:#7c2d12; }
+    .kw[data-cls="patented"]   .code { background:#1e3a8a; }
+    .kw[data-cls="generic"]    .code { background:#475569; }
+    .kw .mfg { padding: 1px 6px; border-radius: 999px;
+               background:#f1f5f9; color:#475569; font-weight:600; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>250 — Keyway / profile</h1>
+  <p class="lede">
+    The blank's keyway determines which cylinder a cut will physically
+    enter. The little silhouette is the cross-section a cutter would see
+    from the bow end — useful when reaching for a tin of <code>SC1</code>
+    blanks and not grabbing <code>SC4</code> by mistake.
+  </p>
+
+  <template id="kw-renderer">
+    <span class="kw">
+      <svg width="14" height="20" viewBox="0 0 14 20" aria-hidden="true">
+        <path fill="#cbd5e1" stroke="#0f172a" stroke-width="0.6"/>
+      </svg>
+      <span class="code" data-bind="code"></span>
+      <span class="mfg"  data-bind="mfg"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="280">Site / lock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="kw-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">Keyway</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cls"
+              data-header-cell-width-value="120">Class</th>
+          <th data-controller="header-cell" data-header-cell-field-value="blanksOnHand"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Blanks</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Silhouettes are stylised — they're not pin-accurate to the real
+    keyway, but distinct enough that a tech reaching for SC1 vs C4
+    won't confuse them on a busy bench.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SHAPES = {
+      KW1: 'M3 1 L11 1 L11 5 L8 6 L11 7 L8 9 L11 10 L8 12 L11 14 L8 16 L11 18 L11 19 L3 19 Z',
+      SC1: 'M3 1 L11 1 L11 4 L7 5 L11 7 L7 9 L11 11 L7 13 L11 15 L7 17 L11 19 L3 19 Z',
+      SC4: 'M3 1 L11 1 L11 3 L6 5 L11 7 L6 9 L11 11 L6 13 L11 15 L6 17 L11 19 L3 19 Z',
+      C4 : 'M3 1 L11 1 L11 5 L9 6 L11 8 L9 9 L11 11 L9 12 L11 14 L9 16 L11 18 L3 19 Z',
+      LW4: 'M3 1 L11 1 L11 4 L8 6 L11 8 L8 10 L11 12 L8 14 L11 16 L8 18 L11 19 L3 19 Z',
+      LW5: 'M3 1 L11 1 L11 4 L7 6 L11 8 L7 10 L11 12 L7 14 L11 16 L7 18 L11 19 L3 19 Z',
+      RST: 'M3 1 L11 1 L11 5 L6 7 L11 9 L6 11 L11 13 L6 15 L11 17 L11 19 L3 19 Z',
+    };
+    const ROWS = [
+      { id:1, site:'12 Bay St, Bondi — front',         code:'KW1', mfg:'Lockwood', cls:'generic',    blanksOnHand: 42, __shape:'KW1' },
+      { id:2, site:'12 Bay St, Bondi — garage',        code:'SC1', mfg:'Schlage',  cls:'generic',    blanksOnHand: 28, __shape:'SC1' },
+      { id:3, site:'4/87 Marine Pde, Coogee',          code:'C4',  mfg:'Lockwood', cls:'generic',    blanksOnHand: 14, __shape:'C4'  },
+      { id:4, site:'Bondi Pavilion S2 — back of house',code:'LW4', mfg:'Lockwood', cls:'patented',   blanksOnHand:  6, __shape:'LW4' },
+      { id:5, site:'Pyrmont Pubs HQ — vault corridor', code:'LW5', mfg:'Lockwood', cls:'patented',   blanksOnHand:  3, __shape:'LW5' },
+      { id:6, site:'5 Crown St, Surry Hills',          code:'SC4', mfg:'Schlage',  cls:'generic',    blanksOnHand: 19, __shape:'SC4' },
+      { id:7, site:'33 Glebe Pt Rd — restricted',      code:'BiLock R10', mfg:'BiLock', cls:'restricted', blanksOnHand: 2, __shape:'RST' },
+      { id:8, site:'14 King St — restricted',          code:'EVVA 3KS+',  mfg:'EVVA',   cls:'restricted', blanksOnHand: 0, __shape:'RST' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.kw').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-cls', row.cls);
+        const path = node.querySelector('path');
+        if (path) path.setAttribute('d', SHAPES[row.__shape] || SHAPES.KW1);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

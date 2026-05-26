@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>253 — Cylinder size | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Visual: outside : inside split bar, with the screw notch in the
+       middle. Euro (30/40), oval (similar), mortice (case + backset). */
+    .cyl { display:inline-flex; align-items:center; gap:8px;
+           font-family: ui-monospace, SFMono-Regular, monospace;
+           font-size: 11px; font-weight: 700; }
+    .bar { position: relative; height: 14px;
+           background:#e2e8f0; border-radius: 3px; overflow:hidden;
+           box-shadow: inset 0 0 0 1px #cbd5e1; }
+    .bar .ext { position:absolute; top:0; bottom:0; left:0; background:#1d4ed8; }
+    .bar .int { position:absolute; top:0; bottom:0; right:0; background:#0ea5e9; }
+    .bar .notch { position:absolute; top:0; bottom:0; width:2px; background:#0f172a; }
+    .nums { color: #0f172a; min-width: 64px; }
+    .type { padding: 1px 6px; border-radius: 999px;
+            background:#f1f5f9; color:#475569; font-size: 11px; }
+    .type[data-t="euro"]    { background:#dbeafe; color:#1e3a8a; }
+    .type[data-t="oval"]    { background:#fef3c7; color:#92400e; }
+    .type[data-t="mortice"] { background:#dcfce7; color:#166534; }
+    .warn { padding: 1px 6px; border-radius: 999px;
+            background:#fee2e2; color:#991b1b; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>253 — Cylinder size</h1>
+  <p class="lede">
+    Cylinder geometry that drives whether a replacement actually fits.
+    Euro profiles show outside / inside lengths split around the screw
+    notch; mortice locks show case-size + backset. Asymmetric euro
+    (outside > inside + 10) gets a snap-attack warning chip.
+  </p>
+
+  <template id="cyl-renderer">
+    <span class="cyl">
+      <span class="bar" style="width: 140px;">
+        <span class="ext"></span>
+        <span class="int"></span>
+        <span class="notch"></span>
+      </span>
+      <span class="nums" data-bind="size"></span>
+      <span class="type" data-bind="kind"></span>
+      <span class="warn" data-bind="warnLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="lock"
+              data-header-cell-width-value="260">Lock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="size"
+              data-header-cell-cell-renderer-value="cyl-renderer"
+              data-header-cell-width-value="380">Geometry</th>
+          <th data-controller="header-cell" data-header-cell-field-value="kind"
+              data-header-cell-width-value="120">Type</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Euro sizes are <code>outside/inside</code> in mm (always outside
+    first when standing outside the door). Mortice shows
+    <code>case × backset</code>.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      if (row.kind === 'mortice') {
+        return { ...row, size: `${row.caseSize}×${row.backset} mm`,
+                 warnLabel: '', __ext: 50, __int: 50, __warn: 0 };
+      }
+      const ext = row.outside, int = row.inside;
+      const total = ext + int;
+      const extPct = (ext / total) * 100;
+      const warn = (ext - int) >= 10;
+      return {
+        ...row,
+        size: `${ext}/${int} mm`,
+        warnLabel: warn ? 'snap risk' : '',
+        __ext: extPct,
+        __int: 100 - extPct,
+        __warn: warn ? 1 : 0,
+      };
+    };
+    const SEED = [
+      { id:1, lock:'12 Bay St — front',          kind:'euro',    outside:35, inside:35 },
+      { id:2, lock:'12 Bay St — garage',         kind:'euro',    outside:40, inside:30 },
+      { id:3, lock:'4/87 Marine Pde, Coogee',    kind:'euro',    outside:50, inside:30 },
+      { id:4, lock:'Bondi Pavilion S2',          kind:'euro',    outside:35, inside:45 },
+      { id:5, lock:'Pyrmont Pubs HQ — vault',    kind:'mortice', caseSize:76, backset:60 },
+      { id:6, lock:'5 Crown St — apt 3',         kind:'oval',    outside:30, inside:30 },
+      { id:7, lock:'33 Glebe Pt Rd — back',      kind:'mortice', caseSize:57, backset:44 },
+      { id:8, lock:'14 King St — security door', kind:'euro',    outside:45, inside:35 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.cyl').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const bar   = node.querySelector('.bar');
+        const ext   = node.querySelector('.ext');
+        const int   = node.querySelector('.int');
+        const notch = node.querySelector('.notch');
+        ext.style.width = `${row.__ext}%`;
+        int.style.width = `${row.__int}%`;
+        notch.style.left = `${row.__ext}%`;
+        node.querySelector('.type').setAttribute('data-t', row.kind);
+        const warn = node.querySelector('.warn');
+        warn.style.display = row.__warn ? '' : 'none';
+        if (row.kind === 'mortice') bar.style.opacity = '.35';
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

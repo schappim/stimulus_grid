@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>251 — Bitting code | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .bite { display:inline-flex; align-items:flex-end; gap:2px;
+            padding: 2px 4px; border-radius: 4px; background:#f8fafc;
+            box-shadow: inset 0 0 0 1px #e2e8f0; height: 22px; }
+    .bite span { display:block; width: 6px; background:#0ea5e9; border-radius: 1px; }
+    .bite[data-warn="1"] { background:#fef2f2; box-shadow: inset 0 0 0 1px #fecaca; }
+    .bite[data-warn="1"] span { background:#dc2626; }
+    .digits {
+      margin-left: 8px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 12px; font-weight: 700; color:#0f172a;
+      letter-spacing: .04em;
+    }
+    .sys { margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+           background:#eef2ff; color:#3730a3; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>251 — Bitting code</h1>
+  <p class="lede">
+    Depth-and-spacing reading for a cut key. The bar chart makes a wrong
+    bite obvious before the blank ever touches the wheel; rows where
+    adjacent cuts breach the manufacturer's MACS (max-adjacent-cut
+    specification) glow red.
+  </p>
+
+  <template id="bite-renderer">
+    <span class="bite">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </span>
+    <span class="digits" data-bind="bitting"></span>
+    <span class="sys"    data-bind="system"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="key"
+              data-header-cell-width-value="200">Key ID</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bitting"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="160">Bitting</th>
+          <th data-controller="header-cell" data-header-cell-field-value="system"
+              data-header-cell-width-value="140">System</th>
+          <th data-controller="header-cell" data-header-cell-field-value="bitting"
+              data-header-cell-cell-renderer-value="bite-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="340">Depths</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Edit the <code>Bitting</code> column with a six-digit string like
+    <code>135243</code> and the bars re-derive. Try <code>193827</code>
+    — adjacent jumps trip the MACS warning.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const MACS = 4;
+    const derive = (row) => {
+      const digits = String(row.bitting || '').replace(/\D/g,'').slice(0,6).padEnd(6,'0');
+      const ds = digits.split('').map(Number);
+      let warn = 0;
+      for (let i=1;i<ds.length;i++) if (Math.abs(ds[i]-ds[i-1]) > MACS) warn = 1;
+      return { ...row, bitting: digits, __ds: ds, __warn: warn };
+    };
+    const SEED = [
+      { id:1, key:'CK-014 (front)',     bitting:'135243', system:'Lockwood 5-pin' },
+      { id:2, key:'CK-027 (back)',      bitting:'246153', system:'Lockwood 5-pin' },
+      { id:3, key:'MK Building A',      bitting:'333555', system:'Master 6-pin' },
+      { id:4, key:'GGM site-wide',      bitting:'212121', system:'Grand-grand' },
+      { id:5, key:'Service-key 003',    bitting:'193827', system:'Service' },
+      { id:6, key:'Cleaner CK-04',      bitting:'445566', system:'Sub-master' },
+      { id:7, key:'CK-088 (apt 3)',     bitting:'617283', system:'Restricted' },
+      { id:8, key:'Emergency E1',       bitting:'987654', system:'Emergency' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'bitting') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.bite').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-warn', String(row.__warn || 0));
+        const bars = node.querySelectorAll('span');
+        (row.__ds || []).forEach((d, i) => {
+          if (bars[i]) bars[i].style.height = `${4 + d*2}px`;
+        });
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

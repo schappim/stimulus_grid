@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>255 — EN 1303 grid | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* EN 1303 stamps a six-digit code on the cylinder:
+       category, durability, door mass, fire/smoke, corrosion+temp, key-related security, attack resistance.
+       We render the six relevant digits as a strip; security & attack get colour. */
+    .en { display:inline-flex; gap:2px; }
+    .en b { display:inline-flex; align-items:center; justify-content:center;
+            width: 22px; height: 22px; border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-size: 11px; font-weight: 700;
+            background:#f1f5f9; color:#0f172a;
+            box-shadow: inset 0 0 0 1px #e2e8f0; }
+    .en b[data-pos="sec"][data-v="6"],
+    .en b[data-pos="sec"][data-v="5"] { background:#16a34a; color:#fff; }
+    .en b[data-pos="sec"][data-v="4"] { background:#65a30d; color:#fff; }
+    .en b[data-pos="sec"][data-v="3"] { background:#ea580c; color:#fff; }
+    .en b[data-pos="sec"][data-v="2"],
+    .en b[data-pos="sec"][data-v="1"] { background:#dc2626; color:#fff; }
+    .en b[data-pos="atk"][data-v="D"],
+    .en b[data-pos="atk"][data-v="C"] { background:#0f172a; color:#fff; }
+    .en b[data-pos="atk"][data-v="B"] { background:#1e3a8a; color:#fff; }
+    .en b[data-pos="atk"][data-v="A"] { background:#1d4ed8; color:#fff; }
+    .en b[data-pos="atk"][data-v="0"] { background:#fee2e2; color:#991b1b; }
+    .lab { margin-left: 10px; font-family: ui-monospace, monospace;
+           font-size: 11px; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>255 — EN 1303 grid</h1>
+  <p class="lede">
+    European cylinder standard. Six digits — category, durability,
+    door mass, fire/smoke, corrosion+temp, key security, attack
+    resistance — rendered as a tile strip. Key-security (pos 6) and
+    attack-resistance (pos 7) drive the colour, since they're what an
+    insurer looks at.
+  </p>
+
+  <template id="en-renderer">
+    <span class="en">
+      <b data-pos="cat"></b>
+      <b data-pos="dur"></b>
+      <b data-pos="mass"></b>
+      <b data-pos="fire"></b>
+      <b data-pos="corr"></b>
+      <b data-pos="sec"></b>
+      <b data-pos="atk"></b>
+    </span>
+    <span class="lab" data-bind="code"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="lock"
+              data-header-cell-width-value="260">Lock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="en-renderer"
+              data-header-cell-width-value="360">EN 1303</th>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-width-value="160">Brand</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pos 7 (attack) is rare on Australian cylinders — you'll mostly see
+    EN-stamped product in commercial fit-outs spec'd to European code.
+    A <code>0</code> in that position means the cylinder wasn't tested
+    for drill/pick — not that it failed.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Code is "cat/dur/mass/fire/corr/sec/atk" e.g. "1 6 0 0 D 6 C"
+    const SEED = [
+      { id:1, lock:'12 Bay St — front',          brand:'DOM',     code:'1 6 0 0 D 6 C' },
+      { id:2, lock:'12 Bay St — garage',         brand:'CISA',    code:'1 4 0 0 B 4 0' },
+      { id:3, lock:'Bondi Pavilion S2',          brand:'Mul-T-Lock', code:'1 6 0 0 D 6 D' },
+      { id:4, lock:'Pyrmont Pubs HQ — vault',    brand:'EVVA',    code:'1 6 0 0 D 6 D' },
+      { id:5, lock:'5 Crown St — apt 3',         brand:'ABUS',    code:'1 5 0 0 C 5 B' },
+      { id:6, lock:'33 Glebe Pt Rd — back',      brand:'CISA',    code:'1 3 0 0 B 3 0' },
+      { id:7, lock:'14 King St — security door', brand:'ASSA',    code:'1 6 0 0 D 6 C' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.en').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const parts = String(row.code).split(/\s+/);
+        const tiles = node.querySelectorAll('b');
+        tiles.forEach((t, i) => {
+          t.textContent = parts[i] || '–';
+          t.setAttribute('data-v', parts[i] || '–');
+        });
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

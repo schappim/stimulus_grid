@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>254 — AS 4145 dual grade | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* AS 4145 dual badge: SL = security level 1-7, SD = durability S1-S8.
+       Insurance-approved tick when the combined band meets the typical
+       insurer threshold (SL ≥ 5 and SD ≥ 5). */
+    .as { display:inline-flex; align-items:center; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, SFMono-Regular, monospace;
+          font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .as .sl, .as .sd { padding: 2px 7px; color:#fff; letter-spacing: .02em; }
+    .as[data-sl="1"] .sl,
+    .as[data-sl="2"] .sl,
+    .as[data-sl="3"] .sl { background:#dc2626; }
+    .as[data-sl="4"] .sl,
+    .as[data-sl="5"] .sl { background:#ea580c; }
+    .as[data-sl="6"] .sl,
+    .as[data-sl="7"] .sl { background:#16a34a; }
+    .as[data-sd="1"] .sd,
+    .as[data-sd="2"] .sd,
+    .as[data-sd="3"] .sd { background:#475569; }
+    .as[data-sd="4"] .sd,
+    .as[data-sd="5"] .sd { background:#1d4ed8; }
+    .as[data-sd="6"] .sd,
+    .as[data-sd="7"] .sd,
+    .as[data-sd="8"] .sd { background:#7c3aed; }
+    .ins { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#dcfce7; color:#166534; font-size: 11px; font-weight: 600; }
+    .ins[data-ok="0"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>254 — AS 4145 dual grade</h1>
+  <p class="lede">
+    Australian Standard 4145 cylinder grading: a security level
+    (<code>SL1–SL7</code>) and a durability level (<code>S1–S8</code>).
+    Insurers usually require SL ≥ 5 and S ≥ 5 on commercial premises —
+    rows that don't clear that bar show a red insurance chip.
+  </p>
+
+  <template id="as-renderer">
+    <span class="as">
+      <span class="sl" data-bind="slLabel"></span>
+      <span class="sd" data-bind="sdLabel"></span>
+    </span>
+    <span class="ins" data-bind="insLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="lock"
+              data-header-cell-width-value="260">Lock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sl"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="80">SL</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sd"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="80">SD</th>
+          <th data-controller="header-cell" data-header-cell-field-value="slLabel"
+              data-header-cell-cell-renderer-value="as-renderer"
+              data-header-cell-width-value="300">AS 4145</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Lock-snap and pick resistance live in the security level; the
+    durability level captures cycles-to-failure (S8 ≈ 250 k operations).
+    Edit either column to re-check the insurance band.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const sl = Math.max(1, Math.min(7, Number(row.sl) || 1));
+      const sd = Math.max(1, Math.min(8, Number(row.sd) || 1));
+      const ok = sl >= 5 && sd >= 5 ? 1 : 0;
+      return { ...row, sl, sd,
+               slLabel: `SL${sl}`, sdLabel: `S${sd}`,
+               insLabel: ok ? 'insurance ✓' : 'sub-grade',
+               __sl: sl, __sd: sd, __ok: ok };
+    };
+    const SEED = [
+      { id:1, lock:'12 Bay St — front',          sl:6, sd:7 },
+      { id:2, lock:'12 Bay St — garage',         sl:4, sd:5 },
+      { id:3, lock:'Bondi Pavilion S2',          sl:5, sd:6 },
+      { id:4, lock:'Pyrmont Pubs HQ — vault',    sl:7, sd:8 },
+      { id:5, lock:'5 Crown St — apt 3',         sl:3, sd:4 },
+      { id:6, lock:'33 Glebe Pt Rd — back',      sl:2, sd:3 },
+      { id:7, lock:'14 King St — security door', sl:6, sd:6 },
+      { id:8, lock:'7 Marine Pde — gate',        sl:4, sd:7 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['sl','sd'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.as').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-sl', String(row.__sl));
+        node.setAttribute('data-sd', String(row.__sd));
+        const ins = node.parentElement?.querySelector('.ins') || tr.querySelector('.ins');
+        if (ins) ins.setAttribute('data-ok', String(row.__ok));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
