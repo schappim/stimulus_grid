@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>203 — Today's jobs (mobile) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    :root { --gutter: 20px; --accent: #0ea5e9; --ink: #0f172a; }
+    html, body { margin: 0; background: #f8fafc; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px var(--gutter) calc(96px + env(safe-area-inset-bottom));
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 4px; font-size: 22px; }
+    p.lede { color: #475569; margin-top: 0; font-size: 14px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#e2e8f0; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip {
+      margin-top: 16px; padding: 10px 14px; background: #ecfeff;
+      border-left: 3px solid var(--accent); color:#155e75; font-size: 13px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Toolbar ───────────────────────────────────────────────────────── */
+    .toolbar {
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      margin: 14px 0 10px;
+    }
+    .quick-filter {
+      flex: 1 1 200px; min-width: 0;
+      font: inherit; font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1; border-radius: 8px;
+      background: #fff;
+      -webkit-appearance: none; appearance: none;
+    }
+    .quick-filter:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+    .seg { display: inline-flex; background: #e2e8f0; border-radius: 8px; padding: 2px; }
+    .seg button {
+      font: inherit; font-size: 13px; padding: 8px 12px;
+      border: 0; background: transparent; border-radius: 6px;
+      color: #475569; cursor: pointer; min-height: 36px;
+    }
+    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .stat { color:#64748b; font-size:13px; margin-left:auto; }
+
+    /* ── Grid panel ────────────────────────────────────────────────────── */
+    .panel { height: 600px; background: #fff; border-radius: 8px;
+             box-shadow: 0 1px 2px rgba(15,23,42,.05); overflow: hidden; }
+
+    /* ── Job card (mobile column renderer) ─────────────────────────────── */
+    .job-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "headline status"
+        "address  callout"
+        "tech     arrival";
+      gap: 4px 12px; width: 100%; align-items: center;
+    }
+    .job-card .headline {
+      grid-area: headline;
+      font-weight: 600; color: var(--ink);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .job-card .ref { color: #64748b; font-weight: 500; margin-right: 6px; font-size: 13px; }
+    .job-card .address { grid-area: address; color: #475569; font-size: 13px;
+                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-card .tech    { grid-area: tech; color: #64748b; font-size: 12px;
+                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-card .status  { grid-area: status; justify-self: end; }
+    .job-card .callout { grid-area: callout; justify-self: end; color: #0f766e; font-weight: 600; font-size: 12px; }
+    .job-card .callout[data-amount="0"] { color: #94a3b8; }
+    .job-card .arrival { grid-area: arrival; justify-self: end; font-size: 11px; }
+
+    /* tiny status pill (the mobile card flattens the FSM into a chip) */
+    .sp {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 600; letter-spacing: .02em;
+    }
+    .sp[data-status="quoted"]     { background:#e0e7ff; color:#3730a3; }
+    .sp[data-status="scheduled"]  { background:#dbeafe; color:#1e40af; }
+    .sp[data-status="dispatched"] { background:#cffafe; color:#155e75; }
+    .sp[data-status="on-site"]    { background:#dcfce7; color:#14532d; }
+    .sp[data-status="completed"]  { background:#bbf7d0; color:#14532d; }
+    .sp[data-status="invoiced"]   { background:#fef3c7; color:#92400e; }
+    .sp[data-status="paid"]       { background:#bbf7d0; color:#065f46; }
+    .sp[data-status="on-hold"]    { background:#fef9c3; color:#854d0e; }
+    .sp[data-status="cancelled"]  { background:#e2e8f0; color:#475569; }
+    .sp[data-status="no-show"]    { background:#fee2e2; color:#991b1b; }
+
+    /* arrival mini-pill */
+    .ap {
+      display:inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .ap[data-when="now"]      { background:#dcfce7; color:#14532d; }
+    .ap[data-when="soon"]     { background:#dbeafe; color:#1e40af; }
+    .ap[data-when="late"]     { background:#fef3c7; color:#92400e; }
+    .ap[data-when="overdue"]  { background:#fee2e2; color:#991b1b; }
+    .ap[data-when="later"]    { background:#f1f5f9; color:#475569; }
+
+    /* ── Mobile / narrow-viewport rules ────────────────────────────────── */
+    .panel[data-mode="mobile"] {
+      height: calc(100dvh - 260px);
+      min-height: 380px;
+    }
+    .panel[data-mode="mobile"] thead { display: none; }
+    /* Padding lives on .swipe-wrap so the wrap fully covers the td and the
+       absolutely-positioned action drawers can't leak through padding strips. */
+    .panel[data-mode="mobile"] td { padding: 0; }
+    .panel[data-mode="mobile"] tbody tr { min-height: 76px; }
+
+    body[data-grid-mode="mobile"] .sg-pagination { display: none; }
+    .infinite-hint {
+      display: none; text-align: center; padding: 14px;
+      color: #64748b; font-size: 13px;
+    }
+    body[data-grid-mode="mobile"] .infinite-hint { display: block; }
+    .infinite-hint[data-state="done"]::before    { content: '— end of today —'; }
+    .infinite-hint[data-state="loading"]::before { content: 'Loading more jobs…'; }
+
+    /* ── Swipe-action rows (mobile only) ───────────────────────────────── */
+    /* The cell's contents are wrapped in .swipe-wrap by the renderer; CSS
+       transforms it left/right to expose action layers underneath. The wrap
+       carries the padding so it fully covers the td — at rest, the action
+       drawers behind it are invisible (and also hidden via visibility:hidden
+       until a swipe begins, so users don't see "mystery colour bars"). */
+    .panel[data-mode="mobile"] td { position: relative; overflow: hidden; }
+    .swipe-actions {
+      position: absolute; top: 0; bottom: 0;
+      display: flex; align-items: stretch;
+      pointer-events: none;
+      visibility: hidden;                       /* hidden until a swipe starts */
+    }
+    .swipe-actions.right { right: 0; }
+    .swipe-actions.left  { left: 0; }
+    .swipe-actions button {
+      pointer-events: auto;
+      border: 0; padding: 0 18px;
+      font: inherit; font-size: 13px; font-weight: 600; color: #fff;
+      display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer;
+    }
+    .swipe-actions .act-invoice  { background: #f59e0b; }
+    .swipe-actions .act-complete { background: #16a34a; }
+    .swipe-actions .act-call     { background: #2563eb; }
+    .swipe-actions .act-nav      { background: #0ea5e9; }
+    .swipe-wrap {
+      position: relative; z-index: 1; background: #fff;
+      padding: 14px 16px;                       /* moved off td so wrap fully covers it */
+      transition: transform .18s ease;
+      will-change: transform;
+    }
+    .swipe-wrap.snap-left  { transform: translateX(-176px); }
+    .swipe-wrap.snap-right { transform: translateX(176px); }
+    /* Sibling selector: reveal the drawers only while the wrap is being
+       interacted with (.swiping) or snapped open. */
+    .swipe-wrap.swiping    ~ .swipe-actions,
+    .swipe-wrap.snap-left  ~ .swipe-actions,
+    .swipe-wrap.snap-right ~ .swipe-actions { visibility: visible; }
+
+    @media (max-width: 640px) {
+      body { padding-left: 14px; padding-right: 14px; }
+      h1 { font-size: 20px; }
+      .toolbar { position: sticky; top: 0; background: #f8fafc; z-index: 5;
+                 padding: 8px 0; margin-top: 4px;
+                 box-shadow: 0 1px 0 #e2e8f0; }
+      .stat { display: none; }
+      .seg { width: 100%; }
+      .seg button { flex: 1; }
+      .panel { width: calc(100% + 28px); margin-left: -14px; border-radius: 0; }
+    }
+
+    /* ── Sticky bottom action bar ──────────────────────────────────────── */
+    .bottom-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+      background: #0f172a;
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      display: flex; gap: 8px; align-items: center;
+      box-shadow: 0 -2px 12px rgba(15,23,42,.18);
+    }
+    .bottom-bar button {
+      flex: 1; min-height: 48px;
+      font: inherit; font-size: 14px; font-weight: 600;
+      border: 0; border-radius: 8px; cursor: pointer;
+      color: #f8fafc; background: #1e293b;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .bottom-bar button.primary { background: var(--accent); color: #0c1c2b; }
+    .bottom-bar button:active { transform: translateY(1px); }
+    .bottom-bar .selection {
+      color: #cbd5e1; font-size: 12px;
+      padding: 0 6px; min-width: 70px;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>203 — Today's jobs (mobile)</h1>
+  <p class="lede">
+    A field-tech screen built on the renderers from 143–199. Desktop shows a
+    seven-column dispatcher table (status, arrival, address, travel, callout,
+    tech, vehicle). At narrow widths the grid collapses to a single
+    tap-friendly job card, paging is replaced by infinite scroll, rows are
+    swipeable for quick actions (left to invoice/complete, right to call/navigate),
+    and a sticky bottom bar exposes the primary verbs.
+  </p>
+
+  <!-- Mobile card template. Binds to flat fields pre-computed in JS so the
+       template stays a dumb shape and the data layer owns the formatting. -->
+  <template id="job-card-renderer">
+    <span class="job-card">
+      <span class="headline">
+        <span class="ref"  data-bind="ref"></span><span data-bind="customer"></span>
+      </span>
+      <span class="status">
+        <span class="sp" data-bind="status" data-bind-attr="data-status"></span>
+      </span>
+      <span class="address"  data-bind="addressLine"></span>
+      <span class="callout"  data-bind="calloutLine" data-bind-attr="data-amount"></span>
+      <span class="tech"     data-bind="techLine"></span>
+      <span class="arrival">
+        <span class="ap" data-bind="arrivalLabel" data-bind-attr="data-when"></span>
+      </span>
+    </span>
+  </template>
+
+  <div class="toolbar">
+    <input id="qf" class="quick-filter" type="search"
+           inputmode="search" autocomplete="off"
+           placeholder="Search jobs, customers, suburbs…" />
+    <div class="seg" role="tablist" aria-label="Layout">
+      <button id="mode-auto" aria-pressed="true">Auto</button>
+      <button id="mode-desktop" aria-pressed="false">Desktop</button>
+      <button id="mode-mobile" aria-pressed="false">Mobile</button>
+    </div>
+    <span class="stat" id="stat">…</span>
+  </div>
+
+  <div id="grid" class="panel"
+       data-controller="grid"
+       data-grid-row-selection-value="multiple"
+       data-grid-cell-selection-value="false"
+       data-grid-pagination-value="true"
+       data-grid-page-size-value="25">
+    <table>
+      <thead>
+        <tr>
+          <!-- Mobile-only card column -->
+          <th data-controller="header-cell" data-header-cell-field-value="card"
+              data-header-cell-cell-renderer-value="job-card-renderer"
+              data-header-cell-sortable-value="false"
+              data-header-cell-resizable-value="false"
+              data-header-cell-width-value="1000">Job</th>
+
+          <!-- Desktop columns -->
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="100">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-filter-value="text"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="job-status"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="170">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="window"
+              data-header-cell-cell-renderer-value="arrival-window"
+              data-header-cell-width-value="220">Arrival</th>
+          <th data-controller="header-cell" data-header-cell-field-value="loc"
+              data-header-cell-cell-renderer-value="suburb-postcode-au"
+              data-header-cell-width-value="180">Suburb</th>
+          <th data-controller="header-cell" data-header-cell-field-value="travel"
+              data-header-cell-cell-renderer-value="travel-time"
+              data-header-cell-width-value="150">Travel</th>
+          <th data-controller="header-cell" data-header-cell-field-value="callout"
+              data-header-cell-cell-renderer-value="callout-fee"
+              data-header-cell-width-value="130">Callout</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="140">Tech</th>
+          <th data-controller="header-cell" data-header-cell-field-value="plate"
+              data-header-cell-cell-renderer-value="rego-plate"
+              data-header-cell-width-value="140">Vehicle</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <nav class="sg-pagination"
+       data-controller="pagination"
+       data-pagination-grid-outlet="#grid">
+    <button data-pagination-target="first" data-action="pagination#first">«</button>
+    <button data-pagination-target="prev"  data-action="pagination#prev">‹</button>
+    <span class="sg-spacer"></span>
+    <span data-pagination-target="pageInfo">…</span>
+    <span class="sg-spacer"></span>
+    <button data-pagination-target="next"  data-action="pagination#next">›</button>
+    <button data-pagination-target="last"  data-action="pagination#last">»</button>
+  </nav>
+
+  <div class="infinite-hint" data-state="loading"></div>
+
+  <p class="tip">
+    <strong>How it works:</strong> a single <code>matchMedia('(max-width: 640px)')</code>
+    listener flips <code>data-mode</code> on the grid and toggles column visibility
+    via <code>gridApi.setColumnVisible</code>. The card column uses a
+    <code>&lt;template&gt;</code> renderer that flattens the same row data into a
+    two-line tap target — the desktop columns keep using the actual tradie renderers
+    (<code>job-status</code>, <code>arrival-window</code>, <code>suburb-postcode-au</code>,
+    <code>travel-time</code>, <code>callout-fee</code>, <code>rego-plate</code>),
+    so this demo is a real composition test of the 143–199 set.<br><br>
+    <strong>Swipe actions:</strong> on mobile, a single touch handler tracks
+    <code>touchstart</code>/<code>touchmove</code>/<code>touchend</code> on the
+    card cell. Horizontal drag past 60px snaps the row open to one of two action
+    drawers (Invoice/Complete on the left, Call/Navigate on the right). Tap
+    elsewhere or scroll vertically and the row snaps back. No native bridge required.<br><br>
+    <strong>Bottom action bar:</strong> fixed-position, respects
+    <code>env(safe-area-inset-bottom)</code> for iPhone home-indicator clearance,
+    and reflects multi-row selection — pick a few jobs and the verbs apply in bulk.
+  </p>
+
+  <div class="bottom-bar" role="toolbar" aria-label="Job actions">
+    <span class="selection" id="sel-count">0 selected</span>
+    <button id="bb-photo">+ Photo</button>
+    <button id="bb-invoice">Invoice</button>
+    <button id="bb-start" class="primary">Start job</button>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+
+    const grid = document.getElementById('grid');
+    const qf   = document.getElementById('qf');
+    const stat = document.getElementById('stat');
+    const selCount = document.getElementById('sel-count');
+
+    /* ── Demo data ─────────────────────────────────────────────────────── */
+    const CUSTOMERS = [
+      { name: 'Bondi Pavilion',    suburb: 'Bondi',     state: 'NSW', postcode: '2026', street: '12 Smith St' },
+      { name: 'Vega Studio',       suburb: 'Surry Hills',state:'NSW', postcode: '2010', street: '88 Crown St' },
+      { name: 'Coogee Holdings',   suburb: 'Coogee',    state: 'NSW', postcode: '2034', street: '4/22 Bay St' },
+      { name: 'Manly Reno Co',     suburb: 'Manly',     state: 'NSW', postcode: '2095', street: '17 Pine St' },
+      { name: 'Glebe Builders',    suburb: 'Glebe',     state: 'NSW', postcode: '2037', street: '5 Bridge Rd' },
+      { name: 'Pyrmont Pubs',      suburb: 'Pyrmont',   state: 'NSW', postcode: '2009', street: '210 Harris St' },
+      { name: 'Newtown Bakery',    suburb: 'Newtown',   state: 'NSW', postcode: '2042', street: '301 King St' },
+      { name: 'Surry Hills Cafe',  suburb: 'Surry Hills',state:'NSW', postcode: '2010', street: '14 Foveaux St' },
+      { name: 'Mosman Doctors',    suburb: 'Mosman',    state: 'NSW', postcode: '2088', street: '8 Spit Rd' },
+      { name: 'Annandale Yoga',    suburb: 'Annandale', state: 'NSW', postcode: '2038', street: '99 Booth St' },
+      { name: 'Marrickville Tile', suburb: 'Marrickville',state:'NSW',postcode: '2204', street: '40 Illawarra Rd' },
+      { name: 'Redfern Fitout',    suburb: 'Redfern',   state: 'NSW', postcode: '2016', street: '6 Regent St' },
+      { name: 'Cronulla Surf Co',  suburb: 'Cronulla',  state: 'NSW', postcode: '2230', street: '21 Gerrale St' },
+      { name: 'Parra Dental',      suburb: 'Parramatta',state: 'NSW', postcode: '2150', street: '60 Church St' },
+      { name: 'Hornsby Heights',   suburb: 'Hornsby',   state: 'NSW', postcode: '2077', street: '12 Pacific Hwy' },
+    ];
+    const STATUSES = ['scheduled','dispatched','on-site','completed','invoiced','quoted','on-hold','no-show','paid'];
+    const TECHS = [
+      { name: 'Astrid Hale',   vehicle: '2024 Toyota HiLux',         plate: 'ABK 42T', style: 'Standard' },
+      { name: 'Marcus Chen',   vehicle: '2022 Ford Ranger Wildtrak', plate: 'KD 868',  style: 'personalised' },
+      { name: 'Priya Patel',   vehicle: '2023 Isuzu D-Max',          plate: 'IRIE',    style: 'personalised-plus' },
+      { name: 'Jamal Owens',   vehicle: '2021 Mitsubishi Triton',    plate: 'IPLAYA',  style: 'personalised-red' },
+      { name: 'Lena Brooks',   vehicle: '2024 Toyota LandCruiser',   plate: 'AAD 39Z', style: 'premium-white' },
+      { name: 'Tomás Vega',    vehicle: '2020 Nissan Navara',        plate: 'ACD 72P', style: 'premium-slimline' },
+    ];
+    const CALLOUT_OPTIONS = [
+      120, 85, 'waived', 'included', null, { amount: 220, status: 'charged' },
+    ];
+
+    const fmtTime = (d) => d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })
+                            .replace(':00', '').toLowerCase();
+    const fmtArrivalLine = (start, end) => {
+      const day = start.toLocaleDateString('en-AU', { weekday: 'short' });
+      return `${fmtTime(start)}–${fmtTime(end)} ${day}`;
+    };
+    const arrivalBucket = (start, end) => {
+      const now = Date.now();
+      if (now > end.getTime() + 30 * 60 * 1000) return 'overdue';
+      if (now > end.getTime())                  return 'late';
+      if (now >= start.getTime())               return 'now';
+      if (start.getTime() - now < 4 * 3600 * 1000) return 'soon';
+      return 'later';
+    };
+    const fmtCallout = (c) => {
+      if (c == null)              return { label: 'no fee', amount: '0' };
+      if (c === 'waived')         return { label: 'waived', amount: '0' };
+      if (c === 'included')       return { label: 'included', amount: '0' };
+      if (typeof c === 'number')  return { label: `$${c}`,   amount: String(c) };
+      return { label: `$${c.amount}`, amount: String(c.amount) };
+    };
+
+    const now = new Date();
+    const minute = 60 * 1000;
+    const w = (startMinOffset, endMinOffset) => {
+      const s = new Date(now.getTime() + startMinOffset * minute);
+      const e = new Date(now.getTime() + endMinOffset   * minute);
+      return { start: s.toISOString(), end: e.toISOString() };
+    };
+
+    const ROWS = Array.from({ length: 48 }, (_, i) => {
+      const cust  = CUSTOMERS[i % CUSTOMERS.length];
+      const tech  = TECHS[i % TECHS.length];
+      const status= STATUSES[(i * 3) % STATUSES.length];
+      // Stagger windows across the day relative to "now":
+      const base  = -120 + (i * 35) % (60 * 9);
+      const win   = w(base, base + 60 + ((i * 7) % 30));
+      const startD = new Date(win.start), endD = new Date(win.end);
+      const callout = CALLOUT_OPTIONS[i % CALLOUT_OPTIONS.length];
+      const co      = fmtCallout(callout);
+      const travelMin = 8 + (i * 5) % 40;
+      const travel = { minutes: travelMin, distance: `${(travelMin * 0.4 + 1).toFixed(1)} km`,
+                       traffic: travelMin < 15 ? 'light' : travelMin < 30 ? 'moderate' : 'heavy' };
+
+      return {
+        id: i + 1,
+        ref: `J-${1042 + i}`,
+        customer: cust.name,
+        status,
+        window: win,
+        loc: { suburb: cust.suburb, state: cust.state, postcode: cust.postcode },
+        street: cust.street,
+        travel,
+        callout,
+        tech: tech.name,
+        plate: { state: 'NSW', plate: tech.plate, style: tech.style },
+
+        // ── Mobile-card flat fields ──
+        addressLine:  `${cust.street}, ${cust.suburb} ${cust.postcode}`,
+        techLine:     `${tech.name} · ${travel.minutes}m drive`,
+        calloutLine:  co.label,
+        arrivalLabel: fmtArrivalLine(startD, endD),
+        // arrivalLabel needs a `data-when` bucket; we expose it via data-bind-attr
+        // by reusing the same field — see template. To keep it simple we stash the
+        // bucket on a duplicate field that the binder maps to the attribute below.
+      };
+    });
+    // Compute arrival bucket for the attr binding (data-when) — separate field so
+    // the binder writes the text and the attr from different keys.
+    ROWS.forEach((r) => {
+      const s = new Date(r.window.start), e = new Date(r.window.end);
+      r.arrivalLabelAttr = arrivalBucket(s, e);
+    });
+
+    // The template's <span class="ap" data-bind="arrivalLabel"
+    // data-bind-attr="data-when"> writes the same value to both text and attr.
+    // Re-aim the attr at the bucket field by post-processing the template result.
+    // (The renderer's data-bind-attr reads the bound field; to drive attr from a
+    // different field we patch the row's `arrivalLabel` to be a getter-friendly
+    // object only when the binder supports it. Simpler: just overwrite the
+    // attribute in a post-render hook.)
+
+    /* ── Mobile / desktop swap ─────────────────────────────────────────── */
+    const DESKTOP_COLS = ['ref','customer','status','window','loc','travel','callout','tech','plate'];
+    const MOBILE_COL   = 'card';
+    const DESKTOP_PAGE_SIZE = 25;
+    const MOBILE_CHUNK      = 15;
+    const SCROLL_THRESHOLD  = 200;
+
+    const mql = window.matchMedia('(max-width: 640px)');
+    let mode = 'auto';
+    const effectiveMode = () => mode === 'auto' ? (mql.matches ? 'mobile' : 'desktop') : mode;
+    const hint = document.querySelector('.infinite-hint');
+
+    const applyMode = () => {
+      const m = effectiveMode();
+      grid.dataset.mode = m;
+      document.body.dataset.gridMode = m;
+      const api = grid.gridApi;
+      if (!api) return;
+      api.setColumnVisible(MOBILE_COL, m === 'mobile');
+      DESKTOP_COLS.forEach((c) => api.setColumnVisible(c, m === 'desktop'));
+      if (m === 'mobile') {
+        api.paginationGoToFirstPage();
+        api.paginationSetPageSize(MOBILE_CHUNK);
+        requestAnimationFrame(() => {
+          api.sizeColumnsToFit();
+          decorateMobileRows();
+        });
+      } else {
+        api.paginationSetPageSize(DESKTOP_PAGE_SIZE);
+      }
+      updateHint();
+    };
+
+    const updateHint = () => {
+      if (!grid.gridApi) return;
+      const api = grid.gridApi;
+      const shown = api.paginationGetPageSize();
+      const total = api.paginationGetRowCount();
+      hint.dataset.state = shown >= total ? 'done' : 'loading';
+    };
+
+    /* ── Infinite scroll: grow page-size as user nears the bottom ──────── */
+    let scrollViewport = null;
+    let loading = false;
+
+    const onScroll = () => {
+      if (effectiveMode() !== 'mobile') return;
+      if (loading) return;
+      const api = grid.gridApi;
+      if (!api) return;
+      const shown = api.paginationGetPageSize();
+      const total = api.paginationGetRowCount();
+      if (shown >= total) return;
+
+      const v = scrollViewport;
+      const distanceFromBottom = v.scrollHeight - v.scrollTop - v.clientHeight;
+      if (distanceFromBottom > SCROLL_THRESHOLD) return;
+
+      loading = true;
+      api.paginationSetPageSize(Math.min(shown + MOBILE_CHUNK, total));
+      requestAnimationFrame(() => { loading = false; updateHint(); decorateMobileRows(); });
+    };
+
+    const attachScrollListener = () => {
+      scrollViewport = grid.querySelector('.sg-body-viewport');
+      if (!scrollViewport) return;
+      scrollViewport.addEventListener('scroll', onScroll, { passive: true });
+    };
+
+    /* ── Decorate mobile rows: arrival-bucket attr + swipe wrapper + actions ── */
+    const ACTIONS_HTML = `
+      <div class="swipe-actions left">
+        <button class="act-invoice"  data-act="invoice">Invoice</button>
+        <button class="act-complete" data-act="complete">Done</button>
+      </div>
+      <div class="swipe-actions right">
+        <button class="act-call" data-act="call">Call</button>
+        <button class="act-nav"  data-act="nav">Navigate</button>
+      </div>
+    `;
+
+    const decorateMobileRows = () => {
+      if (effectiveMode() !== 'mobile') return;
+      grid.querySelectorAll('tbody tr').forEach((tr) => {
+        const td = tr.querySelector('td');
+        if (!td || td.dataset.swipeReady === '1') return;
+
+        // 1) Fix arrival-pill's data-when attr from the bucket field, since the
+        //    binder writes the same field to text + attr by default.
+        const rowId = Number(tr.dataset.id || tr.getAttribute('data-id'));
+        const row = ROWS.find((r) => r.id === rowId) || ROWS[Array.from(tr.parentNode.children).indexOf(tr)];
+        const pill = td.querySelector('.ap');
+        if (pill && row) pill.setAttribute('data-when', row.arrivalLabelAttr);
+
+        // 2) Wrap the cell contents in .swipe-wrap and append action drawers.
+        const wrap = document.createElement('div');
+        wrap.className = 'swipe-wrap';
+        while (td.firstChild) wrap.appendChild(td.firstChild);
+        td.appendChild(wrap);
+        td.insertAdjacentHTML('beforeend', ACTIONS_HTML);
+        td.dataset.swipeReady = '1';
+        wireSwipe(td, wrap);
+      });
+    };
+
+    /* ── Swipe gesture (pure JS, no library) ───────────────────────────── */
+    const SNAP_DISTANCE = 60;        // px of horizontal drag to commit a snap
+    const SNAP_OFFSET   = 176;       // matches CSS .snap-left/right transform
+    const VERTICAL_LOCK = 10;        // px of vertical drift cancels the swipe
+
+    let openWrap = null;             // currently snapped wrap, for tap-to-close
+    const closeOpen = () => {
+      if (!openWrap) return;
+      openWrap.classList.remove('snap-left', 'snap-right');
+      openWrap = null;
+    };
+
+    const wireSwipe = (td, wrap) => {
+      let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false, axisLocked = false;
+
+      td.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        dx = dy = 0; dragging = true; axisLocked = false;
+        wrap.style.transition = 'none';
+      }, { passive: true });
+
+      td.addEventListener('touchmove', (e) => {
+        if (!dragging) return;
+        dx = e.touches[0].clientX - startX;
+        dy = e.touches[0].clientY - startY;
+        if (!axisLocked) {
+          if (Math.abs(dy) > VERTICAL_LOCK && Math.abs(dy) > Math.abs(dx)) {
+            dragging = false;                 // vertical scroll wins
+            wrap.style.transform = '';
+            wrap.style.transition = '';
+            wrap.classList.remove('swiping');
+            return;
+          }
+          if (Math.abs(dx) > 6) { axisLocked = true; wrap.classList.add('swiping'); }
+        }
+        if (axisLocked) {
+          // Resist past the snap distance so it doesn't fling off-screen.
+          const clamped = Math.max(-SNAP_OFFSET * 1.2, Math.min(SNAP_OFFSET * 1.2, dx));
+          wrap.style.transform = `translateX(${clamped}px)`;
+        }
+      }, { passive: true });
+
+      td.addEventListener('touchend', () => {
+        if (!dragging) return;
+        dragging = false;
+        wrap.style.transition = '';
+        wrap.style.transform = '';
+        wrap.classList.remove('swiping');     // drawers re-hide unless we snap below
+        if (Math.abs(dx) < SNAP_DISTANCE) { wrap.classList.remove('snap-left','snap-right'); return; }
+        closeOpen();
+        if (dx < 0) { wrap.classList.add('snap-left'); }
+        else        { wrap.classList.add('snap-right'); }
+        openWrap = wrap;
+      });
+
+      // Tap on the card body (not an action button) closes any open drawer.
+      td.addEventListener('click', (e) => {
+        if (e.target.closest('.swipe-actions')) {
+          handleAction(e.target.closest('button')?.dataset.act, td);
+          closeOpen();
+          return;
+        }
+        if (openWrap === wrap) { closeOpen(); }
+      });
+    };
+
+    const handleAction = (act, td) => {
+      if (!act) return;
+      const card = td.querySelector('.headline')?.textContent?.trim() || 'job';
+      const map = { invoice: 'Invoiced', complete: 'Completed', call: 'Calling', nav: 'Navigating to' };
+      console.log(`[203] ${map[act]} — ${card}`);
+      // (In a real app: open dialler, send Maps deep link, POST a state change.)
+    };
+
+    /* ── Toolbar + bottom-bar wiring ───────────────────────────────────── */
+    const segButtons = {
+      auto:    document.getElementById('mode-auto'),
+      desktop: document.getElementById('mode-desktop'),
+      mobile:  document.getElementById('mode-mobile'),
+    };
+    Object.entries(segButtons).forEach(([key, btn]) => {
+      btn.addEventListener('click', () => {
+        mode = key;
+        Object.entries(segButtons).forEach(([k, b]) =>
+          b.setAttribute('aria-pressed', String(k === key)));
+        applyMode();
+      });
+    });
+
+    qf.addEventListener('input', () => grid.gridApi.setQuickFilter(qf.value));
+
+    ['bb-photo','bb-invoice','bb-start'].forEach((id) => {
+      document.getElementById(id).addEventListener('click', () => {
+        const sel = grid.gridApi.getSelectedRows?.() || [];
+        const verb = id.replace('bb-','');
+        const target = sel.length ? `${sel.length} job(s)` : 'no selection — pick a row first';
+        console.log(`[203] bottom-bar ${verb} → ${target}`);
+      });
+    });
+
+    /* ── Stat line + selection count ───────────────────────────────────── */
+    const updateStat = () => {
+      const api = grid.gridApi; if (!api) return;
+      const total = api.paginationGetRowCount();
+      const page  = api.paginationGetCurrentPage() + 1;
+      const pages = api.paginationGetTotalPages();
+      stat.textContent = `${total} jobs today · page ${page}/${pages}`;
+    };
+    const updateSelection = () => {
+      const api = grid.gridApi; if (!api) return;
+      const n = (api.getSelectedRows?.() || []).length;
+      selCount.textContent = n ? `${n} selected` : '0 selected';
+    };
+
+    /* ── Boot ──────────────────────────────────────────────────────────── */
+    grid.addEventListener('grid:ready', (e) => {
+      e.detail.api.setRowData(ROWS);
+      attachScrollListener();
+      applyMode();
+      requestAnimationFrame(() => { updateStat(); updateSelection(); });
+    }, { once: true });
+
+    ['grid:rowDataChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach((ev) => grid.addEventListener(ev, () => {
+        updateStat(); updateHint(); decorateMobileRows();
+      }));
+    grid.addEventListener('grid:selectionChanged', updateSelection);
+
+    mql.addEventListener('change', () => { if (mode === 'auto') applyMode(); });
+
+    // Tapping outside the grid closes any open swipe drawer.
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.swipe-wrap, .swipe-actions')) closeOpen();
+    });
+  </script>
+</body>
+</html>
