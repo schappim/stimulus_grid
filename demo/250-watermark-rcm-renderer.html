@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>250 — WaterMark / RCM compliance | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* WaterMark (plumbing products) + RCM (Regulatory Compliance Mark for
+       electrical / electronic). Two separate marks; the cell shows which
+       apply per product and whether the cert is valid. */
+    .mark {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 11px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .mark .tile {
+      padding: 2px 7px; min-width: 28px; text-align: center;
+      letter-spacing: .03em;
+    }
+    .mark .key { background:#f8fafc; color:#475569; font-family: system-ui, sans-serif; font-weight: 600; }
+    .mark[data-wm="ok"]   .wm { background:#16a34a; color:#fff; }
+    .mark[data-wm="no"]   .wm { background:#dc2626; color:#fff; }
+    .mark[data-wm="na"]   .wm { background:#cbd5e1; color:#475569; }
+    .mark[data-rcm="ok"]  .rcm { background:#0ea5e9; color:#fff; }
+    .mark[data-rcm="no"]  .rcm { background:#dc2626; color:#fff; }
+    .mark[data-rcm="na"]  .rcm { background:#cbd5e1; color:#475569; }
+    .marks {
+      display: inline-flex; gap: 6px; align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>250 — WaterMark / RCM compliance</h1>
+  <p class="lede">
+    WaterMark (plumbing products under <code>WMTS</code>) and RCM
+    (Regulatory Compliance Mark for electrical, electronic and telecom)
+    are the two product-compliance marks every Australian tradie has to
+    eyeball before installing. Two independent badges per product so a
+    sparkie / plumber sees applicability and validity at a glance.
+  </p>
+
+  <template id="mark-renderer">
+    <span class="marks">
+      <span class="mark" data-wm-target>
+        <span class="tile key">WM</span>
+        <span class="tile wm" data-bind="wmLabel"></span>
+      </span>
+      <span class="mark" data-rcm-target>
+        <span class="tile key">RCM</span>
+        <span class="tile rcm" data-bind="rcmLabel"></span>
+      </span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="140">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="320">Product</th>
+          <th data-controller="header-cell" data-header-cell-field-value="wmLabel"
+              data-header-cell-cell-renderer-value="mark-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="280">Compliance</th>
+          <th data-controller="header-cell" data-header-cell-field-value="certNo"
+              data-header-cell-width-value="180">Cert #</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    A "no" badge on a mandatory mark (WaterMark on a plumbing product;
+    RCM on a 240V product) is grounds to refuse the install — the
+    contractor wears liability.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const lbl = (k) => k === 'ok' ? '✓' : k === 'no' ? '✗' : 'N/A';
+    const derive = (row) => ({ ...row, wmLabel: lbl(row.wm), rcmLabel: lbl(row.rcm) });
+    const SEED = [
+      { id:1, sku:'TX-1500-WM',      part:'Caroma toilet — vitreous china, dual flush', wm:'ok', rcm:'na', certNo:'WM-022134' },
+      { id:2, sku:'IXL-VANT-200',    part:'IXL Vantage 3-in-1 bathroom fan/light',      wm:'na', rcm:'ok', certNo:'RCM-N12022' },
+      { id:3, sku:'CAR-TAP-MTM-50',  part:'Caroma mixer tap 50mm',                      wm:'ok', rcm:'na', certNo:'WM-018400' },
+      { id:4, sku:'BUDGET-HOSE-A',   part:'Cheap shower hose (parallel import)',        wm:'no', rcm:'na', certNo:'—' },
+      { id:5, sku:'GPO-DBL-WHT',     part:'Clipsal C2025 double GPO',                   wm:'na', rcm:'ok', certNo:'RCM-N09110' },
+      { id:6, sku:'GASCK-NG6',       part:'Gas cooktop NG 60cm',                        wm:'ok', rcm:'ok', certNo:'WM+RCM dual' },
+      { id:7, sku:'EVCHG-7K',        part:'EV charger 7kW (no AS/NZS3127 mark)',        wm:'na', rcm:'no', certNo:'—' },
+      { id:8, sku:'TRAPSEAL-32',     part:'Reliance HepvO waterless trap',              wm:'ok', rcm:'na', certNo:'WM-029811' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    // Paint per-row WM / RCM banding (data-bind-attr can't carry both).
+    const paintMarks = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.marks').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const marks = node.querySelectorAll('.mark');
+        marks[0]?.setAttribute('data-wm',  row.wm);
+        marks[1]?.setAttribute('data-rcm', row.rcm);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintMarks));
+    new MutationObserver(paintMarks).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

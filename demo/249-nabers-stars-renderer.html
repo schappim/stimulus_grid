@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>249 — NABERS / energy stars | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* NABERS — 0 to 6 stars (in 0.5 increments). Used on commercial
+       offices > 1000m² for Commercial Building Disclosure obligations.
+       The star row + the numeric rating both render. */
+    .nb {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 1px 6px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+      background: #f1f5f9;
+    }
+    .nb .stars {
+      display: inline-flex; gap: 1px;
+      font-size: 13px; line-height: 1;
+      color: #94a3b8;
+    }
+    .nb .stars .filled { color: #f59e0b; }
+    .nb .num {
+      padding: 1px 7px; border-radius: 999px;
+      background: #fff; box-shadow: inset 0 0 0 1px #e2e8f0;
+      font-variant-numeric: tabular-nums;
+    }
+    .nb[data-band="poor"] { background:#fee2e2; }
+    .nb[data-band="ok"]   { background:#fef3c7; }
+    .nb[data-band="good"] { background:#dcfce7; }
+    .nb[data-band="great"]{ background:#dbeafe; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>249 — NABERS / energy stars</h1>
+  <p class="lede">
+    NABERS rating (0–6 stars) for commercial buildings. Sub-4★ triggers
+    Commercial Building Disclosure flags for offices &gt; 1,000 m².
+    The chip combines the star row, the numeric rating, and a banded
+    background so the worst rows stand out.
+  </p>
+
+  <template id="nb-renderer">
+    <span class="nb" data-bind-attr="data-band">
+      <span class="stars" data-stars></span>
+      <span class="num" data-bind="stars"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="building"
+              data-header-cell-width-value="260">Building</th>
+          <th data-controller="header-cell" data-header-cell-field-value="stars"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">Stars</th>
+          <th data-controller="header-cell" data-header-cell-field-value="band"
+              data-header-cell-cell-renderer-value="nb-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">NABERS</th>
+          <th data-controller="header-cell" data-header-cell-field-value="nla"
+              data-header-cell-width-value="120">NLA (m²)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Star fractions (e.g. 4.5★) render half-filled in production; for
+    simplicity this demo rounds to the nearest whole star.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const band = (s) => s < 2.5 ? 'poor' : s < 4 ? 'ok' : s < 5 ? 'good' : 'great';
+    const derive = (row) => ({ ...row, band: band(Number(row.stars || 0)) });
+    const SEED = [
+      { id:1, building:'90 Pyrmont Bridge Rd',  stars:5.5, nla:'12,400' },
+      { id:2, building:'5 Crown St, Surry Hills',stars:4.0, nla:' 4,800' },
+      { id:3, building:'201 Pittwater Rd, Manly',stars:3.5, nla:' 2,100' },
+      { id:4, building:'Pyrmont Pubs HQ',       stars:2.0, nla:' 1,400' },
+      { id:5, building:'Bondi Pavilion S2',     stars:6.0, nla:' 9,200' },
+      { id:6, building:'14 King St, Newtown',   stars:1.5, nla:' 1,000' },
+      { id:7, building:'Vega Studio fitout',    stars:5.0, nla:' 3,200' },
+      { id:8, building:'Mosman Doctors',        stars:4.5, nla:' 1,600' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'stars') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintStars = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.nb').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        const slot = node.querySelector('[data-stars]');
+        if (!slot || !row) return;
+        const n = Math.round(Number(row.stars || 0));
+        slot.innerHTML = Array.from({length:6}, (_,i) =>
+          `<span class="${i < n ? 'filled' : ''}">★</span>`).join('');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintStars));
+    new MutationObserver(paintStars).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
