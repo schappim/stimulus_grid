@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>245 — Hot water system | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Hot water system type — every property has one, and the type drives
+       what a plumber / sparkie quotes ("we'll need a sparkie if you're
+       on instant-electric"). */
+    .hw {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+    .hw .icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      color: #fff; font-size: 12px; line-height: 1;
+    }
+    .hw[data-t="electric"]   { background:#fef3c7; color:#92400e; }
+    .hw[data-t="electric"]   .icon { background:#ca8a04; }
+    .hw[data-t="gas-storage"]{ background:#fed7aa; color:#9a3412; }
+    .hw[data-t="gas-storage"].icon { background:#ea580c; }
+    .hw[data-t="gas-instant"]{ background:#fee2e2; color:#991b1b; }
+    .hw[data-t="gas-instant"].icon { background:#dc2626; }
+    .hw[data-t="solar"]      { background:#fef9c3; color:#854d0e; }
+    .hw[data-t="solar"]      .icon { background:#ca8a04; }
+    .hw[data-t="heat-pump"]  { background:#dcfce7; color:#166534; }
+    .hw[data-t="heat-pump"]  .icon { background:#16a34a; }
+    .hw[data-t="wood"]       { background:#ffedd5; color:#7c2d12; }
+    .hw[data-t="wood"]       .icon { background:#9a3412; }
+    .hw[data-t="none"]       { background:#f1f5f9; color:#475569; }
+    .hw[data-t="none"]       .icon { background:#475569; }
+
+    .age {
+      margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
+    .age[data-a="new"]  { background:#dcfce7; color:#166534; }
+    .age[data-a="mid"]  { background:#fef3c7; color:#92400e; }
+    .age[data-a="old"]  { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>245 — Hot water system</h1>
+  <p class="lede">
+    Electric / gas-storage / gas-instant / solar / heat-pump / wood-fired —
+    every property has one, and the type changes who's quoting. An
+    instant-gas swap-out can't be a like-for-like job if the customer's
+    going heat-pump. Age band ages the unit — &gt; 12 y is "expect
+    replacement in the quote window".
+  </p>
+
+  <template id="hw-renderer">
+    <span class="hw" data-bind-attr="data-t">
+      <span class="icon" data-bind="icon"></span>
+      <span data-bind="hwLabel"></span>
+    </span>
+    <span class="age" data-bind="ageLabel" data-bind-attr-keep></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="260">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hw"
+              data-header-cell-cell-renderer-value="hw-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="280">Hot water</th>
+          <th data-controller="header-cell" data-header-cell-field-value="installedYear"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Installed</th>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-width-value="200">Brand / model</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Australian government rebates ($1,000–$2,000) tilt new installs heavily
+    toward heat-pump — flag legacy electric / gas-storage as priority
+    upgrade candidates.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      electric:    { label:'Electric storage', icon:'⚡' },
+      'gas-storage':{ label:'Gas — storage',   icon:'g' },
+      'gas-instant':{ label:'Gas — instant',   icon:'⌁' },
+      solar:       { label:'Solar',             icon:'☼' },
+      'heat-pump': { label:'Heat-pump',         icon:'♨' },
+      wood:        { label:'Wood-fired',        icon:'🔥' },
+      none:        { label:'Unknown',           icon:'?' },
+    };
+    const derive = (row) => {
+      const yr = new Date().getFullYear() - Number(row.installedYear || 0);
+      let a = 'new', ageLabel = `${yr} y old`;
+      if (Number.isNaN(yr) || row.installedYear == null) { ageLabel = 'unknown'; a = 'mid'; }
+      else if (yr >= 12) a = 'old';
+      else if (yr >= 6)  a = 'mid';
+      return { ...row, hwLabel:META[row.hw]?.label ?? row.hw, icon:META[row.hw]?.icon ?? '?', ageLabel, __a:a };
+    };
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',       hw:'electric',    installedYear:2008, brand:'Rheem 250L' },
+      { id:2, site:'4/87 Marine Pde',        hw:'gas-instant', installedYear:2019, brand:'Rinnai Infinity 26' },
+      { id:3, site:'Bondi Pavilion S2',      hw:'heat-pump',   installedYear:2024, brand:'Sanden Eco Plus 315L' },
+      { id:4, site:'Surry Hills Cafe',       hw:'gas-storage', installedYear:2012, brand:'Vulcan 170L' },
+      { id:5, site:'5 Spit Rd, Mosman',      hw:'solar',       installedYear:2014, brand:'Solahart 302BJ' },
+      { id:6, site:'14/2 King St, Newtown',  hw:'electric',    installedYear:1998, brand:'Rheem 80L (legacy)' },
+      { id:7, site:'33 Glebe Pt Rd, Glebe',  hw:'heat-pump',   installedYear:2023, brand:'Reclaim CO₂' },
+      { id:8, site:'Lot 42, Kangaroo Valley',hw:'wood',        installedYear:1989, brand:'Coonara wetback' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['hw','installedYear'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintAge = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.age').forEach((n) => {
+        const tr = n.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) n.setAttribute('data-a', row.__a || 'new');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintAge));
+    new MutationObserver(paintAge).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
