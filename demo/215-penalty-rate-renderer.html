@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>215 — Penalty-rate pill | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Penalty-rate pill — the rate multiplier applied to a worked block.
+       Ordinary 1.0× / OT 1.5× / OT 2.0× / Saturday / Sunday / Public-holiday.
+       Calculator pipelines reference this code, not the colour. */
+    .pr {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 8px 2px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .pr .x {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 18px; padding: 0 6px;
+      border-radius: 4px;
+      font-size: 10.5px; color: #fff; letter-spacing: .02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .pr[data-rate="ord"]    { background:#f1f5f9; color:#1f2937; }
+    .pr[data-rate="ord"] .x { background:#475569; }
+    .pr[data-rate="ot15"]   { background:#fef3c7; color:#854d0e; }
+    .pr[data-rate="ot15"] .x{ background:#ca8a04; }
+    .pr[data-rate="ot20"]   { background:#fee2e2; color:#991b1b; }
+    .pr[data-rate="ot20"] .x{ background:#dc2626; }
+    .pr[data-rate="sat"]    { background:#ecfeff; color:#155e75; }
+    .pr[data-rate="sat"] .x { background:#0e7490; }
+    .pr[data-rate="sun"]    { background:#fce7f3; color:#9d174d; }
+    .pr[data-rate="sun"] .x { background:#be185d; }
+    .pr[data-rate="ph"]     { background:#f3e8ff; color:#6b21a8; }
+    .pr[data-rate="ph"] .x  { background:#7e22ce; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>215 — Penalty-rate pill</h1>
+  <p class="lede">
+    The rate multiplier applied to a worked block: <em>Ordinary</em>,
+    <em>OT 1.5×</em>, <em>OT 2.0×</em>, <em>Saturday</em>, <em>Sunday</em>,
+    <em>Public holiday</em>. The code is stable for payroll; the colour
+    drift just helps a supervisor eyeball the cost on a roster.
+  </p>
+
+  <template id="pr-renderer">
+    <span class="pr" data-bind-attr="data-rate">
+      <span class="x" data-bind="rateMultiplier"></span>
+      <span data-bind="rateLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="date"
+              data-header-cell-type-value="date"
+              data-header-cell-width-value="140">Date</th>
+          <th data-controller="header-cell" data-header-cell-field-value="block"
+              data-header-cell-width-value="180">Block</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rate"
+              data-header-cell-cell-renderer-value="pr-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Rate</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hours"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="100">Hours</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The multiplier sub-chip is a separate <code>rateMultiplier</code>
+    field rather than a CSS pseudo — that way the payroll export reads
+    the raw <code>1.5</code> from the data, not the rendered string.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      ord:  { label:'Ordinary',         x:'1.0×' },
+      ot15: { label:'OT — first 2h',    x:'1.5×' },
+      ot20: { label:'OT — beyond',      x:'2.0×' },
+      sat:  { label:'Saturday',         x:'1.5×' },
+      sun:  { label:'Sunday',           x:'2.0×' },
+      ph:   { label:'Public holiday',   x:'2.5×' },
+    };
+    const mk = (k) => ({ rate:k, rateLabel:META[k].label, rateMultiplier:META[k].x });
+    const ROWS = [
+      { id:1, tech:'Astrid Hale', date:'2026-05-25', block:'07:00 – 15:30', hours:7.5, ...mk('ord')  },
+      { id:2, tech:'Astrid Hale', date:'2026-05-25', block:'15:30 – 17:30', hours:2.0, ...mk('ot15') },
+      { id:3, tech:'Astrid Hale', date:'2026-05-25', block:'17:30 – 19:00', hours:1.5, ...mk('ot20') },
+      { id:4, tech:'Marcus Chen', date:'2026-05-23', block:'07:00 – 14:00', hours:7.0, ...mk('sat')  },
+      { id:5, tech:'Marcus Chen', date:'2026-05-24', block:'08:00 – 12:00', hours:4.0, ...mk('sun')  },
+      { id:6, tech:'Priya Patel', date:'2026-04-25', block:'07:00 – 15:00', hours:8.0, ...mk('ph')   },
+      { id:7, tech:'Jamal Owens', date:'2026-05-25', block:'06:30 – 15:00', hours:8.5, ...mk('ord')  },
+      { id:8, tech:'Lena Brooks', date:'2026-05-25', block:'09:00 – 12:00', hours:3.0, ...mk('ord')  },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'rate') return;
+      const k = String(e.detail.newValue || '').trim();
+      if (!META[k]) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      grid.gridApi.applyTransaction({ update: [{ ...row, ...mk(k) }] });
+    });
+  </script>
+</body>
+</html>
