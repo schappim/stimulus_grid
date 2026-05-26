@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>210 — Recurring service next-due | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Recurring service — the maintenance contract clock. The pill shows
+       both the cadence (♻ Quarterly) and the next-due indicator. */
+    .rec {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      background: #f8fafc; color: #1f2937;
+    }
+    .rec .cadence {
+      display:inline-flex; align-items:center; gap: 4px;
+      padding: 1px 8px; border-radius: 999px;
+      background: #e0e7ff; color: #3730a3;
+      font-size: 11px;
+    }
+    .rec .due {
+      padding: 1px 8px; border-radius: 999px;
+      font-size: 11px;
+    }
+    .rec[data-due="ok"]   .due { background:#dcfce7; color:#166534; }
+    .rec[data-due="soon"] .due { background:#fef3c7; color:#92400e; }
+    .rec[data-due="over"] .due { background:#fee2e2; color:#991b1b; }
+    .rec[data-due="off"]  .due { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>210 — Recurring service next-due</h1>
+  <p class="lede">
+    Maintenance-contract cadence and the next-service countdown in one
+    chip — fortnightly grease-trap pump-out, monthly fire-extinguisher
+    check, quarterly RCD test, annual gas certificate. Editing the
+    <em>Next due</em> column re-evaluates the colour band so dispatchers
+    can re-schedule visually.
+  </p>
+
+  <template id="rec-renderer">
+    <span class="rec" data-bind-attr="data-due">
+      <span class="cadence" data-bind="cadenceLabel"></span>
+      <span class="due" data-bind="dueLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="service"
+              data-header-cell-width-value="240">Service</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dueBand"
+              data-header-cell-cell-renderer-value="rec-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="240">Cadence / Next due</th>
+          <th data-controller="header-cell" data-header-cell-field-value="nextDue"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Next due</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Editable <em>Next due</em> drives the colour band:
+    <strong>green</strong> &gt; 14 days out, <strong>amber</strong> within
+    14 days, <strong>red</strong> overdue. Cadence is a labelled chip so a
+    saved view like <em>"Overdue maintenance — quarterly"</em> reads cleanly.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const CADENCE = {
+      weekly:'Weekly', fortnightly:'Fortnightly', monthly:'Monthly',
+      quarterly:'Quarterly', biannual:'6-monthly', annual:'Annual',
+    };
+    const today = () => new Date(new Date().toDateString());
+    const dayDiff = (d) => Math.round((new Date(d) - today()) / 86400000);
+    const recompute = (row) => {
+      if (!row.nextDue) return { ...row, dueBand:'off', dueLabel:'No schedule' };
+      const d = dayDiff(row.nextDue);
+      let dueBand, dueLabel;
+      if (d < 0)         { dueBand='over'; dueLabel = `${Math.abs(d)}d overdue`; }
+      else if (d === 0)  { dueBand='soon'; dueLabel = `Today`; }
+      else if (d <= 14)  { dueBand='soon'; dueLabel = `in ${d}d`; }
+      else               { dueBand='ok';   dueLabel = `in ${d}d`; }
+      return { ...row, dueBand, dueLabel };
+    };
+    const inDays = (n) => { const d = today(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+    const SEED = [
+      { id:1, customer:'Bondi Pavilion',    service:'Switchboard RCD test',          cadence:'quarterly',  nextDue: inDays(42) },
+      { id:2, customer:'Coogee Holdings',   service:'Grease-trap pump-out',          cadence:'fortnightly',nextDue: inDays(-3) },
+      { id:3, customer:'Manly Reno Co',     service:'Fire-extinguisher inspection',  cadence:'monthly',    nextDue: inDays(8) },
+      { id:4, customer:'Vega Studio',       service:'Annual gas certificate',        cadence:'annual',     nextDue: inDays(180) },
+      { id:5, customer:'Surry Hills Cafe',  service:'Cool-room compressor service',  cadence:'biannual',   nextDue: inDays(-21) },
+      { id:6, customer:'Pyrmont Pubs',      service:'Beer-line clean',               cadence:'weekly',     nextDue: inDays(2) },
+      { id:7, customer:'Newtown Bakery',    service:'Oven flue & extraction',        cadence:'quarterly',  nextDue: inDays(63) },
+      { id:8, customer:'Glebe Builders',    service:'Tower-crane inspection',        cadence:'monthly',    nextDue: inDays(0) },
+      { id:9, customer:'Mosman Doctors',    service:'Backflow prevention test',      cadence:'annual',     nextDue: inDays(310) },
+      { id:10,customer:'Annandale Yoga',    service:'Reverse-cycle HVAC filter',     cadence:'quarterly',  nextDue: inDays(-1) },
+    ].map(r => ({ ...r, cadenceLabel: `♻ ${CADENCE[r.cadence]}` }));
+    const ROWS = SEED.map(recompute);
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'nextDue') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [recompute(row)] });
+    });
+  </script>
+</body>
+</html>
