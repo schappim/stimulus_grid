@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>212 — Inspection result | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Inspection result — pass / fail / conditional pass + a
+       reinspection-required flag. Council inspectors, certifiers, fire
+       authorities, electrical inspectors all use this same shape. */
+    .insp {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 4px 2px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+    .insp .mark {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 18px; height: 18px; border-radius: 50%;
+      color: #fff; font-size: 12px; font-weight: 700;
+    }
+    .insp[data-r="pass"]        { background:#dcfce7; color:#166534; }
+    .insp[data-r="pass"]        .mark { background:#16a34a; }
+    .insp[data-r="conditional"] { background:#fef3c7; color:#92400e; }
+    .insp[data-r="conditional"] .mark { background:#ca8a04; }
+    .insp[data-r="fail"]        { background:#fee2e2; color:#991b1b; }
+    .insp[data-r="fail"]        .mark { background:#dc2626; }
+    .insp[data-r="pending"]     { background:#e0e7ff; color:#3730a3; }
+    .insp[data-r="pending"]     .mark { background:#4f46e5; }
+    .reflag {
+      display: inline-block; margin-left: 6px;
+      padding: 1px 7px; border-radius: 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+      background: #fee2e2; color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>212 — Inspection result</h1>
+  <p class="lede">
+    Pass / Fail / Conditional pass — plus a re-inspection flag the
+    certifier ticks when something needs another look. Pending means the
+    inspection is booked but not yet attended. Editable so the supervisor
+    can update the result from the van.
+  </p>
+
+  <template id="insp-renderer">
+    <span class="insp" data-bind-attr="data-r">
+      <span class="mark" data-bind="resultGlyph"></span>
+      <span data-bind="resultLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="job"
+              data-header-cell-width-value="220">Job</th>
+          <th data-controller="header-cell" data-header-cell-field-value="inspectionType"
+              data-header-cell-width-value="180">Type</th>
+          <th data-controller="header-cell" data-header-cell-field-value="result"
+              data-header-cell-cell-renderer-value="insp-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="190">Result</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reinspect"
+              data-header-cell-type-value="boolean"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="130">Re-inspect</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-type-value="date"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="140">Inspected</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The re-inspect column is a separate boolean so it survives editing the
+    result independently. Once a row is <em>fail</em> AND
+    <em>re-inspect: true</em>, the saved-view <em>"Open re-inspections"</em>
+    catches it without further config.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      pass:        { glyph:'✓', label:'Pass' },
+      conditional: { glyph:'!', label:'Conditional' },
+      fail:        { glyph:'✗', label:'Fail' },
+      pending:     { glyph:'…', label:'Pending' },
+    };
+    const mk = (k, extra='') => ({ result:k, resultGlyph:META[k].glyph, resultLabel:META[k].label + (extra ? ` — ${extra}` : '') });
+    const ROWS = [
+      { id:1, job:'Bondi Pavilion — wet area',  inspectionType:'Waterproof certifier', reinspect:false, when:'2026-05-22', ...mk('pass') },
+      { id:2, job:'Coogee Holdings — switchboard',inspectionType:'Electrical (CoES)',  reinspect:true,  when:'2026-05-20', ...mk('conditional', 'cleanup MEN link') },
+      { id:3, job:'Manly Reno — kitchen',       inspectionType:'Council building',     reinspect:true,  when:'2026-05-19', ...mk('fail', 'fall to gully') },
+      { id:4, job:'Surry Hills Cafe — gas',     inspectionType:'Gas (CoC)',            reinspect:false, when:'2026-05-24', ...mk('pass') },
+      { id:5, job:'Vega Studio — fire',         inspectionType:'Fire essential svcs',  reinspect:false, when:'2026-05-25', ...mk('pass') },
+      { id:6, job:'Pyrmont Pubs — kitchen',     inspectionType:'Health / food',        reinspect:true,  when:'2026-05-21', ...mk('conditional', 'splashback height') },
+      { id:7, job:'Newtown Bakery — extraction',inspectionType:'AS1668 mechanical',    reinspect:false, when:null,         ...mk('pending') },
+      { id:8, job:'Glebe Builders — façade',    inspectionType:'Engineer cert',        reinspect:false, when:'2026-05-15', ...mk('pass') },
+      { id:9, job:'Mosman Doctors — backflow',  inspectionType:'Backflow annual',      reinspect:true,  when:'2026-05-18', ...mk('fail', 'no test cocks') },
+      { id:10,job:'Annandale Yoga — RCD',       inspectionType:'Electrical periodic',  reinspect:false, when:'2026-05-23', ...mk('pass') },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'result') return;
+      const k = String(e.detail.newValue || '').toLowerCase().trim();
+      if (!META[k]) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      grid.gridApi.applyTransaction({ update: [{ ...row, ...mk(k) }] });
+    });
+  </script>
+</body>
+</html>
