@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>230 — BAS period chip | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* BAS period chip — fiscal year + quarter (Q1 Jul–Sep, Q2 Oct–Dec,
+       Q3 Jan–Mar, Q4 Apr–Jun) plus a lodgement status note. */
+    .bas {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .bas .fy {
+      padding: 2px 8px;
+      background: #f1f5f9; color: #1f2937;
+      letter-spacing: .04em;
+    }
+    .bas .q {
+      padding: 2px 8px;
+      color: #fff;
+    }
+    .bas[data-q="Q1"] .q { background:#16a34a; }
+    .bas[data-q="Q2"] .q { background:#ea580c; }
+    .bas[data-q="Q3"] .q { background:#7c3aed; }
+    .bas[data-q="Q4"] .q { background:#0284c7; }
+
+    .lodge {
+      margin-left: 8px; padding: 1px 8px;
+      border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .lodge[data-l="lodged"]   { background:#dcfce7; color:#166534; }
+    .lodge[data-l="due"]      { background:#fef3c7; color:#92400e; }
+    .lodge[data-l="overdue"]  { background:#fee2e2; color:#991b1b; }
+    .lodge[data-l="pending"]  { background:#e0e7ff; color:#3730a3; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>230 — BAS period chip</h1>
+  <p class="lede">
+    Business activity statement period — fiscal year + quarter. AU's
+    fiscal year runs 1 Jul → 30 Jun, so Q1 is Jul–Sep, Q2 Oct–Dec,
+    Q3 Jan–Mar, Q4 Apr–Jun. The lodgement chip layers <em>lodged</em>,
+    <em>due</em>, <em>overdue</em>, or <em>pending</em> on top.
+  </p>
+
+  <template id="bas-renderer">
+    <span class="bas" data-bind-attr="data-q">
+      <span class="fy" data-bind="fyLabel"></span>
+      <span class="q"  data-bind="qLabel"></span>
+    </span>
+    <span class="lodge" data-bind="lodgeLabel" data-bind-attr="data-l"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="entity"
+              data-header-cell-width-value="220">Entity</th>
+          <th data-controller="header-cell" data-header-cell-field-value="q"
+              data-header-cell-cell-renderer-value="bas-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Period</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gst"
+              data-header-cell-width-value="130">GST collected</th>
+          <th data-controller="header-cell" data-header-cell-field-value="creds"
+              data-header-cell-width-value="130">GST credits</th>
+          <th data-controller="header-cell" data-header-cell-field-value="net"
+              data-header-cell-width-value="130">Net</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Pair the period chip with the aged-receivables (#228) for end-of-quarter
+    triage — anything in 90+ at quarter-close is going to drag the entity
+    through ATO compliance.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const FY_LABEL = (fy) => `FY${String(fy).slice(-2)}–${String(fy+1).slice(-2)}`;
+    const Q_LABEL = { Q1:'Q1 Jul–Sep', Q2:'Q2 Oct–Dec', Q3:'Q3 Jan–Mar', Q4:'Q4 Apr–Jun' };
+    const LODGE = { lodged:'Lodged', due:'Due', overdue:'Overdue', pending:'Pending' };
+    const ROWS = [
+      { id:1, entity:'Bondi Plumbing Pty Ltd',  fy:2025, q:'Q1', lodge:'lodged',  gst:'$ 9,200', creds:'$ 3,100', net:'$ 6,100' },
+      { id:2, entity:'Coogee Electrical Co',    fy:2025, q:'Q2', lodge:'lodged',  gst:'$14,400', creds:'$ 5,800', net:'$ 8,600' },
+      { id:3, entity:'Manly Renovations',       fy:2025, q:'Q3', lodge:'lodged',  gst:'$22,100', creds:'$ 9,400', net:'$12,700' },
+      { id:4, entity:'Surry Hills Services',    fy:2025, q:'Q4', lodge:'overdue', gst:'$ 8,600', creds:'$ 2,700', net:'$ 5,900' },
+      { id:5, entity:'Vega Studio Trust',       fy:2026, q:'Q1', lodge:'due',     gst:'$11,200', creds:'$ 4,200', net:'$ 7,000' },
+      { id:6, entity:'Pyrmont Holdings',        fy:2026, q:'Q1', lodge:'pending', gst:'$ 4,500', creds:'$ 1,800', net:'$ 2,700' },
+      { id:7, entity:'Newtown Trade Pty Ltd',   fy:2026, q:'Q2', lodge:'pending', gst:'$ 0',     creds:'$ 0',     net:'$ 0'    },
+      { id:8, entity:'Glebe Builders',          fy:2025, q:'Q4', lodge:'lodged',  gst:'$33,400', creds:'$11,200', net:'$22,200' },
+    ].map(r => ({
+      ...r,
+      fyLabel: FY_LABEL(r.fy),
+      qLabel: Q_LABEL[r.q],
+      lodgeLabel: LODGE[r.lodge],
+    }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+  </script>
+</body>
+</html>
