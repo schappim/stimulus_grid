@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>226 — Supplier price-rank | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Supplier price-rank — compares three or more suppliers per SKU
+       and tags the cheapest / preferred / next price. The 'preferred'
+       flag is loyalty-driven (trade account + service) not always the
+       cheapest, so it gets its own badge. */
+    .rank {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 6px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+    }
+    .rank .label {
+      padding: 1px 7px; border-radius: 4px;
+      color: #fff; font-size: 11px;
+    }
+    .rank[data-r="cheap"]    { background:#dcfce7; color:#166534; }
+    .rank[data-r="cheap"] .label    { background:#16a34a; }
+    .rank[data-r="preferred"]{ background:#fef3c7; color:#92400e; }
+    .rank[data-r="preferred"] .label{ background:#ca8a04; }
+    .rank[data-r="next"]     { background:#e0e7ff; color:#3730a3; }
+    .rank[data-r="next"] .label     { background:#4f46e5; }
+    .rank[data-r="expensive"]{ background:#fee2e2; color:#991b1b; }
+    .rank[data-r="expensive"] .label{ background:#dc2626; }
+
+    .savings { color:#94a3b8; font-size: 11px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>226 — Supplier price-rank</h1>
+  <p class="lede">
+    Each part exists at multiple suppliers — Reece, Tradelink, Plumbing
+    Plus, Beacon, Bunnings — and the rank chip flags the cheapest, the
+    preferred (loyalty / trade-account / service), the next-cheapest, and
+    the over-priced. Preferred isn't always cheapest, which is exactly the
+    point — the buyer sees both.
+  </p>
+
+  <template id="rank-renderer">
+    <span class="rank" data-bind-attr="data-r">
+      <span class="label" data-bind="rankLabel"></span>
+      <span data-bind="supplier"></span>
+      <span class="savings" data-bind="savingsLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="120">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="260">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="supplier"
+              data-header-cell-width-value="160">Supplier</th>
+          <th data-controller="header-cell" data-header-cell-field-value="rank"
+              data-header-cell-cell-renderer-value="rank-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="260">Rank</th>
+          <th data-controller="header-cell" data-header-cell-field-value="price"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="110">Price ex</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The rank is computed per-SKU group: cheapest gets <em>cheap</em>;
+    the row with <code>preferred: true</code> gets <em>preferred</em>
+    regardless of price; the next-up gets <em>next</em>; everything
+    else past 1.15× cheapest reads <em>expensive</em>. Edit a price to
+    re-rank the group.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const rank = (rows) => {
+      const grouped = new Map();
+      rows.forEach(r => {
+        if (!grouped.has(r.sku)) grouped.set(r.sku, []);
+        grouped.get(r.sku).push(r);
+      });
+      const out = [];
+      for (const list of grouped.values()) {
+        const sorted = [...list].sort((a,b) => a.price - b.price);
+        const cheap = sorted[0].price;
+        sorted.forEach((row, i) => {
+          let band;
+          if (row.preferred)                band = 'preferred';
+          else if (i === 0)                 band = 'cheap';
+          else if (i === 1)                 band = 'next';
+          else if (row.price > cheap * 1.15) band = 'expensive';
+          else                              band = 'next';
+          out.push({
+            ...row,
+            rank: band,
+            rankLabel: band === 'cheap' ? 'CHEAPEST' :
+                       band === 'preferred' ? 'PREFERRED' :
+                       band === 'next' ? 'NEXT' : 'EXPENSIVE',
+            savingsLabel: i === 0 ? '' : `+${((row.price/cheap-1)*100).toFixed(0)}%`,
+          });
+        });
+      }
+      return out;
+    };
+    const SEED = [
+      { id:1, sku:'GPO-DBL', part:'Clipsal C2025 double GPO',  supplier:'Tradelink',   price: 14.95, preferred:true  },
+      { id:2, sku:'GPO-DBL', part:'Clipsal C2025 double GPO',  supplier:'Beacon',      price: 13.20, preferred:false },
+      { id:3, sku:'GPO-DBL', part:'Clipsal C2025 double GPO',  supplier:'Bunnings',    price: 16.80, preferred:false },
+      { id:4, sku:'GPO-DBL', part:'Clipsal C2025 double GPO',  supplier:'L&H',         price: 14.50, preferred:false },
+      { id:5, sku:'COP-15',  part:'15mm copper x 3m',          supplier:'Reece',       price: 41.00, preferred:true  },
+      { id:6, sku:'COP-15',  part:'15mm copper x 3m',          supplier:'Plumbing Plus',price: 38.20, preferred:false },
+      { id:7, sku:'COP-15',  part:'15mm copper x 3m',          supplier:'Tradelink',   price: 44.10, preferred:false },
+      { id:8, sku:'RCBO-16A',part:'NHP RCBO 1P+N 16A 30mA',    supplier:'L&H',         price: 38.00, preferred:false },
+      { id:9, sku:'RCBO-16A',part:'NHP RCBO 1P+N 16A 30mA',    supplier:'Middys',      price: 35.40, preferred:false },
+      { id:10,sku:'RCBO-16A',part:'NHP RCBO 1P+N 16A 30mA',    supplier:'Beacon',      price: 42.10, preferred:false },
+      { id:11,sku:'RCBO-16A',part:'NHP RCBO 1P+N 16A 30mA',    supplier:'Bunnings',    price: 36.95, preferred:true  },
+    ];
+    let ROWS = rank(SEED);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'price') return;
+      ROWS = rank(grid.gridApi.getRowData());
+      grid.gridApi.setRowData(ROWS);
+    });
+  </script>
+</body>
+</html>
