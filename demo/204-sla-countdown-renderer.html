@@ -9,7 +9,7 @@
     body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
     h1 { margin-bottom: 4px; }
     p.lede { color: #6b7280; margin-top: 0; }
-    .panel { height: 460px; margin-top: 16px; }
+    .panel { height: 480px; margin-top: 16px; }
     .crumbs a { color: #2563eb; text-decoration: none; }
     code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
     .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
@@ -35,8 +35,6 @@
     .sla[data-state="missed"]  { background: #f1f5f9; color: #475569; text-decoration: line-through; }
     .sla[data-state="paused"]  { background: #f3f4f6; color: #6b7280; font-style: italic; }
     @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity: .55 } }
-
-    .target { color: #94a3b8; font-size: 11px; margin-left: 4px; }
   </style>
 </head>
 <body>
@@ -44,11 +42,11 @@
   <h1>204 — SLA countdown / breach</h1>
   <p class="lede">
     Contractual response-time clock — "respond within 4 business hours" or
-    "make-safe within 2h on a P1". Drives whether the job earns or loses
-    money. The pill states are <em>ok</em> (plenty of time), <em>warn</em>
-    (≤ 30 min buffer), <em>breach</em> (overdue), <em>met</em> (closed inside
-    the window), <em>missed</em> (closed late), and <em>paused</em> (clock
-    stopped while waiting on the customer).
+    "make-safe within 2h on a P1". The pill updates live as you re-schedule
+    a job: <strong>double-click the <em>Due by</em> column to edit the
+    deadline</strong> and watch the pill recompute (ok / warn / breach).
+    States <em>met</em>, <em>missed</em>, and <em>paused</em> are terminal
+    and don't get recomputed by the deadline change.
   </p>
 
   <template id="sla-renderer">
@@ -62,15 +60,20 @@
           <th data-controller="header-cell" data-header-cell-field-value="ref"
               data-header-cell-width-value="110">Job #</th>
           <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="200">Customer</th>
           <th data-controller="header-cell" data-header-cell-field-value="contract"
-              data-header-cell-width-value="180">Contract</th>
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="200">Contract</th>
           <th data-controller="header-cell" data-header-cell-field-value="slaState"
               data-header-cell-cell-renderer-value="sla-renderer"
               data-header-cell-sortable-value="true"
-              data-header-cell-width-value="190">SLA</th>
+              data-header-cell-width-value="200">SLA</th>
           <th data-controller="header-cell" data-header-cell-field-value="due"
-              data-header-cell-width-value="190">Due by</th>
+              data-header-cell-type-value="datetime"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="200">Due by</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -78,43 +81,78 @@
   </div>
 
   <p class="tip">
-    Pair the SLA pill with <code>setRowClassRules</code> so the entire row
-    pulses red when in breach. The pill itself can sort by the underlying
-    minutes-remaining so the dispatcher's "most-at-risk" view is one click.
+    Double-click any <em>Due by</em> cell — the picker is a native
+    <code>&lt;input type="datetime-local"&gt;</code>. On commit, the demo's
+    <code>grid:cellValueChanged</code> handler recomputes the pill via
+    <code>applyTransaction</code>. Try moving an "ok" job into the past to
+    flip it to breach, or push a "breach" deadline into the future to
+    recover it.
   </p>
 
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
-    const fmtDue = (d) => d.toLocaleString('en-AU', {
-      weekday:'short', hour:'2-digit', minute:'2-digit', hour12: false,
-    });
-    const now = new Date();
-    const inMin = (m) => new Date(now.getTime() + m * 60000);
-    const ROWS = [
+
+    const TERMINAL = new Set(['met','missed','paused']);
+
+    // Single source of truth: given a row, derive {slaState, slaLabel}
+    // from its `due` ISO datetime. Terminal states (already-closed jobs)
+    // are preserved — only ok/warn/breach are recomputed.
+    const recompute = (row) => {
+      if (TERMINAL.has(row.slaState)) return row;
+      const due = row.due ? new Date(row.due) : null;
+      if (!due || isNaN(due)) return { ...row, slaState: 'ok', slaLabel: 'No SLA' };
+      const mins = Math.round((due - Date.now()) / 60000);
+      const fmt = (m) => {
+        const a = Math.abs(m); const h = Math.floor(a / 60); const r = a % 60;
+        return h ? `${h}h ${String(r).padStart(2,'0')}m` : `${r}m`;
+      };
+      let slaState, slaLabel;
+      if (mins < 0)       { slaState = 'breach'; slaLabel = `BREACH +${fmt(mins)}`; }
+      else if (mins <= 30){ slaState = 'warn';   slaLabel = `${fmt(mins)} left`; }
+      else                { slaState = 'ok';     slaLabel = `${fmt(mins)} left`; }
+      return { ...row, slaState, slaLabel };
+    };
+
+    const now = Date.now();
+    const at  = (m) => new Date(now + m * 60000).toISOString();
+
+    const SEED = [
       { id:1, ref:'J-2104', customer:'Bondi Pavilion',  contract:'Strata maintenance — P2',
-        slaState:'ok',     slaLabel:'3h 42m left',           due: fmtDue(inMin(222))  },
+        due: at(222) },
       { id:2, ref:'J-2105', customer:'Coogee Holdings', contract:'Real-estate panel — P1 (2h)',
-        slaState:'warn',   slaLabel:'24m left',              due: fmtDue(inMin(24))   },
+        due: at(24) },
       { id:3, ref:'J-2106', customer:'Manly Reno Co',   contract:'Builder-of-record — P1 (4h)',
-        slaState:'breach', slaLabel:'BREACH +1h 12m',        due: fmtDue(inMin(-72))  },
+        due: at(-72) },
       { id:4, ref:'J-2107', customer:'Surry Hills Cafe',contract:'Equipment cover — same-day',
-        slaState:'breach', slaLabel:'BREACH +3h 04m',        due: fmtDue(inMin(-184)) },
+        due: at(-184) },
       { id:5, ref:'J-2108', customer:'Vega Studio',     contract:'Standard NBD',
-        slaState:'ok',     slaLabel:'18h 03m left',          due: fmtDue(inMin(1083)) },
+        due: at(1083) },
       { id:6, ref:'J-2109', customer:'Mosman Doctors',  contract:'After-hours emergency',
-        slaState:'met',    slaLabel:'Met — 47m to attend',   due: fmtDue(inMin(-720)) },
+        slaState:'met',    slaLabel:'Met — 47m to attend',   due: at(-720) },
       { id:7, ref:'J-2110', customer:'Newtown Bakery',  contract:'Standard NBD',
-        slaState:'missed', slaLabel:'Missed by 2h 11m',      due: fmtDue(inMin(-960)) },
+        slaState:'missed', slaLabel:'Missed by 2h 11m',      due: at(-960) },
       { id:8, ref:'J-2111', customer:'Pyrmont Pubs',    contract:'Real-estate panel — P2 (8h)',
-        slaState:'paused', slaLabel:'Paused — awaiting parts', due: '—'                },
+        slaState:'paused', slaLabel:'Paused — awaiting parts', due: at(480) },
       { id:9, ref:'J-2112', customer:'Glebe Builders',  contract:'Insurance — make-safe 2h',
-        slaState:'warn',   slaLabel:'08m left',              due: fmtDue(inMin(8))    },
+        due: at(8) },
       { id:10,ref:'J-2113', customer:'Annandale Yoga',  contract:'Quoted — no SLA',
-        slaState:'ok',     slaLabel:'No SLA',                due: '—'                  },
+        slaState:'ok', slaLabel:'No SLA', due: null },
     ];
+    const ROWS = SEED.map(recompute);
+
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Re-derive the pill when the deadline changes.
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'due') return;
+      const rowId = e.detail.rowId;
+      const live  = grid.gridApi.getRowData().find(r => String(r.id) === String(rowId));
+      if (!live) return;
+      const patched = recompute(live);
+      grid.gridApi.applyTransaction({ update: [patched] });
+    });
   </script>
 </body>
 </html>
