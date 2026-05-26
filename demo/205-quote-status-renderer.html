@@ -9,7 +9,7 @@
     body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
     h1 { margin-bottom: 4px; }
     p.lede { color: #6b7280; margin-top: 0; }
-    .panel { height: 460px; margin-top: 16px; }
+    .panel { height: 480px; margin-top: 16px; }
     .crumbs a { color: #2563eb; text-decoration: none; }
     code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
     .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
@@ -33,8 +33,6 @@
     .qstatus[data-status="declined"] { background:#fee2e2; color:#991b1b; }
     .qstatus[data-status="expired"]  { background:#fef3c7; color:#92400e; }
     .qstatus[data-status="revised"]  { background:#f3e8ff; color:#6b21a8; }
-
-    .when { color:#94a3b8; font-size: 11px; margin-left: 4px; }
   </style>
 </head>
 <body>
@@ -43,8 +41,10 @@
   <p class="lede">
     The funnel before an invoice exists. <em>Viewed</em> is the high-value
     signal — most quoting tools track e-mail open / PDF open and the
-    follow-up window is &lt; 48h before the lead cools. Pair this with the
-    SLA pill (#204) to chase quotes that haven't been touched.
+    follow-up window is &lt; 48h before the lead cools. Edit the
+    <em>Expires</em> column to push or pull a quote's deadline; if it lands
+    before "now" the status auto-flips to <em>expired</em>, and bumping it
+    forward restores the previous status.
   </p>
 
   <template id="qstatus-renderer">
@@ -58,17 +58,27 @@
           <th data-controller="header-cell" data-header-cell-field-value="ref"
               data-header-cell-width-value="110">Quote #</th>
           <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-editable-value="true"
               data-header-cell-width-value="200">Customer</th>
           <th data-controller="header-cell" data-header-cell-field-value="amount"
               data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
               data-header-cell-sortable-value="true"
               data-header-cell-width-value="120">Total</th>
           <th data-controller="header-cell" data-header-cell-field-value="qStatus"
               data-header-cell-cell-renderer-value="qstatus-renderer"
               data-header-cell-sortable-value="true"
-              data-header-cell-width-value="180">Status</th>
-          <th data-controller="header-cell" data-header-cell-field-value="last"
-              data-header-cell-width-value="180">Last activity</th>
+              data-header-cell-width-value="190">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="sent"
+              data-header-cell-type-value="datetime"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="190">Sent</th>
+          <th data-controller="header-cell" data-header-cell-field-value="expires"
+              data-header-cell-type-value="datetime"
+              data-header-cell-editable-value="true"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="200">Expires</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -76,38 +86,77 @@
   </div>
 
   <p class="tip">
-    The renderer takes a controlled vocabulary so a <em>"Quote follow-up"</em>
-    saved view (#H) filters cleanly:
-    <code>qStatus IN (sent, viewed) AND last &lt; -2 days</code>.
+    Both <em>Sent</em> and <em>Expires</em> are editable datetime cells.
+    The handler watches <code>grid:cellValueChanged</code> on
+    <code>expires</code> and flips the status to <em>expired</em> when the
+    deadline passes (preserving the prior status under
+    <code>__prevStatus</code> so a forward-shift can restore it).
+    <em>Accepted</em> and <em>declined</em> are terminal and never get
+    overridden.
   </p>
 
   <script src="../dist/stimulus_grid.js"></script>
   <script>
     StimulusGrid.start();
+
+    const TERMINAL = new Set(['accepted','declined','revised']);
+    const now = Date.now();
+    const at  = (mins) => new Date(now + mins * 60000).toISOString();
+
     const ROWS = [
-      { id:1, ref:'Q-3091', customer:'Bondi Pavilion',  amount:'$ 14,850',
-        qStatus:'draft',    qStatusLabel:'Draft',       last:'Today 11:02' },
-      { id:2, ref:'Q-3092', customer:'Coogee Holdings', amount:'$  2,340',
-        qStatus:'sent',     qStatusLabel:'Sent',        last:'Yesterday 16:48' },
-      { id:3, ref:'Q-3093', customer:'Manly Reno Co',   amount:'$ 38,720',
-        qStatus:'viewed',   qStatusLabel:'Viewed × 3',  last:'Yesterday 19:11' },
-      { id:4, ref:'Q-3094', customer:'Vega Studio',     amount:'$  1,090',
-        qStatus:'viewed',   qStatusLabel:'Viewed',      last:'2 days ago' },
-      { id:5, ref:'Q-3095', customer:'Surry Hills Cafe',amount:'$  6,210',
-        qStatus:'accepted', qStatusLabel:'Accepted',    last:'2 days ago — sig OK' },
-      { id:6, ref:'Q-3096', customer:'Pyrmont Pubs',    amount:'$ 22,400',
-        qStatus:'accepted', qStatusLabel:'Accepted',    last:'3 days ago' },
-      { id:7, ref:'Q-3097', customer:'Newtown Bakery',  amount:'$    890',
-        qStatus:'declined', qStatusLabel:'Declined',    last:'5 days ago — "too high"' },
-      { id:8, ref:'Q-3098', customer:'Glebe Builders',  amount:'$ 12,100',
-        qStatus:'expired',  qStatusLabel:'Expired',     last:'30 days ago' },
-      { id:9, ref:'Q-3099', customer:'Mosman Doctors',  amount:'$  4,560',
-        qStatus:'revised',  qStatusLabel:'Revised v2',  last:'Today 09:33' },
-      { id:10,ref:'Q-3100', customer:'Annandale Yoga',  amount:'$  3,200',
-        qStatus:'sent',     qStatusLabel:'Sent — no opens', last:'4 days ago' },
+      { id:1, ref:'Q-3091', customer:'Bondi Pavilion',  amount: 14850,
+        qStatus:'draft',    qStatusLabel:'Draft',
+        sent:null, expires:at(60*24*30) },
+      { id:2, ref:'Q-3092', customer:'Coogee Holdings', amount:  2340,
+        qStatus:'sent',     qStatusLabel:'Sent',
+        sent:at(-60*22), expires:at(60*24*30) },
+      { id:3, ref:'Q-3093', customer:'Manly Reno Co',   amount: 38720,
+        qStatus:'viewed',   qStatusLabel:'Viewed × 3',
+        sent:at(-60*36), expires:at(60*24*28) },
+      { id:4, ref:'Q-3094', customer:'Vega Studio',     amount:  1090,
+        qStatus:'viewed',   qStatusLabel:'Viewed',
+        sent:at(-60*48), expires:at(60*24*28) },
+      { id:5, ref:'Q-3095', customer:'Surry Hills Cafe',amount:  6210,
+        qStatus:'accepted', qStatusLabel:'Accepted',
+        sent:at(-60*72), expires:at(60*24*28) },
+      { id:6, ref:'Q-3096', customer:'Pyrmont Pubs',    amount: 22400,
+        qStatus:'accepted', qStatusLabel:'Accepted',
+        sent:at(-60*100), expires:at(60*24*25) },
+      { id:7, ref:'Q-3097', customer:'Newtown Bakery',  amount:   890,
+        qStatus:'declined', qStatusLabel:'Declined',
+        sent:at(-60*120), expires:at(60*24*23) },
+      { id:8, ref:'Q-3098', customer:'Glebe Builders',  amount: 12100,
+        qStatus:'expired',  qStatusLabel:'Expired',
+        sent:at(-60*24*40), expires:at(-60*24*10) },
+      { id:9, ref:'Q-3099', customer:'Mosman Doctors',  amount:  4560,
+        qStatus:'revised',  qStatusLabel:'Revised v2',
+        sent:at(-60*5), expires:at(60*24*30) },
+      { id:10,ref:'Q-3100', customer:'Annandale Yoga',  amount:  3200,
+        qStatus:'sent',     qStatusLabel:'Sent — no opens',
+        sent:at(-60*96), expires:at(60*24*26) },
     ];
+
     const grid = document.querySelector('.panel');
     grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'expires') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (!row || TERMINAL.has(row.qStatus)) return;
+      const exp = row.expires ? new Date(row.expires) : null;
+      const isPast = exp && !isNaN(exp) && exp.getTime() < Date.now();
+      if (isPast && row.qStatus !== 'expired') {
+        grid.gridApi.applyTransaction({ update: [{
+          ...row, __prevStatus: row.qStatus, __prevLabel: row.qStatusLabel,
+          qStatus: 'expired', qStatusLabel: 'Expired',
+        }] });
+      } else if (!isPast && row.qStatus === 'expired' && row.__prevStatus) {
+        grid.gridApi.applyTransaction({ update: [{
+          ...row, qStatus: row.__prevStatus, qStatusLabel: row.__prevLabel,
+          __prevStatus: null, __prevLabel: null,
+        }] });
+      }
+    });
   </script>
 </body>
 </html>
