@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>240 — NMI (National Meter Identifier) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* NMI — National Meter Identifier. 10 or 11 chars; first 2 are the
+       jurisdiction prefix (e.g. NSW 41xx, VIC 61xx, QLD 31xx, SA 20xx,
+       WA 80xx, TAS 80xx, NT 70xx, ACT 71xx). Sparkies read this every day. */
+    .nmi {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .nmi .st {
+      padding: 2px 8px; color: #fff;
+      letter-spacing: .04em;
+    }
+    .nmi .num {
+      padding: 2px 8px;
+      background: #f8fafc; color: #0f172a;
+    }
+    .nmi[data-st="NSW"] .st { background:#1d4ed8; }
+    .nmi[data-st="VIC"] .st { background:#0f766e; }
+    .nmi[data-st="QLD"] .st { background:#7c2d12; }
+    .nmi[data-st="SA"]  .st { background:#dc2626; }
+    .nmi[data-st="WA"]  .st { background:#ca8a04; }
+    .nmi[data-st="TAS"] .st { background:#16a34a; }
+    .nmi[data-st="NT"]  .st { background:#9a3412; }
+    .nmi[data-st="ACT"] .st { background:#6b21a8; }
+    .nmi[data-st="??"]  .st { background:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>240 — NMI (National Meter Identifier)</h1>
+  <p class="lede">
+    The 10- or 11-character electricity meter ID. Sparkies, retailers and
+    DNSPs all key off this number. The first two digits identify the
+    jurisdiction (NSW <code>41xx</code>, VIC <code>61xx</code>,
+    QLD <code>31xx</code>…) so we derive a state badge from the prefix.
+    Last char (if 11 chars) is the AEMO check digit — not validated here.
+  </p>
+
+  <template id="nmi-renderer">
+    <span class="nmi" data-bind-attr="data-st">
+      <span class="st"  data-bind="state"></span>
+      <span class="num" data-bind="nmi"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="address"
+              data-header-cell-width-value="280">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="nmi"
+              data-header-cell-cell-renderer-value="nmi-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="260">NMI</th>
+          <th data-controller="header-cell" data-header-cell-field-value="retailer"
+              data-header-cell-width-value="160">Retailer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="meterType"
+              data-header-cell-width-value="160">Meter type</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The state prefix mapping is intentionally permissive — a misread or
+    mistyped NMI falls into the neutral <em>??</em> chip rather than
+    silently mis-classifying a NSW site as ACT.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // First two digits → jurisdiction (rough AEMO ranges).
+    const stateOf = (nmi) => {
+      const p = String(nmi || '').replace(/\s+/g,'').slice(0, 2);
+      if (/^4[0-9]/.test(p)) return 'NSW';
+      if (/^6[0-9]/.test(p)) return 'VIC';
+      if (/^3[0-9]/.test(p)) return 'QLD';
+      if (/^2[0-9]/.test(p)) return 'SA';
+      if (/^80/.test(p))     return 'WA';
+      if (/^85/.test(p))     return 'TAS';
+      if (/^7[0]/.test(p))   return 'NT';
+      if (/^71/.test(p))     return 'ACT';
+      return '??';
+    };
+    const derive = (row) => ({ ...row, state: stateOf(row.nmi) });
+    const SEED = [
+      { id:1, address:'12 Bay St, Bondi NSW',         nmi:'4103218765', retailer:'AGL',         meterType:'Smart (Type 4)' },
+      { id:2, address:'45 St Kilda Rd, Melbourne VIC',nmi:'61020401112',retailer:'Origin',      meterType:'Smart' },
+      { id:3, address:'9 Roma St, Brisbane QLD',      nmi:'3112340099', retailer:'Energex',     meterType:'Accumulation' },
+      { id:4, address:'14 Pirie St, Adelaide SA',     nmi:'2002550441', retailer:'AGL',         meterType:'Smart' },
+      { id:5, address:'87 Hay St, Perth WA',          nmi:'8001034012', retailer:'Synergy',     meterType:'Type 5 interval' },
+      { id:6, address:'5 Salamanca, Hobart TAS',      nmi:'8520014499', retailer:'Aurora',      meterType:'Smart' },
+      { id:7, address:'2 Mitchell St, Darwin NT',     nmi:'7002112304', retailer:'Jacana',      meterType:'Accumulation' },
+      { id:8, address:'10 London Cct, Canberra ACT',  nmi:'7100447710', retailer:'ActewAGL',    meterType:'Smart' },
+      { id:9, address:'unknown — survey row',         nmi:'????????',   retailer:'—',           meterType:'—' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'nmi') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
