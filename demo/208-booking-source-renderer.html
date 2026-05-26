@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>208 — Booking source | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Booking-source chip — where the lead came from. The colour & glyph
+       are stable per provider so the marketing dashboard reads the same
+       palette across the app. */
+    .src {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 9px 2px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      background: #f8fafc; color: #1f2937;
+    }
+    .src .glyph {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 18px; height: 18px; border-radius: 50%;
+      font-size: 11px; font-weight: 700; color: #fff;
+      flex: none;
+    }
+    .src[data-src="hipages"]      .glyph { background:#ef4444; }
+    .src[data-src="airtasker"]    .glyph { background:#10b981; }
+    .src[data-src="oneflare"]     .glyph { background:#3b82f6; }
+    .src[data-src="serviceseek"]  .glyph { background:#8b5cf6; }
+    .src[data-src="google"]       .glyph { background:#0ea5e9; }
+    .src[data-src="facebook"]     .glyph { background:#1d4ed8; }
+    .src[data-src="referral"]     .glyph { background:#f59e0b; }
+    .src[data-src="repeat"]       .glyph { background:#16a34a; }
+    .src[data-src="website"]      .glyph { background:#475569; }
+    .src[data-src="phone"]        .glyph { background:#0f172a; }
+    .src[data-src="walk-in"]      .glyph { background:#92400e; }
+    .src[data-src="repeat"]   { background:#dcfce7; color:#166534; }
+    .src[data-src="referral"] { background:#fef3c7; color:#92400e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>208 — Booking source chip</h1>
+  <p class="lede">
+    Where the lead came from. Marketplace traffic (<em>Hipages</em>,
+    <em>Airtasker</em>, <em>Oneflare</em>, <em>ServiceSeeking</em>) is
+    expensive and quality-variable; <em>Repeat</em> and <em>Referral</em>
+    are the cheap, high-margin gold. Surfacing source on every row makes
+    the cost-per-job conversation honest.
+  </p>
+
+  <template id="src-renderer">
+    <span class="src" data-bind-attr="data-src">
+      <span class="glyph" data-bind="sourceInitial"></span>
+      <span data-bind="sourceLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="source"
+              data-header-cell-cell-renderer-value="src-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="180">Source</th>
+          <th data-controller="header-cell" data-header-cell-field-value="leadCost"
+              data-header-cell-width-value="110">Lead cost</th>
+          <th data-controller="header-cell" data-header-cell-field-value="value"
+              data-header-cell-width-value="130">Job value</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The glyph initial is data-driven (<code>sourceInitial</code>) so adding
+    a new marketplace doesn't touch CSS — just the data layer. Use the
+    source field as a group-by to roll up cost-per-job by channel.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      hipages:    { label:'Hipages',         initial:'h' },
+      airtasker:  { label:'Airtasker',       initial:'A' },
+      oneflare:   { label:'Oneflare',        initial:'1' },
+      serviceseek:{ label:'ServiceSeeking',  initial:'S' },
+      google:     { label:'Google Ads',      initial:'G' },
+      facebook:   { label:'Facebook',        initial:'f' },
+      referral:   { label:'Referral',        initial:'★' },
+      repeat:     { label:'Repeat customer', initial:'♻' },
+      website:    { label:'Website form',    initial:'W' },
+      phone:      { label:'Phone call',      initial:'☏' },
+      'walk-in':  { label:'Walk-in',         initial:'⤵' },
+    };
+    const mk = (k) => ({ source:k, sourceLabel:META[k].label, sourceInitial:META[k].initial });
+    const ROWS = [
+      { id:1, ref:'J-6101', customer:'Bondi Pavilion',   leadCost:'$ 0',   value:'$  1,890', ...mk('repeat') },
+      { id:2, ref:'J-6102', customer:'Coogee Holdings',  leadCost:'$ 38',  value:'$    340', ...mk('hipages') },
+      { id:3, ref:'J-6103', customer:'Manly Reno Co',    leadCost:'$ 22',  value:'$    560', ...mk('airtasker') },
+      { id:4, ref:'J-6104', customer:'Vega Studio',      leadCost:'$ 45',  value:'$  3,200', ...mk('oneflare') },
+      { id:5, ref:'J-6105', customer:'Surry Hills Cafe', leadCost:'$  6',  value:'$  6,210', ...mk('google') },
+      { id:6, ref:'J-6106', customer:'Pyrmont Pubs',     leadCost:'$ 0',   value:'$ 22,400', ...mk('referral') },
+      { id:7, ref:'J-6107', customer:'Newtown Bakery',   leadCost:'$ 33',  value:'$    890', ...mk('serviceseek') },
+      { id:8, ref:'J-6108', customer:'Glebe Builders',   leadCost:'$ 0',   value:'$ 12,100', ...mk('repeat') },
+      { id:9, ref:'J-6109', customer:'Mosman Doctors',   leadCost:'$ 0',   value:'$  4,560', ...mk('website') },
+      { id:10,ref:'J-6110', customer:'Annandale Yoga',   leadCost:'$ 0',   value:'$  3,200', ...mk('phone') },
+      { id:11,ref:'J-6111', customer:'Surry Hills HQ',   leadCost:'$ 18',  value:'$    980', ...mk('facebook') },
+      { id:12,ref:'J-6112', customer:'Drop-in client',   leadCost:'$ 0',   value:'$    420', ...mk('walk-in') },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'source') return;
+      const k = String(e.detail.newValue || '').trim();
+      if (!META[k]) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      grid.gridApi.applyTransaction({ update: [{ ...row, ...mk(k) }] });
+    });
+  </script>
+</body>
+</html>
