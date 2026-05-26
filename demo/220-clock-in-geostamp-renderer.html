@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>220 — Clock-in geo-stamp | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Clock-in geo-stamp — the timestamp + lat/lng of when a tech pressed
+       'Start job'. Distance from the booked site is the proof. The pin
+       button opens Google Maps so a supervisor can verify. */
+    .geo {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px;
+    }
+    .geo .ts {
+      display:inline-flex; align-items:center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px;
+      background: #f1f5f9; color: #1f2937;
+      font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    .geo .delta {
+      padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .geo[data-delta="ok"]   .delta { background:#dcfce7; color:#166534; }
+    .geo[data-delta="far"]  .delta { background:#fef3c7; color:#92400e; }
+    .geo[data-delta="off"]  .delta { background:#fee2e2; color:#991b1b; }
+    .geo[data-delta="none"] .delta { background:#f1f5f9; color:#475569; }
+    .geo a.pin {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #0ea5e9; color: #fff; text-decoration: none;
+      font-size: 13px;
+    }
+    .geo a.pin:hover { background: #0284c7; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>220 — Clock-in geo-stamp</h1>
+  <p class="lede">
+    When a technician taps <em>Start job</em>, the app captures the time
+    plus the device's GPS. The cell prints the timestamp and the distance
+    to the booked site — green if within 100 m, amber up to 500 m, red
+    beyond. The pin button opens Google Maps so a supervisor can verify
+    against street view.
+  </p>
+
+  <template id="geo-renderer">
+    <span class="geo" data-bind-attr="data-delta">
+      <span class="ts" data-bind="clockLabel"></span>
+      <span class="delta" data-bind="distLabel"></span>
+      <a class="pin" target="_blank" rel="noreferrer" data-bind-attr="href">📍</a>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Technician</th>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="220">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="href"
+              data-header-cell-cell-renderer-value="geo-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="280">Clock-in</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The <code>href</code> is a fully-formed
+    <code>maps.google.com/?q=lat,lng</code> URL stored alongside the
+    coordinates — keeps the renderer dumb and the deep-link works the
+    same on iOS / Android / desktop.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', hour12:false });
+    const fmtDist = (m) => m >= 1000 ? `${(m/1000).toFixed(1)} km` : `${Math.round(m)} m`;
+    const band = (m) => m == null ? 'none' : m <= 100 ? 'ok' : m <= 500 ? 'far' : 'off';
+    const mk = (clockIso, dist, lat, lng) => ({
+      clockLabel: fmtTime(clockIso),
+      distLabel: dist == null ? 'no fix' : fmtDist(dist),
+      __delta: band(dist),
+      href: `https://maps.google.com/?q=${lat},${lng}`,
+    });
+    const ROWS = [
+      { id:1, ref:'J-8101', tech:'Astrid Hale',  site:'12 Bay St, Bondi',         ...mk('2026-05-25T07:02:00', 42,    -33.892, 151.275) },
+      { id:2, ref:'J-8102', tech:'Marcus Chen',  site:'87 Marine Pde, Coogee',    ...mk('2026-05-25T07:14:00', 18,    -33.920, 151.255) },
+      { id:3, ref:'J-8103', tech:'Priya Patel',  site:'201 Pittwater Rd, Manly',  ...mk('2026-05-25T07:31:00', 410,   -33.798, 151.288) },
+      { id:4, ref:'J-8104', tech:'Jamal Owens',  site:'5 Crown St, Surry Hills',  ...mk('2026-05-25T08:02:00', 1750,  -33.886, 151.213) },
+      { id:5, ref:'J-8105', tech:'Lena Brooks',  site:'90 Pyrmont Bridge Rd',     ...mk('2026-05-25T06:48:00', 28,    -33.873, 151.193) },
+      { id:6, ref:'J-8106', tech:'Tomás Vega',   site:'14 King St, Newtown',      ...mk('2026-05-25T07:21:00', 96,    -33.895, 151.180) },
+      { id:7, ref:'J-8107', tech:'Aroha Walker', site:'33 Glebe Pt Rd, Glebe',    ...mk('2026-05-25T07:09:00', 88,    -33.880, 151.187) },
+      { id:8, ref:'J-8108', tech:'Sofia Ricci',  site:'5 Spit Rd, Mosman',        ...mk('2026-05-25T08:12:00', null,  -33.831, 151.247) },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Mirror the per-row band onto the chip's data-delta attribute.
+    const paintBand = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.geo').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (row) node.setAttribute('data-delta', row.__delta || 'ok');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBand));
+    new MutationObserver(paintBand).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
