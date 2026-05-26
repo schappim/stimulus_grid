@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>256 — Group-by-date sticky headers | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 560px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Group-by-date sticky day headers. The grid emits group rows
+       via the built-in groupBy; we restyle them to look like a
+       calendar-style "TODAY / TOMORROW / THIS WEEK" header plus a
+       running-totals strip. */
+    .sg-grid tr.sg-group-row td {
+      position: sticky; top: 0; z-index: 2;
+      background: #0f172a; color: #fff;
+      padding: 8px 16px;
+      font-size: 13px; font-weight: 700; letter-spacing: .04em;
+    }
+    .sg-grid tr.sg-group-row[data-day="today"] td    { background:#dc2626; }
+    .sg-grid tr.sg-group-row[data-day="tomorrow"] td { background:#ea580c; }
+    .sg-grid tr.sg-group-row[data-day="thisweek"] td { background:#0284c7; }
+    .sg-grid tr.sg-group-row[data-day="later"] td    { background:#475569; }
+    .sg-grid tr.sg-group-row td .totals {
+      margin-left: auto;
+      display: inline-flex; gap: 12px; font-weight: 600; font-size: 12px;
+      color: rgba(255,255,255,.85);
+    }
+    .sg-grid tr.sg-group-row td .row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sg-grid tr.sg-group-row td .row .label { font-size: 13px; }
+    .sg-grid tr.sg-group-row td .row .totals span b { color: #fff; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>256 — Group-by-date sticky day headers</h1>
+  <p class="lede">
+    Built on the grid's <code>groupBy</code>, the day header sticks to the
+    top of the viewport as you scroll and carries a running-totals strip
+    — <em>jobs</em>, <em>hours</em>, <em>$ value</em> — per day. The
+    today / tomorrow / this-week / later rotation maps a tradie's mental
+    model better than a calendar grid.
+  </p>
+
+  <div class="panel" data-controller="grid"
+       data-grid-group-by-value='["dayBucket"]'>
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="140">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="180">Tech</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hours"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="80">Hrs</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amount"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">$ ex</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Sticky group rows are achieved via <code>position: sticky; top: 0</code>
+    on the group <code>td</code>. Per-day totals are rendered into the
+    group label after the grid emits <code>grid:rowDataChanged</code>.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const today = new Date(new Date().toDateString());
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const endOfWeek = new Date(today); endOfWeek.setDate(endOfWeek.getDate() + (7 - today.getDay()));
+    const bucket = (iso) => {
+      const d = new Date(iso); d.setHours(0,0,0,0);
+      if (+d === +today)    return 'TODAY';
+      if (+d === +tomorrow) return 'TOMORROW';
+      if (d > today && d <= endOfWeek) return 'THIS WEEK';
+      return 'LATER';
+    };
+    const ord = { TODAY:0, TOMORROW:1, 'THIS WEEK':2, LATER:3 };
+    const dayClass = { TODAY:'today', TOMORROW:'tomorrow', 'THIS WEEK':'thisweek', LATER:'later' };
+    const at = (offset, h, m) => {
+      const d = new Date(today); d.setDate(d.getDate() + offset);
+      d.setHours(h, m, 0, 0); return d.toISOString();
+    };
+    const fmtTime = (iso) => new Date(iso).toLocaleString('en-AU', { weekday:'short', hour:'2-digit', minute:'2-digit', hour12: false });
+    const SEED = [
+      { id:1, ref:'J-9101', when:at(0, 7,30), customer:'Bondi Pavilion',  tech:'Astrid Hale',   hours:2.5, amount: 480 },
+      { id:2, ref:'J-9102', when:at(0,11, 0), customer:'Coogee Holdings', tech:'Marcus Chen',   hours:4.0, amount: 760 },
+      { id:3, ref:'J-9103', when:at(0,14,30), customer:'Manly Reno Co',   tech:'Priya Patel',   hours:3.0, amount: 540 },
+      { id:4, ref:'J-9104', when:at(1, 7, 0), customer:'Vega Studio',     tech:'Astrid Hale',   hours:6.0, amount:1380 },
+      { id:5, ref:'J-9105', when:at(1,13,30), customer:'Surry Hills Cafe',tech:'Jamal Owens',   hours:1.5, amount: 320 },
+      { id:6, ref:'J-9106', when:at(2, 8, 0), customer:'Pyrmont Pubs',    tech:'Lena Brooks',   hours:5.0, amount:1150 },
+      { id:7, ref:'J-9107', when:at(2,13, 0), customer:'Newtown Bakery',  tech:'Tomás Vega',    hours:2.0, amount: 420 },
+      { id:8, ref:'J-9108', when:at(4, 7,30), customer:'Glebe Builders',  tech:'Astrid Hale',   hours:8.0, amount:2200 },
+      { id:9, ref:'J-9109', when:at(5,10, 0), customer:'Mosman Doctors',  tech:'Aroha Walker',  hours:1.0, amount: 240 },
+      { id:10,ref:'J-9110', when:at(9, 9, 0), customer:'Annandale Yoga',  tech:'Sofia Ricci',   hours:2.5, amount: 600 },
+      { id:11,ref:'J-9111', when:at(14,8, 0), customer:'Future site A',   tech:'Tomás Vega',    hours:4.0, amount: 980 },
+    ].map(r => ({ ...r, dayBucket: bucket(r.when), whenLabel: fmtTime(r.when) }));
+    // Sort so groups appear TODAY → TOMORROW → THIS WEEK → LATER.
+    SEED.sort((a, b) => ord[a.dayBucket] - ord[b.dayBucket] || new Date(a.when) - new Date(b.when));
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+
+    // After each render, decorate group rows with totals + day class.
+    const paintGroups = () => requestAnimationFrame(() => {
+      const totals = new Map();
+      grid.gridApi.getRowData().forEach(r => {
+        const t = totals.get(r.dayBucket) ?? { jobs:0, hours:0, amount:0 };
+        t.jobs++; t.hours += r.hours; t.amount += r.amount;
+        totals.set(r.dayBucket, t);
+      });
+      grid.querySelectorAll('tr.sg-group-row').forEach((tr) => {
+        const td = tr.querySelector('td');
+        if (!td) return;
+        const text = td.textContent.trim();
+        // Extract the bucket name (groupBy renders 'dayBucket: TODAY' style).
+        const m = text.match(/(TODAY|TOMORROW|THIS WEEK|LATER)/);
+        if (!m) return;
+        const key = m[1];
+        const t = totals.get(key) ?? { jobs:0, hours:0, amount:0 };
+        tr.setAttribute('data-day', dayClass[key]);
+        td.innerHTML = `<span class="row"><span class="label">${key}</span>
+          <span class="totals">
+            <span><b>${t.jobs}</b> jobs</span>
+            <span><b>${t.hours.toFixed(1)}</b> h</span>
+            <span>$<b>${t.amount.toLocaleString()}</b></span>
+          </span></span>`;
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintGroups));
+    new MutationObserver(paintGroups).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
