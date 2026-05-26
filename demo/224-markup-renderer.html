@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>224 — Markup % | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Markup % — cost vs charge with margin tint. Markup % is calculated
+       from charge / cost so it survives discount-then-markup logic. */
+    .mu {
+      display: inline-flex; align-items: baseline; gap: 4px;
+      padding: 1px 9px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .mu[data-band="loss"] { background:#fee2e2; color:#991b1b; }
+    .mu[data-band="thin"] { background:#fef3c7; color:#92400e; }
+    .mu[data-band="ok"]   { background:#dcfce7; color:#166534; }
+    .mu[data-band="fat"]  { background:#e0e7ff; color:#3730a3; }
+    .mu .note { font-weight: 500; font-size: 11px; opacity: .8; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>224 — Markup %</h1>
+  <p class="lede">
+    Cost in, charge out, markup percent computed and tinted by margin band.
+    Loss (&lt; 0%) is red, thin (0–15%) is amber, healthy (15–60%) green,
+    fat (&gt; 60%) blue — for the buyer to spot pricing anomalies fast.
+    Edit either price column to see the bar re-derive.
+  </p>
+
+  <template id="mu-renderer">
+    <span class="mu" data-bind-attr="data-band">
+      <span data-bind="muLabel"></span>
+      <span class="note" data-bind="muNote"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="140">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="260">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cost"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Cost ex</th>
+          <th data-controller="header-cell" data-header-cell-field-value="charge"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Charge ex</th>
+          <th data-controller="header-cell" data-header-cell-field-value="muBand"
+              data-header-cell-cell-renderer-value="mu-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="200">Markup</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Markup % uses <code>(charge - cost) / cost × 100</code>. If you prefer
+    margin % (<code>(charge - cost) / charge × 100</code>), keep the
+    underlying numbers identical and just rename the cell.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const cost = Number(row.cost || 0);
+      const charge = Number(row.charge || 0);
+      if (cost === 0) return { ...row, muBand:'fat', muLabel:'—', muNote:'no cost' };
+      const pct = ((charge - cost) / cost) * 100;
+      let band = 'ok';
+      if (pct < 0)       band = 'loss';
+      else if (pct < 15) band = 'thin';
+      else if (pct > 60) band = 'fat';
+      const dollars = `$${(charge - cost).toFixed(2)}`;
+      return { ...row, muBand:band, muLabel:`${pct.toFixed(0)}%`, muNote:`+${dollars}` };
+    };
+    const SEED = [
+      { id:1, sku:'PVC-DWV-100-90', part:'100mm DWV 90° bend',          cost:  4.20, charge:  9.90 },
+      { id:2, sku:'GPO-DBL-WHT',    part:'Clipsal C2025 double GPO',    cost:  6.85, charge: 14.95 },
+      { id:3, sku:'RCBO-SP-16A',    part:'NHP RCBO 1P+N 16A 30mA',      cost: 32.10, charge: 38.00 },
+      { id:4, sku:'COP-15-X-30',    part:'15mm copper x 3m straight',   cost: 24.40, charge: 41.00 },
+      { id:5, sku:'TPS-2.5MM-100',  part:'TPS 2.5mm² flat 100m drum',   cost:188.00, charge:295.00 },
+      { id:6, sku:'GAS-RG10',       part:'R-410A 10kg cylinder',        cost:560.00, charge:520.00 },
+      { id:7, sku:'SILVERSEAL-280', part:'Sika MS Polymer 280ml white', cost: 12.20, charge: 13.50 },
+      { id:8, sku:'BRACKETS-Z-50',  part:'Z-bracket 50mm galv',         cost:  0.90, charge:  4.20 },
+      { id:9, sku:'CALLOUT-MIN',    part:'Minimum callout fee',         cost:  0.00, charge:165.00 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['cost','charge'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
