@@ -5,25 +5,30 @@
 [![stimulus_grid_rails gem](https://img.shields.io/gem/v/stimulus_grid_rails?label=stimulus_grid_rails)](https://rubygems.org/gems/stimulus_grid_rails)
 
 An **HTML-first data grid for [Stimulus.js](https://stimulus.hotwired.dev/) (Hotwire)**.
-Drop `data-controller="grid"` on a `<table>`, describe columns with `data-*`
-attributes, and you get sort, filter, global search, single/multi selection,
-pagination, inline editing, custom cell renderers **and editors**, column
-resize/reorder/pin/hide (double-click a resize handle to autosize), virtual scrolling for large datasets, row grouping with per-group aggregation, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven **side panel** for groups/pivots/values, **multi-row column header groups** (auto-derived in pivot mode), a sticky **pinned bottom row** for grand totals, a **right-click column menu** for one-click pin/hide/group/pivot/aggregate, **persisted column state** that round-trips through `localStorage`, **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** rendered from a self-referential `parent_id` (org charts, file trees, BOMs), **separator + merged-cell rows** for quote / invoice / report layouts, and a **library of ~200 built-in cell renderers** — from the core (email/URL/phone, currency, percent, progress bars, star ratings, country flags, ABNs, avatars, status pills, attachments, sparklines, heatmaps, masks, multi-line, address-au) through editor-renderers (select, multiselect, combobox, date/time/date-range/color pickers, slider, textarea) and row-action surfaces (action-button, menu, split-button, row-actions, drag-handle, row-number, expand-toggle) all the way to industry domains (FSM job status, SLA/DLP countdowns, AU compliance certificates — white card / blue card / WWCC / HRWL / COES / QBCC / VBA / refrigerant / asbestos / pool-safety / test-and-tag / insurance currency, BSB / ACN / TFN / Medicare, NMI / DBYD / BAL / NABERS / NCC class, insurance claims & loss adjusters, locksmith keyways / bittings / MKS / safe ratings / transponder chips / MLAA / SCEC, fleet rego & CTP & service-due, and many more) — all pre-registered and reference-able by name, plus a public
-`gridApi` — no React, no build-time config object, no third-party grid framework.
-With the optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion,
-edits also **stream live to every connected client over Turbo Streams** (Action
-Cable) — optimistic updates, server-side validation, and undo/redo included.
 
-The HTML is the source of truth: a `stimulus_grid` table is a real `<table>` that
-renders without JS and progressively enhances.
+Your `<table>` is the source of truth. It renders without JavaScript, then progressively enhances into a full spreadsheet-style grid. No React, no build-time config object, no third-party grid framework — just `data-controller="grid"` on a `<table>` and `data-*` attributes on the `<th>`s.
 
 ![stimulus_grid — sortable, filterable data grid with pinned columns, custom medal renderers, multi-row selection, and pagination](docs/images/grid-overview.png)
 
-> Prefer the Rails/Hotwire server-driven version — live multi-user editing over
-> Turbo Streams, server-side search/filter, optimistic updates, and undo/redo? It
-> ships as the **`stimulus_grid_rails`** gem; see the **Rails & Hotwire** section
-> below, [`gem/stimulus_grid_rails`](gem/stimulus_grid_rails), and
-> [`RAILS.md`](RAILS.md). LLM usage docs live in [`skills/`](skills).
+## What you get
+
+- **Spreadsheet basics** — sort, filter, global search, single/multi selection, pagination, inline editing, and custom cell renderers **and editors**.
+
+- **Column control** — resize (double-click a handle to autosize), reorder, pin, hide, a right-click column menu for one-click pin/hide/group/pivot/aggregate, and **column state persisted to `localStorage`**.
+
+- **Scale & analysis** — virtual scrolling for large datasets, row grouping with per-group aggregates, a spreadsheet-style **status bar** with live range aggregates, **pivot mode** with a drag-driven side panel (groups / pivots / values), multi-row column header groups, and a sticky pinned bottom row for grand totals.
+
+- **Hierarchical & document layouts** — **master/detail rows** that expand to reveal a nested grid (orders → line items), **tree data** from a self-referential `parent_id` (org charts, file trees, BOMs), and **separator + merged-cell rows** for quote / invoice / report layouts.
+
+- **~200 built-in cell renderers** — core (email, URL, phone, currency, percent, progress bars, star ratings, status pills, sparklines, country flags…), editor-renderers (select, multiselect, combobox, date/time/date-range/color pickers, slider, textarea), row-action surfaces, and a deep bench of industry-domain renderers (FSM, AU compliance certificates, insurance, locksmith, fleet, and more). All pre-registered and reference-able by name — see [Built-in cell renderers](#built-in-cell-renderers).
+
+- **A public `gridApi`** for programmatic control, plus events you can hook into from any Stimulus controller.
+
+## With Rails
+
+Prefer a server-driven version with live multi-user editing? The optional [`stimulus_grid_rails`](gem/stimulus_grid_rails) companion streams edits to every connected client over Turbo Streams (Action Cable), with optimistic updates, server-side validation, and undo/redo.
+
+See the **Rails & Hotwire** section below, or jump straight to [`RAILS.md`](RAILS.md). LLM-friendly usage docs live in [`skills/`](skills).
 
 ---
 
