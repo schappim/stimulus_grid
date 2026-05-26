@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>206 — Re-attendance counter | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Re-attendance pill — counts how many physical visits a job has needed.
+       Visit 1 of N: business-as-usual. Visit 2: amber (worth asking why).
+       Visit 3+: red flag — root cause analysis required, margin probably gone. */
+    .visits {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .visits[data-flag="ok"]    { background:#dcfce7; color:#166534; }
+    .visits[data-flag="watch"] { background:#fef3c7; color:#92400e; }
+    .visits[data-flag="bad"]   { background:#fee2e2; color:#991b1b; }
+    .visits .pip {
+      width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .35;
+    }
+    .visits .pip.on { opacity: 1; }
+    .visits .flag {
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+      padding: 1px 5px; border-radius: 4px;
+      background: rgba(0,0,0,.07); margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>206 — Re-attendance counter</h1>
+  <p class="lede">
+    Counts how many physical visits a single job has burned. <em>Visit 1 of 1</em>
+    is normal; <em>2 of 2</em> is worth a sit-down; <em>3+</em> auto-flags the row
+    so a supervisor reviews root cause — wrong diagnosis, missed parts,
+    customer not on site? Each repeat visit destroys the margin.
+  </p>
+
+  <template id="visits-renderer">
+    <span class="visits" data-bind-attr="data-flag">
+      <span class="pip on"></span>
+      <span class="pip" data-bind-class-on="v2"></span>
+      <span class="pip" data-bind-class-on="v3"></span>
+      <span data-bind="visitsLabel"></span>
+      <span class="flag" data-bind="visitsFlag" data-show-if-truthy="visitsFlag"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="180">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="visits"
+              data-header-cell-cell-renderer-value="visits-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">Visits</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reason"
+              data-header-cell-width-value="260">Last-visit reason</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The data layer owns the flag — pre-compute <code>visitsFlag</code> to
+    <em>'REVIEW'</em> once a row passes the threshold so dispatchers can
+    sort by it. Tracking re-attendance per technician feeds the quality
+    scorecard.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const mk = (n, of, reason) => {
+      const flag = n >= 3 ? 'bad' : n >= 2 ? 'watch' : 'ok';
+      return {
+        visits: n,
+        visitsLabel: `Visit ${n} of ${of}`,
+        visitsFlag: flag === 'bad' ? 'REVIEW' : '',
+        flag, reason,
+      };
+    };
+    const ROWS = [
+      { id:1,  ref:'J-4001', customer:'Bondi Pavilion',   ...mk(1, 1, '—') },
+      { id:2,  ref:'J-4002', customer:'Coogee Holdings',  ...mk(1, 2, 'First inspection') },
+      { id:3,  ref:'J-4003', customer:'Manly Reno Co',    ...mk(2, 2, 'Returned with correct gas fitting') },
+      { id:4,  ref:'J-4004', customer:'Vega Studio',      ...mk(2, 3, 'Tile re-grout — failed wet-test') },
+      { id:5,  ref:'J-4005', customer:'Surry Hills Cafe', ...mk(3, 3, 'Pump replaced under warranty') },
+      { id:6,  ref:'J-4006', customer:'Pyrmont Pubs',     ...mk(4, 4, 'Council inspector wanted re-flash') },
+      { id:7,  ref:'J-4007', customer:'Glebe Builders',   ...mk(1, 1, '—') },
+      { id:8,  ref:'J-4008', customer:'Newtown Bakery',   ...mk(2, 2, 'Customer wasn’t on-site first call') },
+      { id:9,  ref:'J-4009', customer:'Mosman Doctors',   ...mk(5, 5, 'Recurring leak — drainage re-route') },
+      { id:10, ref:'J-4010', customer:'Annandale Yoga',   ...mk(1, 1, '—') },
+    ];
+
+    // Decorate pips for each row's visit count.
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:rowDataChanged', () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.visits').forEach((node) => {
+        const tr   = node.closest('tr');
+        const row  = ROWS.find(r => String(r.id) === tr.dataset.rowId);
+        const pips = node.querySelectorAll('.pip');
+        pips.forEach((p, i) => p.classList.toggle('on', i < (row?.visits ?? 0)));
+        const flag = node.querySelector('.flag');
+        if (flag && !flag.textContent.trim()) flag.remove();
+      });
+    }));
+  </script>
+</body>
+</html>
