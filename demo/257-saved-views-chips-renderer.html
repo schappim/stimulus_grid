@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>257 — Saved-view chips | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 460px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .views {
+      display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 0;
+    }
+    .view {
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid #e2e8f0; background: #fff; cursor: pointer;
+      font: inherit; font-size: 13px; font-weight: 600; color: #1f2937;
+    }
+    .view:hover { background: #f1f5f9; }
+    .view[aria-pressed="true"] {
+      background: #0f172a; color: #fff; border-color: #0f172a;
+    }
+    .view .ct {
+      display:inline-block; margin-left: 6px; padding: 0 6px;
+      background: rgba(0,0,0,.06); border-radius: 999px;
+      font-size: 11px; font-variant-numeric: tabular-nums;
+    }
+    .view[aria-pressed="true"] .ct { background: rgba(255,255,255,.18); color: #fff; }
+    .save {
+      margin-left: auto; padding: 6px 12px; border-radius: 999px;
+      background: #0ea5e9; color: #fff; border: 0; cursor: pointer;
+      font: inherit; font-size: 13px; font-weight: 600;
+    }
+    .save:hover { background: #0284c7; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>257 — Saved-view chips (localStorage)</h1>
+  <p class="lede">
+    Preset filter views as chips. Selecting a chip applies the saved
+    quick-filter to the grid. The active selection persists in
+    <code>localStorage</code> so refreshing this page (or coming back
+    tomorrow) restores the same view.
+  </p>
+
+  <div class="views" id="views" role="tablist"></div>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="160">Tech</th>
+          <th data-controller="header-cell" data-header-cell-field-value="day"
+              data-header-cell-width-value="120">Day</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-width-value="160">Status</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tags"
+              data-header-cell-width-value="220">Tags</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Each preset writes its quick-filter through
+    <code>gridApi.setQuickFilter()</code>; saved-view selection is keyed
+    in localStorage under <code>sg:saved-view</code>. Custom user views
+    add to the same dict and survive reloads.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const ROWS = [
+      { id:1, ref:'J-1001', customer:'Bondi Pavilion',  tech:'Astrid Hale',   day:'Today',    status:'Scheduled', tags:'recurring' },
+      { id:2, ref:'J-1002', customer:'Coogee Holdings', tech:'Marcus Chen',   day:'Today',    status:'On site',   tags:'insurance urgent' },
+      { id:3, ref:'J-1003', customer:'Manly Reno Co',   tech:'Priya Patel',   day:'Tomorrow', status:'Scheduled', tags:'warranty' },
+      { id:4, ref:'J-1004', customer:'Surry Hills Cafe',tech:'me',            day:'Today',    status:'Overdue',   tags:'urgent' },
+      { id:5, ref:'J-1005', customer:'Vega Studio',     tech:'me',            day:'This week',status:'Scheduled', tags:'recurring' },
+      { id:6, ref:'J-1006', customer:'Pyrmont Pubs',    tech:'Lena Brooks',   day:'Later',    status:'Unscheduled',tags:'callback' },
+      { id:7, ref:'J-1007', customer:'Newtown Bakery',  tech:'Tomás Vega',    day:'Later',    status:'Unscheduled',tags:'' },
+      { id:8, ref:'J-1008', customer:'Glebe Builders',  tech:'me',            day:'Today',    status:'Overdue',   tags:'followup' },
+      { id:9, ref:'J-1009', customer:'Mosman Doctors',  tech:'Aroha Walker',  day:'Tomorrow', status:'Scheduled', tags:'recurring vip' },
+      { id:10,ref:'J-1010', customer:'Annandale Yoga',  tech:'Sofia Ricci',   day:'This week',status:'Scheduled', tags:'followup' },
+    ];
+
+    const VIEWS = [
+      { id:'all',         label:'All',         filter:''           },
+      { id:'mine',        label:'Mine',        filter:'me'         },
+      { id:'today',       label:'Today',       filter:'Today'      },
+      { id:'overdue',     label:'Overdue',     filter:'Overdue'    },
+      { id:'unscheduled', label:'Unscheduled', filter:'Unscheduled'},
+      { id:'followups',   label:'Followups',   filter:'followup'   },
+    ];
+
+    const grid = document.getElementById('grid');
+    const KEY = 'sg:saved-view';
+    let active = localStorage.getItem(KEY) || 'all';
+
+    const counts = () => Object.fromEntries(VIEWS.map(v => {
+      const f = v.filter.toLowerCase();
+      const n = !f ? ROWS.length :
+        ROWS.filter(r => Object.values(r).some(x => String(x ?? '').toLowerCase().includes(f))).length;
+      return [v.id, n];
+    }));
+
+    const paint = () => {
+      const c = counts();
+      const host = document.getElementById('views');
+      host.innerHTML = VIEWS.map(v =>
+        `<button class="view" data-id="${v.id}" aria-pressed="${v.id===active}">${v.label}<span class="ct">${c[v.id]}</span></button>`
+      ).join('') + `<button class="save" id="save">Save current as view…</button>`;
+    };
+
+    const apply = (id) => {
+      active = id;
+      localStorage.setItem(KEY, id);
+      const v = VIEWS.find(x => x.id === id) || VIEWS[0];
+      grid.gridApi.setQuickFilter(v.filter);
+      paint();
+    };
+
+    grid.addEventListener('grid:ready', () => {
+      grid.gridApi.setRowData(ROWS);
+      apply(active);
+    }, { once: true });
+
+    document.getElementById('views').addEventListener('click', (e) => {
+      const btn = e.target.closest('.view');
+      if (btn) return apply(btn.dataset.id);
+      if (e.target.id === 'save') {
+        const name = prompt('Name for this saved view (e.g. "Mine — overdue"):');
+        if (!name) return;
+        const id = 'u-' + name.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+        const filter = prompt('Quick-filter term for this view:', '');
+        VIEWS.push({ id, label: name, filter: filter ?? '' });
+        apply(id);
+      }
+    });
+  </script>
+</body>
+</html>
