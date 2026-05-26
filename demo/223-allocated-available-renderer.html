@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>223 — Allocated vs available | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Allocated-vs-available — "8 free / 12 on hand". On-hand is the
+       full physical count; allocated is what's already promised to
+       other jobs. The bar shows what the next job can actually use. */
+    .av {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 1px 6px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .av .nums {
+      display:inline-flex; align-items:baseline; gap: 4px;
+    }
+    .av .free  { font-size: 14px; }
+    .av .total { color: #6b7280; }
+    .av .bar {
+      position: relative; width: 90px; height: 8px;
+      background: #f1f5f9; border-radius: 4px; overflow: hidden;
+    }
+    .av .fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+    .av[data-band="ok"]   { background:#dcfce7; color:#166534; }
+    .av[data-band="ok"]   .fill { background:#16a34a; }
+    .av[data-band="low"]  { background:#fef3c7; color:#92400e; }
+    .av[data-band="low"]  .fill { background:#ca8a04; }
+    .av[data-band="zero"] { background:#fee2e2; color:#991b1b; }
+    .av[data-band="zero"] .fill { background:#dc2626; }
+    .av[data-band="oversold"] { background:#fee2e2; color:#7f1d1d; }
+    .av[data-band="oversold"] .fill { background:#dc2626; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>223 — Allocated vs available qty</h1>
+  <p class="lede">
+    On-hand minus allocated equals free to use. Edit either column and the
+    bar re-renders so the buyer sees instantly whether the next job will
+    short-pick. <em>Over-sold</em> rows (allocated &gt; on-hand) read red —
+    those need an urgent re-allocation conversation.
+  </p>
+
+  <template id="av-renderer">
+    <span class="av" data-bind-attr="data-band">
+      <span class="nums">
+        <span class="free"  data-bind="freeLabel"></span>
+        <span class="total" data-bind="totalLabel"></span>
+      </span>
+      <span class="bar"><span class="fill"></span></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="sku"
+              data-header-cell-width-value="140">SKU</th>
+          <th data-controller="header-cell" data-header-cell-field-value="part"
+              data-header-cell-width-value="280">Part</th>
+          <th data-controller="header-cell" data-header-cell-field-value="onHand"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">On hand</th>
+          <th data-controller="header-cell" data-header-cell-field-value="allocated"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Allocated</th>
+          <th data-controller="header-cell" data-header-cell-field-value="band"
+              data-header-cell-cell-renderer-value="av-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="220">Available</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Sort by the <em>Available</em> column to surface the rows where you're
+    about to run dry — the underlying sort value is the
+    <code>free</code> number, not the rendered string.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const total = Math.max(0, Number(row.onHand || 0));
+      const alloc = Math.max(0, Number(row.allocated || 0));
+      const free  = total - alloc;
+      let band = 'ok';
+      if (free < 0)            band = 'oversold';
+      else if (free === 0)     band = 'zero';
+      else if (free <= Math.max(2, Math.floor(total * 0.2))) band = 'low';
+      return {
+        ...row, total, alloc, free,
+        freeLabel: `${free} free`,
+        totalLabel: `/ ${total} on hand`,
+        band,
+        __pct: total ? Math.min(100, Math.max(0, (Math.max(0, free) / total) * 100)) : 0,
+      };
+    };
+    const SEED = [
+      { id:1, sku:'PVC-DWV-100-90', part:'100mm DWV 90° bend',           onHand:24, allocated: 8 },
+      { id:2, sku:'GPO-DBL-WHT',    part:'Clipsal C2025 double GPO',     onHand:48, allocated:46 },
+      { id:3, sku:'RCBO-SP-16A',    part:'NHP RCBO 1P+N 16A 30mA',       onHand:22, allocated:14 },
+      { id:4, sku:'COP-15-X-30',    part:'15mm copper x 3m straight',    onHand:60, allocated:60 },
+      { id:5, sku:'TPS-2.5MM-100',  part:'TPS 2.5mm² flat 100m drum',    onHand: 2, allocated: 5 },
+      { id:6, sku:'GAS-RG10',       part:'R-410A 10kg cylinder',         onHand: 3, allocated: 0 },
+      { id:7, sku:'SILVERSEAL-280', part:'Sika MS Polymer 280ml white',  onHand: 0, allocated: 0 },
+      { id:8, sku:'BRACKETS-Z-50',  part:'Z-bracket 50mm galv',          onHand:38, allocated: 4 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['onHand','allocated'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintBars = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.av').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        const fill = node.querySelector('.fill');
+        if (fill && row) fill.style.width = `${row.__pct ?? 0}%`;
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintBars));
+    new MutationObserver(paintBars).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
