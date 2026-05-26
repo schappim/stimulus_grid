@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>232 — Refund / chargeback | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Refund / chargeback indicator — distinct from a normal refund
+       because a chargeback brings a card-scheme dispute fee + brand-risk.
+       The kind ribbon stays separate from the percent so 'partial refund'
+       and 'chargeback in dispute' read differently at a glance. */
+    .rcb {
+      display: inline-flex; align-items: stretch; gap: 1px;
+      border-radius: 6px; overflow: hidden;
+      font-size: 12px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .rcb .kind {
+      padding: 2px 8px;
+      color: #fff; letter-spacing: .02em;
+    }
+    .rcb .pct {
+      padding: 2px 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .rcb[data-k="none"]      .kind { background:#475569; }
+    .rcb[data-k="none"]            { background:#f1f5f9; color:#475569; }
+    .rcb[data-k="partial"]   .kind { background:#ca8a04; }
+    .rcb[data-k="partial"]         { background:#fef3c7; color:#92400e; }
+    .rcb[data-k="full"]      .kind { background:#9333ea; }
+    .rcb[data-k="full"]            { background:#f3e8ff; color:#6b21a8; }
+    .rcb[data-k="chargeback"]  .kind { background:#dc2626; }
+    .rcb[data-k="chargeback"]        { background:#fee2e2; color:#991b1b; }
+    .rcb[data-k="disputed"]    .kind { background:#7c2d12; }
+    .rcb[data-k="disputed"]          { background:#ffedd5; color:#7c2d12; animation: rcbPulse 1.6s ease-in-out infinite; }
+    @keyframes rcbPulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>232 — Refund / chargeback indicator</h1>
+  <p class="lede">
+    Distinguishes a regular refund (<em>partial</em> / <em>full</em>) from
+    a card-scheme chargeback (<em>chargeback</em> / <em>disputed</em> while
+    the bank investigation runs). Disputed rows pulse — they cost time,
+    fees, and brand-trust if the merchant loses.
+  </p>
+
+  <template id="rcb-renderer">
+    <span class="rcb" data-bind-attr="data-k">
+      <span class="kind" data-bind="kLabel"></span>
+      <span class="pct"  data-bind="pctLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="120">Invoice #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="orig"
+              data-header-cell-width-value="120">Original</th>
+          <th data-controller="header-cell" data-header-cell-field-value="amt"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Refunded</th>
+          <th data-controller="header-cell" data-header-cell-field-value="kind"
+              data-header-cell-cell-renderer-value="rcb-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Refund / CB</th>
+          <th data-controller="header-cell" data-header-cell-field-value="reason"
+              data-header-cell-width-value="220">Reason</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The kind field is the system of record — the percent is computed from
+    refunded ÷ original so editing either input column re-derives the chip.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABEL = { none:'NONE', partial:'PARTIAL', full:'FULL', chargeback:'CHARGEBACK', disputed:'DISPUTED' };
+    const num = (x) => Number(String(x ?? 0).replace(/[^\d.-]/g,'')) || 0;
+    const derive = (row) => {
+      const orig = num(row.orig);
+      const amt  = num(row.amt);
+      const pct  = orig ? Math.round((amt / orig) * 100) : 0;
+      let kind = row.kind;
+      if (kind !== 'chargeback' && kind !== 'disputed') {
+        kind = amt === 0 ? 'none' : (amt >= orig - 0.01 ? 'full' : 'partial');
+      }
+      return { ...row, kind, kLabel: LABEL[kind], pctLabel: amt ? `$${amt} · ${pct}%` : '$0' };
+    };
+    const SEED = [
+      { id:1, ref:'INV-1001', customer:'Bondi Pavilion',    orig: 1890, amt:    0, kind:'none',       reason:'—' },
+      { id:2, ref:'INV-1002', customer:'Coogee Holdings',   orig:  340, amt:  340, kind:'full',       reason:'Wrong sized fitting — full refund' },
+      { id:3, ref:'INV-1003', customer:'Manly Reno Co',     orig: 3200, amt:  450, kind:'partial',    reason:'Materials credit' },
+      { id:4, ref:'INV-1004', customer:'Vega Studio',       orig: 4560, amt: 4560, kind:'chargeback', reason:'Cardholder claims work not done' },
+      { id:5, ref:'INV-1005', customer:'Surry Hills Cafe',  orig:  980, amt:  980, kind:'disputed',   reason:'CB lodged — evidence sent 3d ago' },
+      { id:6, ref:'INV-1006', customer:'Pyrmont Pubs',      orig:22400, amt:    0, kind:'none',       reason:'—' },
+      { id:7, ref:'INV-1007', customer:'Newtown Bakery',    orig:  420, amt:  120, kind:'partial',    reason:'Customer dissatisfied with grout' },
+      { id:8, ref:'INV-1008', customer:'Glebe Builders',    orig:12100, amt:    0, kind:'none',       reason:'—' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['amt','kind'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
