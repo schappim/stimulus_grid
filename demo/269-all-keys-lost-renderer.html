@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>269 — All-keys-lost vs spare | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .akl { display:inline-flex; align-items:stretch; gap:1px;
+           border-radius: 6px; overflow:hidden;
+           font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+           box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .akl .scn { padding: 2px 8px; color:#fff; }
+    .akl .lab { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .akl[data-akl="1"] .scn { background:#dc2626; }
+    .akl[data-akl="0"] .scn { background:#16a34a; }
+    .est { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+    .est[data-tier="hi"] { background:#fee2e2; color:#991b1b; }
+    .est[data-tier="md"] { background:#fef3c7; color:#92400e; }
+    .est[data-tier="lo"] { background:#dcfce7; color:#166534; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>269 — All-keys-lost vs spare</h1>
+  <p class="lede">
+    The single boolean that flips an auto-locksmith quote from "two
+    hours on the driveway" to "tow it to the dealer". An all-keys-lost
+    (AKL) job on a 2018-era European car can mean EEPROM removal,
+    PIN-code retrieval, online security access, or all three.
+  </p>
+
+  <template id="akl-renderer">
+    <span class="akl">
+      <span class="scn" data-bind="scenario"></span>
+      <span class="lab" data-bind="ekw"></span>
+    </span>
+    <span class="est" data-bind="estLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="280">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="scenario"
+              data-header-cell-cell-renderer-value="akl-renderer"
+              data-header-cell-width-value="320">Scenario</th>
+          <th data-controller="header-cell" data-header-cell-field-value="immo"
+              data-header-cell-width-value="160">Immobiliser</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The estimate pill is band-only — the actual quote depends on the
+    immobiliser system (modelled in #270), the parts catalogue, and
+    whether the customer can produce ownership documents before you
+    drill anything.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, vehicle:'2009 Toyota Hilux',     scenario:'AKL',          immo:'4D-67',         ekw:'on-board prog', __akl:1, __tier:'md', estLabel:'≈ 2h, $$' },
+      { id:2, vehicle:'2014 Holden Commodore', scenario:'Spare cut',    immo:'PCF7937',       ekw:'on-board prog', __akl:0, __tier:'lo', estLabel:'≈ 45 min, $' },
+      { id:3, vehicle:'2020 Ford Ranger',      scenario:'AKL',          immo:'DST80',         ekw:'IDS / Autel',   __akl:1, __tier:'md', estLabel:'≈ 3h, $$$' },
+      { id:4, vehicle:'2018 VW Golf MQB',      scenario:'AKL',          immo:'MQB CAN',       ekw:'online + PIN',  __akl:1, __tier:'hi', estLabel:'≈ 6h, $$$$' },
+      { id:5, vehicle:'2011 Mazda 3',          scenario:'Spare cut',    immo:'PCF7936',       ekw:'on-board prog', __akl:0, __tier:'lo', estLabel:'≈ 30 min, $' },
+      { id:6, vehicle:'2006 Honda Civic',      scenario:'AKL',          immo:'HITAG2',        ekw:'on-board prog', __akl:1, __tier:'lo', estLabel:'≈ 1h, $' },
+      { id:7, vehicle:'2013 Mitsubishi Triton',scenario:'AKL',          immo:'ID48',          ekw:'OBD adapter',   __akl:1, __tier:'md', estLabel:'≈ 2h, $$' },
+      { id:8, vehicle:'2022 Tesla Model Y',    scenario:'Phone-key add',immo:'BLE pairing',   ekw:'OEM app + PIN', __akl:0, __tier:'lo', estLabel:'≈ 15 min, $' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.akl').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-akl', String(row.__akl));
+        const est = tr.querySelector('.est');
+        if (est) est.setAttribute('data-tier', row.__tier);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

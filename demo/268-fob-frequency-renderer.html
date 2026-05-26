@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>268 — Remote / fob frequency | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .fb { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .fb .freq { padding: 2px 8px; color:#fff; }
+    .fb .mod  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .fb[data-band="lo"] .freq { background:#1d4ed8; }
+    .fb[data-band="mid"] .freq { background:#0ea5e9; }
+    .fb[data-band="hi"] .freq { background:#7c3aed; }
+    .roll { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; }
+    .roll[data-r="rolling"] { background:#dcfce7; color:#166534; }
+    .roll[data-r="fixed"]   { background:#fee2e2; color:#991b1b; }
+    .roll[data-r="bidi"]    { background:#ede9fe; color:#5b21b6; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>268 — Remote / fob frequency</h1>
+  <p class="lede">
+    The RF band and modulation a fob talks on — drives which tester or
+    sniffer you reach for, and whether you can clone the remote at all.
+    Fixed-code remotes (red) can be cloned with a basic copier; rolling
+    or bidirectional remotes need the OEM dealer tool or the matching
+    aftermarket programmer.
+  </p>
+
+  <template id="fb-renderer">
+    <span class="fb">
+      <span class="freq" data-bind="freq"></span>
+      <span class="mod"  data-bind="mod"></span>
+    </span>
+    <span class="roll" data-bind="codeLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="260">Vehicle / device</th>
+          <th data-controller="header-cell" data-header-cell-field-value="freq"
+              data-header-cell-cell-renderer-value="fb-renderer"
+              data-header-cell-width-value="320">RF + code</th>
+          <th data-controller="header-cell" data-header-cell-field-value="buttons"
+              data-header-cell-width-value="120">Buttons</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The band determines local regulations too — 433.92 MHz is the
+    European/AU norm, 315 MHz is North-American, 868 MHz is short-range
+    (alarms, sensors). Match the band to the country the vehicle was
+    delivered in, not the country it's parked in.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const BAND = (f) => f < 400 ? 'lo' : f < 600 ? 'mid' : 'hi';
+    const SEED = [
+      { id:1, vehicle:'2009 Toyota Hilux',     freq:'433.92 MHz', mod:'ASK',  code:'rolling', __r:'rolling', __band:BAND(434), buttons:3 },
+      { id:2, vehicle:'2014 Holden Commodore', freq:'434.42 MHz', mod:'FSK',  code:'rolling', __r:'rolling', __band:BAND(434), buttons:3 },
+      { id:3, vehicle:'2020 Ford Ranger',      freq:'433.92 MHz', mod:'FSK',  code:'rolling', __r:'rolling', __band:BAND(434), buttons:4 },
+      { id:4, vehicle:'2018 VW Golf MQB',      freq:'433.92 MHz', mod:'FSK',  code:'bidi',    __r:'bidi',    __band:BAND(434), buttons:3 },
+      { id:5, vehicle:'2011 Mazda 3',          freq:'315 MHz',    mod:'ASK',  code:'rolling', __r:'rolling', __band:BAND(315), buttons:3 },
+      { id:6, vehicle:'Garage roller — Merlin',freq:'433.92 MHz', mod:'ASK',  code:'fixed',   __r:'fixed',   __band:BAND(434), buttons:2 },
+      { id:7, vehicle:'Boom gate — Centurion', freq:'868 MHz',    mod:'FSK',  code:'rolling', __r:'rolling', __band:BAND(868), buttons:1 },
+      { id:8, vehicle:'2022 Tesla Model Y',    freq:'2.4 GHz',    mod:'BLE',  code:'bidi',    __r:'bidi',    __band:'hi',      buttons:0 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.fb').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-band', row.__band);
+        const roll = tr.querySelector('.roll');
+        if (roll) {
+          roll.setAttribute('data-r', row.__r);
+          roll.textContent = row.code;
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

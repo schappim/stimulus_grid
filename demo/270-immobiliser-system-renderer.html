@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>270 — Immobiliser system | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .im { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .im .oem { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .im .gen { padding: 2px 8px; color:#fff; }
+    .im[data-gen="g1"] .gen { background:#16a34a; }
+    .im[data-gen="g2"] .gen { background:#0ea5e9; }
+    .im[data-gen="g3"] .gen { background:#7c3aed; }
+    .im[data-gen="g4"] .gen { background:#b45309; }
+    .im[data-gen="g5"] .gen { background:#dc2626; }
+    .wf { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+          font-size: 11px; font-weight: 600; }
+    .wf[data-wf="obd"]    { background:#dcfce7; color:#166534; }
+    .wf[data-wf="pin"]    { background:#fef3c7; color:#92400e; }
+    .wf[data-wf="online"] { background:#fee2e2; color:#991b1b; }
+    .wf[data-wf="ee"]     { background:#ede9fe; color:#5b21b6; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>270 — Immobiliser system</h1>
+  <p class="lede">
+    The brain on the other end of the transponder. Generation maps
+    roughly to the year of vehicle and to the workflow:
+    <strong>OBD</strong> (plug-and-play), <strong>PIN</strong>
+    (need a 4–7 digit security code), <strong>online</strong>
+    (manufacturer gateway/SFD2 token), <strong>EE</strong>
+    (de-solder EEPROM).
+  </p>
+
+  <template id="im-renderer">
+    <span class="im">
+      <span class="oem" data-bind="oem"></span>
+      <span class="gen" data-bind="gen"></span>
+    </span>
+    <span class="wf" data-bind="workflow"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="280">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="gen"
+              data-header-cell-cell-renderer-value="im-renderer"
+              data-header-cell-width-value="360">Immobiliser</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tool"
+              data-header-cell-width-value="200">Tool</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Online workflows (BMW FEM/BDC, VW MQB, late Toyota DST-AES) need
+    an active dealer-tool subscription and an internet connection —
+    not great for a 2 AM AKL on a country road.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, vehicle:'2009 Toyota Hilux',     oem:'Toyota', gen:'G2-H-chip',  workflow:'obd',    __gen:'g1', tool:'Autel IM508' },
+      { id:2, vehicle:'2014 Holden Commodore', oem:'GM',     gen:'PassLock 3', workflow:'pin',    __gen:'g2', tool:'AD100 Pro + Tango' },
+      { id:3, vehicle:'2020 Ford Ranger',      oem:'Ford',   gen:'PATS-5',     workflow:'pin',    __gen:'g3', tool:'Autel IM608' },
+      { id:4, vehicle:'2018 VW Golf MQB',      oem:'VAG',    gen:'MQB-CAN',    workflow:'online', __gen:'g4', tool:'VVDI KTP + SFD' },
+      { id:5, vehicle:'2011 Mazda 3',          oem:'Mazda',  gen:'IMMO-N',     workflow:'obd',    __gen:'g2', tool:'AD100 Pro' },
+      { id:6, vehicle:'2006 Honda Civic',      oem:'Honda',  gen:'Type-2',     workflow:'obd',    __gen:'g1', tool:'TPX clone' },
+      { id:7, vehicle:'2013 Mitsubishi Triton',oem:'Mitsu',  gen:'Hitag2',     workflow:'obd',    __gen:'g2', tool:'Autel IM508' },
+      { id:8, vehicle:'2017 BMW F30',          oem:'BMW',    gen:'FEM/BDC',    workflow:'ee',     __gen:'g4', tool:'Yanhua mini ACDP' },
+      { id:9, vehicle:'2022 Tesla Model Y',    oem:'Tesla',  gen:'BLE-AES',    workflow:'online', __gen:'g5', tool:'OEM app' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.im').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-gen', row.__gen);
+        const wf = tr.querySelector('.wf');
+        if (wf) wf.setAttribute('data-wf', row.workflow);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

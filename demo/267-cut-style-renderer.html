@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>267 — Cut style | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Cut style: code + tiny edge silhouette. Laser/sidewinder cuts
+       draw as a wavy line; traditional ridge cuts draw as a stair. */
+    .cs { display:inline-flex; align-items:center; gap:6px;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+    .cs svg { display:block; }
+    .cs .code { padding: 2px 8px; border-radius: 4px;
+                background:#0f172a; color:#fff; }
+    .cs[data-kind="laser"]   .code { background:#7c3aed; }
+    .cs[data-kind="ridge"]   .code { background:#1d4ed8; }
+    .cs[data-kind="dimple"]  .code { background:#0ea5e9; }
+    .cs[data-kind="tibbe"]   .code { background:#ea580c; }
+    .machine { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+               background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>267 — Cut style</h1>
+  <p class="lede">
+    The keyway designator that tells the bench which jaws and clamp
+    to set. <strong>Laser</strong> (HU64, HU100, NSN14) is sidewinder;
+    <strong>ridge</strong> (TOY43, TOY40) is the classic stair-cut;
+    <strong>dimple</strong> (TIBBE) is Ford UK.
+  </p>
+
+  <template id="cs-renderer">
+    <span class="cs">
+      <svg width="60" height="14" viewBox="0 0 60 14" aria-hidden="true">
+        <path fill="none" stroke="#0f172a" stroke-width="1"/>
+      </svg>
+      <span class="code" data-bind="code"></span>
+    </span>
+    <span class="machine" data-bind="machine"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="260">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="code"
+              data-header-cell-cell-renderer-value="cs-renderer"
+              data-header-cell-width-value="360">Cut style</th>
+          <th data-controller="header-cell" data-header-cell-field-value="kind"
+              data-header-cell-width-value="140">Kind</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Silhouettes are not the actual milling profile — they're a visual
+    distinction so a tech doesn't grab the wrong clamp set for a TOY43
+    when an HU64 was queued.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SHAPES = {
+      laser:  'M2 7 Q8 2 14 7 T26 7 T38 7 T50 7 T58 7',
+      ridge:  'M2 11 L8 11 L8 6 L14 6 L14 11 L20 11 L20 4 L26 4 L26 10 L32 10 L32 5 L38 5 L38 11 L44 11 L44 7 L50 7 L50 11 L58 11',
+      dimple: 'M2 7 L10 7 M12 4 L12 10 M20 7 L28 7 M30 4 L30 10 M38 7 L46 7 M48 4 L48 10 M56 7 L58 7',
+      tibbe:  'M2 4 L58 4 M2 10 L58 10',
+    };
+    const SEED = [
+      { id:1, vehicle:'2009 Toyota Hilux',     code:'TOY43',  kind:'ridge',  machine:'Silca Bravo' },
+      { id:2, vehicle:'2014 Holden Commodore', code:'HU100',  kind:'laser',  machine:'Silca Futura Pro' },
+      { id:3, vehicle:'2020 Ford Ranger',      code:'HU101',  kind:'laser',  machine:'Silca Futura Pro' },
+      { id:4, vehicle:'2018 VW Golf MQB',      code:'HU66',   kind:'laser',  machine:'Silca Futura Pro' },
+      { id:5, vehicle:'2011 Mazda 3',          code:'MAZ24',  kind:'laser',  machine:'Silca Futura Pro' },
+      { id:6, vehicle:'2006 Honda Civic',      code:'HON66',  kind:'ridge',  machine:'Silca Bravo' },
+      { id:7, vehicle:'1996 Ford Falcon (UK)', code:'TIBBE',  kind:'dimple', machine:'Silca Tibbe' },
+      { id:8, vehicle:'2013 Mitsubishi Triton',code:'MIT11R', kind:'ridge',  machine:'Silca Bravo' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.cs').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-kind', row.kind);
+        const path = node.querySelector('path');
+        if (path) path.setAttribute('d', SHAPES[row.kind] || SHAPES.ridge);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>

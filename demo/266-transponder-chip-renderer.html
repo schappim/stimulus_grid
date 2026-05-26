@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>266 — Transponder chip | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .chip { display:inline-flex; align-items:stretch; gap:1px;
+            border-radius: 6px; overflow:hidden;
+            font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .chip .ic { padding: 2px 6px; background:#0f172a; color:#fff; }
+    .chip .nm { padding: 2px 8px; background:#1d4ed8; color:#fff; }
+    .crypto { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+              font-size: 11px; font-weight: 600; }
+    .crypto[data-s="strong"] { background:#dcfce7; color:#166534; }
+    .crypto[data-s="medium"] { background:#fef3c7; color:#92400e; }
+    .crypto[data-s="weak"]   { background:#fee2e2; color:#991b1b; }
+    .crypto[data-s="fixed"]  { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>266 — Transponder chip</h1>
+  <p class="lede">
+    Identifies what's inside the head of an automotive key. The
+    transponder name tells you which programmer to reach for; the
+    crypto chip is the difference between "ten minutes on the bench"
+    and "we need to pull the immobiliser unit".
+  </p>
+
+  <template id="chip-renderer">
+    <span class="chip">
+      <span class="ic" data-bind="ic"></span>
+      <span class="nm" data-bind="chipName"></span>
+    </span>
+    <span class="crypto" data-bind="cryptoLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="vehicle"
+              data-header-cell-width-value="260">Vehicle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="chipName"
+              data-header-cell-cell-renderer-value="chip-renderer"
+              data-header-cell-width-value="340">Transponder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="programmer"
+              data-header-cell-width-value="200">Programmer</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Fixed-code chips (Philips 33, Megamos 13) are auto-locksmith
+    bread-and-butter — anything with rolling AES (DST80, HITAG AES,
+    Megamos AES) needs current tooling and a paid subscription.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, vehicle:'2009 Toyota Hilux',     ic:'TI',    chipName:'4D-67',         cryptoLabel:'fixed',  __s:'fixed',  programmer:'Silca Sicura' },
+      { id:2, vehicle:'2014 Holden Commodore', ic:'NXP',   chipName:'PCF7937',       cryptoLabel:'HITAG2', __s:'weak',   programmer:'AD100 Pro' },
+      { id:3, vehicle:'2020 Ford Ranger',      ic:'TI',    chipName:'DST80',         cryptoLabel:'AES',    __s:'strong', programmer:'Autel IM608' },
+      { id:4, vehicle:'2018 VW Golf MQB',      ic:'EM',    chipName:'Megamos AES',   cryptoLabel:'AES',    __s:'strong', programmer:'VVDI Key Tool Plus' },
+      { id:5, vehicle:'2011 Mazda 3',          ic:'NXP',   chipName:'PCF7936',       cryptoLabel:'Crypto-1', __s:'medium', programmer:'AD100 Pro' },
+      { id:6, vehicle:'2006 Honda Civic',      ic:'Philips', chipName:'ID 13',       cryptoLabel:'fixed',  __s:'fixed',  programmer:'TPX clone' },
+      { id:7, vehicle:'2022 Tesla Model Y',    ic:'—',     chipName:'BLE phone-key', cryptoLabel:'BLE/AES',__s:'strong', programmer:'OEM app' },
+      { id:8, vehicle:'2013 Mitsubishi Triton',ic:'Megamos', chipName:'ID 48',       cryptoLabel:'Crypto-1', __s:'medium', programmer:'AD100 Pro' },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.crypto').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-s', row.__s || 'medium');
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
