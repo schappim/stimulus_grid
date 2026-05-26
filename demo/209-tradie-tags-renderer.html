@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>209 — Tradie job tags | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Tradie job tags — opinionated vocabulary with stable colours per tag.
+       Generic coloured-tags exists at #41, but this is the FSM preset
+       with rules attached (e.g. 'warranty' is no-charge; 'after-hours'
+       triggers OT loading; 'insurance' requires auth-limit). */
+    .tagset { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+    .tg {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 1px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: .02em;
+      white-space: nowrap;
+    }
+    .tg::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .tg[data-tag="warranty"]        { background:#fee2e2; color:#991b1b; }
+    .tg[data-tag="after-hours"]     { background:#fff7ed; color:#9a3412; }
+    .tg[data-tag="insurance"]       { background:#e0e7ff; color:#3730a3; }
+    .tg[data-tag="defect-callback"] { background:#fce7f3; color:#9d174d; }
+    .tg[data-tag="urgent"]          { background:#fef2f2; color:#dc2626; }
+    .tg[data-tag="vip"]             { background:#fef3c7; color:#92400e; }
+    .tg[data-tag="recurring"]       { background:#dcfce7; color:#166534; }
+    .tg[data-tag="apprentice"]      { background:#f3e8ff; color:#6b21a8; }
+    .tg[data-tag="rework"]          { background:#fee2e2; color:#7f1d1d; }
+    .tg[data-tag="hold-payment"]    { background:#f1f5f9; color:#475569; text-decoration: line-through; }
+    .tg[data-tag="public-holiday"]  { background:#fff7ed; color:#7c2d12; }
+    .tg[data-tag="weekend"]         { background:#fef3c7; color:#854d0e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>209 — Tradie job tags</h1>
+  <p class="lede">
+    A controlled vocabulary of multi-tags with operational meaning. Unlike
+    generic coloured-tags (#41), these labels are <em>rules</em>:
+    <em>warranty</em> = no charge, <em>after-hours</em> = OT loading,
+    <em>insurance</em> = honour the auth-limit, <em>defect-callback</em> = must
+    close out before invoicing. Reserving the vocabulary stops users
+    inventing typo-variants ("warranty work", "warr", "WARRANTY!!!").
+  </p>
+
+  <template id="tagset-renderer">
+    <span class="tagset"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tags"
+              data-header-cell-cell-renderer-value="tagset-renderer"
+              data-header-cell-width-value="360">Tags</th>
+          <th data-controller="header-cell" data-header-cell-field-value="note"
+              data-header-cell-width-value="280">Note</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The tag column is rendered with <code>data-bind-html</code> so each row
+    can carry its own multi-chip set. Pre-render the HTML once at load — it
+    keeps the renderer template trivial and the chips stay sortable /
+    filterable on the underlying <code>tags</code> array.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const LABELS = {
+      warranty:        'Warranty',
+      'after-hours':   'After hours',
+      insurance:       'Insurance',
+      'defect-callback':'Defect c/b',
+      urgent:          'Urgent',
+      vip:             'VIP',
+      recurring:       'Recurring',
+      apprentice:      'Apprentice OJT',
+      rework:          'Rework',
+      'hold-payment':  'Hold payment',
+      'public-holiday':'Public holiday',
+      weekend:         'Weekend',
+    };
+    const renderTags = (tags) => tags.map(t =>
+      `<span class="tg" data-tag="${t}">${LABELS[t] ?? t}</span>`).join('');
+
+    const ROWS = [
+      { id:1, ref:'J-7101', customer:'Bondi Pavilion',  tags:['warranty','defect-callback'], note:'7-day re-attend on cracked grout' },
+      { id:2, ref:'J-7102', customer:'Coogee Holdings', tags:['insurance','urgent'],         note:'CGU claim — auth $1.5k' },
+      { id:3, ref:'J-7103', customer:'Manly Reno Co',   tags:['after-hours','weekend'],      note:'Sun fit-off — Mon trading' },
+      { id:4, ref:'J-7104', customer:'Surry Hills Cafe',tags:['urgent','vip'],                note:'Owner is a referral source' },
+      { id:5, ref:'J-7105', customer:'Vega Studio',     tags:['recurring','apprentice'],     note:'Quarterly maint — 3rd yr supervised' },
+      { id:6, ref:'J-7106', customer:'Pyrmont Pubs',    tags:['public-holiday','after-hours'], note:'ANZAC day cool-room' },
+      { id:7, ref:'J-7107', customer:'Newtown Bakery',  tags:['hold-payment'],               note:'Dispute open — invoice frozen' },
+      { id:8, ref:'J-7108', customer:'Glebe Builders',  tags:['rework','warranty'],          note:'Window flashing redo' },
+      { id:9, ref:'J-7109', customer:'Mosman Doctors',  tags:['vip','recurring'],            note:'Monthly compliance round' },
+      { id:10,ref:'J-7110', customer:'Annandale Yoga',  tags:['urgent','insurance','after-hours'], note:'Storm damage — IAG' },
+    ];
+
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    const byId = new Map(ROWS.map(r => [String(r.id), r]));
+    const decorate = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.tagset').forEach((node) => {
+        if (node.dataset.painted === node.closest('tr')?.dataset.rowId) return;
+        const tr = node.closest('tr');
+        const row = byId.get(tr?.dataset.rowId);
+        if (!row) return;
+        node.innerHTML = renderTags(row.tags);
+        node.dataset.painted = tr.dataset.rowId;
+      });
+    });
+
+    // Body rows get re-templated on data / sort / filter / pagination —
+    // re-decorate on every event that could change which row sits in which td.
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach((ev) => grid.addEventListener(ev, () => {
+        grid.querySelectorAll('.tagset').forEach(n => n.removeAttribute('data-painted'));
+        decorate();
+      }));
+    // Belt-and-braces: an observer catches any re-render the public events miss.
+    new MutationObserver(decorate).observe(grid.querySelector('tbody'), {
+      childList: true, subtree: true,
+    });
+  </script>
+</body>
+</html>
