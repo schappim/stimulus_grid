@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>228 — Aged receivables bucket | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Aged receivables — 4-segment bar of $ in current / 30 / 60 / 90+
+       day buckets, plus a chip naming the worst bucket. Helps the
+       book-keeper triage where to chase first. */
+    .ar { display: inline-flex; align-items: center; gap: 8px; }
+    .ar .bar {
+      display: flex; height: 14px; min-width: 200px;
+      border-radius: 4px; overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+      font-size: 0;
+    }
+    .ar .seg { height: 100%; }
+    .ar .seg.cur  { background:#16a34a; }
+    .ar .seg.d30  { background:#ca8a04; }
+    .ar .seg.d60  { background:#ea580c; }
+    .ar .seg.d90  { background:#dc2626; }
+    .ar .worst {
+      padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    }
+    .ar[data-worst="cur"] .worst { background:#dcfce7; color:#166534; }
+    .ar[data-worst="d30"] .worst { background:#fef3c7; color:#92400e; }
+    .ar[data-worst="d60"] .worst { background:#fed7aa; color:#9a3412; }
+    .ar[data-worst="d90"] .worst { background:#fee2e2; color:#991b1b; }
+    .ar[data-worst="zero"] .worst { background:#f1f5f9; color:#475569; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>228 — Aged receivables bucket</h1>
+  <p class="lede">
+    Four-segment ageing bar — <em>Current</em> / <em>30+</em> / <em>60+</em>
+    / <em>90+</em> days — plus a chip naming the worst bucket. The bar
+    widths are proportional to dollars so a $20k 90+ row reads visibly
+    worse than a $1k 90+ row.
+  </p>
+
+  <template id="ar-renderer">
+    <span class="ar" data-bind-attr="data-worst">
+      <span class="bar">
+        <span class="seg cur" data-seg="cur"></span>
+        <span class="seg d30" data-seg="d30"></span>
+        <span class="seg d60" data-seg="d60"></span>
+        <span class="seg d90" data-seg="d90"></span>
+      </span>
+      <span class="worst" data-bind="worstLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="cur"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="110">Current</th>
+          <th data-controller="header-cell" data-header-cell-field-value="d30"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">30+</th>
+          <th data-controller="header-cell" data-header-cell-field-value="d60"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">60+</th>
+          <th data-controller="header-cell" data-header-cell-field-value="d90"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="100">90+</th>
+          <th data-controller="header-cell" data-header-cell-field-value="worst"
+              data-header-cell-cell-renderer-value="ar-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Ageing</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Sort by <em>Ageing</em> — the underlying sort value is the worst-bucket
+    bracket (0 = clean → 3 = 90+ days), then by dollars within that bucket.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const derive = (row) => {
+      const cur = Math.max(0, Number(row.cur || 0));
+      const d30 = Math.max(0, Number(row.d30 || 0));
+      const d60 = Math.max(0, Number(row.d60 || 0));
+      const d90 = Math.max(0, Number(row.d90 || 0));
+      const total = cur + d30 + d60 + d90;
+      const worst = d90 ? 'd90' : d60 ? 'd60' : d30 ? 'd30' : cur ? 'cur' : 'zero';
+      const labels = { cur:'Clean — $' + cur.toLocaleString(), d30:'30+ — $' + d30.toLocaleString(),
+                       d60:'60+ — $' + d60.toLocaleString(), d90:'90+ — $' + d90.toLocaleString(),
+                       zero:'No balance' };
+      return {
+        ...row, cur, d30, d60, d90,
+        worst, worstLabel: labels[worst],
+        __pct: { cur: total ? cur/total*100 : 0, d30: total ? d30/total*100 : 0,
+                 d60: total ? d60/total*100 : 0, d90: total ? d90/total*100 : 0 },
+      };
+    };
+    const SEED = [
+      { id:1, customer:'Bondi Pavilion',    cur:  3200, d30:    0, d60:    0, d90:    0 },
+      { id:2, customer:'Coogee Holdings',   cur:     0, d30: 1450, d60:    0, d90:    0 },
+      { id:3, customer:'Manly Reno Co',     cur:  4500, d30: 1200, d60:    0, d90:    0 },
+      { id:4, customer:'Surry Hills Cafe',  cur:     0, d30:    0, d60: 2200, d90:    0 },
+      { id:5, customer:'Vega Studio',       cur:  6100, d30: 1400, d60:  800, d90:  200 },
+      { id:6, customer:'Pyrmont Pubs',      cur:     0, d30:    0, d60:    0, d90: 8800 },
+      { id:7, customer:'Newtown Bakery',    cur:   620, d30:    0, d60:    0, d90:    0 },
+      { id:8, customer:'Glebe Builders',    cur:  9200, d30: 4400, d60: 1800, d90:    0 },
+      { id:9, customer:'Mosman Doctors',    cur:     0, d30:    0, d60:    0, d90:    0 },
+      { id:10,customer:'Annandale Yoga',    cur:     0, d30:  720, d60:    0, d90:    0 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['cur','d30','d60','d90'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paintSegs = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ar').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row?.__pct) return;
+        for (const k of ['cur','d30','d60','d90']) {
+          const seg = node.querySelector(`[data-seg="${k}"]`);
+          if (seg) seg.style.width = `${row.__pct[k] ?? 0}%`;
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintSegs));
+    new MutationObserver(paintSegs).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
