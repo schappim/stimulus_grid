@@ -199,4 +199,15 @@ export default class HeaderCellController extends Controller {
     document.body.style.userSelect = 'none';
   }
 
+  // Double-click on the resize handle — autosize the column to fit
+  // the widest cell. Mirrors Excel / Numbers / every spreadsheet.
+  // Suppresses the click event that would otherwise bubble to the th and
+  // toggle sort.
+  autosizeColumn(event) {
+    if (!this.resizableValue || !this.grid) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.grid.autoSizeColumn(this.fieldValue);
+  }
+
 }

@@ -1383,7 +1383,11 @@ export default class GridController extends Controller {
     if (col.resizable !== false && !th.querySelector('.sg-resize-handle') && !col._isCheckbox) {
       th.appendChild(el('span', {
         class: 'sg-resize-handle',
-        'data-action': 'mousedown->header-cell#startResize',
+        // Double-click on the handle autosizes the column to its content.
+        // Excel / Numbers / every spreadsheet does this — power users expect
+        // it and reach for it before the right-click menu.
+        'data-action': 'mousedown->header-cell#startResize dblclick->header-cell#autosizeColumn',
+        title: 'Drag to resize · Double-click to fit',
       }));
     }
   }

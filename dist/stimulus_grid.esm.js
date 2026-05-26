@@ -10963,7 +10963,11 @@ class Zt extends ce {
       title: "Filter"
     }), a.innerHTML = ud, i.appendChild(a)) : a && a.remove(), n.resizable !== !1 && !e.querySelector(".sg-resize-handle") && !n._isCheckbox && e.appendChild(L("span", {
       class: "sg-resize-handle",
-      "data-action": "mousedown->header-cell#startResize"
+      // Double-click on the handle autosizes the column to its content.
+      // Excel / Numbers / every spreadsheet does this — power users expect
+      // it and reach for it before the right-click menu.
+      "data-action": "mousedown->header-cell#startResize dblclick->header-cell#autosizeColumn",
+      title: "Drag to resize · Double-click to fit"
     }));
   }
   _renderBody() {
@@ -12469,6 +12473,13 @@ class Jt extends ce {
       document.removeEventListener("mousemove", i), document.removeEventListener("mouseup", o), document.body.style.cursor = "", document.body.style.userSelect = "";
     };
     document.addEventListener("mousemove", i), document.addEventListener("mouseup", o), document.body.style.cursor = "col-resize", document.body.style.userSelect = "none";
+  }
+  // Double-click on the resize handle — autosize the column to fit
+  // the widest cell. Mirrors Excel / Numbers / every spreadsheet.
+  // Suppresses the click event that would otherwise bubble to the th and
+  // toggle sort.
+  autosizeColumn(e) {
+    !this.resizableValue || !this.grid || (e.preventDefault(), e.stopPropagation(), this.grid.autoSizeColumn(this.fieldValue));
   }
 }
 H(Jt, "values", {
