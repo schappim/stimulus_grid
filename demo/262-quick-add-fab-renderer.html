@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>262 — Quick-add FAB | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    html, body { margin:0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1080px; margin: 0 auto;
+      padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
+      color: #1f2937; line-height: 1.5;
+    }
+    h1 { margin-bottom: 4px; font-size: 22px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 500px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Floating Action Button — bottom-right, thumb-reach on mobile.
+       Tappable, big hit area, sits above the safe-area inset. */
+    .fab {
+      position: fixed; right: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #0ea5e9; color: #fff;
+      border: 0; cursor: pointer;
+      font-size: 24px; font-weight: 300;
+      box-shadow: 0 10px 24px rgba(14,165,233,.4), 0 2px 4px rgba(0,0,0,.15);
+      display: inline-flex; align-items: center; justify-content: center;
+      z-index: 10;
+      transition: transform .12s ease;
+    }
+    .fab:hover  { background:#0284c7; }
+    .fab:active { transform: scale(.94); }
+
+    /* Sheet that pops up when FAB is tapped. */
+    .sheet {
+      position: fixed; left: 0; right: 0;
+      bottom: 0; padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
+      background: #fff;
+      box-shadow: 0 -10px 30px rgba(0,0,0,.15);
+      border-radius: 18px 18px 0 0;
+      transform: translateY(100%);
+      transition: transform .22s ease-out;
+      z-index: 11;
+    }
+    .sheet.open { transform: translateY(0); }
+    .sheet h3 { margin: 0 0 12px; font-size: 16px; }
+    .sheet label { display: block; font-size: 12px; color: #6b7280; margin: 8px 0 4px; }
+    .sheet input, .sheet select {
+      width: 100%; box-sizing: border-box;
+      padding: 10px 12px; font: inherit; font-size: 16px;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      -webkit-appearance: none; appearance: none;
+    }
+    .sheet .row { display: flex; gap: 8px; }
+    .sheet .row > * { flex: 1; }
+    .sheet .actions { display:flex; gap:8px; margin-top: 16px; }
+    .sheet .actions button {
+      flex:1; padding: 12px; border-radius: 10px;
+      font: inherit; font-size: 15px; font-weight: 600; cursor:pointer;
+      border: 0;
+    }
+    .sheet .actions .cancel { background:#f1f5f9; color:#1f2937; }
+    .sheet .actions .save   { background:#0ea5e9; color:#fff; }
+    .scrim {
+      position: fixed; inset: 0; background: rgba(15,23,42,.4);
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s; z-index: 10;
+    }
+    .scrim.open { opacity: 1; pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>262 — Quick-add FAB</h1>
+  <p class="lede">
+    Floating action button bottom-right, thumb-reachable. Tap it to slide
+    up a sheet that captures the minimum-viable job (customer, time, tech)
+    and inserts a new row at the top of the grid. Honours
+    <code>env(safe-area-inset-bottom)</code> so it stays above the iOS
+    home-indicator. Inputs are 16px to skip iOS focus-zoom.
+  </p>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="220">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="when"
+              data-header-cell-width-value="180">When</th>
+          <th data-controller="header-cell" data-header-cell-field-value="tech"
+              data-header-cell-width-value="200">Tech</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Use a sheet (not a full-page form) so the underlying grid stays
+    visible — the user can see where their new job will land. The
+    <kbd>esc</kbd> key, the scrim tap, and the cancel button all close
+    without saving.
+  </p>
+
+  <button class="fab" id="fab" aria-label="Add job">+</button>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet">
+    <h3>New job</h3>
+    <label>Customer</label>
+    <input id="f-cust" placeholder="e.g. Bondi Pavilion" />
+    <div class="row">
+      <div>
+        <label>When</label>
+        <input id="f-when" type="datetime-local" />
+      </div>
+      <div>
+        <label>Tech</label>
+        <select id="f-tech">
+          <option>Astrid Hale</option>
+          <option>Marcus Chen</option>
+          <option>Priya Patel</option>
+          <option>Jamal Owens</option>
+          <option>(unassigned)</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="cancel" type="button" id="cancel">Cancel</button>
+      <button class="save" type="button" id="save">Add job</button>
+    </div>
+  </div>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const grid = document.getElementById('grid');
+    const ROWS = [
+      { id:1, ref:'J-1001', customer:'Bondi Pavilion',  when:'Today 08:00',  tech:'Astrid Hale'  },
+      { id:2, ref:'J-1002', customer:'Coogee Holdings', when:'Today 10:30',  tech:'Marcus Chen'  },
+      { id:3, ref:'J-1003', customer:'Manly Reno Co',   when:'Today 14:00',  tech:'Priya Patel'  },
+    ];
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    const sheet = document.getElementById('sheet');
+    const scrim = document.getElementById('scrim');
+    const open = () => { sheet.classList.add('open'); scrim.classList.add('open'); document.getElementById('f-cust').focus(); };
+    const close = () => { sheet.classList.remove('open'); scrim.classList.remove('open'); };
+    document.getElementById('fab').addEventListener('click', open);
+    document.getElementById('cancel').addEventListener('click', close);
+    scrim.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+    document.getElementById('save').addEventListener('click', () => {
+      const cust = document.getElementById('f-cust').value.trim();
+      if (!cust) { document.getElementById('f-cust').focus(); return; }
+      const whenRaw = document.getElementById('f-when').value;
+      const when = whenRaw
+        ? new Date(whenRaw).toLocaleString('en-AU', { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })
+        : 'TBC';
+      const tech = document.getElementById('f-tech').value;
+      const ids = grid.gridApi.getRowData().map(r => r.id);
+      const id = (ids.length ? Math.max(...ids) : 0) + 1;
+      grid.gridApi.applyTransaction({ add: [{ id, ref:`J-${1000 + id}`, customer:cust, when, tech }] });
+      grid.gridApi.paginationGoToFirstPage();
+      // Reset + close.
+      document.getElementById('f-cust').value = '';
+      document.getElementById('f-when').value = '';
+      close();
+    });
+  </script>
+</body>
+</html>

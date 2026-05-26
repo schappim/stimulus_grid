@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>260 — Sync-conflict pill | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Sync-conflict pill — the row was edited locally and on the server
+       since the last sync. Surfaces the field that differs and offers
+       keep-mine / use-theirs / merge actions. */
+    .conflict {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 4px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .conflict[data-c="ok"]       { background:#dcfce7; color:#166534; }
+    .conflict[data-c="conflict"] { background:#fee2e2; color:#991b1b; }
+    .conflict .badge {
+      padding: 1px 8px; border-radius: 4px;
+      color: #fff; letter-spacing: .03em; font-size: 11px;
+    }
+    .conflict[data-c="ok"]       .badge { background:#16a34a; }
+    .conflict[data-c="conflict"] .badge { background:#dc2626; animation: pulse 1.4s ease-in-out infinite; }
+
+    .resolver {
+      display:inline-flex; gap: 4px; margin-left: 8px;
+    }
+    .resolver button {
+      font: inherit; font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px;
+      border: 1px solid #cbd5e1; background: #fff; cursor:pointer;
+    }
+    .resolver button:hover { background: #f1f5f9; }
+    .resolver button.mine   { color:#1e40af; border-color:#bfdbfe; }
+    .resolver button.theirs { color:#92400e; border-color:#fde68a; }
+    .resolver button.merge  { color:#166534; border-color:#bbf7d0; }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>260 — Sync-conflict pill</h1>
+  <p class="lede">
+    The row was edited locally AND on the server since the last sync. The
+    pill names the conflicting field and offers
+    <em>Keep mine</em> / <em>Use theirs</em> / <em>Merge</em>. Without an
+    explicit resolution UI the user is one stale tab away from overwriting
+    a colleague's edit silently.
+  </p>
+
+  <template id="conflict-renderer">
+    <span class="conflict" data-bind-attr="data-c">
+      <span class="badge" data-bind="cBadge"></span>
+      <span data-bind="cLabel"></span>
+      <span class="resolver" data-resolver></span>
+    </span>
+  </template>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="ref"
+              data-header-cell-width-value="110">Job #</th>
+          <th data-controller="header-cell" data-header-cell-field-value="customer"
+              data-header-cell-width-value="200">Customer</th>
+          <th data-controller="header-cell" data-header-cell-field-value="myValue"
+              data-header-cell-width-value="180">Mine</th>
+          <th data-controller="header-cell" data-header-cell-field-value="theirValue"
+              data-header-cell-width-value="180">Server</th>
+          <th data-controller="header-cell" data-header-cell-field-value="status"
+              data-header-cell-cell-renderer-value="conflict-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="320">Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The merge button is intentionally optional — for many fields (status,
+    technician, hours) there's no sensible "average" and the user must
+    pick a side. <em>Merge</em> shines for notes, tags, and other
+    additive data.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const labelFor = (row) => row.conflictField
+      ? `conflict on ${row.conflictField}` : 'in sync';
+    const derive = (row) => ({
+      ...row,
+      cBadge: row.status === 'conflict' ? 'CONFLICT' : 'OK',
+      cLabel: labelFor(row),
+    });
+    const SEED = [
+      { id:1, ref:'J-1001', customer:'Bondi Pavilion',  myValue:'Astrid Hale',  theirValue:'Astrid Hale',  status:'ok' },
+      { id:2, ref:'J-1002', customer:'Coogee Holdings', myValue:'Marcus Chen',  theirValue:'Marcus Chen',  status:'ok' },
+      { id:3, ref:'J-1003', customer:'Manly Reno Co',   myValue:'Priya Patel',  theirValue:'Jamal Owens',  status:'conflict', conflictField:'tech' },
+      { id:4, ref:'J-1004', customer:'Surry Hills Cafe',myValue:'Quoted $4,200',theirValue:'Quoted $4,400',status:'conflict', conflictField:'amount' },
+      { id:5, ref:'J-1005', customer:'Vega Studio',     myValue:'tags: warranty', theirValue:'tags: warranty, after-hours', status:'conflict', conflictField:'tags' },
+      { id:6, ref:'J-1006', customer:'Pyrmont Pubs',    myValue:'in progress',  theirValue:'in progress',  status:'ok' },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.getElementById('grid');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+
+    // Inject resolver buttons + handle clicks.
+    const paintResolvers = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.conflict').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        const host = node.querySelector('[data-resolver]');
+        if (!host || !row) return;
+        if (row.status !== 'conflict') { host.innerHTML = ''; return; }
+        if (host.dataset.hydrated === String(row.id)) return;
+        host.innerHTML = `
+          <button class="mine"   data-act="mine">Keep mine</button>
+          <button class="theirs" data-act="theirs">Use theirs</button>
+          <button class="merge"  data-act="merge">Merge</button>`;
+        host.dataset.hydrated = String(row.id);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paintResolvers));
+    new MutationObserver(paintResolvers).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const tr = btn.closest('tr');
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+      if (!row) return;
+      const act = btn.dataset.act;
+      let resolved = { ...row, status:'ok', conflictField:null };
+      if (act === 'theirs') resolved.myValue   = row.theirValue;
+      if (act === 'mine')   resolved.theirValue = row.myValue;
+      if (act === 'merge')  {
+        // Merge only meaningfully demonstrated for tag-list-style values.
+        const m = String(row.myValue).split(': ')[1]?.split(/,\s*/) ?? [];
+        const t = String(row.theirValue).split(': ')[1]?.split(/,\s*/) ?? [];
+        const merged = Array.from(new Set([...m, ...t])).join(', ');
+        resolved.myValue = resolved.theirValue = `tags: ${merged}`;
+      }
+      grid.gridApi.applyTransaction({ update: [derive(resolved)] });
+    });
+  </script>
+</body>
+</html>

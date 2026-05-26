@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>261 — Row freshness / stale | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 14px; margin: 14px 0;
+      font-size: 13px; color: #475569;
+    }
+    .toolbar input[type="range"] { width: 200px; }
+    .threshold { font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+
+    /* Stale-row dim. The row is rendered but dimmed when its
+       updatedAt is older than the configured threshold. */
+    .sg-grid tbody tr[data-stale="true"] td {
+      color: #94a3b8 !important;
+      background: #f8fafc !important;
+    }
+    .sg-grid tbody tr[data-stale="very-stale"] td {
+      color: #cbd5e1 !important;
+      background: #f1f5f9 !important;
+      text-decoration: line-through;
+    }
+    .freshness {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .freshness[data-f="fresh"]      { background:#dcfce7; color:#166534; }
+    .freshness[data-f="stale"]      { background:#fef3c7; color:#92400e; }
+    .freshness[data-f="very-stale"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>261 — Row freshness / stale</h1>
+  <p class="lede">
+    The whole row dims when its data is older than the threshold below.
+    Matters for stock levels, technician location, vehicle ETAs — values
+    that decay fast and shouldn't be acted on without a refresh.
+  </p>
+
+  <div class="toolbar">
+    <label>Stale after <span class="threshold" id="t1">2</span> h</label>
+    <input type="range" min="1" max="48" value="2" id="freshHrs" />
+    <label>Very-stale after <span class="threshold" id="t2">12</span> h</label>
+    <input type="range" min="2" max="72" value="12" id="staleHrs" />
+  </div>
+
+  <template id="fresh-renderer">
+    <span class="freshness" data-bind-attr="data-f">
+      <span data-bind="freshLabel"></span>
+    </span>
+  </template>
+
+  <div id="grid" class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="van"
+              data-header-cell-width-value="140">Van</th>
+          <th data-controller="header-cell" data-header-cell-field-value="loc"
+              data-header-cell-width-value="220">Last known location</th>
+          <th data-controller="header-cell" data-header-cell-field-value="stockLine"
+              data-header-cell-width-value="200">Van stock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="freshness"
+              data-header-cell-cell-renderer-value="fresh-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="160">Freshness</th>
+          <th data-controller="header-cell" data-header-cell-field-value="updatedAt"
+              data-header-cell-width-value="170">Last update</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Two thresholds give a graded warning — at <em>stale</em> the row
+    dims (still readable); at <em>very-stale</em> it strikes through.
+    The slider re-thresholds without re-fetching, so users can dial
+    sensitivity per workflow.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const now = Date.now();
+    const hoursAgo = (h) => new Date(now - h * 3600 * 1000);
+    const fmt = (d) => d.toLocaleString('en-AU', { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false });
+    const SEED = [
+      { id:1, van:'VAN-01', loc:'Bondi',     stockLine:'PVC stocked',   _h:0.5 },
+      { id:2, van:'VAN-02', loc:'Mascot',    stockLine:'Low on flexis', _h:1.5 },
+      { id:3, van:'VAN-03', loc:'Strathfield',stockLine:'Full restock', _h:3   },
+      { id:4, van:'VAN-04', loc:'Glebe',     stockLine:'2 GPOs left',   _h:8   },
+      { id:5, van:'VAN-05', loc:'Marrickville',stockLine:'Empty water tank', _h:16 },
+      { id:6, van:'VAN-06', loc:'Hornsby',   stockLine:'Last seen full', _h:36 },
+      { id:7, van:'VAN-07', loc:'(no GPS)',  stockLine:'unknown',        _h:72 },
+    ].map(r => ({ ...r, updatedAt: fmt(hoursAgo(r._h)), updatedHrs: r._h }));
+
+    const grid = document.getElementById('grid');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+
+    let freshHrs = 2, staleHrs = 12;
+    const t1 = document.getElementById('t1'); const t2 = document.getElementById('t2');
+    const fHr = document.getElementById('freshHrs'); const sHr = document.getElementById('staleHrs');
+    fHr.addEventListener('input', () => { freshHrs = +fHr.value; t1.textContent = freshHrs; repaint(); });
+    sHr.addEventListener('input', () => { staleHrs = +sHr.value; t2.textContent = staleHrs; repaint(); });
+
+    const bandOf = (h) => h <= freshHrs ? 'fresh' : h <= staleHrs ? 'stale' : 'very-stale';
+    const labelOf = (h) => h < 1 ? 'just now' : `${h.toFixed(1)} h old`;
+
+    const repaint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('tbody tr[data-row-id]').forEach((tr) => {
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr.dataset.rowId);
+        if (!row) return;
+        const f = bandOf(row.updatedHrs);
+        tr.setAttribute('data-stale', f === 'fresh' ? 'false' : f);
+        const pill = tr.querySelector('.freshness');
+        if (pill) {
+          pill.setAttribute('data-f', f);
+          pill.querySelector('[data-bind="freshLabel"]')?.replaceChildren(document.createTextNode(labelOf(row.updatedHrs)));
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, repaint));
+    new MutationObserver(repaint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
