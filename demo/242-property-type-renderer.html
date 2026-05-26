@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>242 — Property type | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Property type — site attribute (distinct from #194 customer-type).
+       Drives compliance: a Class 2 apartment has different rules
+       (strata, fire, plumbing) than a free-standing Class 1a house. */
+    .pt {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 1px 9px 1px 4px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+    .pt .icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 22px; height: 22px; border-radius: 50%;
+      color: #fff; font-size: 12px; line-height: 1;
+    }
+    .pt[data-t="house"]       { background:#dcfce7; color:#166534; }
+    .pt[data-t="house"]       .icon { background:#16a34a; }
+    .pt[data-t="townhouse"]   { background:#fef3c7; color:#92400e; }
+    .pt[data-t="townhouse"]   .icon { background:#ca8a04; }
+    .pt[data-t="apartment"]   { background:#dbeafe; color:#1e40af; }
+    .pt[data-t="apartment"]   .icon { background:#1d4ed8; }
+    .pt[data-t="commercial"]  { background:#f3e8ff; color:#6b21a8; }
+    .pt[data-t="commercial"]  .icon { background:#7c3aed; }
+    .pt[data-t="industrial"]  { background:#ffedd5; color:#7c2d12; }
+    .pt[data-t="industrial"]  .icon { background:#9a3412; }
+    .pt[data-t="rural"]       { background:#ecfdf5; color:#065f46; }
+    .pt[data-t="rural"]       .icon { background:#047857; }
+    .pt[data-t="mixed"]       { background:#fee2e2; color:#991b1b; }
+    .pt[data-t="mixed"]       .icon { background:#dc2626; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>242 — Property type</h1>
+  <p class="lede">
+    Site attribute — house / townhouse / apartment / commercial /
+    industrial / rural / mixed-use. Drives compliance: a Class 2
+    apartment has different strata, fire and plumbing rules than a
+    Class 1a free-standing house. Distinct from #194 customer-type.
+  </p>
+
+  <template id="pt-renderer">
+    <span class="pt" data-bind-attr="data-t">
+      <span class="icon" data-bind="icon"></span>
+      <span data-bind="label"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="site"
+              data-header-cell-width-value="280">Site</th>
+          <th data-controller="header-cell" data-header-cell-field-value="type"
+              data-header-cell-cell-renderer-value="pt-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="220">Property type</th>
+          <th data-controller="header-cell" data-header-cell-field-value="suburb"
+              data-header-cell-width-value="160">Suburb</th>
+          <th data-controller="header-cell" data-header-cell-field-value="builtYear"
+              data-header-cell-width-value="100">Built</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Mixed-use is its own bucket because the boundary triggers <em>both</em>
+    Class 2 residential rules and Class 5/6 commercial rules — the kind
+    of trap a quick survey misses.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const META = {
+      house:      { label:'House',           icon:'⌂' },
+      townhouse:  { label:'Townhouse',       icon:'⌂⌂' },
+      apartment:  { label:'Apartment',       icon:'⊞' },
+      commercial: { label:'Commercial',      icon:'$' },
+      industrial: { label:'Industrial',      icon:'⚙' },
+      rural:      { label:'Rural',           icon:'🌾' },
+      mixed:      { label:'Mixed-use',       icon:'≡' },
+    };
+    const derive = (row) => ({ ...row, label:META[row.type]?.label ?? row.type, icon:META[row.type]?.icon ?? '?' });
+    const SEED = [
+      { id:1, site:'12 Bay St, Bondi',           type:'house',      suburb:'Bondi',       builtYear:1953 },
+      { id:2, site:'4/87 Marine Pde, Coogee',    type:'apartment',  suburb:'Coogee',      builtYear:2005 },
+      { id:3, site:'2A The Crescent, Glebe',     type:'townhouse',  suburb:'Glebe',       builtYear:1992 },
+      { id:4, site:'201 Pittwater Rd, Manly',    type:'commercial', suburb:'Manly',       builtYear:1988 },
+      { id:5, site:'5 Crown St, Surry Hills',    type:'mixed',      suburb:'Surry Hills', builtYear:1916 },
+      { id:6, site:'90 Bay St, Pyrmont',         type:'industrial', suburb:'Pyrmont',     builtYear:1975 },
+      { id:7, site:'Lot 42, Kangaroo Valley',    type:'rural',      suburb:'Kangaroo V.', builtYear:1962 },
+      { id:8, site:'12 Park Rd, Newtown',        type:'house',      suburb:'Newtown',     builtYear:1908 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'type') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+  </script>
+</body>
+</html>
