@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>303 — Spare-key cabinet location | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .kc { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .kc .room { padding: 2px 8px; color:#fff; background:#0f172a; }
+    .kc .cab  { padding: 2px 8px; background:#1d4ed8; color:#fff; }
+    .kc .hook { padding: 2px 8px; color:#fff; }
+    .kc[data-clr="green"]  .hook { background:#16a34a; }
+    .kc[data-clr="amber"]  .hook { background:#f59e0b; }
+    .kc[data-clr="red"]    .hook { background:#dc2626; }
+    .kc[data-clr="blue"]   .hook { background:#0ea5e9; }
+    .state { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+             font-size: 11px; font-weight: 600;
+             background:#dcfce7; color:#166534; }
+    .state[data-s="out"]    { background:#fef3c7; color:#92400e; }
+    .state[data-s="missing"]{ background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>303 — Spare-key cabinet location</h1>
+  <p class="lede">
+    Where the off-site spares physically live. Three pieces of address:
+    the cabinet room, the cabinet ID, and the colour-coded hook number.
+    Beats "front office somewhere" when the tech who keyed the system
+    has gone home for the night.
+  </p>
+
+  <template id="kc-renderer">
+    <span class="kc">
+      <span class="room" data-bind="room"></span>
+      <span class="cab"  data-bind="cabinet"></span>
+      <span class="hook" data-bind="hookLabel"></span>
+    </span>
+    <span class="state" data-bind="state"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="key"
+              data-header-cell-width-value="280">Key</th>
+          <th data-controller="header-cell" data-header-cell-field-value="room"
+              data-header-cell-cell-renderer-value="kc-renderer"
+              data-header-cell-width-value="460">Cabinet location</th>
+          <th data-controller="header-cell" data-header-cell-field-value="custodian"
+              data-header-cell-width-value="200">Custodian</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The hook colour usually mirrors the master-key system colour code
+    (often green = sub-master, red = grand master, amber = service
+    keys, blue = guest). Keep colour + number together so a tech
+    can't grab the wrong tag.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, key:'CK-014 spare',         room:'Main office',     cabinet:'KC-A',  hook:'12', hookColour:'green', state:'in cabinet', custodian:'A. Hua' },
+      { id:2, key:'GM-A spare',           room:'Strongroom B2',   cabinet:'KC-VLT',hook:'04', hookColour:'red',   state:'in cabinet', custodian:'M. Schappi' },
+      { id:3, key:'BiLock R10 spare',     room:'Restricted-key safe', cabinet:'KC-RST',hook:'07', hookColour:'red',   state:'in cabinet', custodian:'M. Schappi' },
+      { id:4, key:'Service-key 003',      room:'Cleaner station', cabinet:'KC-CL', hook:'15', hookColour:'amber', state:'out',         custodian:'cleaning supervisor' },
+      { id:5, key:'CK-088 (apt 3) spare', room:'Concierge desk',  cabinet:'KC-FD', hook:'21', hookColour:'green', state:'missing',     custodian:'J. Whitford' },
+      { id:6, key:'Pool gate spare',      room:'Pool plant room', cabinet:'KC-PG', hook:'02', hookColour:'blue',  state:'in cabinet', custodian:'building manager' },
+      { id:7, key:'AKL transponder spare',room:'Workshop bench A',cabinet:'KC-WK', hook:'30', hookColour:'amber', state:'in cabinet', custodian:'A. Hua' },
+      { id:8, key:'GGM-001 spare',        room:'CEO safe',        cabinet:'KC-CEO',hook:'01', hookColour:'red',   state:'in cabinet', custodian:'Owner (Sam O.)' },
+    ];
+    const ROWS = SEED.map(r => ({ ...r, hookLabel: `Hook ${r.hook}` }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.kc').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-clr', row.hookColour);
+        const state = tr.querySelector('.state');
+        if (state) {
+          if (row.state === 'in cabinet') state.removeAttribute('data-s');
+          else state.setAttribute('data-s', row.state === 'out' ? 'out' : 'missing');
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
