@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>300 — Smart-lock battery state | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .bt { display:inline-flex; align-items:center; gap:8px; }
+    .bt .cell {
+      position: relative; width: 38px; height: 14px;
+      border: 2px solid #0f172a; border-radius: 2px;
+      background:#fff;
+    }
+    .bt .cell::after {
+      content:""; position:absolute; right:-5px; top: 3px;
+      width:3px; height: 4px; background:#0f172a; border-radius: 0 1px 1px 0;
+    }
+    .bt .fill { position:absolute; left:1px; top:1px; bottom:1px; }
+    .bt[data-band="ok"]    .fill { background:#16a34a; }
+    .bt[data-band="warn"]  .fill { background:#f59e0b; }
+    .bt[data-band="crit"]  .fill { background:#dc2626; }
+    .bt .pct {
+      font-family: ui-monospace, monospace; font-size: 11px;
+      font-weight: 700; color:#0f172a;
+    }
+    .eta { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           font-size: 11px; font-weight: 600;
+           background:#f1f5f9; color:#475569; }
+    .eta[data-state="crit"] { background:#fee2e2; color:#991b1b; }
+    .eta[data-state="warn"] { background:#fef3c7; color:#92400e; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>300 — Smart-lock battery state</h1>
+  <p class="lede">
+    Electronic locks die quietly. The cell shows the current battery
+    percentage with an ETA-to-flat based on the model's average draw
+    — so a 60-door fleet's rotation list is one column-sort away.
+  </p>
+
+  <template id="bt-renderer">
+    <span class="bt">
+      <span class="cell"><span class="fill"></span></span>
+      <span class="pct" data-bind="pctLabel"></span>
+    </span>
+    <span class="eta" data-bind="etaLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="lock"
+              data-header-cell-width-value="280">Smart lock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pct"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Battery %</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pctLabel"
+              data-header-cell-cell-renderer-value="bt-renderer"
+              data-header-cell-sortable-value="true"
+              data-header-cell-width-value="280">State</th>
+          <th data-controller="header-cell" data-header-cell-field-value="model"
+              data-header-cell-width-value="200">Model</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Edit the <code>Battery %</code> column to see the band flip — the
+    real fleet data comes via the manufacturer's API (Yale Home, August,
+    Salto KS), which is out of scope for the renderer itself.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // average days from full charge by model — illustrative.
+    const LIFE_DAYS = {
+      'Yale Conexis L2':  240,
+      'August Pro 4G':    180,
+      'Salto AElement':   730,
+      'Lockwood SmartC':  180,
+      'Schlage Encode':   180,
+      'Aqara A100 Zigbee':365,
+    };
+    const derive = (row) => {
+      const pct = Math.max(0, Math.min(100, Number(row.pct) || 0));
+      const days = Math.round((pct/100) * (LIFE_DAYS[row.model] || 180));
+      const band = pct >= 35 ? 'ok' : pct >= 15 ? 'warn' : 'crit';
+      const state = band;
+      return {
+        ...row,
+        pct,
+        pctLabel: `${pct} %`,
+        etaLabel: `≈ ${days} d`,
+        __band: band, __state: state,
+      };
+    };
+    const SEED = [
+      { id:1, lock:'12 Bay St — front',         model:'Yale Conexis L2',   pct: 78 },
+      { id:2, lock:'Bondi Pavilion — staff',    model:'Salto AElement',    pct: 62 },
+      { id:3, lock:'Pyrmont Pubs HQ — back',    model:'August Pro 4G',     pct: 22 },
+      { id:4, lock:'5 Crown St — apt 3',        model:'Lockwood SmartC',   pct: 11 },
+      { id:5, lock:'33 Glebe Pt Rd — back',     model:'Schlage Encode',    pct:  4 },
+      { id:6, lock:'14 King St — main',         model:'Aqara A100 Zigbee', pct: 88 },
+      { id:7, lock:'7 Marine Pde — strata',     model:'Yale Conexis L2',   pct: 45 },
+      { id:8, lock:'Pyrmont Pubs — meeting rm', model:'Salto AElement',    pct: 91 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'pct') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.bt').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-band', row.__band);
+        node.querySelector('.fill').style.width = `${row.pct}%`;
+        const eta = tr.querySelector('.eta');
+        if (eta) eta.setAttribute('data-state', row.__state);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
