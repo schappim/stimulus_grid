@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>296 — Maglock holding force | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .mg { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .mg .lbs { padding: 2px 8px; color:#fff; }
+    .mg .kg  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .mg[data-band="lo"] .lbs { background:#f59e0b; }
+    .mg[data-band="md"] .lbs { background:#1d4ed8; }
+    .mg[data-band="hi"] .lbs { background:#7c3aed; }
+    .fit { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           font-size: 11px; font-weight: 600; }
+    .fit[data-ok="1"] { background:#dcfce7; color:#166534; }
+    .fit[data-ok="0"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>296 — Maglock holding force</h1>
+  <p class="lede">
+    Electromagnetic lock spec at-a-glance — pounds force plus the kg
+    equivalent. The fit pill flips red when the maglock is undersized
+    for the door (a 600 lb single-leaf is fine on a 35 kg internal
+    door, but not on a 90 kg glass entrance).
+  </p>
+
+  <template id="mg-renderer">
+    <span class="mg">
+      <span class="lbs" data-bind="lbsLabel"></span>
+      <span class="kg"  data-bind="kgLabel"></span>
+    </span>
+    <span class="fit" data-bind="fitLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="280">Door</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lbs"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="120">Force (lbs)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="leafKg"
+              data-header-cell-type-value="number"
+              data-header-cell-width-value="120">Leaf (kg)</th>
+          <th data-controller="header-cell" data-header-cell-field-value="lbsLabel"
+              data-header-cell-cell-renderer-value="mg-renderer"
+              data-header-cell-width-value="280">Maglock</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Rule-of-thumb: pick a maglock whose lb rating is at least 10× the
+    door-leaf weight in kg. The fit pill applies that rule; edit the
+    <code>lbs</code> column to see it flip.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const KG_PER_LB = 0.453592;
+    const derive = (row) => {
+      const lbs = Number(row.lbs) || 0;
+      const kg  = Math.round(lbs * KG_PER_LB);
+      const band = lbs < 600 ? 'lo' : lbs < 1200 ? 'md' : 'hi';
+      const ok = lbs >= row.leafKg * 10 ? 1 : 0;
+      return {
+        ...row,
+        lbsLabel: `${lbs} lb`,
+        kgLabel: `${kg} kg`,
+        fitLabel: ok ? 'fit ✓' : 'undersized',
+        __band: band, __ok: ok,
+      };
+    };
+    const SEED = [
+      { id:1, door:'L2 main entry (timber)',         lbs:  600, leafKg: 38 },
+      { id:2, door:'L2 server room',                 lbs: 1200, leafKg: 52 },
+      { id:3, door:'Lobby air-lock A',               lbs:  600, leafKg: 80 },
+      { id:4, door:'Glass entrance — Bondi Pavilion',lbs: 1500, leafKg: 92 },
+      { id:5, door:'IDF cabinet',                    lbs:  300, leafKg: 14 },
+      { id:6, door:'Plant-room exterior',            lbs: 1200, leafKg:110 },
+      { id:7, door:'Sliding gate — loading dock',    lbs: 2400, leafKg:180 },
+      { id:8, door:'Vault outer',                    lbs: 1500, leafKg:165 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (!['lbs','leafKg'].includes(e.detail.colId)) return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.mg').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-band', row.__band);
+        const fit = tr.querySelector('.fit');
+        if (fit) fit.setAttribute('data-ok', String(row.__ok));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
