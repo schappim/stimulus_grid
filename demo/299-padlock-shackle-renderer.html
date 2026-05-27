@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>299 — Padlock shackle dimensions | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .pl { display:inline-flex; align-items:center; gap:8px;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+    .pl svg { display:block; }
+    .pl .dims { padding: 2px 8px; border-radius: 4px;
+                background:#0f172a; color:#fff; }
+    .pl .body { padding: 1px 6px; border-radius: 999px;
+                background:#f1f5f9; color:#475569; font-weight: 600; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>299 — Padlock shackle dimensions</h1>
+  <p class="lede">
+    The four numbers a hardware-store assistant needs to answer
+    "will this padlock fit my chain / hasp / locker?" — shackle
+    diameter, horizontal clearance, vertical clearance, and body
+    width. The mini SVG sketches the shackle so the customer can
+    eyeball the proportions before you reach for the calliper.
+  </p>
+
+  <template id="pl-renderer">
+    <span class="pl">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="6" y="14" width="20" height="14" rx="2" fill="#cbd5e1" stroke="#0f172a"/>
+        <path fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="dims" data-bind="dims"></span>
+      <span class="body" data-bind="bodyLabel"></span>
+    </span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="model"
+              data-header-cell-width-value="260">Padlock</th>
+          <th data-controller="header-cell" data-header-cell-field-value="dims"
+              data-header-cell-cell-renderer-value="pl-renderer"
+              data-header-cell-width-value="400">Shackle</th>
+          <th data-controller="header-cell" data-header-cell-field-value="material"
+              data-header-cell-width-value="160">Material</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The SVG draws a proportional shackle silhouette — long-shackle
+    padlocks are immediately distinguishable from close-shackle on
+    sort. Vertical clearance is the figure that bites when fitting a
+    container or a hasp with a deep staple.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Each row: shackle Ø, horizontal opening, vertical clearance, body width — all mm.
+    const SEED = [
+      { id:1, model:'Abus 64TI/40',          d: 6,  h: 22, v: 23, body: 40, material:'titanium' },
+      { id:2, model:'Squire SS50CS',         d:10,  h: 27, v: 25, body: 50, material:'boron' },
+      { id:3, model:'Squire SS50CS long',    d:10,  h: 27, v: 64, body: 50, material:'boron' },
+      { id:4, model:'Abus Granit 37/80',     d:13,  h: 30, v: 36, body: 80, material:'special steel' },
+      { id:5, model:'Master M115',           d: 6,  h: 18, v: 19, body: 30, material:'brass' },
+      { id:6, model:'Lockwood 359 close',    d:11,  h: 22, v: 14, body: 50, material:'hardened' },
+      { id:7, model:'Mul-T-Lock G-Series',   d:11,  h: 25, v: 28, body: 51, material:'boron alloy' },
+      { id:8, model:'Squire CP50 marine',    d:10,  h: 27, v: 25, body: 50, material:'316 SS' },
+    ];
+    const ROWS = SEED.map(r => ({
+      ...r,
+      dims: `Ø${r.d} · H${r.h} · V${r.v} · B${r.body} mm`,
+      bodyLabel: r.body >= 80 ? 'high-security' : r.body >= 50 ? 'commercial' : 'compact',
+    }));
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.pl').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const path = node.querySelector('path');
+        // Shackle: start (left base) up by V, across by H, back down by V.
+        const baseY = 14;
+        const topY  = Math.max(2, baseY - Math.min(12, row.v / 4));
+        const leftX = 10, rightX = leftX + Math.min(14, row.h / 2.5);
+        path.setAttribute('d', `M${leftX} ${baseY} L${leftX} ${topY} L${rightX} ${topY} L${rightX} ${baseY}`);
+        path.setAttribute('stroke-width', String(Math.max(1.6, row.d / 4)));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
