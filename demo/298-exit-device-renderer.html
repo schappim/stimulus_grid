@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>298 — Panic / emergency exit device | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* EN 1125 (panic — public buildings), EN 179 (emergency — known users),
+       AS 1428.1 (accessibility). Show certification stamp + device type. */
+    .ed { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .ed .std  { padding: 2px 8px; color:#fff; }
+    .ed .dev  { padding: 2px 8px; background:#0f172a; color:#fff; }
+    .ed[data-s="en1125"] .std { background:#dc2626; }
+    .ed[data-s="en179"]  .std { background:#ea580c; }
+    .ed[data-s="as1428"] .std { background:#1d4ed8; }
+    .ed[data-s="none"]   .std { background:#475569; }
+    .access { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+              font-size: 11px; font-weight: 600;
+              background:#f1f5f9; color:#475569; }
+    .access[data-public="1"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>298 — Panic / emergency exit device</h1>
+  <p class="lede">
+    Push-bar / touch-bar / lever hardware on egress doors with the
+    certification stamp. <strong>EN 1125</strong> is the panic standard
+    for places where the occupants are <em>untrained</em> (cinemas,
+    shopping centres); <strong>EN 179</strong> is for places they're
+    not (offices, plant rooms). Public-occupancy rows without EN 1125
+    flag red.
+  </p>
+
+  <template id="ed-renderer">
+    <span class="ed">
+      <span class="std" data-bind="stdLabel"></span>
+      <span class="dev" data-bind="device"></span>
+    </span>
+    <span class="access" data-bind="accessLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="280">Door</th>
+          <th data-controller="header-cell" data-header-cell-field-value="device"
+              data-header-cell-cell-renderer-value="ed-renderer"
+              data-header-cell-width-value="380">Exit device</th>
+          <th data-controller="header-cell" data-header-cell-field-value="occupancy"
+              data-header-cell-width-value="160">Occupancy</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The AS 1428.1 chip is independent of EN 179/1125 — it covers the
+    one-handed-operation and force-to-operate parts of the standard.
+    A lever-trim retrofit can deliver AS 1428.1 over an EN 179 base.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const SEED = [
+      { id:1, door:'Cinema exit 4 — auditorium 2',  device:'Push bar (touch-pad)', stdLabel:'EN 1125', __s:'en1125', occupancy:'public',  accessLabel:'public path', __pub:1 },
+      { id:2, door:'Office back-of-house egress',   device:'Push pad — single',    stdLabel:'EN 179',  __s:'en179',  occupancy:'office',  accessLabel:'staff only',  __pub:0 },
+      { id:3, door:'Shopping centre Mall A',        device:'Touch bar — double',   stdLabel:'EN 1125', __s:'en1125', occupancy:'public',  accessLabel:'public path', __pub:1 },
+      { id:4, door:'Plant-room emergency exit',     device:'Lever trim',           stdLabel:'EN 179',  __s:'en179',  occupancy:'staff',   accessLabel:'restricted',  __pub:0 },
+      { id:5, door:'School corridor — main exit',   device:'Push bar (touch-pad)', stdLabel:'EN 1125', __s:'en1125', occupancy:'public',  accessLabel:'public path', __pub:1 },
+      { id:6, door:'Theatre stage door',            device:'Push pad — single',    stdLabel:'EN 179',  __s:'en179',  occupancy:'staff',   accessLabel:'restricted',  __pub:0 },
+      { id:7, door:'Late-night bar fire exit',      device:'Lever trim only',      stdLabel:'none',    __s:'none',   occupancy:'public',  accessLabel:'public path', __pub:1 },
+      { id:8, door:'Accessible WC',                 device:'Push-button + lever',  stdLabel:'AS 1428.1', __s:'as1428',occupancy:'public',  accessLabel:'accessible',  __pub:0 },
+    ];
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(SEED), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.ed').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-s', row.__s);
+        const acc = tr.querySelector('.access');
+        if (acc) acc.setAttribute('data-public', String(row.__pub && row.__s !== 'en1125' ? 1 : 0));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
