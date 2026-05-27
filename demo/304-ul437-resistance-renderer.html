@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>304 — UL 437 anti-pick / anti-drill | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* Two minute:second timings (pick, drill) shown as a side-by-side
+       pair of bars from 0 to 15 min. UL 437 requires ≥ 10 min on each. */
+    .ul { display:inline-flex; align-items:center; gap:6px; }
+    .ul .lab {
+      font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+      color:#0f172a; width: 90px;
+    }
+    .bar { position:relative; display:inline-block;
+           width: 90px; height: 10px; border-radius: 3px;
+           background:#e2e8f0; overflow:hidden; box-shadow: inset 0 0 0 1px #cbd5e1; }
+    .bar .fill { position:absolute; left:0; top:0; bottom:0; }
+    .bar .mark { position:absolute; top:0; bottom:0; width:1px; background:#0f172a; left: 66.66%; }
+    .bar.pick  .fill { background:#1d4ed8; }
+    .bar.drill .fill { background:#7c3aed; }
+    .pass { margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+            font-size: 11px; font-weight: 600;
+            background:#dcfce7; color:#166534; }
+    .pass[data-pass="0"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>304 — UL 437 anti-pick / anti-drill</h1>
+  <p class="lede">
+    Independently-tested resistance times against picking and drilling.
+    UL 437 — the recognised high-security cylinder standard — requires
+    at least 10 minutes against each. The vertical tick on each bar is
+    the 10-minute pass line; rows that fall short flag red.
+  </p>
+
+  <template id="ul-renderer">
+    <span class="ul">
+      <span class="lab" data-bind="pickLabel"></span>
+      <span class="bar pick"><span class="fill"></span><span class="mark"></span></span>
+    </span>
+    <span class="ul">
+      <span class="lab" data-bind="drillLabel"></span>
+      <span class="bar drill"><span class="fill"></span><span class="mark"></span></span>
+    </span>
+    <span class="pass" data-bind="passLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="cyl"
+              data-header-cell-width-value="240">Cylinder</th>
+          <th data-controller="header-cell" data-header-cell-field-value="pickLabel"
+              data-header-cell-cell-renderer-value="ul-renderer"
+              data-header-cell-width-value="540">Pick / drill resistance</th>
+          <th data-controller="header-cell" data-header-cell-field-value="brand"
+              data-header-cell-width-value="160">Brand</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The times are aggregate medians from the test report — not the
+    lowest individual sample. A cylinder that beats the line on
+    pick but loses on drill still fails UL 437 overall.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    const fmt = (s) => `${Math.floor(s/60)}m ${String(s%60).padStart(2,'0')}s`;
+    const derive = (row) => {
+      const passPick  = row.pickSec  >= 600;
+      const passDrill = row.drillSec >= 600;
+      return {
+        ...row,
+        pickLabel:  `pick  ${fmt(row.pickSec)}`,
+        drillLabel: `drill ${fmt(row.drillSec)}`,
+        passLabel: (passPick && passDrill) ? 'UL 437 ✓' : 'UL 437 ✗',
+        __pass: (passPick && passDrill) ? 1 : 0,
+      };
+    };
+    const SEED = [
+      { id:1, cyl:'Medeco Maxum',         brand:'Medeco',   pickSec: 1140, drillSec: 1380 },
+      { id:2, cyl:'Mul-T-Lock MT5+',      brand:'Mul-T-Lock', pickSec: 1320, drillSec: 1500 },
+      { id:3, cyl:'EVVA 4KS+',            brand:'EVVA',     pickSec: 1380, drillSec: 1620 },
+      { id:4, cyl:'Abloy Protec2',        brand:'Abloy',    pickSec: 1500, drillSec: 1500 },
+      { id:5, cyl:'Lockwood Twin',        brand:'Lockwood', pickSec:  480, drillSec:  720 },
+      { id:6, cyl:'Schlage Primus',       brand:'Schlage',  pickSec:  720, drillSec:  900 },
+      { id:7, cyl:'CISA AP4 RK',          brand:'CISA',     pickSec:  840, drillSec:  900 },
+      { id:8, cyl:'Generic 5-pin (KW1)',  brand:'(generic)', pickSec:   90, drillSec:  120 },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('tr[data-row-id]').forEach((tr) => {
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr.dataset.rowId);
+        if (!row) return;
+        const cap = 900; // 15 min cap
+        const pickPct  = Math.min(100, (row.pickSec  / cap) * 100);
+        const drillPct = Math.min(100, (row.drillSec / cap) * 100);
+        const pickBar  = tr.querySelector('.bar.pick  .fill');
+        const drillBar = tr.querySelector('.bar.drill .fill');
+        if (pickBar)  pickBar.style.width  = `${pickPct}%`;
+        if (drillBar) drillBar.style.width = `${drillPct}%`;
+        const pass = tr.querySelector('.pass');
+        if (pass) pass.setAttribute('data-pass', String(row.__pass));
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
