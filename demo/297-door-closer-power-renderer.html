@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>297 — Door closer power (EN 1-7) | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    .dc { display:inline-flex; align-items:stretch; gap:1px;
+          border-radius: 6px; overflow:hidden;
+          font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+    .dc .en  { padding: 2px 6px; color:#fff; background:#0f172a; }
+    .dc .pwr { padding: 2px 8px; color:#fff; }
+    .dc[data-en="1"] .pwr,
+    .dc[data-en="2"] .pwr { background:#16a34a; }
+    .dc[data-en="3"] .pwr,
+    .dc[data-en="4"] .pwr { background:#0ea5e9; }
+    .dc[data-en="5"] .pwr,
+    .dc[data-en="6"] .pwr { background:#7c3aed; }
+    .dc[data-en="7"] .pwr { background:#b91c1c; }
+    .acc { margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+           font-size: 11px; font-weight: 600; }
+    .acc[data-a="compliant"] { background:#dcfce7; color:#166534; }
+    .acc[data-a="non"]       { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>297 — Door closer power (EN 1-7)</h1>
+  <p class="lede">
+    EN 1154 door-closer power size — 1 (tiny internal cupboards) through
+    7 (large external double doors). AS 1428.1 / DDA caps the closing
+    force on accessible doors, so anything above size 3 on a path-of-
+    travel door is non-compliant.
+  </p>
+
+  <template id="dc-renderer">
+    <span class="dc">
+      <span class="en"  data-bind="enLabel"></span>
+      <span class="pwr" data-bind="pwrLabel"></span>
+    </span>
+    <span class="acc" data-bind="accLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="door"
+              data-header-cell-width-value="280">Door</th>
+          <th data-controller="header-cell" data-header-cell-field-value="en"
+              data-header-cell-type-value="number"
+              data-header-cell-editable-value="true"
+              data-header-cell-width-value="80">EN</th>
+          <th data-controller="header-cell" data-header-cell-field-value="enLabel"
+              data-header-cell-cell-renderer-value="dc-renderer"
+              data-header-cell-width-value="300">Closer power</th>
+          <th data-controller="header-cell" data-header-cell-field-value="accessible"
+              data-header-cell-width-value="160">Accessible path</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    Adjustable closers cover a range (e.g. an EN 2–5 closer can be
+    spring-tensioned to fit a size-3 door). The cell shows the
+    <em>set</em> size, not the closer's adjustment range.
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // EN size → (door mass kg, door width mm) — illustrative.
+    const SPEC = {
+      1: '20 kg / 750 mm',
+      2: '40 kg / 850 mm',
+      3: '60 kg / 950 mm',
+      4: '80 kg / 1100 mm',
+      5: '100 kg / 1250 mm',
+      6: '120 kg / 1400 mm',
+      7: '160 kg / 1600 mm',
+    };
+    const derive = (row) => {
+      const en = Math.max(1, Math.min(7, Number(row.en) || 1));
+      const compliant = !row.accessible || en <= 3;
+      return {
+        ...row,
+        en,
+        enLabel: `EN ${en}`,
+        pwrLabel: SPEC[en],
+        accLabel: row.accessible ? (compliant ? 'AS 1428.1 ✓' : 'AS 1428.1 ✗') : 'n/a',
+        __a: row.accessible ? (compliant ? 'compliant' : 'non') : null,
+      };
+    };
+    const SEED = [
+      { id:1, door:'L2 main entry',          en: 4, accessible: true  },
+      { id:2, door:'L2 server room',         en: 3, accessible: false },
+      { id:3, door:'Lobby air-lock A',       en: 3, accessible: true  },
+      { id:4, door:'Glass entrance — Bondi', en: 6, accessible: true  },
+      { id:5, door:'Cleaner cupboard',       en: 2, accessible: false },
+      { id:6, door:'Plant-room exterior',    en: 5, accessible: false },
+      { id:7, door:'Accessible WC',          en: 2, accessible: true  },
+      { id:8, door:'Boardroom',              en: 4, accessible: true  },
+    ];
+    const ROWS = SEED.map(derive);
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    grid.addEventListener('grid:cellValueChanged', (e) => {
+      if (e.detail.colId !== 'en') return;
+      const row = grid.gridApi.getRowData().find(r => String(r.id) === String(e.detail.rowId));
+      if (row) grid.gridApi.applyTransaction({ update: [derive(row)] });
+    });
+    const paint = () => requestAnimationFrame(() => {
+      grid.querySelectorAll('.dc').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        node.setAttribute('data-en', String(row.en));
+        const acc = tr.querySelector('.acc');
+        if (acc) {
+          if (row.__a) acc.setAttribute('data-a', row.__a);
+          else acc.removeAttribute('data-a');
+        }
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
