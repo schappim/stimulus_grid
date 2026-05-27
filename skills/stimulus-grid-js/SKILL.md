@@ -1,6 +1,6 @@
 ---
 name: stimulus-grid-js
-description: Use stimulus_grid, an HTML-first data grid for Stimulus.js (Hotwire). Apply when adding or editing an interactive data table/grid in a Stimulus/Hotwire (non-Rails-specific) front end — sortable/filterable columns, row selection, pagination, inline editing, custom cell renderers/editors, virtual scrolling, CSV export, or driving a grid through its gridApi. For the Rails server-driven version (Turbo Stream live sync, server-side search, undo/redo) use the stimulus-grid-rails skill instead.
+description: Use stimulus_grid, an HTML-first data grid for Stimulus.js (Hotwire). Apply when adding or editing an interactive data table/grid in a Stimulus/Hotwire (non-Rails-specific) front end — sortable/filterable columns, row selection, pagination, inline editing, custom cell renderers/editors, virtual scrolling, CSV export, or driving a grid through its gridApi. For the Rails server-driven version (Turbo Stream live sync, server-side search, undo/redo) use the stimulus-grid-rails skill instead — and see its COOKBOOK.md for the exact HTTP + Turbo Stream wire format if you're writing a non-Rails server.
 ---
 
 # Using stimulus_grid (the JS library)
@@ -399,7 +399,12 @@ load only the current page into `rowData`, and on `grid:paginationChanged` /
 `grid:sortChanged` fetch that window from your server and call
 `gridApi.setRowData(window)` + `gridApi.setRowCount(total)`. Pagination math then
 reflects the full server total though only one page is in the DOM. (The
-`stimulus_grid_rails` gem wires this end-to-end.)
+[`stimulus_grid_rails`](../stimulus-grid-rails/SKILL.md) gem wires this
+end-to-end — including server-side sort/filter/search. Writing a custom
+(non-Rails) server? The full wire format the `grid-sync` controller
+expects — HTTP request/response shapes, `X-Optimistic-Id` header,
+Turbo Stream action attributes — is documented in
+[`../stimulus-grid-rails/COOKBOOK.md`](../stimulus-grid-rails/COOKBOOK.md).)
 
 ## Row grouping & aggregation
 

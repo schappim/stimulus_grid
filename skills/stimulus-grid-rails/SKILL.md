@@ -1,6 +1,6 @@
 ---
 name: stimulus-grid-rails
-description: Use the stimulus_grid_rails gem to build a server-driven, multi-user editable data grid in a Rails + Hotwire app. Apply when adding an editable table backed by Active Record with live cross-tab/cross-user updates over Turbo Streams + Action Cable, server-side global search/filtering, optimistic cell edits with server reconcile, computed columns, add/remove rows, undo/redo, per-column permissions, or multi-tenant isolation. For a purely client-side grid with no Rails backend, use the stimulus-grid-js skill instead.
+description: Use the stimulus_grid_rails gem to build a server-driven, multi-user editable data grid in a Rails + Hotwire app. Apply when adding an editable table backed by Active Record with live cross-tab/cross-user updates over Turbo Streams + Action Cable, server-side global search/filtering, optimistic cell edits with server reconcile, computed columns, add/remove rows, undo/redo, per-column permissions, or multi-tenant isolation. For a purely client-side grid with no Rails backend, use the stimulus-grid-js skill instead. For exact HTTP request/response shapes, Turbo Stream action attributes, optimistic-id wire format, or to debug a fresh integration that didn't work first time, see COOKBOOK.md alongside this file.
 ---
 
 # Using stimulus_grid_rails (the Rails engine)
@@ -10,7 +10,34 @@ A Rails grid where **the server column definition is the source of truth**
 runs the `stimulus_grid` JS; the gem adds a Stimulus `grid-sync` layer + custom
 Turbo Stream actions so edits broadcast live to every tab.
 
+## When to use which file
+
+| You're doing… | Read this |
+|---|---|
+| First-time integration in a fresh Rails app | This file, top-to-bottom — then the [End-to-end first-time recipe](./COOKBOOK.md#end-to-end-first-time-recipe) |
+| Need exact HTTP request/response shapes | [`COOKBOOK.md` → HTTP surface](./COOKBOOK.md#http-surface) |
+| Need the Turbo Stream `<turbo-stream action="…">` attribute table | [`COOKBOOK.md` → Turbo Stream wire format](./COOKBOOK.md#turbo-stream-wire-format) |
+| Debugging "cell flickers" / "other tabs don't update" / "PATCH 404" | [`COOKBOOK.md` → Common first-time failures](./COOKBOOK.md#common-first-time-failures) |
+| Looking up Ruby API signatures, column options, search operators | [`gem/stimulus_grid_rails/docs/REFERENCE.md`](../../gem/stimulus_grid_rails/docs/REFERENCE.md) (authoritative API reference) |
+| JS-only / client-side grid (no Rails) | [`../stimulus-grid-js/SKILL.md`](../stimulus-grid-js/SKILL.md) |
+| Looking for gridApi methods / JS event names / built-in renderers | [`../stimulus-grid-js/SKILL.md`](../stimulus-grid-js/SKILL.md) |
+| Pasting a working example | The runnable demo at `gem/demo/` (`bin/rails server`, open in two tabs) |
+
 ## Setup
+
+### Schema requirements (do this first)
+
+The gem has **no required schema columns** on your row model — defaults
+work for any standard Active Record table. You only need extra columns
+for opt-in features:
+
+- `lock_version` (integer) — required if any column uses
+  `concurrency: :version_checked` (the cell sends it with every PATCH
+  and the controller rejects stale writes with `cell-conflict`).
+- One column per non-computed `column` you declare on the Grid.
+
+Full schema details + a minimal migration:
+[COOKBOOK.md → Schema requirements](./COOKBOOK.md#schema-requirements).
 
 ```ruby
 # Gemfile
@@ -33,6 +60,7 @@ StimulusGridRails.start(app)   // grid-sync, cell-editor + Turbo Stream actions
 
 ```erb
 <%# app/views/layouts/application.html.erb <head> %>
+<%= csrf_meta_tags %>                          <%# REQUIRED — grid-sync reads it for X-CSRF-Token %>
 <%= stylesheet_link_tag "stimulus_grid", "stimulus_grid_rails" %>
 <%= javascript_importmap_tags %>
 ```
@@ -155,9 +183,14 @@ style `.sgr-panel` to give it a height.
 - **Validation + permissions** run server-side on every PATCH (`editable_for?`,
   `validate`). Never trusts the client.
 - **Computed cascade:** editing a `depends_on` column recomputes the computed
-  column and pushes it in the same response/broadcast.
+  column and pushes it in the same response/broadcast. Cascade contract +
+  caveats: [COOKBOOK.md → Computed-column cascade contract](./COOKBOOK.md#computed-column-cascade-contract).
 - **Version-checked concurrency:** `:version_checked` columns send `lock_version`;
   a stale write returns a `cell-conflict` (listen for `grid:cellConflict`).
+
+How the optimistic-id reconcile actually works on the wire (originator
+suppression, 30s TTL, cascade semantics, custom-client warnings):
+[COOKBOOK.md → Optimistic-id reconciliation lifecycle](./COOKBOOK.md#optimistic-id-reconciliation-lifecycle).
 
 ## Toolbar actions (dispatch events on the grid element)
 
@@ -267,6 +300,11 @@ on the grid endpoints too. Combined with:
 
 …one tenant never sees another tenant's data or broadcasts. Without ActsAsTenant
 the tenant scoping is a no-op and `scope` defaults to `model_class.all`.
+
+> **Caveat for background jobs that mutate rows:** wrap them in
+> `ActsAsTenant.with_tenant(tenant) { … }` so the broadcaster picks up
+> the right tenant at after_commit time. Full lifecycle mechanics:
+> [COOKBOOK.md → Tenant scoping mechanics](./COOKBOOK.md#tenant-scoping-mechanics).
 
 ## Master/detail rows
 
@@ -460,7 +498,16 @@ it to `setSortModel`. Sort persists across renders + `persist_key:` reloads.
 `GET /grids/:resource/rows?q=&filters=` (search/filter, JSON) ·
 `POST /grids/:resource/rows` (create) ·
 `DELETE /grids/:resource/rows/:row_id` and `/rows/bulk` (delete) ·
-`POST /grids/:resource/undo` and `/redo` · `POST /grids/:resource/bulk` (cell bulk).
+`POST /grids/:resource/undo` and `/redo` · `POST /grids/:resource/bulk` (cell bulk) ·
+`POST /grids/:resource/:row_id/attachments/:column` (+ DELETE).
+
+**Full request/response JSON + Turbo Stream shapes for every endpoint**
+(including the `X-Optimistic-Id` header contract, `cell-revert` /
+`cell-conflict` response bodies, search/filter operator table, and the
+bulk-paste atomicity contract) live in
+[COOKBOOK.md → HTTP surface](./COOKBOOK.md#http-surface). If you're
+implementing a non-default client (mobile app, scripted writer) or
+debugging an integration, read that section.
 
 ## Gotchas
 
@@ -470,5 +517,35 @@ it to `setSortModel`. Sort persists across renders + `persist_key:` reloads.
   they're recomputed for display, cascade, and search JSON.
 - The grid manages its own `<tbody>`; per-row buttons must come from a cell
   renderer (server-rendered button HTML is replaced on first render).
-- Create/delete return `204` and rely on the auto-broadcast; the originating tab
+- Create/delete return `200` empty and rely on the auto-broadcast; the originating tab
   applies the change when the broadcast lands (~50ms).
+- Bulk paste and bulk delete are **not transactional** — per-row failures are
+  silently skipped. If you need transactional bulk semantics write your own
+  endpoint. [COOKBOOK.md → Bulk paste + bulk delete atomicity](./COOKBOOK.md#bulk-paste--bulk-delete-atomicity).
+
+## Pre-flight checklist + failure diagnosis
+
+Before going live (or when sync silently isn't working), run through
+[COOKBOOK.md → Wiring pre-flight checklist](./COOKBOOK.md#wiring-pre-flight-checklist)
+— ten silent-failure traps from "csrf_meta_tags missing" through
+"locking_column not set". For any symptom you're already seeing, the
+[Common first-time failures](./COOKBOOK.md#common-first-time-failures)
+table maps it to a one-line fix.
+
+## Where to look
+
+| Where to look                                                                | What's in it                                                  |
+|------------------------------------------------------------------------------|---------------------------------------------------------------|
+| [`./COOKBOOK.md`](./COOKBOOK.md)                                             | **wire-format spec** — HTTP, Turbo Streams, lifecycle, first-time recipe, failure modes |
+| [`../../gem/stimulus_grid_rails/docs/REFERENCE.md`](../../gem/stimulus_grid_rails/docs/REFERENCE.md) | **Ruby API surface** — Grid DSL, column options, types, search operators, helpers |
+| [`../stimulus-grid-js/SKILL.md`](../stimulus-grid-js/SKILL.md)               | JS-side `gridApi`, events, renderer library, pivot/group APIs |
+| `gem/stimulus_grid_rails/lib/stimulus_grid_rails/grid.rb`                    | the DSL (`Grid` base class)                                   |
+| `gem/stimulus_grid_rails/lib/stimulus_grid_rails/column.rb`                  | column option list + coerce/validate + DOM data-attr emission |
+| `gem/stimulus_grid_rails/lib/stimulus_grid_rails/concerns/broadcastable.rb`  | the after_commit broadcaster + `_sgr_optimistic_id` pass-through |
+| `gem/stimulus_grid_rails/lib/stimulus_grid_rails/turbo_streams_helper.rb`    | the `<turbo-stream>` action builders                          |
+| `gem/stimulus_grid_rails/app/controllers/.../cells_controller.rb`            | `update` / `bulk`                                             |
+| `gem/stimulus_grid_rails/app/controllers/.../rows_controller.rb`             | `index` / `create` / `destroy` / `destroy_bulk`               |
+| `gem/stimulus_grid_rails/app/controllers/.../history_controller.rb`         | `undo` / `redo`                                                |
+| `gem/stimulus_grid_rails/app/views/.../grids/_grid.html.erb`                 | the grid partial the helper renders                           |
+| `gem/stimulus_grid_rails/app/assets/javascripts/stimulus_grid_rails.js`      | the JS `grid-sync` controller + custom StreamAction handlers  |
+| `gem/demo/`                                                                  | a complete Rails 7.2 host app exercising it end-to-end        |
