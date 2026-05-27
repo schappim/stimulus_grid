@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>302 — Safe boltwork | stimulus_grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../dist/stimulus_grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lede { color: #6b7280; margin-top: 0; }
+    .panel { height: 480px; margin-top: 16px; }
+    .crumbs a { color: #2563eb; text-decoration: none; }
+    code { background:#f3f4f6; padding:1px 4px; border-radius:3px; font-size:.9em; }
+    .tip { margin-top: 16px; padding: 10px 14px; background: #eff6ff;
+           border-left: 3px solid #2563eb; color:#1e3a8a; font-size: 13px; }
+
+    /* A small door diagram: active bolts (yellow) and dead bolts (grey)
+       on each of four edges. Active = driven by handle/wheel, dead =
+       fixed pin/dog that engages when the door is closed. */
+    .bw { display:inline-flex; align-items:center; gap:8px; }
+    .bw svg { display:block; }
+    .bw .desc {
+      font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
+      color:#0f172a;
+    }
+    .total {
+      margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+      background:#f1f5f9; color:#475569; font-size: 11px; font-weight: 600;
+    }
+    .total[data-band="hi"] { background:#dcfce7; color:#166534; }
+    .total[data-band="md"] { background:#fef3c7; color:#92400e; }
+    .total[data-band="lo"] { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+  <p class="crumbs"><a href="./">← demos</a></p>
+  <h1>302 — Safe boltwork</h1>
+  <p class="lede">
+    Active and dead bolts on each edge of a safe door, drawn at scale.
+    A vault-grade safe runs bolts on all four edges; a domestic office
+    safe might only have three live bolts on the hinge side. The trail
+    pill is the total bolt count banded into hi/md/lo.
+  </p>
+
+  <template id="bw-renderer">
+    <span class="bw">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="8" y="8" width="32" height="32" rx="2"
+              fill="#fff" stroke="#0f172a" stroke-width="1.4"/>
+        <g class="bolts"></g>
+      </svg>
+      <span class="desc" data-bind="desc"></span>
+    </span>
+    <span class="total" data-bind="totalLabel"></span>
+  </template>
+
+  <div class="panel" data-controller="grid">
+    <table>
+      <thead>
+        <tr>
+          <th data-controller="header-cell" data-header-cell-field-value="safe"
+              data-header-cell-width-value="280">Safe</th>
+          <th data-controller="header-cell" data-header-cell-field-value="desc"
+              data-header-cell-cell-renderer-value="bw-renderer"
+              data-header-cell-width-value="380">Boltwork</th>
+          <th data-controller="header-cell" data-header-cell-field-value="hinge"
+              data-header-cell-width-value="120">Hinge</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="tip">
+    The boltwork descriptor uses <em>T/B/L/R</em> for the door edge
+    and <em>A/D</em> for active / dead — e.g. <code>L3A · R3A · T1D ·
+    B1D</code> reads "three active bolts left, three active right,
+    one dead pin top and bottom".
+  </p>
+
+  <script src="../dist/stimulus_grid.js"></script>
+  <script>
+    StimulusGrid.start();
+    // Each row: active and dead counts per edge (top/bottom/left/right).
+    // active drawn in yellow, dead in grey.
+    const SEED = [
+      { id:1, safe:'CMI Office OFF-1',  hinge:'right', t:{a:0,d:0}, b:{a:0,d:0}, l:{a:3,d:0}, r:{a:0,d:0} },
+      { id:2, safe:'Lokaway LK-2',      hinge:'right', t:{a:0,d:1}, b:{a:0,d:1}, l:{a:3,d:0}, r:{a:0,d:0} },
+      { id:3, safe:'Chubb Air-30',      hinge:'right', t:{a:1,d:0}, b:{a:1,d:0}, l:{a:3,d:0}, r:{a:0,d:1} },
+      { id:4, safe:'Mutual MTD-3',      hinge:'left',  t:{a:2,d:0}, b:{a:2,d:0}, l:{a:0,d:2}, r:{a:4,d:0} },
+      { id:5, safe:'AMSEC BWB3025',     hinge:'right', t:{a:1,d:0}, b:{a:1,d:0}, l:{a:4,d:0}, r:{a:0,d:1} },
+      { id:6, safe:'Diebold vault',     hinge:'left',  t:{a:3,d:0}, b:{a:3,d:0}, l:{a:0,d:3}, r:{a:5,d:0} },
+      { id:7, safe:'Phoenix DS3401D',   hinge:'right', t:{a:0,d:0}, b:{a:0,d:0}, l:{a:2,d:0}, r:{a:0,d:0} },
+    ];
+    const total = (r) => r.t.a+r.t.d+r.b.a+r.b.d+r.l.a+r.l.d+r.r.a+r.r.d;
+    const ROWS = SEED.map(r => {
+      const desc = `T${r.t.a}A/${r.t.d}D · B${r.b.a}A/${r.b.d}D · L${r.l.a}A/${r.l.d}D · R${r.r.a}A/${r.r.d}D`;
+      const n = total(r);
+      const band = n >= 10 ? 'hi' : n >= 5 ? 'md' : 'lo';
+      return { ...r, desc, totalLabel: `${n} bolts`, __band: band };
+    });
+    const grid = document.querySelector('.panel');
+    grid.addEventListener('grid:ready', () => grid.gridApi.setRowData(ROWS), { once: true });
+    const drawEdge = (svgNS, parent, edge, count, isActive) => {
+      // edge: 't' top, 'b' bottom, 'l' left, 'r' right.
+      // Place bolts as small filled rects sticking out from the door rectangle.
+      const fill = isActive ? '#fbbf24' : '#94a3b8';
+      const stroke = '#0f172a';
+      for (let i = 0; i < count; i++) {
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('fill', fill);
+        rect.setAttribute('stroke', stroke);
+        rect.setAttribute('stroke-width', '0.6');
+        // along axis: distribute across the edge length.
+        const axisStart = 12, axisEnd = 36;
+        const slots = count + 1;
+        const along = axisStart + ((i+1) * (axisEnd - axisStart)) / slots - 2;
+        if (edge === 't') {
+          rect.setAttribute('x', String(along));
+          rect.setAttribute('y', '4'); rect.setAttribute('width', '4'); rect.setAttribute('height', '6');
+        } else if (edge === 'b') {
+          rect.setAttribute('x', String(along));
+          rect.setAttribute('y', '38'); rect.setAttribute('width', '4'); rect.setAttribute('height', '6');
+        } else if (edge === 'l') {
+          rect.setAttribute('y', String(along));
+          rect.setAttribute('x', '2'); rect.setAttribute('width', '8'); rect.setAttribute('height', '4');
+        } else {
+          rect.setAttribute('y', String(along));
+          rect.setAttribute('x', '38'); rect.setAttribute('width', '8'); rect.setAttribute('height', '4');
+        }
+        parent.appendChild(rect);
+      }
+    };
+    const paint = () => requestAnimationFrame(() => {
+      const NS = 'http://www.w3.org/2000/svg';
+      grid.querySelectorAll('.bw').forEach((node) => {
+        const tr = node.closest('tr');
+        const row = grid.gridApi.getRowData().find(r => String(r.id) === tr?.dataset.rowId);
+        if (!row) return;
+        const g = node.querySelector('.bolts');
+        if (!g) return;
+        g.innerHTML = '';
+        drawEdge(NS, g, 't', row.t.a, true);
+        drawEdge(NS, g, 't', row.t.d, false);
+        drawEdge(NS, g, 'b', row.b.a, true);
+        drawEdge(NS, g, 'b', row.b.d, false);
+        drawEdge(NS, g, 'l', row.l.a, true);
+        drawEdge(NS, g, 'l', row.l.d, false);
+        drawEdge(NS, g, 'r', row.r.a, true);
+        drawEdge(NS, g, 'r', row.r.d, false);
+        const total = tr.querySelector('.total');
+        if (total) total.setAttribute('data-band', row.__band);
+      });
+    });
+    ['grid:rowDataChanged','grid:sortChanged','grid:filterChanged','grid:paginationChanged']
+      .forEach(ev => grid.addEventListener(ev, paint));
+    new MutationObserver(paint).observe(grid.querySelector('tbody'), { childList:true, subtree:true });
+  </script>
+</body>
+</html>
