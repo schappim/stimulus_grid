@@ -1,7 +1,7 @@
 PATH
   remote: ../stimulus_grid_rails
   specs:
-    stimulus_grid_rails (0.1.0)
+    stimulus_grid_rails (0.2.0)
       importmap-rails (>= 1.2)
       rails (>= 7.0)
       stimulus-rails (>= 1.3)
