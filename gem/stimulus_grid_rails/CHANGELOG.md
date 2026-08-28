@@ -1,6 +1,38 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.2.0 (2026-08-28)
+
+Ships the full cell-renderer library to Rails, adds Active Storage attachments,
+and refreshes the vendored grid assets — they had drifted well behind `dist/`.
+
+### Added
+
+- `:attachments` column type backed by Active Storage `has_many_attached`.
+  `Grid#format_cell` / `serialize_value` emit the file list as JSON (id, filename,
+  url, content_type, byte_size, thumb_url, signed_id) the JS `attachments`
+  renderer consumes directly. New `AttachmentsController` adds
+  `POST /grids/:resource/:row_id/attachments/:column` (multipart upload OR
+  signed_ids) and `DELETE /grids/:resource/:row_id/attachments/:column/:attachment_id`;
+  each mutation broadcasts the new attachment payload as a `cell` Turbo Stream
+  so every connected tab reconciles automatically. New `apply_attachments!`
+  helper on Grid handles the attach/detach round-trip; override
+  `attachment_url_for` for signed/expiring URLs or CDN hosts. The row partial
+  now emits structured cell values in `data-cell-value=` (avoids the JSON
+  briefly flashing as the cell's textContent on first paint). The demo app
+  ships a `file_records` page wired to `FileRecord` + `FileRecordGrid`.
+
+### Changed
+
+- Vendored grid assets (`app/assets/javascripts/stimulus_grid.js`,
+  `app/assets/stylesheets/stimulus_grid.css`) re-synced from `dist/`. They were
+  last refreshed before the renderer library landed, so the engine had been
+  shipping roughly half the grid: 204 KB of JS against the current 432 KB, with
+  ~130 renderers missing entirely. Rails apps now get all 199 built-in
+  renderers, the side panel, pivot mode, row grouping, tree data, master/detail,
+  the spreadsheet selection model and the column menu — see the root
+  CHANGELOG.md for the JS-side detail.
+
+## 0.1.0 (2026-05-20)
 
 Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
 
@@ -60,16 +92,3 @@ Initial MVP slice of the Rails + Hotwire bindings for stimulus_grid.
 - Bulk paste (RAILS.md §9): paste tab/newline-separated data from an anchor cell;
   grid-sync fills the range and POSTs to /bulk.
 - Full Minitest suite for the Rails side (62 examples) under demo/test.
-- `:attachments` column type backed by Active Storage `has_many_attached`.
-  `Grid#format_cell` / `serialize_value` emit the file list as JSON (id, filename,
-  url, content_type, byte_size, thumb_url, signed_id) the JS `attachments`
-  renderer consumes directly. New `AttachmentsController` adds
-  `POST /grids/:resource/:row_id/attachments/:column` (multipart upload OR
-  signed_ids) and `DELETE /grids/:resource/:row_id/attachments/:column/:attachment_id`;
-  each mutation broadcasts the new attachment payload as a `cell` Turbo Stream
-  so every connected tab reconciles automatically. New `apply_attachments!`
-  helper on Grid handles the attach/detach round-trip; override
-  `attachment_url_for` for signed/expiring URLs or CDN hosts. The row partial
-  now emits structured cell values in `data-cell-value=` (avoids the JSON
-  briefly flashing as the cell's textContent on first paint). The demo app
-  ships a `file_records` page wired to `FileRecord` + `FileRecordGrid`.
